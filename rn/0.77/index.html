@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://containerlab.dev/rn/0.77/">
       
       
-        <link rel="prev" href="../../lab-examples/generic_vm01/">
+        <link rel="prev" href="../0.78/">
       
       
         <link rel="next" href="../0.76/">
@@ -376,6 +376,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="././" class="md-tabs__link">
+        <a href="../0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1009,6 +1015,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1575,6 +1585,8 @@
       
         
       
+        
+      
     
     
     
@@ -1620,6 +1632,33 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0.78/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  0.78
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3962,12 +4001,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../0.78/" class="md-path__link">
           
   
   <span class="md-ellipsis">
@@ -4009,7 +4050,7 @@
   <h1 id="release-077">Release 0.77<a class="headerlink" href="#release-077" title="Permanent link">#</a></h1>
 <p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 19H5V8h14m-3-7v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1m-1 11h-5v5h5z"/></svg></span> 2026-06-28 · <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16.5 11 13 7.5l1.4-1.4 2.1 2.1L20.7 4l1.4 1.4zM11 7H2v2h9zm10 6.4L19.6 12 17 14.6 14.4 12 13 13.4l2.6 2.6-2.6 2.6 1.4 1.4 2.6-2.6 2.6 2.6 1.4-1.4-2.6-2.6zM11 15H2v2h9z"/></svg></span> <a href="https://github.com/srl-labs/containerlab/releases">Full Changelog</a></p>
 <h2 id="apply-topology-changes">Apply topology changes<a class="headerlink" href="#apply-topology-changes" title="Permanent link">#</a></h2>
-<p>The new <a href="../../cmd/apply/"><code>apply</code></a> command reconciles the topology you want with the lab that is already running. If the lab is not deployed yet, <code>apply</code> behaves like <code>deploy</code>; if the lab is running, it compares the desired topology with the live runtime and applies supported deltas without destroying and redeploying the whole lab.</p>
+<p>The new <code>apply</code> command reconciles the topology you want with the lab that is already running. If the lab is not deployed yet, <code>apply</code> behaves like <code>deploy</code>; if the lab is running, it compares the desired topology with the live runtime and applies supported deltas without destroying and redeploying the whole lab.</p>
 <p>The first implementation focuses on topology shape changes: adding and deleting nodes, adding and deleting supported links, starting stopped nodes, restoring parked dataplane interfaces, and restarting or recreating existing nodes for a limited set of state-backed node definition changes.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>lab.clab.yml<span class="w"> </span>--dry-run
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>lab.clab.yml
@@ -4106,7 +4147,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../lab-examples/generic_vm01/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Generic VM">
+          <a href="../0.78/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0.78">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -4116,7 +4157,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Generic VM
+                0.78
               </div>
             </div>
           </a>

@@ -446,6 +446,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.77/" class="md-tabs__link">
+        <a href="../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1009,6 +1015,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1389,6 +1399,68 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reconciliation-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reconciliation behavior
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reconciliation behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-apply-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Link apply modes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Link apply modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overriding-the-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Overriding the mode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-that-a-kind-supports-live-link-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Validating that a kind supports live link changes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconciliation-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reconciliation limitations
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#flags" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1494,6 +1566,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         reconfigure
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        dry-run
       </span>
     </span>
   </a>
@@ -1636,8 +1719,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1686,8 +1769,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1715,6 +1798,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Deploy a lab and regenerate all configuration artifacts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preview-changes-to-an-already-deployed-lab" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preview changes to an already deployed lab
       </span>
     </span>
   </a>
@@ -1751,6 +1845,11 @@
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1864,33 +1963,6 @@
     
   
   restart
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../apply/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  apply
 
     
   </span>
@@ -2112,6 +2184,33 @@
     
   
   graph
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  validate
 
     
   </span>
@@ -2565,6 +2664,8 @@
       
         
       
+        
+      
     
     
     
@@ -2583,7 +2684,7 @@
   
   
   
-    <a href="../../rn/0.77/" class="md-nav__link">
+    <a href="../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -2697,6 +2798,68 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reconciliation-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reconciliation behavior
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reconciliation behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-apply-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Link apply modes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Link apply modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overriding-the-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Overriding the mode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-that-a-kind-supports-live-link-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Validating that a kind supports live link changes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconciliation-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reconciliation limitations
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#flags" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2802,6 +2965,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         reconfigure
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        dry-run
       </span>
     </span>
   </a>
@@ -2944,8 +3118,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2994,8 +3168,8 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -3023,6 +3197,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Deploy a lab and regenerate all configuration artifacts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preview-changes-to-an-already-deployed-lab" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preview changes to an already deployed lab
       </span>
     </span>
   </a>
@@ -3059,6 +3244,11 @@
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -3189,7 +3379,12 @@
   
   <h1 id="deploy-command">deploy command<a class="headerlink" href="#deploy-command" title="Permanent link">#</a></h1>
 <h3 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h3>
-<p>The <code>deploy</code> command spins up a lab using the topology expressed via <a href="../../manual/topo-def-file/">topology definition file</a>.</p>
+<p>The <code>deploy</code> command spins up a lab using the topology expressed via <a href="../../manual/topo-def-file/">topology definition file</a>.
+When the lab is already deployed, <code>deploy</code> reconciles the running lab with the topology
+definition: supported node and link changes are applied in place without destroying and
+redeploying the whole lab. <code>apply</code> is an alias of <code>deploy</code>; both command forms accept the same
+flags and behave identically. <code>--reconfigure</code> retains its explicit destroy-and-recreate behavior,
+and <code>--dry-run</code> previews the planned changes.</p>
 <blockquote>
 <p>All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending <code>CLAB_</code> to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.</p>
 <p>For example, the <code>--max-workers</code> flag for the <code>deploy</code> command can be set via <code>CLAB_DEPLOY_MAX_WORKERS</code> environment variable.
@@ -3198,7 +3393,146 @@ Or <code>CLAB_TOPO=srlinux.dev/clab-srl clab dep -c</code> to deploy a lab with 
 </blockquote>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h3>
 <p><code>containerlab [global-flags] deploy [local-flags]</code></p>
-<p><strong>aliases:</strong> <code>dep</code></p>
+<p><strong>aliases:</strong> <code>dep</code>, <code>apply</code></p>
+<h2 id="reconciliation-behavior">Reconciliation behavior<a class="headerlink" href="#reconciliation-behavior" title="Permanent link">#</a></h2>
+<p>Deploy converges a lab to the topology definition provided by the user. If the lab is not
+deployed yet, it is deployed. If the lab is already deployed, containerlab discovers the current
+state from the container runtime and applies supported topology deltas without destroying and
+redeploying the whole lab. The <code>--dry-run</code> flag previews the planned changes without applying
+them.</p>
+<p>Reconciliation focuses on topology shape changes:</p>
+<ul>
+<li>add nodes</li>
+<li>delete nodes</li>
+<li>add links</li>
+<li>delete links</li>
+</ul>
+<p>Deploy also tracks a small set of existing node definition changes from the last saved state.
+Any tracked change—including <code>exec</code>, <code>environment</code>, <code>image</code>, <code>type</code>, <code>binds</code>, <code>ports</code>, resources,
+runtime, or components—conservatively recreates only the affected node.</p>
+<p>Use <a href="../redeploy/"><code>redeploy</code></a> instead when:</p>
+<ul>
+<li>you modify or add node properties that reconciliation does not support</li>
+<li>you need to change the startup configuration</li>
+<li>the generated configuration artifacts need to change</li>
+</ul>
+<p>When existing nodes need their dataplane adjusted, deploy uses the same endpoint parking
+mechanism as the <code>stop</code>, <code>start</code>, and <code>restart</code> commands: affected nodes are stopped, their
+dataplane interfaces are parked in a temporary network namespace, and the interfaces are restored
+after the node starts again.</p>
+<h3 id="link-apply-modes">Link apply modes<a class="headerlink" href="#link-apply-modes" title="Permanent link">#</a></h3>
+<p>When deploy adds or removes a link on a node that keeps running, the node kind decides how
+disruptive that change is. Three modes exist:</p>
+<ul>
+<li><code>live</code> - the link change is applied in place; the node is neither restarted nor recreated.
+  This requires the NOS to detect interfaces that appear or disappear at runtime (hotplug).</li>
+<li><code>restart</code> - the link change is applied first and the existing container is then restarted so
+  the NOS picks up the new interface inventory.</li>
+<li><code>recreate</code> - the node container is deleted and created again. Generated runtime metadata such
+  as the <code>CLAB_INTFS</code> environment variable and startup files are rebuilt. This is the
+  conservative default for kinds that have not been validated for anything better.</li>
+</ul>
+<p>The currently declared modes per kind:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Mode</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nokia_srlinux</code></td>
+<td><code>live</code></td>
+<td>SR Linux detects hot-plugged interfaces</td>
+</tr>
+<tr>
+<td><code>nokia_srsim</code></td>
+<td><code>live</code></td>
+<td>SR-SIM detects hot-plugged interfaces</td>
+</tr>
+<tr>
+<td><code>linux</code></td>
+<td><code>live</code></td>
+<td>Plain Linux containers see new interfaces immediately</td>
+</tr>
+<tr>
+<td><code>arista_ceos</code></td>
+<td><code>restart</code></td>
+<td>cEOS requires a restart to enumerate new interfaces</td>
+</tr>
+<tr>
+<td>vrnetlab-based VM kinds</td>
+<td><code>recreate</code></td>
+<td>VM NIC wiring is fixed at VM boot; live changes cannot work</td>
+</tr>
+<tr>
+<td>images built with Boxen</td>
+<td><code>live</code></td>
+<td>Detected via the <code>org.opencontainers.image.vendor=Boxen</code> label</td>
+</tr>
+<tr>
+<td>all other kinds</td>
+<td><code>recreate</code></td>
+<td>Conservative default for kinds not yet validated</td>
+</tr>
+</tbody>
+</table>
+<h4 id="overriding-the-mode">Overriding the mode<a class="headerlink" href="#overriding-the-mode" title="Permanent link">#</a></h4>
+<p>If you know that a node's NOS handles hot-plugged interfaces (or at least survives a plain
+restart), you can override the kind default with the <code>link-apply-mode</code> property on a node, a
+group, a kind, or the topology defaults:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">topology</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">r1</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">juniper_crpd</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">crpd:24.4R1.9</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">link-apply-mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">live</span><span class="w"> </span><span class="c1"># apply link changes without recreating the node</span>
+</span></code></pre></div>
+<p>The override takes precedence over the kind's declaration. When the override is more permissive
+than the kind default, containerlab logs a warning: it is then your responsibility to verify the
+NOS actually uses interfaces added this way.</p>
+<h4 id="validating-that-a-kind-supports-live-link-changes">Validating that a kind supports live link changes<a class="headerlink" href="#validating-that-a-kind-supports-live-link-changes" title="Permanent link">#</a></h4>
+<p>The kernel will always show a hot-plugged interface inside the container namespace—the real
+question is whether the NOS picks it up. To validate a kind:</p>
+<ol>
+<li>Deploy a small lab with two nodes of that kind and one link.</li>
+<li>Add a second link between the nodes in the topology file and run
+   <code>containerlab deploy -t &lt;topo&gt;</code> with <code>link-apply-mode: live</code> set on the nodes.</li>
+<li>Confirm the node was not recreated (<code>docker inspect</code> start time is unchanged and the apply
+   summary lists the change under <code>added links</code> without recreating the nodes).</li>
+<li>Confirm the NOS sees and can use the new interface: it shows up in the NOS CLI, can be
+   configured, and passes traffic.</li>
+<li>Remove the link again with deploy and confirm the NOS handles the removal gracefully.</li>
+</ol>
+<p>If a kind passes this validation, please open an issue or pull request so the kind's default can
+be changed for everyone—the change is a one-line declaration in the kind's node implementation.</p>
+<h3 id="reconciliation-limitations">Reconciliation limitations<a class="headerlink" href="#reconciliation-limitations" title="Permanent link">#</a></h3>
+<p>Only a subset of topology changes can be reconciled:</p>
+<ul>
+<li>supported link types are <code>veth</code>, brief links, <code>host</code>, <code>mgmt-net</code>, <code>macvlan</code>, <code>vxlan</code>,
+  <code>vxlan-stitch</code>, <code>dummy</code>, and <code>bridge</code></li>
+<li>distributed nodes, such as SR-SIM with components, are supported for node and link add/delete</li>
+<li>root-namespace-based and <code>ext-container</code> nodes can participate in link reconciliation; deploy
+  does not create or delete their underlying resource</li>
+<li>configuration drift that would require recreating an externally managed node is rejected</li>
+<li>nodes with <code>auto-remove</code> enabled are not supported</li>
+<li><code>network-mode: container:&lt;...&gt;</code> users/providers are not supported</li>
+<li>existing node definition reconciliation is limited to fields captured in the state file</li>
+<li>existing link parameter/type changes with the same runtime interface names are not applied in
+  place; use <code>redeploy</code> for those changes</li>
+</ul>
+<p>Containerlab discovers existing links from live interfaces that carry its ownership marker and
+persists a <code>.state.clab.yaml</code> file under the lab directory after deployment or reconciliation. The
+state file stores the resolved topology used as the baseline for limited node definition
+reconciliation. Older labs without this state file can still reconcile supported shape changes,
+but existing node definition changes are not inferred until a state file has been written. Older
+or manually created interfaces without containerlab's ownership marker are left untouched. If
+such an interface blocks a requested link change, deployment fails instead of deleting it.
+Removed <code>vxlan-stitch</code> host-side interfaces are cleaned up on a best-effort basis when their
+default runtime names can be derived from the stale node endpoint.</p>
+<p>Deleted nodes are removed directly from the runtime. Node lab directories are kept.</p>
 <h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">#</a></h3>
 <h4 id="topology">topology<a class="headerlink" href="#topology" title="Permanent link">#</a></h4>
 <p>With the global <code>--topo | -t</code> flag a user sets the path to the topology definition file that will be used to spin up a lab.</p>
@@ -3289,6 +3623,9 @@ Or <code>CLAB_TOPO=srlinux.dev/clab-srl clab dep -c</code> to deploy a lab with 
 <p>Containerlab supports using S3 URLs to retrieve topology files and startup configurations for network devices. Check out the documentation on <a href="../../manual/s3-usage-example/">S3 usage</a> for more details.</p>
 <h4 id="name">name<a class="headerlink" href="#name" title="Permanent link">#</a></h4>
 <p>With the global <code>--name | -n</code> flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.</p>
+<p>For an already deployed lab, <code>--name</code> can be used without <code>--topo</code>. Containerlab tries to derive
+the topology file from the labels on the deployed containers. If the original topology file is no
+longer available, provide <code>--topo</code> explicitly.</p>
 <h4 id="vars">vars<a class="headerlink" href="#vars" title="Permanent link">#</a></h4>
 <p>Global <code>--vars</code> option for using specified json or yaml file to load template variables from for generating topology file.</p>
 <p>Default is to lookup files with "_vars" suffix and common json/yaml file extensions next to topology file.
@@ -3298,6 +3635,12 @@ For example, for <code>mylab.clab.gotmpl</code> template of topology definition 
 <p>The local <code>--reconfigure | -c</code> flag instructs containerlab to first <strong>destroy</strong> the lab and all its directories and then start the deployment process. That will result in a clean (re)deployment where every configuration artefact will be generated (TLS, node config) from scratch.</p>
 <p>Without this flag present, containerlab will reuse the available configuration artifacts found in the lab directory.</p>
 <p>Refer to the <a href="../../manual/conf-artifacts/">configuration artifacts</a> page to get more information on the lab directory contents.</p>
+<p>Management network overrides (<code>--network</code>, <code>--ipv4-subnet</code> and <code>--ipv6-subnet</code>) require a fresh
+deployment. They are rejected when an existing lab is reconciled; use <code>--reconfigure</code> to apply
+them by destroying and redeploying the lab.</p>
+<h4 id="dry-run">dry-run<a class="headerlink" href="#dry-run" title="Permanent link">#</a></h4>
+<p>The local <code>--dry-run</code> flag prints the planned changes without applying them. For an already deployed lab this shows the <a href="#reconciliation-behavior">reconciliation plan</a>—the nodes and links to add, delete, recreate, or restart. For a lab that is not deployed yet it reports that the lab would be deployed.</p>
+<p><code>--dry-run</code> cannot be combined with <code>--reconfigure</code>, since reconfigure always destroys and redeploys the full lab.</p>
 <h4 id="max-workers">max-workers<a class="headerlink" href="#max-workers" title="Permanent link">#</a></h4>
 <p>With <code>--max-workers</code> flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.</p>
 <h4 id="runtime">runtime<a class="headerlink" href="#runtime" title="Permanent link">#</a></h4>
@@ -3317,7 +3660,7 @@ For example, for <code>mylab.clab.gotmpl</code> template of topology definition 
 <h4 id="export-rendered">export-rendered<a class="headerlink" href="#export-rendered" title="Permanent link">#</a></h4>
 <p>The local <code>--export-rendered &lt;path&gt;</code> flag writes the <strong>fully rendered</strong> topology definition to the given file: after Go template execution and environment-variable substitution, but before containerlab proceeds with the rest of deployment. This is useful for debugging templated labs or capturing the exact YAML that was parsed.</p>
 <p>The path argument is <strong>required</strong>. Relative paths are interpreted from the process working directory.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>lab0.clab.gotmpl<span class="w"> </span>--vars<span class="w"> </span>lab0.clab_vars.yml<span class="w"> </span>--export-rendered<span class="w"> </span>lab0.rendered.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>lab0.clab.gotmpl<span class="w"> </span>--vars<span class="w"> </span>lab0.clab_vars.yml<span class="w"> </span>--export-rendered<span class="w"> </span>lab0.rendered.clab.yml
 </span></code></pre></div>
 <h4 id="log-level">log-level<a class="headerlink" href="#log-level" title="Permanent link">#</a></h4>
 <p>Global <code>--log-level</code> parameter can be used to configure logging verbosity of all containerlab operations.
@@ -3327,6 +3670,7 @@ For example, for <code>mylab.clab.gotmpl</code> template of topology definition 
 <h4 id="node-filter">node-filter<a class="headerlink" href="#node-filter" title="Permanent link">#</a></h4>
 <p>The local <code>--node-filter</code> flag allows users to specify a subset of topology nodes targeted by <code>deploy</code> command. The value of this flag is a comma-separated list of node names as they appear in the topology.</p>
 <p>When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.</p>
+<p>Node filtering applies to fresh deployments (including <code>--reconfigure</code>) only. When deploy <a href="#reconciliation-behavior">reconciles</a> an already deployed lab, the filter is rejected, because running nodes excluded by the filter would otherwise be deleted.</p>
 <p>Read more about <a href="../../manual/node-filtering/">node filtering</a> in the documentation.</p>
 <h4 id="skip-post-deploy">skip-post-deploy<a class="headerlink" href="#skip-post-deploy" title="Permanent link">#</a></h4>
 <p>The <code>--skip-post-deploy</code> flag skips the post-deploy phase of the lab deployment, affecting all nodes.</p>
@@ -3349,36 +3693,37 @@ For example, for <code>mylab.clab.gotmpl</code> template of topology definition 
 <p>The local <code>--owner</code> flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.</p>
 <p>This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the <code>clab_admins</code> group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.</p>
 <p>Example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--owner<span class="w"> </span>alice
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--owner<span class="w"> </span>alice
 </span></code></pre></div>
 <h4 id="restore-all">restore-all<a class="headerlink" href="#restore-all" title="Permanent link">#</a></h4>
 <p>The local <code>--restore-all</code> flag enables restoring vrnetlab-based nodes from previously saved snapshots. When specified, containerlab will look for snapshot files named <code>{nodename}.tar</code> in the provided directory and automatically restore nodes that have matching snapshots.</p>
 <p>Nodes without snapshots in the directory will deploy normally (fresh deployment).</p>
 <p><strong>Default directory</strong>: <code>./snapshots</code> (if flag is used without a value)</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Restore all nodes that have snapshots in ./snapshots directory</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Restore from custom directory</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all<span class="w"> </span>/backups/lab1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Restore all nodes that have snapshots in ./snapshots directory</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Restore from custom directory</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all<span class="w"> </span>/backups/lab1
 </span></code></pre></div>
 <p><strong>Note</strong>: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.</p>
+<p><strong>Note</strong>: Snapshot restore requires a fresh deployment. Restoring into an already deployed lab is rejected; use <code>--reconfigure</code> to destroy the lab and redeploy it from snapshots.</p>
 <h4 id="restore">restore<a class="headerlink" href="#restore" title="Permanent link">#</a></h4>
 <p>The local <code>--restore</code> flag allows per-node snapshot restoration by explicitly specifying the snapshot file path for individual nodes. This flag can be specified multiple times to restore different nodes from different snapshot files.</p>
 <p><strong>Format</strong>: <code>--restore node=path/to/snapshot.tar</code></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Restore only r1 from a specific snapshot</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Restore multiple nodes with specific snapshots</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r2</span><span class="o">=</span>./snapshots/r2.tar
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Restore only r1 from a specific snapshot</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Restore multiple nodes with specific snapshots</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r2</span><span class="o">=</span>./snapshots/r2.tar
 </span></code></pre></div>
 <p><strong>Priority</strong>: Per-node <code>--restore</code> specifications override <code>--restore-all</code> for the specified nodes.</p>
 <p><strong>Combined usage</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Restore all from ./snapshots, but override r3 with a different snapshot</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--restore-all<span class="w"> </span>./snapshots<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r3</span><span class="o">=</span>./backups/r3-old.tar
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Restore all from ./snapshots, but override r3 with a different snapshot</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--restore-all<span class="w"> </span>./snapshots<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r3</span><span class="o">=</span>./backups/r3-old.tar
 </span></code></pre></div>
 <p>In this example:</p>
 <ul>
@@ -3404,21 +3749,31 @@ Affects all containerlab commands in the same way, not just <code>deploy</code>.
 <p>The default behavior is to create the lab directory in the same directory as the topology file (<code>clab.yml</code> file).</p>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h3>
 <h4 id="deploy-a-lab-using-the-given-topology-file">Deploy a lab using the given topology file<a class="headerlink" href="#deploy-a-lab-using-the-given-topology-file" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
 <h4 id="deploy-a-lab-and-regenerate-all-configuration-artifacts">Deploy a lab and regenerate all configuration artifacts<a class="headerlink" href="#deploy-a-lab-and-regenerate-all-configuration-artifacts" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--reconfigure
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--reconfigure
+</span></code></pre></div>
+<h4 id="preview-changes-to-an-already-deployed-lab">Preview changes to an already deployed lab<a class="headerlink" href="#preview-changes-to-an-already-deployed-lab" title="Permanent link">#</a></h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--dry-run
+</span></code></pre></div>
+<p>Shows the <a href="#reconciliation-behavior">reconciliation plan</a> without applying it. Running the same command without <code>--dry-run</code> applies the changes in place.</p>
+<p>The <code>apply</code> alias can be used for the same operation:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+</span></code></pre></div>
+<p>It can also reconcile an already deployed lab by name:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>--name<span class="w"> </span>mylab
 </span></code></pre></div>
 <h4 id="deploy-a-lab-without-specifying-topology-file">Deploy a lab without specifying topology file<a class="headerlink" href="#deploy-a-lab-without-specifying-topology-file" title="Permanent link">#</a></h4>
 <p>Given that a single topology file is present in the current directory.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>containerlab<span class="w"> </span>deploy
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>containerlab<span class="w"> </span>deploy
 </span></code></pre></div>
 <h4 id="deploy-a-lab-using-short-flag-names">Deploy a lab using short flag names<a class="headerlink" href="#deploy-a-lab-using-short-flag-names" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>clab<span class="w"> </span>dep<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>clab<span class="w"> </span>dep<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
 <h4 id="deploy-a-lab-from-a-remote-url-with-curl">Deploy a lab from a remote URL with curl<a class="headerlink" href="#deploy-a-lab-from-a-remote-url-with-curl" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>-
 </span></code></pre></div>
 <div class="footnote">
 <hr />

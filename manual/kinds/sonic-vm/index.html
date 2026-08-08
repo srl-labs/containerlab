@@ -448,6 +448,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.77/" class="md-tabs__link">
+        <a href="../../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1011,6 +1017,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1749,6 +1759,61 @@
   
   
   
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../plvision_sonic/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  PLVision
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../vr-ros/" class="md-nav__link">
         
@@ -2028,6 +2093,33 @@
     
   
   Check Point Cloudguard
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ciena_saos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Ciena SAOS 10
 
     
   </span>
@@ -2903,6 +2995,8 @@
       
         
       
+        
+      
     
     
     
@@ -2921,7 +3015,7 @@
   
   
   
-    <a href="../../../rn/0.77/" class="md-nav__link">
+    <a href="../../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -3189,6 +3283,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3271,12 +3369,14 @@ A kind defines a supported feature set and a startup procedure of a <code>sonic-
 </ol>
 <p>The VM-based image of SONiC is built with the <a href="https://github.com/srl-labs/vrnetlab/tree/master/sonic"><code>srl-labs/vrnetlab</code></a> project.</p>
 <h2 id="getting-sonic-images">Getting Sonic images<a class="headerlink" href="#getting-sonic-images" title="Permanent link">#</a></h2>
-<p>Getting SONiC images is possible via two resources:</p>
+<p>Getting SONiC images is possible via the following resources:</p>
 <ol>
 <li><a href="https://sonic.software/">Sonic.software</a> -- an unofficial repo with SONiC images (may be down sometimes, uses Azure pipeline as a source)</li>
 <li><a href="https://sonic-build.azurewebsites.net/ui/sonic/pipelines">Azure pipeline</a> -- an official source of SONiC images (may also be down eventually), and finding the right one there is a pita.</li>
 <li><a href="https://sonic-net.github.io/SONiC/sonic_latest_images.html">Another pipeline view</a> -- may not contain recent pipelines.</li>
 </ol>
+<details>
+<summary>How to download SONiC image from Azure pipeline?</summary>
 <p>When <a href="https://sonic.software">https://sonic.software</a> is down, you can follow the following procedure to find the SONiC image in the Azure pipeline artifacts maze:</p>
 <ol>
 <li>Go to the piplines list: <a href="https://sonic-build.azurewebsites.net/ui/sonic/pipelines">https://sonic-build.azurewebsites.net/ui/sonic/pipelines</a></li>
@@ -3292,6 +3392,7 @@ A kind defines a supported feature set and a startup procedure of a <code>sonic-
 <video width="100%" controls>
   <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/054c60a0c8d685f826297c115470221b/sonic-dl.mp4" type="video/mp4">
 </video>
+</details>
 </details>
 <h2 id="managing-sonic-vm-nodes">Managing sonic-vm nodes<a class="headerlink" href="#managing-sonic-vm-nodes" title="Permanent link">#</a></h2>
 <p>SONiC node launched with containerlab takes approximately 1 minute to boot up and can be managed via the following interfaces:</p>

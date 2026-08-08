@@ -448,6 +448,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.77/" class="md-tabs__link">
+        <a href="../../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1011,6 +1017,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1578,6 +1588,61 @@
   
   
   
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../plvision_sonic/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  PLVision
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../vr-ros/" class="md-nav__link">
         
@@ -1857,6 +1922,33 @@
     
   
   Check Point Cloudguard
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ciena_saos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Ciena SAOS 10
 
     
   </span>
@@ -2801,6 +2893,8 @@
       
         
       
+        
+      
     
     
     
@@ -2819,7 +2913,7 @@
   
   
   
-    <a href="../../../rn/0.77/" class="md-nav__link">
+    <a href="../../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -3048,6 +3142,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3116,6 +3214,10 @@
 <li>The name of the node of <code>ext-container</code> kind should match the container name as displayed by the <code>docker ps</code> command.</li>
 </ol>
 <p>By specifying the node <code>external-node1</code> as part of the containerlab topology, users can use this node name in the links section of the file and create links between containerlab-managed and externally-managed nodes.</p>
+<p><code>containerlab apply</code> can add and remove containerlab-owned interfaces on an external container.
+The external container itself remains outside containerlab's lifecycle and is never started,
+stopped, restarted, created, or deleted by these operations. If it is stopped, start it outside
+containerlab before running <code>apply</code>.</p>
 <h2 id="interacting-with-external-container-nodes">Interacting with External Container nodes<a class="headerlink" href="#interacting-with-external-container-nodes" title="Permanent link">#</a></h2>
 <p>Even though External Container nodes are not scheduled by containerlab, it is possible to configure or interact with them using containerlab topology definition options.</p>
 <p>For example, when deploying containerlab topology, users can execute commands in the external containers using <a href="../../nodes/#exec"><code>exec</code></a> configuration option:</p>

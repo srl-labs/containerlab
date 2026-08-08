@@ -446,6 +446,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.77/" class="md-tabs__link">
+        <a href="../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1009,6 +1015,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -2321,6 +2331,8 @@
       
         
       
+        
+      
     
     
     
@@ -2339,7 +2351,7 @@
   
   
   
-    <a href="../../rn/0.77/" class="md-nav__link">
+    <a href="../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -2407,6 +2419,11 @@
                       
                     
                     
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -2418,6 +2435,25 @@
   
     
   
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#git-lfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Git LFS
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -2581,6 +2617,13 @@
 <p>Containerlab relies on contributions from the community to improve existing functionality and add new features. The developers guide provides information on how to contribute to various bits of the project.</p>
 <p>Remember, that all contributions are welcome and important, no matter how big or small they are. Spot a typo in the documentation? Found a bug? Have an idea for a new feature? Want to improve the performance of the code? All of these are valuable contributions to the project.</p>
 <p>Thank you for considering contributing to containerlab!</p>
+<h2 id="git-lfs">Git LFS<a class="headerlink" href="#git-lfs" title="Permanent link">#</a></h2>
+<p>Containerlab repo stores raster, video and other graphics using <a href="https://git-lfs.com/">Git Large File Storage (LFS)</a>. Contributors should have Git LFS installed in their system and initialize it in their clone:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>lfs<span class="w"> </span>install
+</span></code></pre></div>
+<p>When a maintainer pushes to a contributor's pull request branch, GitHub may reject the LFS lock check with <code>You must have push access to verify locks</code>, even when the contributor allows maintainer edits. Containerlab does not use LFS file locking, so disable this check locally:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>config<span class="w"> </span>--local<span class="w"> </span><span class="s1">&#39;lfs.https://github.com/.locksverify&#39;</span><span class="w"> </span><span class="nb">false</span>
+</span></code></pre></div>
   
 
   

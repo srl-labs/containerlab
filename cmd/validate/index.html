@@ -12,13 +12,13 @@
         <meta name="author" content="Roman Dodin">
       
       
-        <link rel="canonical" href="https://containerlab.dev/cmd/apply/">
+        <link rel="canonical" href="https://containerlab.dev/cmd/validate/">
       
       
-        <link rel="prev" href="../restart/">
+        <link rel="prev" href="../graph/">
       
       
-        <link rel="next" href="../redeploy/">
+        <link rel="next" href="../tools/disable-tx-offload/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>apply command - containerlab</title>
+        <title>validate command - containerlab</title>
       
     
     
@@ -167,9 +167,9 @@
 
 <!-- Open graph meta tags -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="containerlab - apply command" />
+<meta property="og:title" content="containerlab - validate command" />
 <meta property="og:description" content="Containerlab deploys docker based meshed lab topologies" />
-<meta property="og:url" content="https://containerlab.dev/cmd/apply/" />
+<meta property="og:url" content="https://containerlab.dev/cmd/validate/" />
 <meta property="og:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
@@ -179,7 +179,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@ntdvps" />
 <meta name="twitter:creator" content="@ntdvps" />
-<meta name="twitter:title" content="containerlab - apply command" />
+<meta name="twitter:title" content="containerlab - validate command" />
 <meta name="twitter:description" content="Containerlab deploys docker based meshed lab topologies" />
 <meta name="twitter:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
 
@@ -203,7 +203,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#apply-command" class="md-skip">
+        <a href="#validate-command" class="md-skip">
           Skip to content
         </a>
       
@@ -246,7 +246,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              apply command
+              validate command
             
           </span>
         </div>
@@ -376,6 +376,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.77/" class="md-tabs__link">
+        <a href="../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1009,6 +1015,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1440,274 +1450,6 @@
                 
   
   
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  apply
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  apply
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Description
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#link-apply-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Link apply modes
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Link apply modes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#overriding-the-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Overriding the mode
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#validating-that-a-kind-supports-live-link-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Validating that a kind supports live link changes
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Usage
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Flags
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Flags">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#topology-name" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        topology | name
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dry-run" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        dry-run
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#max-workers" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        max-workers
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skip-post-deploy" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        skip-post-deploy
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#export-template" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        export-template
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Limitations
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Examples
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#preview-topology-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Preview topology changes
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploy-or-apply-topology-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Deploy or apply topology changes
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#apply-by-lab-name" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Apply by lab name
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
@@ -1920,6 +1662,180 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  validate
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  validate
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Description
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Usage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Flags
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Flags">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Topology
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Examples
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validate-a-lab-using-the-given-topology-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Validate a lab using the given topology file
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate-a-lab-without-specifying-topology-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Validate a lab without specifying topology file
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate-a-lab-using-short-flag-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Validate a lab using short flag names
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2366,6 +2282,8 @@
       
         
       
+        
+      
     
     
     
@@ -2384,7 +2302,7 @@
   
   
   
-    <a href="../../rn/0.77/" class="md-nav__link">
+    <a href="../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -2487,45 +2405,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#link-apply-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Link apply modes
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Link apply modes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#overriding-the-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Overriding the mode
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#validating-that-a-kind-supports-live-link-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Validating that a kind supports live link changes
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2549,54 +2428,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#topology-name" class="md-nav__link">
+  <a href="#topology" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        topology | name
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dry-run" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        dry-run
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#max-workers" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        max-workers
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skip-post-deploy" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        skip-post-deploy
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#export-template" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        export-template
+        Topology
       </span>
     </span>
   </a>
@@ -2605,17 +2440,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Limitations
-      </span>
-    </span>
-  </a>
   
 </li>
       
@@ -2632,10 +2456,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#preview-topology-changes" class="md-nav__link">
+  <a href="#validate-a-lab-using-the-given-topology-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Preview topology changes
+        Validate a lab using the given topology file
       </span>
     </span>
   </a>
@@ -2643,10 +2467,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deploy-or-apply-topology-changes" class="md-nav__link">
+  <a href="#validate-a-lab-without-specifying-topology-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Deploy or apply topology changes
+        Validate a lab without specifying topology file
       </span>
     </span>
   </a>
@@ -2654,10 +2478,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#apply-by-lab-name" class="md-nav__link">
+  <a href="#validate-a-lab-using-short-flag-names" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Apply by lab name
+        Validate a lab using short flag names
       </span>
     </span>
   </a>
@@ -2772,7 +2596,7 @@
 
                   
   
-    <a href="https://github.com/srl-labs/containerlab/edit/main/docs/cmd/apply.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/srl-labs/containerlab/edit/main/docs/cmd/validate.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2781,7 +2605,7 @@
     
       
     
-    <a href="https://github.com/srl-labs/containerlab/raw/main/docs/cmd/apply.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/srl-labs/containerlab/raw/main/docs/cmd/validate.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
     </a>
@@ -2789,185 +2613,36 @@
 
 
   
-  <h1 id="apply-command">apply command<a class="headerlink" href="#apply-command" title="Permanent link">#</a></h1>
-<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h2>
-<p>The <code>apply</code> command reconciles the existing lab topology with the topology definition provided by the user. If the lab is not
-deployed yet, <code>apply</code> deploys it. If the lab is already deployed, <code>apply</code> discovers the current
-state from the container runtime and applies supported topology deltas without destroying and
-redeploying the whole lab.</p>
-<p>The first implementation focuses on topology shape changes:</p>
-<ul>
-<li>add nodes</li>
-<li>delete nodes</li>
-<li>add links</li>
-<li>delete links</li>
-</ul>
-<p>Apply also tracks a small set of existing node definition changes from the last saved apply state:</p>
-<ul>
-<li>Changes, such as <code>exec</code>, restart the existing node;</li>
-<li>Changes that affect the container object, such as <code>image</code>, <code>type</code>, <code>environment</code>, <code>binds</code>, <code>ports</code>, <code>resources</code>, <code>runtime</code>, or <code>components</code>, recreate the node.</li>
-</ul>
-<p>Use <code>redeploy</code> instead of <code>apply</code> when:</p>
-<ul>
-<li>you modify or add node properties that <code>apply</code> does not support</li>
-<li>you need to change the startup configuration,</li>
-<li>the generated configuration artifacts need to change.</li>
-</ul>
-<p>When existing nodes need their dataplane adjusted, apply uses the same endpoint parking
-mechanism as <code>stop</code>/<code>start</code>/<code>restart</code> commands: affected nodes are stopped, their dataplane
-interfaces are parked in a temporary network namespace, and the interfaces are restored after the
-node starts again.</p>
+  <h1 id="validate-command">validate command<a class="headerlink" href="#validate-command" title="Permanent link">#</a></h1>
+<h3 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h3>
+<p>The <code>validate</code> command parses a topology definition file and runs the same schema, node, and link checks that the <code>deploy</code> or <code>destroy</code> commands perform but without deploying or destroying the lab. </p>
+<p>It is useful for catching errors in a topology file before deploying it, for example as a linting step in a CI pipeline.</p>
+<p>If the topology is valid, containerlab reports the lab name along with the number of nodes and links and exits with a zero exit code. If the topology is invalid, the offending error is printed and containerlab exits with a non-zero exit code.</p>
+<h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h3>
+<p><code>containerlab [global-flags] validate [local-flags]</code></p>
+<p><strong>aliases:</strong> <code>val</code></p>
+<h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">#</a></h3>
 <blockquote>
 <p>All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending <code>CLAB_</code> to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.</p>
 <p>For example, the <code>--max-workers</code> flag for the <code>deploy</code> command can be set via <code>CLAB_DEPLOY_MAX_WORKERS</code> environment variable.
 Or <code>CLAB_INSPECT_ALL=1</code> to set <code>--all</code> flag for the <code>inspect</code> command.
 Or <code>CLAB_TOPO=srlinux.dev/clab-srl clab dep -c</code> to deploy a lab with the topology passed via environment variable.</p>
 </blockquote>
-<h2 id="link-apply-modes">Link apply modes<a class="headerlink" href="#link-apply-modes" title="Permanent link">#</a></h2>
-<p>When apply adds or removes a link on a node that keeps running, the node kind decides how
-disruptive that change is. Three modes exist:</p>
-<ul>
-<li><code>live</code> - the link change is applied in place; the node is neither restarted nor recreated.
-  This requires the NOS to detect interfaces that appear or disappear at runtime (hotplug).</li>
-<li><code>restart</code> - the link change is applied first and the existing container is then restarted so
-  the NOS picks up the new interface inventory.</li>
-<li><code>recreate</code> - the node container is deleted and created again. Generated runtime metadata such
-  as the <code>CLAB_INTFS</code> environment variable and startup files are rebuilt. This is the
-  conservative default for kinds that have not been validated for anything better.</li>
-</ul>
-<p>The currently declared modes per kind:</p>
-<table>
-<thead>
-<tr>
-<th>Kind</th>
-<th>Mode</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>nokia_srlinux</code></td>
-<td><code>live</code></td>
-<td>SR Linux detects hot-plugged interfaces</td>
-</tr>
-<tr>
-<td><code>nokia_srsim</code></td>
-<td><code>live</code></td>
-<td>SR-SIM detects hot-plugged interfaces</td>
-</tr>
-<tr>
-<td><code>linux</code></td>
-<td><code>live</code></td>
-<td>plain Linux containers see new interfaces immediately</td>
-</tr>
-<tr>
-<td><code>arista_ceos</code></td>
-<td><code>restart</code></td>
-<td>cEOS requires a restart to enumerate new interfaces</td>
-</tr>
-<tr>
-<td>vrnetlab-based VM kinds</td>
-<td><code>recreate</code></td>
-<td>VM NIC wiring is fixed at VM boot; live changes cannot work</td>
-</tr>
-<tr>
-<td>images built with Boxen</td>
-<td><code>live</code></td>
-<td>detected via the <code>org.opencontainers.image.vendor=Boxen</code> label</td>
-</tr>
-<tr>
-<td>all other kinds</td>
-<td><code>recreate</code></td>
-<td>conservative default for kinds not yet validated</td>
-</tr>
-</tbody>
-</table>
-<h3 id="overriding-the-mode">Overriding the mode<a class="headerlink" href="#overriding-the-mode" title="Permanent link">#</a></h3>
-<p>If you know that a node's NOS handles hot-plugged interfaces (or at least survives a plain
-restart), you can override the kind default with the <code>link-apply-mode</code> property on a node, a
-group, a kind, or the topology defaults:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">topology</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">r1</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">juniper_crpd</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">crpd:24.4R1.9</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">link-apply-mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">live</span><span class="w"> </span><span class="c1"># apply link changes without recreating the node</span>
+<h4 id="topology">Topology<a class="headerlink" href="#topology" title="Permanent link">#</a></h4>
+<p>With the global <code>--topo | -t</code> flag a user sets the path to the topology definition file that will be validated.</p>
+<p>When the topology path refers to a directory, containerlab will look for a file with <code>.clab.yml</code> or <code>.clab.yaml</code> extension in that directory and use it as a topology definition file.</p>
+<p>When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory.</p>
+<p>If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will open an interactive selector to let you pick the topology file from the discovered <code>clab.yml</code> or <code>clab.yaml</code> files.</p>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h3>
+<h4 id="validate-a-lab-using-the-given-topology-file">Validate a lab using the given topology file<a class="headerlink" href="#validate-a-lab-using-the-given-topology-file" title="Permanent link">#</a></h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>containerlab<span class="w"> </span>validate<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
-<p>The override takes precedence over the kind's declaration. When the override is more permissive
-than the kind default, containerlab logs a warning: it is then your responsibility to verify the
-NOS actually uses interfaces added this way.</p>
-<h3 id="validating-that-a-kind-supports-live-link-changes">Validating that a kind supports live link changes<a class="headerlink" href="#validating-that-a-kind-supports-live-link-changes" title="Permanent link">#</a></h3>
-<p>The kernel will always show a hot-plugged interface inside the container namespace - the real
-question is whether the NOS picks it up. To validate a kind:</p>
-<ol>
-<li>Deploy a small lab with two nodes of that kind and one link.</li>
-<li>Add a second link between the nodes in the topology file and run
-   <code>containerlab apply -t &lt;topo&gt;</code> with <code>link-apply-mode: live</code> set on the nodes.</li>
-<li>Confirm the node was not recreated (<code>docker inspect</code> start time is unchanged and the apply
-   summary lists the change under <code>added links</code> without recreating the nodes).</li>
-<li>Confirm the NOS sees and can use the new interface: it shows up in the NOS CLI, can be
-   configured, and passes traffic.</li>
-<li>Remove the link again with apply and confirm the NOS handles the removal gracefully.</li>
-</ol>
-<p>If a kind passes this validation, please open an issue or pull request so the kind's default can
-be changed for everyone - the change is a one-line declaration in the kind's node implementation.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<p><code>containerlab [global-flags] apply [local-flags]</code></p>
-<h2 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">#</a></h2>
-<h3 id="topology-name">topology | name<a class="headerlink" href="#topology-name" title="Permanent link">#</a></h3>
-<p>Use the global <code>--topo | -t</code> flag to reference the desired topology file, or use the global
-<code>--name</code> flag to reference an already deployed lab by name.</p>
-<p>When the lab does not exist yet, <code>--topo</code> is required because there is no runtime state from which
-containerlab can derive the original topology path.</p>
-<p>When <code>--name</code> is used, containerlab tries to derive the topology file from the labels on the
-deployed containers. If the original topology file is no longer available, provide <code>--topo</code>
-explicitly.</p>
-<h3 id="dry-run">dry-run<a class="headerlink" href="#dry-run" title="Permanent link">#</a></h3>
-<p>The local <code>--dry-run</code> flag prints the planned apply actions without applying them.</p>
-<h3 id="max-workers">max-workers<a class="headerlink" href="#max-workers" title="Permanent link">#</a></h3>
-<p>With <code>--max-workers</code> flag, it is possible to limit the number of concurrent workers that create
-new nodes.</p>
-<h3 id="skip-post-deploy">skip-post-deploy<a class="headerlink" href="#skip-post-deploy" title="Permanent link">#</a></h3>
-<p>The <code>--skip-post-deploy</code> flag skips the post-deploy phase for nodes added by apply.</p>
-<h3 id="export-template">export-template<a class="headerlink" href="#export-template" title="Permanent link">#</a></h3>
-<p>The local <code>--export-template</code> flag allows a user to specify a custom Go template that will be used
-for exporting topology data into <code>topology-data.json</code> file under the lab directory after apply
-finishes.</p>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
-<p>Apply currently supports only a subset of topology changes:</p>
-<ul>
-<li>supported link types are <code>veth</code>, brief links, <code>host</code>, <code>mgmt-net</code>, <code>macvlan</code>, <code>vxlan</code>,
-  <code>vxlan-stitch</code>, <code>dummy</code>, and <code>bridge</code></li>
-<li>distributed nodes, such as SR-SIM with components, are supported for node and link add/delete</li>
-<li>root-namespace-based nodes are not supported</li>
-<li>nodes with <code>auto-remove</code> enabled are not supported</li>
-<li><code>ext-container</code> and other pre-existing container nodes are not supported</li>
-<li><code>network-mode: container:&lt;...&gt;</code> users/providers are not supported</li>
-<li>existing node definition reconciliation is limited to fields captured in the apply state file</li>
-<li>existing link parameter/type changes with the same runtime interface names are not applied in
-  place; use <code>redeploy</code> for those changes</li>
-</ul>
-<p>Apply discovers existing links from live interfaces that carry containerlab's ownership marker and
-persists a <code>.state.clab.yaml</code> file under the lab directory after <code>deploy</code> and <code>apply</code>. The state file
-stores the resolved topology used as the baseline for limited node definition reconciliation. Older
-labs without this state file can still apply supported shape changes, but existing node definition
-changes are not inferred until a state file has been written. Older or manually created interfaces
-without containerlab's ownership marker are left untouched. If such an interface blocks a requested
-link change, apply fails instead of deleting it. Removed <code>vxlan-stitch</code> host-side interfaces are
-cleaned up on a best-effort basis when their default runtime names can be derived from the stale node
-endpoint.</p>
-<p>Deleted nodes are removed directly from the runtime. Node lab directories are kept.</p>
-<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
-<h3 id="preview-topology-changes">Preview topology changes<a class="headerlink" href="#preview-topology-changes" title="Permanent link">#</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--dry-run
+<h4 id="validate-a-lab-without-specifying-topology-file">Validate a lab without specifying topology file<a class="headerlink" href="#validate-a-lab-without-specifying-topology-file" title="Permanent link">#</a></h4>
+<p>Given that a single topology file is present in the current directory.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>containerlab<span class="w"> </span>validate
 </span></code></pre></div>
-<h3 id="deploy-or-apply-topology-changes">Deploy or apply topology changes<a class="headerlink" href="#deploy-or-apply-topology-changes" title="Permanent link">#</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
-</span></code></pre></div>
-<p>If <code>mylab</code> is not running, the command deploys it. If it is running, the command applies supported
-topology changes in place.</p>
-<h3 id="apply-by-lab-name">Apply by lab name<a class="headerlink" href="#apply-by-lab-name" title="Permanent link">#</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>--name<span class="w"> </span>mylab
+<h4 id="validate-a-lab-using-short-flag-names">Validate a lab using short flag names<a class="headerlink" href="#validate-a-lab-using-short-flag-names" title="Permanent link">#</a></h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>clab<span class="w"> </span>val<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
   
 
@@ -3022,7 +2697,7 @@ topology changes in place.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../restart/" class="md-footer__link md-footer__link--prev" aria-label="Previous: restart">
+          <a href="../graph/" class="md-footer__link md-footer__link--prev" aria-label="Previous: graph">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -3032,20 +2707,20 @@ topology changes in place.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                restart
+                graph
               </div>
             </div>
           </a>
         
         
           
-          <a href="../redeploy/" class="md-footer__link md-footer__link--next" aria-label="Next: redeploy">
+          <a href="../tools/disable-tx-offload/" class="md-footer__link md-footer__link--next" aria-label="Next: disable-tx-offload">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                redeploy
+                disable-tx-offload
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -446,6 +446,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -830,12 +834,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.77/" class="md-tabs__link">
+        <a href="../../rn/0.78/" class="md-tabs__link">
           
   
   Release notes
@@ -1009,6 +1015,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -2757,6 +2767,8 @@
       
         
       
+        
+      
     
     
     
@@ -2775,7 +2787,7 @@
   
   
   
-    <a href="../../rn/0.77/" class="md-nav__link">
+    <a href="../../rn/0.78/" class="md-nav__link">
       
   
   
@@ -3202,8 +3214,15 @@
 </ul>
 <h4 id="execution">Execution<a class="headerlink" href="#execution" title="Permanent link">#</a></h4>
 <p>The test case is written in Go language. To run it, <a href="https://go.dev/doc/install">Go &gt;= 1.21</a> needs to be installed first.</p>
-<p>Once installed, run the test:</p>
-<div class="language-Shell highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>go<span class="w"> </span>run<span class="w"> </span>ipv4_forwarding.go
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The Go module for this test is intentionally not part of the containerlab repository. Create a separate module, add the tested <code>gosnappi</code> dependency, and run the test source from there.</p>
+</div>
+<div class="language-Shell highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/ixiac01-client
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>~/ixiac01-client
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>go<span class="w"> </span>mod<span class="w"> </span>init<span class="w"> </span>ixiac01-client
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>go<span class="w"> </span>get<span class="w"> </span>github.com/open-traffic-generator/snappi/gosnappi@v1.55.0
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>go<span class="w"> </span>run<span class="w"> </span>/etc/containerlab/lab-examples/ixiac01/ipv4_forwarding.go
 </span></code></pre></div>
 <p>Once 100 packets are sent, the test script checks that we received all the sent packets.</p>
 <p>During the test run you will see flow metrics reported each second with the current flow data such as:</p>

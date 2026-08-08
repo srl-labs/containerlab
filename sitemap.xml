@@ -115,6 +115,9 @@
         <loc>https://containerlab.dev/manual/kinds/dell_sonic/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/manual/kinds/plvision_sonic/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/manual/kinds/vr-ros/</loc>
       </url>
       <url>
@@ -146,6 +149,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/manual/kinds/checkpoint_cloudguard/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/manual/kinds/ciena_saos/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/manual/kinds/fortinet_fortigate/</loc>
@@ -295,9 +301,6 @@
         <loc>https://containerlab.dev/cmd/restart/</loc>
       </url>
       <url>
-        <loc>https://containerlab.dev/cmd/apply/</loc>
-      </url>
-      <url>
         <loc>https://containerlab.dev/cmd/redeploy/</loc>
       </url>
       <url>
@@ -320,6 +323,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/cmd/graph/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/cmd/validate/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/cmd/tools/disable-tx-offload/</loc>
@@ -506,6 +512,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/lab-examples/generic_vm01/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/rn/0.78/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/rn/0.77/</loc>
