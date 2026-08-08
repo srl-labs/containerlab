@@ -197,20 +197,8 @@ func (c *CLab) deploy( //nolint: funlen
 		return nil, err
 	}
 
-	if nodesWg != nil {
-		nodesWg.Wait()
-	}
-
-	close(nodeFailCh)
-	var nodeFailErrs []error
-	for nodeErr := range nodeFailCh {
-		nodeFailErrs = append(nodeFailErrs, nodeErr)
-	}
-	if len(nodeFailErrs) > 0 {
-		return nil, fmt.Errorf(
-			"deployment failed for one or more nodes: %w",
-			errors.Join(nodeFailErrs...),
-		)
+	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
+		return nil, err
 	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
@@ -237,6 +225,37 @@ func (c *CLab) deploy( //nolint: funlen
 	execCollection.Log()
 
 	return c.finalize(ctx, options.exportTemplate, options.graph)
+}
+
+func waitForNodeDeploy(
+	ctx context.Context,
+	nodesWg *sync.WaitGroup,
+	nodeFailCh chan error,
+) error {
+	if nodesWg != nil {
+		nodesWg.Wait()
+	}
+
+	close(nodeFailCh)
+
+	// Cancellation takes precedence over errors caused by workers unwinding, and
+	// prevents post-deploy work from running against a partial lab.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	var nodeFailErrs []error
+	for nodeErr := range nodeFailCh {
+		nodeFailErrs = append(nodeFailErrs, nodeErr)
+	}
+	if len(nodeFailErrs) > 0 {
+		return fmt.Errorf(
+			"deployment failed for one or more nodes: %w",
+			errors.Join(nodeFailErrs...),
+		)
+	}
+
+	return nil
 }
 
 func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
