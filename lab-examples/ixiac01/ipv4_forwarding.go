@@ -1,3 +1,5 @@
+//go:build ignore
+
 /*
 Test IPv4 Forwarding with
 - Endpoints: OTG 1.1.1.1 -----> 1.1.1.2 DUT 2.2.2.2 ------> OTG 2.2.2.1
