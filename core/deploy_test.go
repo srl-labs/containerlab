@@ -5,9 +5,42 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"strings"
+	"sync"
 	"testing"
 )
+
+func TestWaitForNodeDeployErrorPrecedence(t *testing.T) {
+	nodeErr := errors.New("node failed")
+
+	t.Run("parent cancellation takes precedence", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		nodeFailCh := make(chan error, 1)
+		nodeFailCh <- nodeErr
+
+		err := waitForNodeDeploy(ctx, &sync.WaitGroup{}, nodeFailCh)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("waitForNodeDeploy() error = %v, want context.Canceled", err)
+		}
+		if errors.Is(err, nodeErr) {
+			t.Fatalf("waitForNodeDeploy() returned node error after cancellation: %v", err)
+		}
+	})
+
+	t.Run("internal failure preserves node error", func(t *testing.T) {
+		nodeFailCh := make(chan error, 1)
+		nodeFailCh <- nodeErr
+
+		err := waitForNodeDeploy(context.Background(), &sync.WaitGroup{}, nodeFailCh)
+		if !errors.Is(err, nodeErr) {
+			t.Fatalf("waitForNodeDeploy() error = %v, want node error", err)
+		}
+	})
+}
 
 func TestCheckReconcileDeployOptionsRejectsManagementNetworkOverrides(t *testing.T) {
 	t.Parallel()
