@@ -241,6 +241,101 @@ func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
 	// should simply and quickly return
 }
 
+func Test_scheduleNodes_PostDeployFailureCancelsWorkers(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	postDeployErr := errors.New("post-deploy failed")
+	blockedReady := make(chan struct{})
+
+	failingNode := clabmocksmocknodes.NewMockNode(mockCtrl)
+	failingNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "node1",
+		Stages:    clabtypes.NewStages(),
+	}).AnyTimes()
+	failingNode.EXPECT().GetShortName().Return("node1").AnyTimes()
+	failingNode.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	failingNode.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+	failingNode.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+	failingNode.EXPECT().DeployEndpoints(gomock.Any()).Return(nil)
+	failingNode.EXPECT().PostDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *clabnodes.PostDeployParams) error {
+			<-blockedReady
+			return postDeployErr
+		},
+	)
+
+	blockedNode := clabmocksmocknodes.NewMockNode(mockCtrl)
+	blockedNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "node2",
+		Stages:    clabtypes.NewStages(),
+	}).AnyTimes()
+	blockedNode.EXPECT().GetShortName().Return("node2").AnyTimes()
+	blockedNode.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	blockedNode.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+	blockedNode.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+	blockedNode.EXPECT().DeployEndpoints(gomock.Any()).DoAndReturn(func(context.Context) error {
+		close(blockedReady)
+		return nil
+	})
+
+	dependencyManager := clabcoredependency_manager.NewDependencyManager()
+	dependencyManager.AddNode(failingNode)
+	dependencyManager.AddNode(blockedNode)
+	failingDependency, err := dependencyManager.GetNode("node1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockedDependency, err := dependencyManager.GetNode("node2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := failingDependency.AddDepender(
+		clabtypes.WaitForConfigure,
+		blockedDependency,
+		clabtypes.WaitForConfigure,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	c := &CLab{
+		Config:            &Config{},
+		Nodes:             map[string]clabnodes.Node{"node1": failingNode, "node2": blockedNode},
+		dependencyManager: dependencyManager,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	nodeFailCh := make(chan error, 2)
+	wg, _ := c.scheduleNodes(ctx, 2, false, nodeFailCh)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("workers did not unwind after PostDeploy failure")
+	}
+
+	failingDependency.Done(context.Background(), clabtypes.WaitForConfigure)
+
+	if ctx.Err() != nil {
+		t.Fatalf("scheduler cancellation propagated to parent context: %v", ctx.Err())
+	}
+
+	select {
+	case err := <-nodeFailCh:
+		if !errors.Is(err, postDeployErr) {
+			t.Fatalf("reported error %v does not wrap PostDeploy error %v", err, postDeployErr)
+		}
+	default:
+		t.Fatal("PostDeploy failure was not reported")
+	}
+}
+
 // Test_scheduleNodeWorkerF_HealthyWaitHonorsCancel verifies that the
 // WaitForHealthy polling loop in scheduleNodeWorkerF returns promptly when the
 // deploy context is cancelled, instead of spinning on time.Sleep forever (issue
@@ -305,7 +400,16 @@ func Test_scheduleNodeWorkerF_HealthyWaitHonorsCancel(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		c.scheduleNodeWorkerF(ctx, 0, input, wg, true, clabexec.NewExecCollection(), nodeFailCh)
+		c.scheduleNodeWorkerF(
+			ctx,
+			0,
+			input,
+			wg,
+			true,
+			clabexec.NewExecCollection(),
+			nodeFailCh,
+			cancel,
+		)
 		close(done)
 	}()
 

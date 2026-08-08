@@ -343,6 +343,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 	skipPostDeploy bool,
 	execCollection *clabexec.ExecCollection,
 	nodeFailCh chan<- error,
+	cancelSchedule context.CancelFunc,
 ) {
 	defer wg.Done()
 
@@ -369,7 +370,8 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			if err := c.deployNode(ctx, node); err != nil {
 				log.Error(err)
 				nodeFailCh <- err
-				continue
+				cancelSchedule()
+				return
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreate)
@@ -382,9 +384,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			// Deploy the Nodes link endpoints
 			err := node.DeployEndpoints(ctx)
 			if err != nil {
-				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
-				nodeFailCh <- fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)
-				continue
+				err = fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)
+				log.Error(err)
+				nodeFailCh <- err
+				cancelSchedule()
+				return
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreateLinks)
@@ -396,11 +400,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			if !skipPostDeploy {
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
-					log.Errorf(
-						"failed to run postdeploy task for node %s: %v",
-						node.Config().ShortName,
-						err,
-					)
+					err = fmt.Errorf("node %q post-deploy: %w", node.Config().ShortName, err)
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
 				}
 			}
 
@@ -481,6 +485,7 @@ func (c *CLab) scheduleNodes(
 	skipPostDeploy bool,
 	nodeFailCh chan<- error,
 ) (*sync.WaitGroup, *clabexec.ExecCollection) {
+	scheduleCtx, cancelSchedule := context.WithCancel(ctx)
 	concurrentChan := make(chan *clabcoredependency_manager.DependencyNode)
 
 	execCollection := clabexec.NewExecCollection()
@@ -498,13 +503,14 @@ func (c *CLab) scheduleNodes(
 	// maxWorkers will be 0
 	for i := range maxWorkers {
 		go c.scheduleNodeWorkerF(
-			ctx,
+			scheduleCtx,
 			i,
 			concurrentChan,
 			wg,
 			skipPostDeploy,
 			execCollection,
 			nodeFailCh,
+			cancelSchedule,
 		)
 	}
 
@@ -533,22 +539,22 @@ func (c *CLab) scheduleNodes(
 				// the workerChan is being closed
 				defer wfcwg.Done()
 
-				node.EnterStage(ctx, clabtypes.WaitForCreate)
+				node.EnterStage(scheduleCtx, clabtypes.WaitForCreate)
 				// if the deploy was cancelled while waiting for the create stage, stop
 				// here instead of enqueueing a node whose dependencies were never met
 				// (and whose worker may already have exited).
-				if ctx.Err() != nil {
+				if scheduleCtx.Err() != nil {
 					return
 				}
 
 				// wait for possible external dependencies
-				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
+				c.waitForExternalNodeDependencies(scheduleCtx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the
 				// channel; honor cancellation so the send cannot block forever once the
 				// workers have unwound on Ctrl-C.
 				select {
 				case workerChan <- node:
-				case <-ctx.Done():
+				case <-scheduleCtx.Done():
 				}
 			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
@@ -558,6 +564,11 @@ func (c *CLab) scheduleNodes(
 		workerFuncChWG.Wait()
 		// close the channel and thereby terminate the workerFuncs
 		close(concurrentChan)
+	}()
+
+	go func() {
+		wg.Wait()
+		cancelSchedule()
 	}()
 
 	return wg, execCollection
