@@ -6,7 +6,7 @@ kind_display_name: Ciena SAOS 10
 ---
 # Ciena SAOS 10
 
-The Ciena SAOS 10.x virtualized switch is identified with the `ciena_saos` kind in the
+The Ciena SAOS 10 Simulator is identified with the `ciena_saos` kind in the
 [topology file](../topo-def-file.md). It is distributed by Ciena as a
 [vrnetlab](../vrnetlab.md)-packaged container image and runs as a Qemu VM inside
 the container.
@@ -102,7 +102,7 @@ topology:
   nodes:
     saos-1:
       kind: ciena_saos
-      image: vrnetlab/ciena_saos:10-12-00-0228
+      image: ciena/saos10:10-12-00-0228
       type: 5132
 ```
 
@@ -147,7 +147,7 @@ topology:
   nodes:
     saos-1:
       kind: ciena_saos
-      image: vrnetlab/ciena_saos:10-12-00-0228
+      image: ciena/saos10:10-12-00-0228
       type: 5132
       # CLI partials (e.g. .cfg.partial / .txt.partial) work the same way
       startup-config: configuration.xml.partial
@@ -203,9 +203,6 @@ The partial-config apply outcome is recorded under `meta`:
   records `startup_partial_apply_status=skipped` in `/state.json` (see
   [Boot state and health](#boot-state-and-health)) and continues booting. Any
   configuration must then be applied out-of-band against the node's management IP.
-* Older SAOS 10.11 images may boot and apply config slowly; if the partial apply
-  times out, tune the `SAOS_*_TIMEOUT_S` values described in the
-  [Startup configuration](#startup-configuration) section.
 
 ## Lab examples
 
@@ -220,12 +217,12 @@ topology:
   nodes:
     saos1:
       kind: ciena_saos
-      image: vrnetlab/ciena_saos:10-12-00-0228
+      image: ciena/saos10:10-12-00-0228
       type: 5132
       startup-config: saos1.cfg.partial
     saos2:
       kind: ciena_saos
-      image: vrnetlab/ciena_saos:10-12-00-0228
+      image: ciena/saos10:10-12-00-0228
       type: 5132
       startup-config: saos2.cfg.partial
 
