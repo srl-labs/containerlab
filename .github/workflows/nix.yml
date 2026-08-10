@@ -1,0 +1,49 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+name: nix
+
+on:
+  push:
+    branches: [main]
+    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+  pull_request:
+    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # git describe needs tags
+      - uses: cachix/install-nix-action@v31
+
+      # version + vendorHash are the only things in flake.nix that go stale.
+      - name: Refresh flake.nix
+        id: refresh
+        run: |
+          version=$(git describe --tags --abbrev=0 | tr -d v)
+          sed -i "s|version = \".*\";|version = \"$version\";|" flake.nix
+          got=$(nix build .#containerlab --no-link 2>&1 | awk '/got:/{print $2}')
+          if [ -n "$got" ]; then
+            sed -i "s|vendorHash = \".*\";|vendorHash = \"$got\";|" flake.nix
+          fi
+          nix build .#containerlab --no-link
+          git diff --quiet flake.nix || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Fail PRs with a stale flake.nix
+        if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
+        run: git diff flake.nix && exit 1
+
+      - uses: peter-evans/create-pull-request@v7
+        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+        with:
+          branch: update-flake
+          title: "chore: update flake.nix"
+          commit-message: "chore: update flake.nix"
