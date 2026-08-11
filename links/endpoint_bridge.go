@@ -35,13 +35,6 @@ func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error 
 			errs = append(errs, err)
 		}
 	}
-	// if it is supposed to be a bridge in a Namespace, the if exists check is to be skipped.
-	if e.Node.GetLinkEndpointType() != LinkEndpointTypeBridgeNS {
-		err = CheckEndpointDoesNotExistYet(ctx, e)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}

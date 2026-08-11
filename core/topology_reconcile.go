@@ -377,21 +377,23 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			}
 			n = parkingNode
 		} else if !isApplySpecialNode(nodeName) {
-			status := c.Nodes[nodeName].GetContainerStatus(ctx)
-			if !clabruntime.ContainerHasJoinableNetns(status) {
-				if plan.isExternallyManaged(nodeName) {
+			if c.Nodes[nodeName].Config().Kind != "bridge" {
+				status := c.Nodes[nodeName].GetContainerStatus(ctx)
+				if !clabruntime.ContainerHasJoinableNetns(status) {
+					if plan.isExternallyManaged(nodeName) {
+						return fmt.Errorf(
+							"externally managed node %q is %s; "+
+								"start it outside containerlab before running apply",
+							nodeName,
+							status,
+						)
+					}
 					return fmt.Errorf(
-						"externally managed node %q is %s; "+
-							"start it outside containerlab before running apply",
+						"node %q is %s; apply requires existing nodes to have a joinable network namespace",
 						nodeName,
 						status,
 					)
 				}
-				return fmt.Errorf(
-					"node %q is %s; apply requires existing nodes to have a joinable network namespace",
-					nodeName,
-					status,
-				)
 			}
 		}
 

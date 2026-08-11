@@ -470,6 +470,7 @@ func TestDiscoverLiveApplyEndpointsRejectsStoppedExternalNode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
 	externalNode.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+	externalNode.EXPECT().Config().Return(&clabtypes.NodeConfig{Kind: "ext-container"})
 
 	c := &CLab{
 		Nodes: map[string]clabnodes.Node{"external": externalNode},
