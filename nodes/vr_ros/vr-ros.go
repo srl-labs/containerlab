@@ -162,27 +162,14 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 // filterManagementInterfaceConfig removes ether1 (management interface) IP address configuration
 // from the exported RouterOS configuration to avoid including containerlab management IP settings.
 func (n *vrRos) filterManagementInterfaceConfig(config string) string {
+	re := regexp.MustCompile(`interface=ether1\b.*\bnetwork=`)
 	lines := strings.Split(config, "\n")
 	var filteredLines []string
-
 	for _, line := range lines {
-		// Skip lines related to ether1 IP address configuration
-		if strings.Contains(line, "/ip address") {
-			// Mark that we're in the IP address section
-			filteredLines = append(filteredLines, line)
+		if re.MatchString(line) {
 			continue
 		}
-
-		// Skip IP address entries for ether1 interface
-		if strings.Contains(line, "interface=ether1") &&
-			(strings.Contains(line, "add address=") || strings.Contains(line, "add ")) {
-			// Skip this line as it's ether1 IP configuration
-			continue
-		}
-
-		// Keep all other lines
 		filteredLines = append(filteredLines, line)
 	}
-
 	return strings.Join(filteredLines, "\n")
 }
