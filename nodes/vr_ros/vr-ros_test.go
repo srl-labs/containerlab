@@ -122,7 +122,6 @@ func TestROSInterfaceParsing(t *testing.T) {
 // else. It guards against substring greediness (ether11 must survive) and against
 // collateral removal of neighbouring sections or ether1 references outside /ip address.
 func TestROSFilterManagementInterfaceConfig(t *testing.T) {
-
 	input := `/interface ethernet
 set [ find default-name=ether1 ] advertise="1G-baseT-full,2.5G-baseT,5G-baseT,10G-baseT"
 set [ find default-name=ether12 ] comment="uplink-1" l2mtu=9000
