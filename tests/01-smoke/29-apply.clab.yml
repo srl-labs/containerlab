@@ -50,6 +50,8 @@ topology:
         set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
         set / interface ethernet-1/1 subinterface 0 ipv4 address 172.31.0.2/24
         set / network-instance default interface ethernet-1/1.0
+    br-29-apply:
+      kind: bridge
 {{- if .addNode }}
     l3:
       kind: linux
@@ -64,6 +66,7 @@ topology:
     - endpoints: ["l1:eth1", "l2:eth1"]
     - endpoints: ["n1:eth1", "n2:eth1"]
     - endpoints: ["srlc:eth1", "srl1:e1-1"]
+    - endpoints: ["l2:eth4", "br-29-apply:appbr1"]
 {{- if .addLink }}
     - endpoints: ["l1:eth2", "l2:eth2"]
     - endpoints: ["n1:eth2", "n2:eth2"]

@@ -19,6 +19,8 @@ ${deploy-drift-vars}        29-apply.vars.deploy-drift.yml
 ${runtime-cli-exec-cmd}     docker exec
 ${recovery-timeout}         30s
 ${retry-interval}           2s
+${bridge-name}              br-29-apply
+${bridge-interface}         appbr1
 
 
 *** Test Cases ***
@@ -34,6 +36,8 @@ Apply initial lab
     Interface Should Exist    n2    eth1
     Interface Should Exist    srlc    eth1
     Interface Should Exist    srl1    e1-1
+    Interface Should Exist    l2    eth4
+    Host Interface Should Be Attached To Bridge    ${bridge-interface}    ${bridge-name}
     Configure Interface Address    n1    eth1    172.30.0.1/24
     Configure Interface Address    n2    eth1    172.30.0.2/24
     Configure Interface Address    srlc    eth1    172.31.0.1/24
@@ -50,6 +54,13 @@ Apply initial lab
     ...    Ping From Node Succeeds
     ...    srlc
     ...    172.31.0.2
+
+Apply reconciles existing bridge
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Apply summary
+    Interface Should Exist    l2    eth4
+    Host Interface Should Be Attached To Bridge    ${bridge-interface}    ${bridge-name}
 
 Dry-run reports link additions
     ${rc}    ${output} =    Apply Topology    ${add-link-vars}    --dry-run
@@ -235,9 +246,19 @@ Deploy reconciles node config drift idempotently
 *** Keywords ***
 Setup
     Run Clab Command    destroy --name ${lab-name} --cleanup
+    Run    sudo ip link del ${bridge-name}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link add name ${bridge-name} type bridge
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link set ${bridge-name} up
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
 
 Teardown
     Run Clab Command    destroy --name ${lab-name} --cleanup
+    Run    sudo ip link del ${bridge-name}
 
 Run Clab Command
     [Arguments]    ${args}
@@ -305,6 +326,14 @@ Host Interface Should Not Exist
     ...    ip link show ${interface}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
+
+Host Interface Should Be Attached To Bridge
+    [Arguments]    ${interface}    ${bridge}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ip link show ${interface}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    master ${bridge}
 
 Node Should Be Running
     [Arguments]    ${node}
