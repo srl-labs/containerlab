@@ -30,6 +30,18 @@ func DiscoverOwnedInterfaces(
 	node Node,
 	knownIfaceNames map[string]struct{},
 ) ([]OwnedInterface, error) {
+	return DiscoverOwnedInterfacesFor(ctx, node, node.GetShortName(), knownIfaceNames)
+}
+
+// DiscoverOwnedInterfacesFor discovers interfaces in node's namespace that
+// carry ownership markers for ownerName. Parking nodes use this when the
+// namespace and logical node differ.
+func DiscoverOwnedInterfacesFor(
+	ctx context.Context,
+	node Node,
+	ownerName string,
+	knownIfaceNames map[string]struct{},
+) ([]OwnedInterface, error) {
 	var interfaces []OwnedInterface
 
 	err := node.ExecFunction(ctx, func(_ ns.NetNS) error {
@@ -48,7 +60,7 @@ func DiscoverOwnedInterfaces(
 					continue
 				}
 			}
-			if !HasOwnershipAltNameFor(link, node.GetShortName(), name) {
+			if !HasOwnershipAltNameFor(link, ownerName, name) {
 				continue
 			}
 
@@ -119,6 +131,18 @@ func DiscoverOwnedInterfaceNames(
 // ValidateOwnedInterface returns an error when an existing interface is not
 // owned by the requested logical endpoint. Missing interfaces are valid.
 func ValidateOwnedInterface(ctx context.Context, node Node, ifaceName string) error {
+	return ValidateOwnedInterfaceFor(ctx, node, node.GetShortName(), ifaceName)
+}
+
+// ValidateOwnedInterfaceFor validates an interface in node's namespace against
+// a possibly different logical owner. Parking nodes use this when the
+// interface remains owned by the original node.
+func ValidateOwnedInterfaceFor(
+	ctx context.Context,
+	node Node,
+	ownerName string,
+	ifaceName string,
+) error {
 	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(ifaceName)
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
@@ -127,7 +151,7 @@ func ValidateOwnedInterface(ctx context.Context, node Node, ifaceName string) er
 		if err != nil {
 			return err
 		}
-		if HasOwnershipAltNameFor(link, node.GetShortName(), ifaceName) {
+		if HasOwnershipAltNameFor(link, ownerName, ifaceName) {
 			return nil
 		}
 		return fmt.Errorf(

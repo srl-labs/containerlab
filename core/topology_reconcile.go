@@ -415,9 +415,10 @@ func (c *CLab) discoverLiveApplyEndpoints(
 
 		plan.setEndpointNode(nodeName, n)
 
-		interfaces, err := clablinks.DiscoverOwnedInterfaces(
+		interfaces, err := clablinks.DiscoverOwnedInterfacesFor(
 			ctx,
 			n,
+			nodeName,
 			c.applyKnownEndpointNames(plan, nodeName),
 		)
 		if err != nil {
@@ -455,7 +456,12 @@ func (c *CLab) validateDesiredEndpointOwnership(
 			continue
 		}
 
-		if err := clablinks.ValidateOwnedInterface(ctx, node, key.iface); err != nil {
+		if err := clablinks.ValidateOwnedInterfaceFor(
+			ctx,
+			node,
+			key.node,
+			key.iface,
+		); err != nil {
 			return fmt.Errorf(
 				"desired endpoint %s cannot be reconciled: %w",
 				key.String(),
