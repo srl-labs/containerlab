@@ -452,7 +452,7 @@ func TestVerifyLinks(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = c.verifyLinks(ctx)
+			err = c.verifyLinks(ctx, clablinks.NewVerifyLinkParams())
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}

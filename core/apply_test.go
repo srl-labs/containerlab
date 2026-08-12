@@ -383,6 +383,37 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	}
 }
 
+func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
+	t.Parallel()
+
+	n1 := &applyFakeLinkNode{name: "n1"}
+	n2 := &applyFakeLinkNode{name: "n2"}
+	link := clablinks.NewLinkVEth()
+	ep1 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth1", link))
+	ep2 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n2, "eth1", link))
+	link.Endpoints = []clablinks.Endpoint{ep1, ep2}
+
+	plan := newApplyPlan(nil, nil)
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "n1", iface: "eth1"}: {},
+		{node: "n2", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "n1", iface: "eth1"}: {Name: "eth1", Index: 11, PeerIndex: 21},
+		{node: "n2", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+
+	if !plan.linkNeedsDeploy(link) {
+		t.Fatal("expected link with mismatched live peers to be redeployed")
+	}
+
+	plan.liveEndpointInfo[applyEndpointKey{node: "n1", iface: "eth1"}] =
+		clablinks.OwnedInterface{Name: "eth1", Index: 11, PeerIndex: 22}
+	if plan.linkNeedsDeploy(link) {
+		t.Fatal("expected link with matching live peers to be preserved")
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 
@@ -901,6 +932,38 @@ func TestRuntimeNodeGroupsIncludesPreExistingNodes(t *testing.T) {
 	}
 }
 
+func TestRuntimeNodeGroupsClassifiesRootNamespaceResourcesSeparately(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+
+	node.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		IsRootNamespaceBased: true,
+	})
+	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"bridge": node},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: rt,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	groups, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	group := groups["bridge"]
+	if group == nil || group.external || !group.rootNamespaceBased {
+		t.Fatalf("unexpected root namespace runtime group: %#v", group)
+	}
+}
+
 func TestNeedsInitialDeploy(t *testing.T) {
 	t.Parallel()
 
@@ -935,6 +998,33 @@ func TestNeedsInitialDeploy(t *testing.T) {
 	})
 	if err != nil || initial {
 		t.Fatalf("external nodes with state: initial = %v, error = %v", initial, err)
+	}
+}
+
+func TestNeedsInitialDeployIgnoresRootNamespaceResources(t *testing.T) {
+	t.Parallel()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: lab\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDirByPrefix("lab"); err != nil {
+		t.Fatal(err)
+	}
+	c := &CLab{TopoPaths: topoPaths}
+
+	initial, err := c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"bridge": {rootNamespaceBased: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !initial {
+		t.Fatal("expected root-namespace-only state without a state file to deploy initially")
 	}
 }
 
