@@ -134,6 +134,7 @@ add address=198.51.100.33/24 comment=data-2 interface=ether2 network=198.51.100.
 add address=203.0.113.36/24 comment=data-11 interface=ether11 network=203.0.113.0
 add address=192.0.2.252/24 comment=loopback interface=lo network=192.0.2.252
 /ip dhcp-client
+add interface=ether1 comment="network=keep-this-dhcp-client"
 add interface=VLAN100_LAN name=BR-WAN use-peer-dns=no use-peer-ntp=no
 /ip dhcp-server lease
 add address=192.0.2.219 client-id=\
@@ -165,6 +166,7 @@ add address=192.0.2.0/24 comment=defconf dns-server=198.51.100.53 gateway=\
 		"interface=ether2 network=198.51.100.0",
 		"interface=lo network=192.0.2.252",
 		"/ip dhcp-client",
+		`interface=ether1 comment="network=keep-this-dhcp-client"`,
 		"interface=VLAN100_LAN name=BR-WAN",
 		"/ip dhcp-server lease",
 		"address=192.0.2.219 client-id=",
