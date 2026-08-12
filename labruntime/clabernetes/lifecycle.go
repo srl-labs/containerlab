@@ -30,10 +30,13 @@ func (r *Runtime) Deploy(
 		return nil, fmt.Errorf("rendered containerlab topology is required")
 	}
 
-	namespace := r.namespaceFor(req.Namespace)
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
+	if err != nil {
+		return nil, err
+	}
 	topologyResource := r.client.Resource(topologyGVR).Namespace(namespace)
 
-	_, err := topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
+	_, err = topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
 		// Expected for the primary Node/Link path.
@@ -76,7 +79,25 @@ func (r *Runtime) Deploy(
 		stagePrimitiveNodeDeployments(primitives)
 	}
 
+	managedNamespace := req.Namespace == "" && r.labNamespaceOverride == ""
+	namespaceCreated, err := r.ensureLabNamespace(
+		ctx,
+		req.Name,
+		namespace,
+		managedNamespace,
+	)
+	if err != nil {
+		return nil, err
+	}
+	cleanupNamespace := func() {
+		if namespaceCreated {
+			_, _ = r.deleteManagedLabNamespace(ctx, req.Name, namespace)
+		}
+	}
+
 	if err = r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
+		cleanupNamespace()
+
 		return nil, err
 	}
 
@@ -84,6 +105,7 @@ func (r *Runtime) Deploy(
 	createdNodes, created, err := r.createPrimitiveResources(ctx, namespace, primitives)
 	if err != nil {
 		r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+		cleanupNamespace()
 
 		return nil, err
 	}
@@ -96,6 +118,7 @@ func (r *Runtime) Deploy(
 	); err != nil {
 		r.deleteCreatedPrimitiveResources(ctx, namespace, created)
 		r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+		cleanupNamespace()
 
 		return nil, err
 	}
@@ -109,6 +132,7 @@ func (r *Runtime) Deploy(
 		); err != nil {
 			r.deleteCreatedPrimitiveResources(ctx, namespace, created)
 			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+			cleanupNamespace()
 
 			return nil, err
 		}
@@ -116,6 +140,7 @@ func (r *Runtime) Deploy(
 		if err = r.enablePrimitiveNodeDeployments(ctx, namespace, createdNodes); err != nil {
 			r.deleteCreatedPrimitiveResources(ctx, namespace, created)
 			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+			cleanupNamespace()
 
 			return nil, err
 		}
@@ -147,7 +172,10 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		return fmt.Errorf("topology name is required")
 	}
 
-	namespace := r.namespaceFor(req.Namespace)
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
+	if err != nil {
+		return err
+	}
 	selector := labels.Set{labelTopologyOwner: req.Name}.String()
 
 	log.Info("Deleting clabernetes lab resources", "name", req.Name, "namespace", namespace)
@@ -155,7 +183,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	var deleteErrors []error
 	// Delete the compatibility owner first when present so it cannot recreate compiler output
 	// while the primitive resources are being removed.
-	err := r.client.Resource(topologyGVR).Namespace(namespace).
+	err = r.client.Resource(topologyGVR).Namespace(namespace).
 		Delete(ctx, req.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		deleteErrors = append(deleteErrors, fmt.Errorf(
@@ -211,11 +239,21 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		return errors.Join(deleteErrors...)
 	}
 
-	if !req.Wait {
+	if req.Wait {
+		if err := r.waitDeleted(ctx, req.Name, namespace, req.Timeout); err != nil {
+			return err
+		}
+	}
+
+	namespaceDeleted, err := r.deleteManagedLabNamespace(ctx, req.Name, namespace)
+	if err != nil {
+		return err
+	}
+	if !req.Wait || !namespaceDeleted {
 		return nil
 	}
 
-	return r.waitDeleted(ctx, req.Name, namespace, req.Timeout)
+	return r.waitNamespaceDeleted(ctx, namespace, req.Timeout)
 }
 
 func (r *Runtime) Inspect(
@@ -226,7 +264,10 @@ func (r *Runtime) Inspect(
 		return nil, fmt.Errorf("topology name is required")
 	}
 
-	namespace := r.namespaceFor(req.Namespace)
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
+	if err != nil {
+		return nil, err
+	}
 	obj, err := r.client.Resource(topologyGVR).Namespace(namespace).
 		Get(ctx, req.Name, metav1.GetOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {

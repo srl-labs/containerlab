@@ -56,6 +56,30 @@ func TestRootRequirementHelpers(t *testing.T) {
 	}
 }
 
+func TestNamespaceFlagHasNoShorthand(t *testing.T) {
+	optionsInstance = nil
+	t.Cleanup(func() { optionsInstance = nil })
+
+	root, err := Entrypoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	flag := root.PersistentFlags().Lookup("namespace")
+	if flag == nil {
+		t.Fatal("--namespace flag was not registered")
+	}
+	if flag.Shorthand != "" {
+		t.Fatalf("--namespace shorthand = %q, want none", flag.Shorthand)
+	}
+	if err := root.PersistentFlags().Set("namespace", "default"); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetOptions().Global.Namespace; got != "default" {
+		t.Fatalf("namespace option = %q, want default", got)
+	}
+}
+
 func TestApplyLabRuntimeDefaultTimeout(t *testing.T) {
 	tests := []struct {
 		name            string

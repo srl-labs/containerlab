@@ -58,7 +58,10 @@ type Runtime struct {
 	kubeClient kubernetes.Interface
 	restConfig *rest.Config
 	namespace  string
-	timeout    time.Duration
+	// labNamespaceOverride is set by --namespace or CLAB_KUBE_NAMESPACE. When
+	// empty, lab-scoped operations derive their namespace from the lab name.
+	labNamespaceOverride string
+	timeout              time.Duration
 }
 
 func init() {
@@ -86,10 +89,11 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 	}
 
 	return &Runtime{
-		client:     client,
-		kubeClient: kubeClient,
-		restConfig: kubeConfig,
-		namespace:  namespace,
-		timeout:    cfg.Timeout,
+		client:               client,
+		kubeClient:           kubeClient,
+		restConfig:           kubeConfig,
+		namespace:            namespace,
+		labNamespaceOverride: configuredLabNamespace(cfg.Namespace),
+		timeout:              cfg.Timeout,
 	}, nil
 }

@@ -84,7 +84,10 @@ func (r *Runtime) targetNodes(
 		return nil, "", fmt.Errorf("topology name is required")
 	}
 
-	namespace := r.namespaceFor(req.Namespace)
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
+	if err != nil {
+		return nil, "", err
+	}
 	nodes, err := r.nodesForTopology(ctx, req.Name, namespace)
 	if err != nil {
 		return nil, "", err

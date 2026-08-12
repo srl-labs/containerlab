@@ -242,6 +242,7 @@ type GlobalOptions struct {
 	TopologyFile     string
 	VarsFiles        []string
 	TopologyName     string
+	Namespace        string
 	Timeout          time.Duration
 	Runtime          string
 	GracefulShutdown bool
@@ -266,6 +267,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 				Debug:            o.DebugCount > 0,
 				Timeout:          o.Timeout,
 				GracefulShutdown: o.GracefulShutdown,
+				LabNamespace:     o.Namespace,
 			},
 		),
 		clabcore.WithDebug(o.DebugCount > 0),

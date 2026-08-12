@@ -14,6 +14,7 @@ ${runtime}              clabernetes
 ${lab-name}             c9s-linux-lifecycle
 ${lab-file}             01-linux-lifecycle.clab.yml
 ${topo}                 ${CURDIR}/${lab-file}
+${lab-namespace}        c9s-${lab-name}
 ${client-label}         clab-node-name\=client
 ${events-log}           /tmp/clab-c9s-events.log
 ${events-err}           /tmp/clab-c9s-events.err
@@ -28,20 +29,20 @@ Deploy c9s linux lab
 
 Deploy emits primary c9s resources without a Topology payload
     ${nodes} =    Process.Run Process
-    ...    kubectl -n default get nodes.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
+    ...    kubectl -n ${lab-namespace} get nodes.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
     ...    shell=True
     Should Be Equal As Integers    ${nodes.rc}    0
     Should Contain    ${nodes.stdout}    node.c9s.run/client
     Should Contain    ${nodes.stdout}    node.c9s.run/server
 
     ${links} =    Process.Run Process
-    ...    kubectl -n default get links.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
+    ...    kubectl -n ${lab-namespace} get links.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
     ...    shell=True
     Should Be Equal As Integers    ${links.rc}    0
     Should Not Be Empty    ${links.stdout}
 
     ${topology} =    Process.Run Process
-    ...    kubectl -n default get topology.c9s.run ${lab-name} --ignore-not-found -o name
+    ...    kubectl -n ${lab-namespace} get topology.c9s.run ${lab-name} --ignore-not-found -o name
     ...    shell=True
     Should Be Equal As Integers    ${topology.rc}    0
     Should Be Empty    ${topology.stdout}
@@ -111,6 +112,12 @@ Destroy c9s linux lab
 
     ${inspect_all} =    Run Clab Command    inspect --all
     Should Not Contain    ${inspect_all.stdout}    ${lab-name}
+
+    ${namespace} =    Process.Run Process
+    ...    kubectl get namespace ${lab-namespace} --ignore-not-found -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${namespace.rc}    0
+    Should Be Empty    ${namespace.stdout}
 
 
 *** Keywords ***

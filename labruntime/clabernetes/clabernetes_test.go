@@ -93,6 +93,211 @@ func TestCleanTarPath(t *testing.T) {
 	}
 }
 
+func TestNamespaceForLab(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name               string
+		labName            string
+		explicit           string
+		configuredOverride string
+		want               string
+		wantError          bool
+	}{
+		{
+			name:    "derived from lab name",
+			labName: "clos",
+			want:    "c9s-clos",
+		},
+		{
+			name:               "configured namespace override",
+			labName:            "clos",
+			configuredOverride: "default",
+			want:               "default",
+		},
+		{
+			name:               "explicit namespace for discovered lab",
+			labName:            "clos",
+			explicit:           "legacy-namespace",
+			configuredOverride: "default",
+			want:               "legacy-namespace",
+		},
+		{
+			name:      "invalid derived namespace",
+			labName:   strings.Repeat("a", 60),
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := &Runtime{labNamespaceOverride: tt.configuredOverride}
+			got, err := r.namespaceForLab(tt.labName, tt.explicit)
+			if tt.wantError {
+				if err == nil {
+					t.Fatalf("namespaceForLab(%q, %q) returned no error", tt.labName, tt.explicit)
+				}
+
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Fatalf("namespaceForLab(%q, %q) = %q, want %q",
+					tt.labName, tt.explicit, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConfiguredLabNamespacePrecedence(t *testing.T) {
+	t.Setenv(envNamespace, "from-environment")
+
+	if got := configuredLabNamespace("from-flag"); got != "from-flag" {
+		t.Fatalf("configured namespace = %q, want flag value", got)
+	}
+	if got := configuredLabNamespace(""); got != "from-environment" {
+		t.Fatalf("configured namespace = %q, want environment value", got)
+	}
+
+	t.Setenv(envNamespace, "")
+	if got := configuredLabNamespace(""); got != "" {
+		t.Fatalf("configured namespace = %q, want automatic namespace selection", got)
+	}
+}
+
+func TestDeployUsesNamespaceOverrideWithoutManagingIt(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	r.labNamespaceOverride = defaultNamespace
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Namespace != defaultNamespace {
+		t.Fatalf("deployed namespace = %q, want %q", state.Namespace, defaultNamespace)
+	}
+	_ = getTestPrimitive(t, r, nodeGVR, defaultNamespace, "node1")
+
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name: "lab1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.kubeClient.CoreV1().Namespaces().Get(
+		context.Background(),
+		defaultNamespace,
+		metav1.GetOptions{},
+	); err != nil {
+		t.Fatalf("namespace override was deleted: %v", err)
+	}
+}
+
+func TestDeployCreatesAndDestroyRemovesDedicatedLabNamespace(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Namespace != "c9s-lab1" {
+		t.Fatalf("deployed namespace = %q, want c9s-lab1", state.Namespace)
+	}
+
+	namespace, err := r.kubeClient.CoreV1().Namespaces().Get(
+		context.Background(),
+		"c9s-lab1",
+		metav1.GetOptions{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if namespace.Labels[labelRuntime] != clabernetesAppValue ||
+		namespace.Labels[labelTopologyOwner] != "lab1" {
+		t.Fatalf("unexpected namespace labels: %v", namespace.Labels)
+	}
+	_ = getTestPrimitive(t, r, nodeGVR, "c9s-lab1", "node1")
+
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name: "lab1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.kubeClient.CoreV1().Namespaces().Get(
+		context.Background(),
+		"c9s-lab1",
+		metav1.GetOptions{},
+	)
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected managed lab namespace to be deleted, got %v", err)
+	}
+}
+
+func TestDestroyPreservesPreexistingLabNamespace(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "node1",
+			"namespace": "c9s-lab1",
+			"labels": map[string]any{
+				labelTopologyOwner: "lab1",
+			},
+		},
+	}}
+	r := newTestRuntime(node)
+	_, err := r.kubeClient.CoreV1().Namespaces().Create(
+		context.Background(),
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "c9s-lab1"}},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name: "lab1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.kubeClient.CoreV1().Namespaces().Get(
+		context.Background(),
+		"c9s-lab1",
+		metav1.GetOptions{},
+	); err != nil {
+		t.Fatalf("pre-existing namespace was deleted: %v", err)
+	}
+}
+
 func TestSavedFilesFromTarSkipsUnsafeEntries(t *testing.T) {
 	t.Parallel()
 
@@ -957,8 +1162,13 @@ func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 			},
 			runtimeObjects...,
 		),
-		kubeClient: kubefake.NewSimpleClientset(),
-		namespace:  defaultNamespace,
+		kubeClient: kubefake.NewSimpleClientset(
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultNamespace}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-ns"}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-a"}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-b"}},
+		),
+		namespace: defaultNamespace,
 	}
 }
 

@@ -58,7 +58,11 @@ func (r *Runtime) launcherPod(
 	namespace,
 	nodeName string,
 ) (*corev1.Pod, error) {
-	namespace = r.namespaceFor(namespace)
+	var err error
+	namespace, err = r.namespaceForLab(name, namespace)
+	if err != nil {
+		return nil, err
+	}
 	launchers, err := r.launcherNodeNames(ctx, name, namespace, []string{nodeName})
 	if err != nil {
 		return nil, err

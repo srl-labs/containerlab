@@ -34,7 +34,7 @@ apiVersion: c9s.run/v1alpha1
 kind: Node
 metadata:
   name: <node-name>
-  namespace: <namespace>
+  namespace: c9s-<lab-name>
   labels:
     c9s.run/topologyOwner: <lab-name>
 spec:
@@ -45,7 +45,7 @@ apiVersion: c9s.run/v1alpha1
 kind: Link
 metadata:
   name: <link-name>
-  namespace: <namespace>
+  namespace: c9s-<lab-name>
 spec:
   endpointA: {nodeName: <node-a>, interfaceName: <interface-a>}
   endpointB: {nodeName: <node-b>, interfaceName: <interface-b>}
@@ -57,9 +57,9 @@ bounded as the lab grows. Each launcher pod runs containerlab inside the pod
 and starts the real node container there. Nodes using `network-mode:
 container:<primary>` share the primary node's launcher pod.
 
-For backward compatibility, `inspect`, `destroy`, and the other lifecycle
-commands can still manage older labs that have a `Topology` compatibility
-resource. New runtime deployments are Node/Link-first.
+For backward compatibility, all-namespace inspection and destruction still
+discover older labs that have a `Topology` compatibility resource. New runtime
+deployments are Node/Link-first.
 
 /// note
 The node containers are nested inside the launcher pods. A `docker ps` on the
@@ -72,7 +72,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | Command | c9s behavior |
 | ------- | ------------ |
 | `deploy` | creates `LauncherProfile`, `Node`, and `Link` resources and waits for readiness |
-| `destroy` | deletes the lab's primitive resources and any compatibility `Topology` |
+| `destroy` | deletes the lab's resources and its containerlab-managed namespace |
 | `inspect` | reads Node, Deployment, Pod, and service status |
 | `exec` | execs through the launcher pod into the nested node container |
 | `start` | scales node Deployments to `1` |
@@ -88,13 +88,13 @@ The c9s runtime expects:
 - a reachable kubernetes cluster
 - kubernetes 1.31 or newer
 - Clabernetes CRDs installed in the cluster
-- the Clabernetes manager running and watching the lab namespace
-- a namespace that already exists for the lab
+- the Clabernetes manager running and watching all lab namespaces
 - kubernetes RBAC allowing containerlab to manage the required resources
 
-/// warning
-The c9s runtime does not create namespaces for you. Create the target namespace
-first, or select an existing namespace.
+/// note
+Containerlab creates a dedicated namespace for each c9s lab. The kube identity
+therefore needs cluster-scoped permission to get, create, and delete namespaces
+unless you select an existing namespace with `CLAB_KUBE_NAMESPACE`.
 ///
 
 ## Selecting the cluster
@@ -111,45 +111,60 @@ You can override the kube context with:
 export CLAB_KUBE_CONTEXT=<context-name>
 ```
 
-You can override the lab namespace with:
+To deploy into an existing namespace instead of a per-lab namespace, use the
+global `--namespace` option:
 
 ```bash
-export CLAB_KUBE_NAMESPACE=<namespace>
+containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
 ```
 
-If no namespace is set with `CLAB_KUBE_NAMESPACE` or the selected kube context,
-containerlab uses `default`.
+For a persistent shell or automation setting, use:
+
+```bash
+export CLAB_KUBE_NAMESPACE=default
+```
+
+An explicit namespace override must already exist. Containerlab places the lab
+resources there but does not create, label, or delete the namespace itself.
+`--namespace` takes precedence over `CLAB_KUBE_NAMESPACE`.
 
 /// tip
-`CLAB_RUNTIME=clabernetes` and `CLAB_KUBE_NAMESPACE=<namespace>` are often the
-two variables worth exporting in shell profiles, CI jobs, or automation
-environments that always target c9s.
+`CLAB_RUNTIME=clabernetes` is worth exporting in shell profiles, CI jobs, or
+automation environments that always target c9s.
 ///
 
 ## Namespace rules
 
-For normal single-lab commands, containerlab operates in one namespace:
-
-1. an internal request namespace, when the caller provides one
-2. `CLAB_KUBE_NAMESPACE`
-3. the namespace from the selected kube context
-4. `default`
-
-For example:
+When `CLAB_KUBE_NAMESPACE` is unset, every lab deployed through the c9s runtime
+gets a dedicated namespace named `c9s-<lab-name>`. For example, this command:
 
 ```bash
-CLAB_KUBE_NAMESPACE=lab-a \
-  containerlab --runtime clabernetes deploy -t topo.clab.yml
+containerlab --runtime clabernetes deploy -t clos.clab.yml
 ```
 
-creates the lab's `LauncherProfile`, `Node`, and `Link` resources in the
-`lab-a` namespace when a lab with the same owner label does not already exist
-there.
+creates the `c9s-clos` namespace and places the lab's `LauncherProfile`, `Node`,
+`Link`, ConfigMap, Deployment, Pod, Service, and PVC resources there. Inspect,
+exec, start, stop, restart, save, and destroy derive the same namespace from the
+lab name.
 
-/// warning
-In c9s 0.7 and newer, the namespace is also the node-name boundary. Two labs in
-the same namespace cannot both contain a node with the same name. Use a
-dedicated namespace when node names could overlap.
+Containerlab labels namespaces it creates with the runtime and lab owner. A
+normal destroy removes such a managed namespace after its lab resources are
+gone. If `c9s-<lab-name>` existed before deploy and does not carry those
+ownership labels, containerlab uses it but preserves it during destroy.
+
+Set `--namespace` when a shared or externally managed namespace is required:
+
+```bash
+containerlab --runtime clabernetes --namespace default deploy -t clos.clab.yml
+```
+
+All single-lab lifecycle commands must use the same flag or environment
+override. Because the namespace is then shared, node and other resource names
+can conflict between labs.
+
+/// warning | Lab names
+`c9s-<lab-name>` must be a valid Kubernetes DNS label and cannot exceed 63
+characters. This leaves at most 59 characters for the lab name.
 ///
 
 Some commands intentionally look across namespaces:
@@ -169,7 +184,7 @@ actions can still target the right lab:
 For example:
 
 ```text
-default/clos/srl1
+c9s-clos/clos/srl1
 ```
 
 Primitive-only labs created outside containerlab are also manageable when
@@ -258,8 +273,7 @@ Clabernetes exposes one.
 
 /// note
 `inspect --all` groups c9s Nodes by `c9s.run/topologyOwner` across all
-namespaces. A single-lab
-inspect uses the selected namespace.
+namespaces. A single-lab inspect uses its canonical `c9s-<lab-name>` namespace.
 ///
 
 Useful kubernetes checks for the same state are:
@@ -458,6 +472,7 @@ ls -la /clabernetes
 
 The kube identity used by the outer containerlab process must be able to:
 
+- get, create, and delete namespaces when using automatic per-lab namespaces
 - create, get, list, watch, update, and delete c9s `Node` resources
 - create, get, list, watch, and delete c9s `Link` and `LauncherProfile` resources
 - get, list, watch, and delete compatibility `Topology` resources when older
@@ -470,6 +485,9 @@ The kube identity used by the outer containerlab process must be able to:
 Useful checks:
 
 ```bash
+kubectl auth can-i get namespaces
+kubectl auth can-i create namespaces
+kubectl auth can-i delete namespaces
 kubectl auth can-i create nodes.c9s.run -n <namespace>
 kubectl auth can-i list nodes.c9s.run -n <namespace>
 kubectl auth can-i update nodes.c9s.run -n <namespace>
@@ -506,27 +524,36 @@ echo "$CLAB_KUBE_CONTEXT"
 Fix the kubeconfig, context, or cluster access, then run the containerlab command
 again.
 
-### Namespace does not exist
+### Namespace creation fails
 
 Typical symptoms:
 
 ```text
-failed to create c9s <resource> <namespace>/<name>: namespaces "<namespace>" not found
+failed to create c9s namespace "c9s-<lab>": ...
 ```
 
 Check:
 
 ```bash
-kubectl get namespace <namespace>
-echo "$CLAB_KUBE_NAMESPACE"
-kubectl config view --minify --output 'jsonpath={..namespace}{"\n"}'
+kubectl auth can-i get namespaces
+kubectl auth can-i create namespaces
+kubectl get namespace c9s-<lab>
 ```
 
-Create the namespace or select an existing one:
+Grant the selected kube identity permission to manage namespaces. You may also
+pre-create the canonical namespace; containerlab will use it and will not
+delete it unless it carries containerlab's runtime and lab-owner labels:
 
 ```bash
-kubectl create namespace <namespace>
-export CLAB_KUBE_NAMESPACE=<namespace>
+kubectl create namespace c9s-<lab>
+```
+
+With `--namespace` or `CLAB_KUBE_NAMESPACE` set, containerlab requires that
+namespace to exist and never creates or deletes it:
+
+```bash
+kubectl get namespace default
+containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
 ```
 
 ### CRDs are missing
@@ -600,7 +627,6 @@ Check:
 ```bash
 containerlab --runtime clabernetes inspect --all
 kubectl get nodes.c9s.run -A -l c9s.run/topologyOwner
-echo "$CLAB_KUBE_NAMESPACE"
 ```
 
 If `docker ps` on the outer host is empty, that can be perfectly normal for c9s.
@@ -646,7 +672,8 @@ Known differences:
   and are rejected with an error when the `clabernetes` runtime is selected.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting
   the global `clabernetes` lab runtime.
-- Two c9s labs can have the same lab name in different namespaces.
+- A lab name maps to one canonical `c9s-<lab-name>` namespace in the selected
+  cluster.
 
 /// note
 Use kubernetes and launcher-pod state as the source of truth for c9s labs:

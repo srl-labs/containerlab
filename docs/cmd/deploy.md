@@ -257,6 +257,14 @@ A global runtime can be selected with the `--runtime | -r` flag. The possible va
 
 /// note
 `clabernetes` is a lab runtime, not a per-node container runtime. When it is selected, containerlab renders the topology and creates a Clabernetes `Topology` custom resource. See [Containerlab runtime](../manual/clabernetes/runtime.md) for details.
+
+By default, the Clabernetes runtime deploys each lab into a managed
+`c9s-<lab-name>` namespace. Use the global `--namespace` option, which has no
+short form, to target an existing namespace instead:
+
+```bash
+containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
+```
 ///
 
 #### timeout

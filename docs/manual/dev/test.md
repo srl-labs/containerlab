@@ -73,8 +73,9 @@ Selecting a specific test case in a test suite is not supported, since test suit
 
 The c9s/Clabernetes Robot tests require the same Kubernetes prerequisites as
 the `containerlab --runtime clabernetes` command: a reachable cluster,
-Clabernetes CRDs and manager installed, an existing target namespace, and RBAC
-for the selected kubeconfig.
+Clabernetes CRDs and manager installed, and RBAC (including namespace
+management when automatic per-lab namespaces are used) for the selected
+kubeconfig.
 
 To run all currently supported Clabernetes Robot tests:
 

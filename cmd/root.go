@@ -82,6 +82,12 @@ func Entrypoint() (*cobra.Command, error) {
 		"",
 		o.Global.TopologyName,
 		"lab/topology name")
+	c.PersistentFlags().StringVar(
+		&o.Global.Namespace,
+		"namespace",
+		o.Global.Namespace,
+		"Kubernetes namespace override for the clabernetes runtime",
+	)
 	c.PersistentFlags().DurationVarP(
 		&o.Global.Timeout,
 		"timeout",
