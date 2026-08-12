@@ -51,25 +51,13 @@ func (r *Runtime) Deploy(
 		return nil, err
 	}
 
-	topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(req)
+	prepared, err := prepareDesiredDeployment(req, namespace)
 	if err != nil {
 		return nil, err
 	}
-
-	desiredTopology := topologyObject(
-		req.Name,
-		namespace,
-		req.Owner,
-		string(topologyDefinition),
-		topologyWithNaming(naming),
-	)
-	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
-		return nil, err
-	}
-	primitives, err := compilePrimitiveResources(desiredTopology)
-	if err != nil {
-		return nil, err
-	}
+	desiredTopology := prepared.topology
+	stagedConfigMaps := prepared.configMaps
+	primitives := prepared.primitives
 
 	// Compatibility Topologies are still supported for labs created by older versions. Keep
 	// their controller ownership intact and reconcile the definition in place. New labs and
@@ -178,6 +166,15 @@ func (r *Runtime) Deploy(
 	}
 
 	if err := r.waitReady(ctx, req.Name, namespace, req.Timeout); err != nil {
+		// A fresh deployment is transactional: timeout/failure removes only resources this
+		// operation created. A failed reconciliation retains the existing lab for diagnosis and
+		// recovery because rolling it back would destroy prior working state.
+		if !primitiveExists {
+			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
+			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+			cleanupNamespace()
+		}
+
 		return nil, err
 	}
 

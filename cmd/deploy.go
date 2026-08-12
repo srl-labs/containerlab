@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -231,7 +232,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	if o.Deploy.DryRun {
-		return printDryRunResult(result.Apply, o)
+		return printDryRunResult(result, o)
 	}
 
 	// keep stdout machine-readable for non-table formats: the reconciliation summary
@@ -258,9 +259,14 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 // printDryRunResult prints the planned changes of a dry run, as JSON when requested via
 // the --format flag and as a table otherwise.
-func printDryRunResult(result *clabcore.ApplyResult, o *Options) error {
+func printDryRunResult(result *clabcore.DeployResult, o *Options) error {
 	if o.Inspect.Format == clabconstants.FormatJSON {
-		b, err := json.MarshalIndent(result, "", "  ")
+		value := any(result.Apply)
+		if result.RuntimePlan != nil {
+			value = result.RuntimePlan
+		}
+
+		b, err := json.MarshalIndent(value, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -270,9 +276,39 @@ func printDryRunResult(result *clabcore.ApplyResult, o *Options) error {
 		return nil
 	}
 
-	printApplyResult(result)
+	if result.RuntimePlan != nil {
+		printLabRuntimePlan(result.RuntimePlan)
+
+		return nil
+	}
+
+	printApplyResult(result.Apply)
 
 	return nil
+}
+
+func printLabRuntimePlan(plan *clablabruntime.DeployPlan) {
+	log.Info("Lab runtime plan", "name", plan.LabName, "namespace", plan.Namespace)
+
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleRounded)
+	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.AppendHeader(tableWriter.Row{"Action", "Kind", "Resource"})
+
+	for _, change := range plan.Changes {
+		resourceName := change.Name
+		if change.Namespace != "" {
+			resourceName = change.Namespace + "/" + resourceName
+		}
+		table.AppendRow(tableWriter.Row{change.Action, change.Kind, resourceName})
+	}
+	if len(plan.Changes) == 0 {
+		table.AppendRow(tableWriter.Row{"no changes", "-", "-"})
+	}
+
+	table.Render()
 }
 
 func printApplyResult(result *clabcore.ApplyResult) {

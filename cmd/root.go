@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -216,6 +217,23 @@ var labRuntimeUnsupportedCommands = map[string]struct{}{
 	"tools": {},
 }
 
+// labRuntimeUnsupportedFlags is the explicit CLI compatibility contract for controller-driven
+// runtimes. A flag listed here must fail before topology parsing or remote mutation instead of
+// being accepted and silently ignored by the adapter.
+var labRuntimeUnsupportedFlags = map[string][]string{ //nolint:gochecknoglobals
+	"deploy": {
+		"graph", "ipv4-subnet", "ipv6-subnet", "max-workers", "network", "node-filter",
+		"restore", "restore-all", "skip-labdir-acl", "skip-post-deploy", "export-template",
+	},
+	"destroy": {
+		"cleanup", "graceful", "keep-mgmt-net", "max-workers", "node-filter",
+	},
+	"redeploy": {
+		"cleanup", "graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
+		"max-workers", "network", "skip-labdir-acl", "skip-post-deploy", "export-template",
+	},
+}
+
 func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) error {
 	if !clablabruntime.IsLabRuntimeName(runtimeName) {
 		return nil
@@ -228,7 +246,51 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 		}
 	}
 
+	if getCommandPath(cobraCmd) == "inspect.interfaces" {
+		return fmt.Errorf("the %q command is not supported with lab runtime %q",
+			"inspect interfaces", runtimeName)
+	}
+
+	var unsupported []string
+	for _, flagName := range labRuntimeUnsupportedFlags[getCommandPath(cobraCmd)] {
+		if labRuntimeFlagWasSet(cobraCmd, flagName) {
+			unsupported = append(unsupported, "--"+flagName)
+		}
+	}
+	if len(unsupported) != 0 {
+		sort.Strings(unsupported)
+
+		return fmt.Errorf(
+			"flag(s) %s are not supported with the %q command and lab runtime %q",
+			strings.Join(unsupported, ", "),
+			cobraCmd.Name(),
+			runtimeName,
+		)
+	}
+
 	return nil
+}
+
+func labRuntimeFlagWasSet(cobraCmd *cobra.Command, flagName string) bool {
+	flag := cobraCmd.Flag(flagName)
+	if flag == nil {
+		return false
+	}
+
+	if flag.Changed {
+		return true
+	}
+
+	if v == nil {
+		return false
+	}
+
+	commandKey := getCommandPath(cobraCmd) + "." + flagName
+	if v.IsSet(commandKey) {
+		return true
+	}
+
+	return v.IsSet(flagName)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory

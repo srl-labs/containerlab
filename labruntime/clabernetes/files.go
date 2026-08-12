@@ -111,7 +111,13 @@ func stageTopologyLocalFiles(
 
 	extraConfigMaps := map[string]*stagedConfigMap{}
 	startupConfigMaps := map[string]*stagedConfigMap{}
-	definitionChanged := exposeClabernetesCompatibilityPorts(config)
+	// Always render parsed links through the c9s brief-link boundary. Previously this happened
+	// only as a side effect of staging an unrelated file or compatibility port, which made an
+	// extended link's behavior depend on whether some other field changed the definition.
+	definitionChanged := len(config.Topology.Links) > 0
+	if exposeClabernetesCompatibilityPorts(config) {
+		definitionChanged = true
+	}
 
 	nodeNames := make([]string, 0, len(config.Topology.Nodes))
 	for nodeName := range config.Topology.Nodes {
@@ -151,6 +157,17 @@ func stageTopologyLocalFiles(
 			}
 
 			if err := stageBindFiles(
+				config,
+				req.Name,
+				nodeName,
+				topologyFileDir,
+				topologyLabDir,
+				extraConfigMaps,
+			); err != nil {
+				return nil, nil, "", err
+			}
+
+			if err := stageAdditionalNodeFiles(
 				config,
 				req.Name,
 				nodeName,
@@ -281,7 +298,7 @@ func exposeClabernetesCompatibilityPorts(config *clabRuntimeConfig) bool {
 
 		nodeDefinition.Ports = append(
 			nodeDefinition.Ports,
-			fmt.Sprintf("%d:%d/tcp", gnmicPrometheusPort, gnmicPrometheusPort),
+			fmt.Sprintf("%d/tcp", gnmicPrometheusPort),
 		)
 		definitionChanged = true
 	}
@@ -446,6 +463,65 @@ func stageBindFiles(
 			topologyLabDir,
 		); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// stageAdditionalNodeFiles covers path-bearing fields that containerlab normally resolves on
+// the machine running the CLI. A remote launcher cannot see those paths unless the adapter copies
+// them into the node's ConfigMap-backed file projection first.
+func stageAdditionalNodeFiles(
+	config *clabRuntimeConfig,
+	topologyName,
+	nodeName,
+	topologyFileDir,
+	topologyLabDir string,
+	configMaps map[string]*stagedConfigMap,
+) error {
+	pathsByField := map[string][]string{
+		"env-files": config.Topology.GetNodeEnvFiles(nodeName),
+	}
+
+	if extras := config.Topology.GetNodeExtras(nodeName); extras != nil {
+		pathsByField["extras.srl-agents"] = extras.SRLAgents
+		pathsByField["extras.ceos-copy-to-flash"] = extras.CeosCopyToFlash
+	}
+
+	fieldNames := make([]string, 0, len(pathsByField))
+	for fieldName := range pathsByField {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+
+	for _, fieldName := range fieldNames {
+		for _, sourcePath := range pathsByField[fieldName] {
+			if strings.TrimSpace(sourcePath) == "" {
+				continue
+			}
+
+			configMap := getOrCreateStagedConfigMap(
+				configMaps,
+				nodeName,
+				safeKubernetesName(topologyName, nodeName, "files"),
+			)
+
+			if err := stageSourcePathIntoConfigMap(
+				configMap,
+				sourcePath,
+				nodeName,
+				topologyFileDir,
+				topologyLabDir,
+			); err != nil {
+				return fmt.Errorf(
+					"failed staging %s path %q for node %q: %w",
+					fieldName,
+					sourcePath,
+					nodeName,
+					err,
+				)
+			}
 		}
 	}
 

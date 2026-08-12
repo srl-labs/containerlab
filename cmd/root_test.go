@@ -218,3 +218,58 @@ func TestCheckLabRuntimeCommandSupport(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
+	tests := []struct {
+		name      string
+		command   string
+		flag      string
+		flagValue string
+		wantErr   bool
+	}{
+		{name: "deploy dry-run supported", command: "deploy", flag: "dry-run", flagValue: "true"},
+		{name: "deploy worker controls rejected", command: "deploy", flag: "max-workers", flagValue: "4", wantErr: true},
+		{name: "deploy node filter rejected", command: "deploy", flag: "node-filter", flagValue: "n1", wantErr: true},
+		{name: "destroy graceful rejected", command: "destroy", flag: "graceful", flagValue: "true", wantErr: true},
+		{name: "destroy node filter rejected", command: "destroy", flag: "node-filter", flagValue: "n1", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v = nil
+			t.Cleanup(func() { v = nil })
+
+			root := &cobra.Command{Use: "containerlab"}
+			command := &cobra.Command{Use: tt.command}
+			root.AddCommand(command)
+			switch tt.flag {
+			case "dry-run", "graceful":
+				command.Flags().Bool(tt.flag, false, "")
+			case "max-workers":
+				command.Flags().Uint(tt.flag, 0, "")
+			case "node-filter":
+				command.Flags().StringSlice(tt.flag, nil, "")
+			}
+			if err := command.Flags().Set(tt.flag, tt.flagValue); err != nil {
+				t.Fatal(err)
+			}
+
+			err := checkLabRuntimeCommandSupport(command, "clabernetes")
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("checkLabRuntimeCommandSupport() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("inspect interfaces rejected", func(t *testing.T) {
+		root := &cobra.Command{Use: "containerlab"}
+		inspect := &cobra.Command{Use: "inspect"}
+		interfaces := &cobra.Command{Use: "interfaces"}
+		root.AddCommand(inspect)
+		inspect.AddCommand(interfaces)
+
+		if err := checkLabRuntimeCommandSupport(interfaces, "clabernetes"); err == nil {
+			t.Fatal("inspect interfaces was accepted for clabernetes")
+		}
+	})
+}

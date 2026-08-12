@@ -43,22 +43,13 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
-	topologyFile := ""
-	topologyLabDir := ""
-	if c.TopoPaths != nil {
-		topologyFile = c.TopoPaths.TopologyFilenameAbsPath()
-		topologyLabDir = c.TopoPaths.TopologyLabDir()
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return nil, err
 	}
+	req.Wait = true
 
-	state, err := c.LabRuntime.Deploy(ctx, clablabruntime.DeployRequest{
-		Name:               c.Config.Name,
-		Owner:              c.labOwner(),
-		TopologyFile:       topologyFile,
-		TopologyLabDir:     topologyLabDir,
-		TopologyDefinition: c.renderedTopology,
-		Wait:               true,
-		Timeout:            c.timeout,
-	})
+	state, err := c.LabRuntime.Deploy(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +57,56 @@ func (c *CLab) deployWithLabRuntime(
 	return c.containersFromLabState(state), nil
 }
 
+func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
+	if c.Config.Name == "" {
+		return clablabruntime.DeployRequest{}, fmt.Errorf("topology name is required")
+	}
+	if len(c.renderedTopology) == 0 {
+		return clablabruntime.DeployRequest{}, fmt.Errorf("rendered topology is empty")
+	}
+
+	topologyFile := ""
+	topologyLabDir := ""
+	if c.TopoPaths != nil {
+		topologyFile = c.TopoPaths.TopologyFilenameAbsPath()
+		topologyLabDir = c.TopoPaths.TopologyLabDir()
+	}
+
+	return clablabruntime.DeployRequest{
+		Name:               c.Config.Name,
+		Owner:              c.labOwner(),
+		TopologyFile:       topologyFile,
+		TopologyLabDir:     topologyLabDir,
+		TopologyDefinition: c.renderedTopology,
+		Timeout:            c.timeout,
+	}, nil
+}
+
+// ValidateLabRuntimeTopology executes the selected runtime's compiler without mutation.
+func (c *CLab) ValidateLabRuntimeTopology(ctx context.Context) error {
+	if c.LabRuntime == nil {
+		return fmt.Errorf("no lab runtime selected")
+	}
+
+	validator, ok := c.LabRuntime.(clablabruntime.TopologyValidator)
+	if !ok {
+		return fmt.Errorf("lab runtime %q does not support topology validation", c.globalRuntimeName)
+	}
+
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return err
+	}
+
+	return validator.Validate(ctx, req)
+}
+
 func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
+	if len(opts.nodeFilter) != 0 {
+		return fmt.Errorf("node-filter is not supported for lab runtime %q; no resources were deleted",
+			c.globalRuntimeName)
+	}
+
 	if opts.all {
 		return c.destroyAllWithLabRuntime(ctx, opts)
 	}
@@ -188,10 +228,13 @@ func (c *CLab) execWithLabRuntime(
 	}
 
 	resultCollection := clabexec.NewExecCollection()
+	var execErrors []error
 	for idx := range containers {
 		namespace, labName, nodeName, err := labRuntimeContainerParts(containers[idx])
 		if err != nil {
 			log.Warnf("exec target %s is invalid: %v", containers[idx].Names[0], err)
+			execErrors = append(execErrors, fmt.Errorf(
+				"exec target %s is invalid: %w", containers[idx].Names[0], err))
 			continue
 		}
 
@@ -204,14 +247,23 @@ func (c *CLab) execWithLabRuntime(
 			})
 			if err != nil {
 				log.Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
+				execErrors = append(execErrors, fmt.Errorf(
+					"exec on %s failed: %w", containers[idx].Names[0], err))
 				continue
 			}
 
 			resultCollection.Add(containers[idx].Names[0], result)
+			if result.GetReturnCode() != 0 {
+				execErrors = append(execErrors, fmt.Errorf(
+					"exec on %s returned exit code %d",
+					containers[idx].Names[0],
+					result.GetReturnCode(),
+				))
+			}
 		}
 	}
 
-	return resultCollection, nil
+	return resultCollection, errors.Join(execErrors...)
 }
 
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {

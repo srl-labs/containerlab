@@ -70,7 +70,13 @@ func compilePrimitiveResources(
 		topology.Spec.Connectivity = string(clabernetesapisv1alpha1.LinkConnectivityVXLAN)
 	}
 
-	compiled, err := clabernetescontrollerstopology.CompileTopology(c9sCompileLogger{}, topology)
+	compiled, err := clabernetescontrollerstopology.CompileTopologyWithOptions(
+		c9sCompileLogger{},
+		topology,
+		clabernetescontrollerstopology.CompileOptions{
+			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyError,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile containerlab topology for c9s: %w", err)
 	}

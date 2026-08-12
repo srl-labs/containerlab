@@ -297,9 +297,67 @@ func setPrimitiveNodeDeploymentStaged(obj *unstructured.Unstructured, staged boo
 }
 
 func primitiveObjectsConform(existing, desired *unstructured.Unstructured) bool {
-	return apiequality.Semantic.DeepEqual(existing.Object["spec"], desired.Object["spec"]) &&
+	return apiequality.Semantic.DeepEqual(
+		normalizeAPIDefaultedJSON(existing.Object["spec"]),
+		normalizeAPIDefaultedJSON(desired.Object["spec"]),
+	) &&
 		apiequality.Semantic.DeepEqual(existing.GetLabels(), desired.GetLabels()) &&
 		apiequality.Semantic.DeepEqual(existing.GetAnnotations(), desired.GetAnnotations())
+}
+
+// normalizeAPIDefaultedJSON removes recursively empty/zero JSON values. Kubernetes CRD
+// defaulting materializes fields such as false booleans and zero-second probe configuration in
+// stored objects even when the renderer omitted them. Those values are declaratively equivalent;
+// treating them as drift would make every plan and reconciliation report an update forever.
+func normalizeAPIDefaultedJSON(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(typed))
+		for key, child := range typed {
+			normalized := normalizeAPIDefaultedJSON(child)
+			if !isZeroJSONValue(normalized) {
+				result[key] = normalized
+			}
+		}
+
+		return result
+	case []any:
+		result := make([]any, len(typed))
+		for idx := range typed {
+			result[idx] = normalizeAPIDefaultedJSON(typed[idx])
+		}
+
+		return result
+	default:
+		return value
+	}
+}
+
+func isZeroJSONValue(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return true
+	case bool:
+		return !typed
+	case string:
+		return typed == ""
+	case int:
+		return typed == 0
+	case int32:
+		return typed == 0
+	case int64:
+		return typed == 0
+	case float32:
+		return typed == 0
+	case float64:
+		return typed == 0
+	case map[string]any:
+		return len(typed) == 0
+	case []any:
+		return len(typed) == 0
+	default:
+		return false
+	}
 }
 
 func (r *Runtime) deleteStalePrimitiveResources(

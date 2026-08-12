@@ -80,6 +80,8 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `restart` | restarts node Deployments |
 | `save` | runs `containerlab save` inside launcher pods |
 | `events` | watches Clabernetes resources and pods |
+| `validate` | runs the strict c9s compiler without creating Kubernetes resources |
+| `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, LauncherProfile, Link, and Node resources without changing them |
 
 ## Requirements
 
@@ -218,6 +220,12 @@ healthcheck, that healthcheck must also be healthy. Containerlab does not guess
 readiness ports or special-case kinds and images, so the same baseline works for
 arbitrary containerlab nodes.
 
+Readiness is atomic for a `network-mode: container:<primary>` group. The one
+launcher Pod is ready only while every nested group member satisfies the generic
+readiness contract. Because every Node in the group inherits that Deployment's
+readiness, a restarting secondary makes both the primary and secondary Nodes
+not ready.
+
 For an image without a Docker healthcheck, this is a process-level signal: a
 running network OS may still be booting services or converging protocols. Use an
 image-defined healthcheck or an explicit c9s TCP/SSH probe when the lab requires
@@ -253,6 +261,28 @@ different lab name or namespace when you want a separate lab:
 ```bash
 containerlab --runtime clabernetes --name <new-lab-name> deploy -t topo.clab.yml
 ```
+
+A failure while waiting for a newly created lab to become ready rolls back the
+resources and managed namespace created by that deployment. A timeout while
+reconciling a lab that already existed retains the lab for diagnosis and a
+later corrective reconciliation.
+
+### Validation and dry-run
+
+Both commands use the same strict c9s preparation path as deploy, including
+extended-link normalization and local-file staging checks:
+
+```bash
+containerlab --runtime clabernetes validate -t topo.clab.yml
+containerlab --runtime clabernetes deploy --dry-run -t topo.clab.yml
+containerlab --runtime clabernetes deploy --dry-run --format json -t topo.clab.yml
+```
+
+`validate` reports whether the topology fits the c9s runtime subset without
+reading or changing lab resources. `deploy --dry-run` additionally reads the
+selected cluster and reports the exact create, update, and delete plan for
+Namespace, ConfigMap, LauncherProfile, Link, Node, or an older compatibility
+Topology. An empty `changes` list means the deployed resources already conform.
 
 ## Inspect
 
@@ -300,6 +330,11 @@ Under the hood, containerlab:
 The command executes in the node container, not in the launcher pod shell. RBAC
 must allow `pods/exec`, and the launcher pod must be ready.
 ///
+
+If any selected nested command returns nonzero, or pod exec itself fails, the
+outer `containerlab exec` also returns nonzero. Successful and failed results
+that were received are still printed, so automation can use both the output and
+the process exit status.
 
 ## Start, stop, and restart
 
@@ -453,6 +488,13 @@ Per-node containerlab artifacts commonly live under:
 ```text
 /clabernetes/clab-clabernetes-<node>/<node>/
 ```
+
+Local startup configurations, licenses, bind sources, `env-files`,
+`extras.srl-agents`, and `extras.ceos-copy-to-flash` paths are copied into
+per-node ConfigMaps and projected at the paths the inner containerlab process
+expects. Each staged file is currently limited to 950 KB. These projections
+are snapshots taken at deploy time, not mutable host bind mounts; run deploy
+again after changing a source file.
 
 /// tip
 When debugging from inside a launcher pod, the usual containerlab and Docker
@@ -659,13 +701,40 @@ The c9s runtime is not a complete drop-in replacement for the local Docker or
 Podman runtime. Several containerlab features still assume local containers,
 local network namespaces, or direct access to the host container runtime.
 
-Known differences:
+The runtime divides compatibility into three categories:
 
-- `deploy --node-filter` is not supported.
+- Native-equivalent: normal point-to-point links and MTU, lifecycle operations,
+  node configuration, staged startup files, exec, inspect, and group-atomic
+  readiness.
+- Documented c9s semantics: Kubernetes Service/LoadBalancer management access,
+  `host:` endpoints in the launcher Pod network namespace, c9s internal
+  cross-Pod link transport, and ConfigMap-backed local files.
+- Rejected: external bridge/host pseudo-nodes, macvlan and `mgmt-net:` links,
+  explicit native VXLAN/stitch/dummy link types, link labels or vars that would
+  be discarded, native shared-management-network settings, and commands or
+  flags with no c9s implementation.
+
+Management access is not a shared management network. Each launcher has its
+own nested Docker management network, so static `mgmt-ipv4`/`mgmt-ipv6`
+addresses are launcher-local and are not cluster-routable between Pods.
+Kubernetes Services, LoadBalancers, and DNS are the supported management access
+path. Explicit topology `mgmt` settings and the `--network`, `--ipv4-subnet`,
+and `--ipv6-subnet` flags are rejected to avoid implying native Docker-network
+semantics.
+
+Known command differences:
+
+- `deploy --node-filter` and `destroy --node-filter` are rejected; a filtered
+  destroy never falls through to whole-lab deletion.
+- Deploy flags `--graph`, `--max-workers`, `--skip-post-deploy`,
+  `--skip-labdir-acl`, `--export-template`, `--restore`, and `--restore-all`
+  are rejected.
+- Destroy flags `--graceful`, `--cleanup`, `--keep-mgmt-net`, and
+  `--max-workers` are rejected.
 - Local Docker commands on the outer host are not authoritative for c9s labs.
 - Local network namespace features are not equivalent in c9s.
-- `inspect interfaces` and host-side `tc` or netem operations do not have the
-  same local namespace access they have with Docker labs.
+- `inspect interfaces` is rejected. Host-side `tc` or netem operations do not
+  have the same local namespace access they have with Docker labs.
 - `graph` and `tools` commands operate on local containers and host networking
   and are rejected with an error when the `clabernetes` runtime is selected.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting

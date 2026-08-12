@@ -787,6 +787,9 @@ func TestDeployStagesLocalFilesFromTopology(t *testing.T) {
 		"set / system name leaf1\n",
 		0o644,
 	)
+	writeFile(t, filepath.Join(topologyDir, "configs", "client2.env"), "MODE=test\n", 0o644)
+	writeFile(t, filepath.Join(topologyDir, "configs", "agent.yml"), "name: agent\n", 0o644)
+	writeFile(t, filepath.Join(topologyDir, "configs", "flash.cfg"), "hostname ceos\n", 0o644)
 
 	const definition = `name: lab1
 topology:
@@ -797,6 +800,13 @@ topology:
       startup-config: configs/fabric/leaf1.cfg
     client2:
       kind: linux
+      env-files:
+        - configs/client2.env
+      extras:
+        srl-agents:
+          - configs/agent.yml
+        ceos-copy-to-flash:
+          - configs/flash.cfg
       binds:
         - configs/client2:/config
     prometheus:
@@ -828,6 +838,15 @@ topology:
 	if got := string(clientConfigMap.BinaryData["configs-client2-iperf-sh"]); got != "#!/bin/sh\n" {
 		t.Fatalf("unexpected client2 staged file content: %q", got)
 	}
+	for key, want := range map[string]string{
+		"configs-client2-env": "MODE=test\n",
+		"configs-agent-yml":   "name: agent\n",
+		"configs-flash-cfg":   "hostname ceos\n",
+	} {
+		if got := string(clientConfigMap.BinaryData[key]); got != want {
+			t.Fatalf("staged %s content = %q, want %q", key, got, want)
+		}
+	}
 
 	prometheusConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-prometheus-files")
 	if got := string(
@@ -851,6 +870,20 @@ topology:
 		"configs-client2-iperf-sh",
 		"execute",
 	)
+	for _, filePath := range []string{
+		"configs/client2.env",
+		"configs/agent.yml",
+		"configs/flash.cfg",
+	} {
+		assertFileMount(
+			t,
+			getTestPrimitive(t, r, nodeGVR, "lab-ns", "client2"),
+			filePath,
+			"lab1-client2-files",
+			safeConfigMapKey(filePath),
+			"read",
+		)
+	}
 	assertFileMount(
 		t,
 		getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus"),
@@ -878,6 +911,239 @@ topology:
 				configMap.Name, configMap.OwnerReferences)
 		}
 	}
+}
+
+func TestValidateStrictlyRejectsUnsupportedContainerlabSemantics(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		definition string
+		want       string
+	}{
+		{
+			name: "management network",
+			definition: `mgmt:
+  network: shared
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine
+`,
+			want: "management network",
+		},
+		{
+			name: "external bridge",
+			definition: `topology:
+  nodes:
+    br0:
+      kind: bridge
+`,
+			want: "pseudo-node",
+		},
+		{
+			name: "lossy link metadata",
+			definition: `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine
+    node2:
+      kind: linux
+      image: alpine
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+      labels:
+        purpose: test
+`,
+			want: "link labels",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRuntime()
+			err := r.Validate(context.Background(), clablabruntime.DeployRequest{
+				Name:               "strict",
+				Namespace:          "lab-ns",
+				TopologyDefinition: []byte(tt.definition),
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("Validate() error = %v, want substring %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestPlanReportsPrimitiveDiffWithoutMutation(t *testing.T) {
+	t.Parallel()
+
+	const initial = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+    node2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+`
+	const changed = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	freshPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(freshPlan.Changes) != 4 {
+		t.Fatalf("fresh plan changes = %+v, want profile, two nodes, and link creates", freshPlan.Changes)
+	}
+	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial), Wait: false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	noOpPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noOpPlan.Changes) != 0 {
+		t.Fatalf("no-op plan changes = %+v, want none", noOpPlan.Changes)
+	}
+
+	changedPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(changed),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantChanges := map[string]bool{
+		"update/Node/node1":                 false,
+		"delete/Node/node2":                 false,
+		"delete/Link/node1-eth1-node2-eth1": false,
+	}
+	for _, change := range changedPlan.Changes {
+		key := string(change.Action) + "/" + change.Kind + "/" + change.Name
+		if _, ok := wantChanges[key]; ok {
+			wantChanges[key] = true
+		}
+	}
+	for change, found := range wantChanges {
+		if !found {
+			t.Fatalf("changed plan = %+v, missing %s", changedPlan.Changes, change)
+		}
+	}
+}
+
+func TestPrimitiveObjectsConformIgnoresMaterializedZeroDefaults(t *testing.T) {
+	t.Parallel()
+
+	desired := &unstructured.Unstructured{Object: map[string]any{
+		"spec": map[string]any{"statusProbes": map[string]any{"enabled": true}},
+	}}
+	existing := desired.DeepCopy()
+	existing.Object["spec"] = map[string]any{
+		"statusProbes": map[string]any{
+			"enabled":            true,
+			"probeConfiguration": map[string]any{"startupSeconds": int64(0)},
+		},
+		"expose": map[string]any{
+			"disableAutoExpose":      false,
+			"disableExpose":          false,
+			"useNodeMgmtIpv4Address": false,
+		},
+	}
+
+	if !primitiveObjectsConform(existing, desired) {
+		t.Fatal("API-materialized zero/default fields were reported as drift")
+	}
+
+	existing.Object["spec"].(map[string]any)["expose"].(map[string]any)["disableExpose"] = true
+	if primitiveObjectsConform(existing, desired) {
+		t.Fatal("nonzero API field was incorrectly ignored")
+	}
+}
+
+func TestFreshDeployReadinessTimeoutRollsBackCreatedPrimitives(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:      "timeout-lab",
+		Namespace: "lab-ns",
+		TopologyDefinition: []byte(`topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+`),
+		Wait:    true,
+		Timeout: 20 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected readiness timeout")
+	}
+
+	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	assertNoTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "timeout-lab")
+}
+
+func TestReconcileReadinessTimeoutRetainsExistingLab(t *testing.T) {
+	t.Parallel()
+
+	const initial = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+`
+	const changed = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name: "retained-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name: "retained-lab", Namespace: "lab-ns", TopologyDefinition: []byte(changed),
+		Wait: true, Timeout: 20 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected reconcile readiness timeout")
+	}
+
+	node := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	image, _, nestedErr := unstructured.NestedString(node.Object, "spec", "image")
+	if nestedErr != nil {
+		t.Fatal(nestedErr)
+	}
+	if image != "alpine:latest" {
+		t.Fatalf("retained node image = %q, want reconciled image", image)
+	}
+	_ = getTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "retained-lab")
 }
 
 func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
@@ -972,9 +1238,6 @@ func TestDeployExposesGNMICMetricsPortForClabernetes(t *testing.T) {
 
 	const definition = `name: st
 prefix: ""
-mgmt:
-  network: st
-  ipv4-subnet: 172.20.20.0/24
 topology:
   nodes:
     leaf1:
@@ -988,7 +1251,7 @@ topology:
       kind: linux
       image: quay.io/prometheus/prometheus:v2.54.1
       ports:
-        - 9090:9090
+        - 9090/tcp
   links:
     - endpoints: ["leaf1:e1-1", "prometheus:eth1"]
 `
@@ -1033,15 +1296,6 @@ topology:
 	if excludedNodes, found := statusProbes["excludedNodes"]; found && excludedNodes != nil {
 		t.Fatalf("containerlab must not exclude kinds from generic readiness: %v", statusProbes)
 	}
-	if got, _, _ := unstructured.NestedString(
-		profile.Object,
-		"spec",
-		"mgmt",
-		"ipv4-subnet",
-	); got != "172.20.20.0/24" {
-		t.Fatalf("launcher profile management subnet = %q, want 172.20.20.0/24", got)
-	}
-
 	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
 		List(context.Background(), metav1.ListOptions{})
 	if err != nil {

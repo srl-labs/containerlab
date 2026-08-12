@@ -106,6 +106,28 @@ type LabState struct {
 	Nodes        []NodeState
 }
 
+type ChangeAction string
+
+const (
+	ChangeCreate ChangeAction = "create"
+	ChangeUpdate ChangeAction = "update"
+	ChangeDelete ChangeAction = "delete"
+)
+
+type ResourceChange struct {
+	Action    ChangeAction `json:"action"`
+	Kind      string       `json:"kind"`
+	Namespace string       `json:"namespace,omitempty"`
+	Name      string       `json:"name"`
+}
+
+// DeployPlan describes the remote resources a lab runtime would change without mutating them.
+type DeployPlan struct {
+	LabName   string           `json:"lab-name"`
+	Namespace string           `json:"namespace"`
+	Changes   []ResourceChange `json:"changes"`
+}
+
 type Event struct {
 	Timestamp   time.Time
 	Type        string
@@ -134,6 +156,16 @@ type LabRuntime interface {
 // local container runtime.
 type LabExistenceChecker interface {
 	LabExists(context.Context, InspectRequest) (bool, error)
+}
+
+// TopologyValidator validates the runtime-specific topology subset without changing remote state.
+type TopologyValidator interface {
+	Validate(context.Context, DeployRequest) error
+}
+
+// TopologyPlanner compiles and diffs a desired topology without changing remote state.
+type TopologyPlanner interface {
+	Plan(context.Context, DeployRequest) (*DeployPlan, error)
 }
 
 type Initializer func(Config) (LabRuntime, error)
