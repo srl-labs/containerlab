@@ -129,6 +129,13 @@ type LabRuntime interface {
 	StreamEvents(context.Context, EventStreamRequest) (<-chan Event, <-chan error, error)
 }
 
+// LabExistenceChecker lets controller-driven runtimes report whether a lab has remote state.
+// Core uses it to distinguish a fresh deployment from reconciliation without consulting the
+// local container runtime.
+type LabExistenceChecker interface {
+	LabExists(context.Context, InspectRequest) (bool, error)
+}
+
 type Initializer func(Config) (LabRuntime, error)
 
 var LabRuntimes = map[string]Initializer{}

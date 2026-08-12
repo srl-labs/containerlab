@@ -241,16 +241,14 @@ topology, then use node filtering with commands such as `start`, `stop`,
 `restart`, `exec`, or `save` after the lab exists.
 ///
 
-Deploy is create-only. If primitive resources carrying the same
-`c9s.run/topologyOwner` label, or a compatibility `Topology` with the same
-name, already exist in the namespace, containerlab fails the deployment:
+Deploy reconciles an existing lab in place. Containerlab compiles the requested topology and
+creates, updates, or removes the corresponding c9s `Node`, `Link`, `LauncherProfile`, and staged
+`ConfigMap` resources. New Nodes remain staged until the complete Link set is present. Labs
+created through the older compatibility `Topology` API retain that controller ownership and
+have their `Topology` definition updated in place.
 
-```text
-the '<lab>' lab has already been deployed in namespace '<namespace>'.
-```
-
-Use `deploy --reconfigure` to replace the existing lab, or use a different lab
-name or namespace when you want a separate lab:
+Use `deploy --reconfigure` when you explicitly want to delete and recreate every resource. Use a
+different lab name or namespace when you want a separate lab:
 
 ```bash
 containerlab --runtime clabernetes --name <new-lab-name> deploy -t topo.clab.yml

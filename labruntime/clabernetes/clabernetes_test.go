@@ -429,7 +429,7 @@ func TestPrimitiveResourcesUseCurrentC9sAPI(t *testing.T) {
 	}
 }
 
-func TestPrimitiveResourceGroupsCreateLinksBeforeNodes(t *testing.T) {
+func TestPrimitiveResourceGroupOrder(t *testing.T) {
 	t.Parallel()
 
 	set := &primitiveResourceSet{}
@@ -880,6 +880,63 @@ topology:
 	}
 }
 
+func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
+	t.Parallel()
+
+	topologyDir := t.TempDir()
+	writeFile(t, filepath.Join(topologyDir, "configs", "node1", "startup.sh"), "#!/bin/sh\n", 0o755)
+
+	const initialDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+      binds:
+        - configs/node1:/config
+`
+	const updatedDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, initialDefinition, 0o644)
+
+	r := newTestRuntime()
+	req := clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyDefinition: []byte(initialDefinition),
+		Wait:               false,
+	}
+	if _, err := r.Deploy(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	_ = getTestConfigMap(t, r, "lab-ns", "lab1-node1-files")
+
+	req.TopologyDefinition = []byte(updatedDefinition)
+	if _, err := r.Deploy(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	_, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").Get(
+		context.Background(),
+		"lab1-node1-files",
+		metav1.GetOptions{},
+	)
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected stale ConfigMap to be deleted, got %v", err)
+	}
+	if files, found, err := unstructured.NestedSlice(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1").Object,
+		"spec",
+		"filesFromConfigMap",
+	); err != nil || found || len(files) != 0 {
+		t.Fatalf("stale node file mounts remain: found=%t files=%v err=%v", found, files, err)
+	}
+}
+
 func TestDeployPreservesDockerCompatibleNamesForEmptyPrefixTopology(t *testing.T) {
 	t.Parallel()
 
@@ -995,7 +1052,7 @@ topology:
 	}
 }
 
-func TestDeployFailsWhenTopologyAlreadyExists(t *testing.T) {
+func TestDeployReconcilesCompatibilityTopology(t *testing.T) {
 	t.Parallel()
 
 	const existingDefinition = `topology:
@@ -1012,22 +1069,158 @@ func TestDeployFailsWhenTopologyAlreadyExists(t *testing.T) {
 `
 
 	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", existingDefinition))
-	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
 		Name:               "lab1",
 		Namespace:          "lab-ns",
 		TopologyDefinition: []byte(newDefinition),
 		Wait:               false,
 	})
-	if err == nil {
-		t.Fatal("expected duplicate topology deploy to fail")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "already been deployed in namespace 'lab-ns'") {
-		t.Fatalf("unexpected error: %v", err)
+	if state.Name != "lab1" || state.Namespace != "lab-ns" {
+		t.Fatalf("unexpected reconciled state: %+v", state)
 	}
 
 	obj := getTestTopology(t, r, "lab-ns", "lab1")
-	if got := topologyDefinition(t, obj); got != existingDefinition {
-		t.Fatalf("topology definition was updated to %q, want %q", got, existingDefinition)
+	if got := topologyDefinition(t, obj); got != newDefinition {
+		t.Fatalf("topology definition was updated to %q, want %q", got, newDefinition)
+	}
+}
+
+func TestDeployReconcilesPrimitiveResources(t *testing.T) {
+	t.Parallel()
+
+	const initialDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3.20
+    old-node:
+      kind: linux
+      image: alpine:3.20
+  links:
+    - endpoints: ["node1:eth1", "old-node:eth1"]
+`
+	const updatedDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3.21
+    node2:
+      kind: linux
+      image: alpine:3.21
+  links:
+    - endpoints: ["node1:eth2", "node2:eth1"]
+`
+
+	r := newTestRuntime()
+	request := clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initialDefinition),
+		Wait:               false,
+	}
+	if _, err := r.Deploy(context.Background(), request); err != nil {
+		t.Fatal(err)
+	}
+
+	node1 := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	node1.SetLabels(mergeDesiredMetadata(node1.GetLabels(), map[string]string{
+		"example.com/preserved": "true",
+		labelIgnoreReconcile:    "true",
+	}))
+	if err := unstructured.SetNestedField(node1.Object, "ready", "status", "readiness"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").Update(
+		context.Background(),
+		node1,
+		metav1.UpdateOptions{},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	request.TopologyDefinition = []byte(updatedDefinition)
+	state, err := r.Deploy(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-ns" || len(state.Nodes) != 2 {
+		t.Fatalf("unexpected reconciled state: %+v", state)
+	}
+
+	node1 = getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	if got, _, _ := unstructured.NestedString(node1.Object, "spec", "image"); got != "alpine:3.21" {
+		t.Fatalf("node1 image = %q, want alpine:3.21", got)
+	}
+	if got, _, _ := unstructured.NestedString(node1.Object, "status", "readiness"); got != "ready" {
+		t.Fatalf("node1 status readiness = %q, want preserved ready", got)
+	}
+	if node1.GetLabels()["example.com/preserved"] != "true" {
+		t.Fatalf("node1 extra labels were not preserved: %v", node1.GetLabels())
+	}
+	if _, exists := node1.GetLabels()[labelIgnoreReconcile]; exists {
+		t.Fatalf("node1 retained stop lifecycle label: %v", node1.GetLabels())
+	}
+
+	node2 := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node2")
+	if _, exists := node2.GetLabels()[clabernetesconstants.LabelDisableDeployments]; exists {
+		t.Fatalf("new node retained deployment staging label: %v", node2.GetLabels())
+	}
+	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "old-node")
+
+	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links.Items) != 1 {
+		t.Fatalf("len(links) = %d, want 1", len(links.Items))
+	}
+	if got, _, _ := unstructured.NestedString(
+		links.Items[0].Object,
+		"spec",
+		"endpointB",
+		"nodeName",
+	); got != "node2" {
+		t.Fatalf("reconciled link endpointB = %q, want node2", got)
+	}
+}
+
+func TestDeployRejectsPrimitiveResourceOwnedByAnotherLab(t *testing.T) {
+	t.Parallel()
+
+	foreignNode := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "node1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "other-lab",
+			},
+		},
+	}}
+	r := newTestRuntime(foreignNode)
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:      "lab1",
+		Namespace: "lab-ns",
+		TopologyDefinition: []byte(`topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`),
+		Wait: false,
+	})
+	if err == nil || !strings.Contains(err.Error(), "belongs to another lab") {
+		t.Fatalf("unexpected ownership collision error: %v", err)
+	}
+
+	actual := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	if actual.GetLabels()[labelTopologyOwner] != "other-lab" {
+		t.Fatalf("foreign node ownership changed: %v", actual.GetLabels())
 	}
 }
 
@@ -1221,6 +1414,23 @@ func getTestPrimitive(
 	}
 
 	return obj
+}
+
+func assertNoTestPrimitive(
+	t *testing.T,
+	r *Runtime,
+	gvr schema.GroupVersionResource,
+	namespace,
+	name string,
+) {
+	t.Helper()
+
+	_, err := r.client.Resource(gvr).Namespace(namespace).
+		Get(context.Background(), name, metav1.GetOptions{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected c9s %s %s/%s not to exist, got %v",
+			gvr.Resource, namespace, name, err)
+	}
 }
 
 func topologyDefinition(t *testing.T, obj *unstructured.Unstructured) string {

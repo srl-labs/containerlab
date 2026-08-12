@@ -19,6 +19,7 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -745,9 +746,17 @@ func (r *Runtime) applyStagedConfigMaps(
 				)
 			}
 
-			configMap.ResourceVersion = existing.ResourceVersion
-			created, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
-				Update(ctx, configMap, metav1.UpdateOptions{})
+			updated := existing.DeepCopy()
+			updated.Labels = mergeDesiredMetadata(existing.Labels, configMap.Labels)
+			updated.Data = configMap.Data
+			updated.BinaryData = configMap.BinaryData
+			if stagedConfigMapsConform(existing, updated) {
+				created = existing
+				err = nil
+			} else {
+				created, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
+					Update(ctx, updated, metav1.UpdateOptions{})
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("failed to apply staged ConfigMap %s/%s: %w",
@@ -761,6 +770,12 @@ func (r *Runtime) applyStagedConfigMaps(
 	}
 
 	return nil
+}
+
+func stagedConfigMapsConform(existing, desired *corev1.ConfigMap) bool {
+	return apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) &&
+		apiequality.Semantic.DeepEqual(existing.Data, desired.Data) &&
+		apiequality.Semantic.DeepEqual(existing.BinaryData, desired.BinaryData)
 }
 
 func stagedConfigMapObject(
@@ -838,6 +853,9 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 			)
 		}
 
+		if apiequality.Semantic.DeepEqual(configMap.OwnerReferences, ownerReferences) {
+			continue
+		}
 		configMap.OwnerReferences = ownerReferences
 
 		if _, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
@@ -869,6 +887,41 @@ func (r *Runtime) deleteStagedConfigMaps(
 			)
 		}
 	}
+}
+
+func (r *Runtime) deleteStaleConfigMaps(
+	ctx context.Context,
+	namespace,
+	topologyName string,
+	desired []stagedConfigMap,
+) error {
+	desiredNames := make(map[string]struct{}, len(desired))
+	for _, staged := range desired {
+		desiredNames[staged.name] = struct{}{}
+	}
+
+	configMaps, err := r.kubeClient.CoreV1().ConfigMaps(namespace).List(
+		ctx,
+		metav1.ListOptions{LabelSelector: labelTopologyOwner + "=" + topologyName},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to list staged ConfigMaps for c9s lab %s/%s: %w",
+			namespace, topologyName, err)
+	}
+
+	for idx := range configMaps.Items {
+		name := configMaps.Items[idx].Name
+		if _, keep := desiredNames[name]; keep {
+			continue
+		}
+		if err := r.kubeClient.CoreV1().ConfigMaps(namespace).
+			Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete stale staged ConfigMap %s/%s: %w",
+				namespace, name, err)
+		}
+	}
+
+	return nil
 }
 
 func safeConfigMapKey(filePath string) string {

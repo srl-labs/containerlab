@@ -30,9 +30,6 @@ func (s *primitiveResourceSet) groups() []primitiveResourceGroup {
 	return []primitiveResourceGroup{
 		{gvr: launcherProfileGVR, kind: "LauncherProfile", objects: s.launcherProfiles},
 		{gvr: linkGVR, kind: "Link", objects: s.links},
-		// c9s lets never-bound Links wait for their endpoint Nodes. Creating Links first ensures
-		// the Node controller sees the complete wiring set before it creates launcher workloads,
-		// avoiding partial-topology launches and the resulting Pod rollouts.
 		{gvr: nodeGVR, kind: "Node", objects: s.nodes},
 	}
 }

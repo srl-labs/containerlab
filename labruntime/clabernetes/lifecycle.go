@@ -36,23 +36,19 @@ func (r *Runtime) Deploy(
 	}
 	topologyResource := r.client.Resource(topologyGVR).Namespace(namespace)
 
-	_, err = topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
+	existingTopology, err := topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
+		existingTopology = nil
 		// Expected for the primary Node/Link path.
 	case err != nil:
 		return nil, fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
 			namespace, req.Name, err)
-	default:
-		return nil, duplicateTopologyError(req.Name, namespace)
 	}
 
-	exists, err := r.primitiveLabExists(ctx, req.Name, namespace)
+	primitiveExists, err := r.primitiveLabExists(ctx, req.Name, namespace)
 	if err != nil {
 		return nil, err
-	}
-	if exists {
-		return nil, duplicateTopologyError(req.Name, namespace)
 	}
 
 	topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(req)
@@ -70,13 +66,23 @@ func (r *Runtime) Deploy(
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
 	}
-
 	primitives, err := compilePrimitiveResources(desiredTopology)
 	if err != nil {
 		return nil, err
 	}
-	if req.Wait {
-		stagePrimitiveNodeDeployments(primitives)
+
+	// Compatibility Topologies are still supported for labs created by older versions. Keep
+	// their controller ownership intact and reconcile the definition in place. New labs and
+	// current primitive labs are reconciled directly through Node, Link, and LauncherProfile.
+	if existingTopology != nil {
+		return r.reconcileCompatibilityTopology(
+			ctx,
+			req,
+			namespace,
+			desiredTopology,
+			primitives,
+			stagedConfigMaps,
+		)
 	}
 
 	managedNamespace := req.Namespace == "" && r.labNamespaceOverride == ""
@@ -101,11 +107,23 @@ func (r *Runtime) Deploy(
 		return nil, err
 	}
 
-	log.Info("Creating clabernetes primitive resources", "name", req.Name, "namespace", namespace)
-	createdNodes, created, err := r.createPrimitiveResources(ctx, namespace, primitives)
+	operation := "Creating"
+	if primitiveExists {
+		operation = "Reconciling"
+	}
+	log.Info(operation+" clabernetes primitive resources", "name", req.Name, "namespace", namespace)
+	appliedNodes, createdNodes, createdResources, err := r.reconcilePrimitiveResources(
+		ctx,
+		namespace,
+		req.Name,
+		primitives,
+	)
 	if err != nil {
-		r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
-		cleanupNamespace()
+		if !primitiveExists {
+			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
+			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+			cleanupNamespace()
+		}
 
 		return nil, err
 	}
@@ -114,12 +132,17 @@ func (r *Runtime) Deploy(
 		ctx,
 		namespace,
 		stagedConfigMaps,
-		createdNodes,
+		appliedNodes,
 	); err != nil {
-		r.deleteCreatedPrimitiveResources(ctx, namespace, created)
-		r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
-		cleanupNamespace()
+		if !primitiveExists {
+			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
+			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+			cleanupNamespace()
+		}
 
+		return nil, err
+	}
+	if err = r.deleteStaleConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
 		return nil, err
 	}
 
@@ -130,20 +153,24 @@ func (r *Runtime) Deploy(
 			primitives.links,
 			req.Timeout,
 		); err != nil {
-			r.deleteCreatedPrimitiveResources(ctx, namespace, created)
-			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
-			cleanupNamespace()
+			if !primitiveExists {
+				r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
+				r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+				cleanupNamespace()
+			}
 
 			return nil, err
 		}
+	}
 
-		if err = r.enablePrimitiveNodeDeployments(ctx, namespace, createdNodes); err != nil {
-			r.deleteCreatedPrimitiveResources(ctx, namespace, created)
+	if err = r.enablePrimitiveNodeDeployments(ctx, namespace, createdNodes); err != nil {
+		if !primitiveExists {
+			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
 			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
 			cleanupNamespace()
-
-			return nil, err
 		}
+
+		return nil, err
 	}
 
 	if !req.Wait {
@@ -155,16 +182,6 @@ func (r *Runtime) Deploy(
 	}
 
 	return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
-}
-
-func duplicateTopologyError(name, namespace string) error {
-	return fmt.Errorf(
-		"the '%s' lab has already been deployed in namespace '%s'. "+
-			"Destroy the lab before deploying a lab with the same name, "+
-			"or use '--reconfigure' to redeploy it",
-		name,
-		namespace,
-	)
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
@@ -294,6 +311,31 @@ func (r *Runtime) Inspect(
 	}
 
 	return state, nil
+}
+
+func (r *Runtime) LabExists(
+	ctx context.Context,
+	req clablabruntime.InspectRequest,
+) (bool, error) {
+	if req.Name == "" {
+		return false, fmt.Errorf("topology name is required")
+	}
+
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
+	if err != nil {
+		return false, err
+	}
+	_, err = r.client.Resource(topologyGVR).Namespace(namespace).
+		Get(ctx, req.Name, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		return true, nil
+	case !apierrors.IsNotFound(err):
+		return false, fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
+			namespace, req.Name, err)
+	}
+
+	return r.primitiveLabExists(ctx, req.Name, namespace)
 }
 
 func (r *Runtime) List(

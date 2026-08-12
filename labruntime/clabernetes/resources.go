@@ -79,46 +79,6 @@ type createdPrimitiveResource struct {
 	name string
 }
 
-func (r *Runtime) createPrimitiveResources(
-	ctx context.Context,
-	namespace string,
-	set *primitiveResourceSet,
-) (map[string]*unstructured.Unstructured, []createdPrimitiveResource, error) {
-	createdNodes := map[string]*unstructured.Unstructured{}
-	created := []createdPrimitiveResource{}
-
-	for _, group := range set.groups() {
-		resource := r.client.Resource(group.gvr).Namespace(namespace)
-		for _, desired := range group.objects {
-			actual, err := resource.Create(ctx, desired, metav1.CreateOptions{})
-			if err != nil {
-				r.deleteCreatedPrimitiveResources(ctx, namespace, created)
-				if apierrors.IsAlreadyExists(err) {
-					return nil, nil, fmt.Errorf(
-						"c9s %s %s/%s already exists and belongs to another lab",
-						group.kind,
-						namespace,
-						desired.GetName(),
-					)
-				}
-
-				return nil, nil, fmt.Errorf("failed to create c9s %s %s/%s: %w",
-					group.kind, namespace, desired.GetName(), err)
-			}
-
-			created = append(
-				created,
-				createdPrimitiveResource{gvr: group.gvr, name: actual.GetName()},
-			)
-			if group.gvr == nodeGVR {
-				createdNodes[actual.GetName()] = actual
-			}
-		}
-	}
-
-	return createdNodes, created, nil
-}
-
 func (r *Runtime) waitPrimitiveLinksResolved(
 	ctx context.Context,
 	namespace string,
