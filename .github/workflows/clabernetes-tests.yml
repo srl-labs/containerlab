@@ -45,7 +45,7 @@ jobs:
 
       - name: Install kind
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.32.0/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
@@ -73,9 +73,9 @@ jobs:
             -v "${HOME}/.helm:/root/.helm" \
             -v "${HOME}/.config/helm:/root/.config/helm" \
             -v "${HOME}/.cache/helm:/root/.cache/helm" \
-            alpine/helm:3.12.3 \
+            alpine/helm:3.18.2 \
             upgrade --install --create-namespace --namespace c9s \
-              clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+              clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
 
           kubectl -n c9s rollout status deploy/clabernetes-manager --timeout=180s
 

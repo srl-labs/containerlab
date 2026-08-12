@@ -59,11 +59,17 @@ func (r *Runtime) launcherPod(
 	nodeName string,
 ) (*corev1.Pod, error) {
 	namespace = r.namespaceFor(namespace)
+	launchers, err := r.launcherNodeNames(ctx, name, namespace, []string{nodeName})
+	if err != nil {
+		return nil, err
+	}
+	launcherNode := launchers[nodeName]
+
 	list, err := r.kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{
 			labelApp:           clabernetesAppValue,
 			labelTopologyOwner: name,
-			labelTopologyNode:  nodeName,
+			labelTopologyNode:  launcherNode,
 		}.String(),
 	})
 	if err != nil {

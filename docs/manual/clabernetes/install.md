@@ -1,6 +1,6 @@
 # Installation
 
-Clabernetes runs on a Kubernetes cluster and hence requires one to be available before you start your Clabernetes journey. Although we don't have a strict requirement on the k8s version, we recommend using the version 1.21 or higher.
+Clabernetes runs on a Kubernetes cluster and hence requires one to be available before you start your Clabernetes journey. c9s 0.7 and newer require Kubernetes 1.31 or higher for the field selectors used by the Link API.
 
 Clabernetes project consists of two main components:
 
@@ -27,7 +27,7 @@ To install the latest Clabernetes release with Helm to an existing k8s cluster[^
 <!-- --8<-- [start:chart-install] -->
 ```bash
 helm upgrade --install --create-namespace --namespace c9s \
-    clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+    clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
 ```
 <!-- --8<-- [end:chart-install] -->
 
@@ -38,7 +38,7 @@ To install a specific clabernetes version add `--version` flag like so:
 
 ```bash
 helm upgrade --version 0.0.25 --install \
-    clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+    clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
 ```
 
 ///
@@ -52,7 +52,7 @@ helm upgrade --install --version 0.0.0 --create-namespace --namespace c9s \
     --set manager.imagePullPolicy=Always \
     --set globalConfig.deployment.launcherImagePullPolicy=Always \
     --set globalConfig.deployment.launcherLogLevel=debug \
-    clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+    clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
 ```
 
 We also set the log level to `debug` for all the components to see more verbose logs. Trust us, you might need it :smile:
@@ -77,7 +77,7 @@ Clabverter is versioned in the same way as Clabernetes, and the easiest way to u
 ```bash title="set up <code>clabverter</code> alias"
 alias clabverter='sudo docker run --user $(id -u) \
     -v $(pwd):/clabernetes/work --rm \
-    ghcr.io/srl-labs/clabernetes/clabverter'
+    ghcr.io/clabernetes/clabernetes/clabverter'
 ```
 <!-- --8<-- [end:cv-install] -->
 ///
@@ -87,7 +87,7 @@ In case you need to install a specific version:
 ```bash
 alias clabverter='sudo docker run --user $(id -u) \
     -v $(pwd):/clabernetes/work --rm \
-    ghcr.io/srl-labs/clabernetes/clabverter:0.0.22'
+    ghcr.io/clabernetes/clabernetes/clabverter:0.7.0'
 ```
 
 ///
@@ -97,7 +97,7 @@ To use the latest development version of clabverter:
 ```bash
 alias clabverter='sudo docker run --pull always --user $(id -u) \
     -v $(pwd):/clabernetes/work --rm \
-    ghcr.io/srl-labs/clabernetes/clabverter:dev-latest'
+    ghcr.io/clabernetes/clabernetes/clabverter:dev-latest'
 ```
 
 ///

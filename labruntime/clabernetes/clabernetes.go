@@ -19,18 +19,25 @@ const (
 	envContext    = "CLAB_KUBE_CONTEXT"
 	envNamespace  = "CLAB_KUBE_NAMESPACE"
 
-	labelApp              = "clabernetes/app"
-	labelTopologyOwner    = "clabernetes/topologyOwner"
-	labelTopologyNode     = "clabernetes/topologyNode"
-	labelIgnoreReconcile  = "clabernetes/ignoreReconcile"
+	c9sAPIVersion         = "c9s.run/v1alpha1"
+	labelApp              = "c9s.run/app"
+	labelTopologyOwner    = "c9s.run/topologyOwner"
+	labelTopologyNode     = "c9s.run/topologyNode"
+	labelIgnoreReconcile  = "c9s.run/ignoreReconcile"
 	clabernetesAppValue   = "clabernetes"
 	restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
 )
 
 var topologyGVR = schema.GroupVersionResource{
-	Group:    "clabernetes.containerlab.dev",
+	Group:    "c9s.run",
 	Version:  "v1alpha1",
 	Resource: "topologies",
+}
+
+var nodeGVR = schema.GroupVersionResource{
+	Group:    "c9s.run",
+	Version:  "v1alpha1",
+	Resource: "nodes",
 }
 
 type Runtime struct {

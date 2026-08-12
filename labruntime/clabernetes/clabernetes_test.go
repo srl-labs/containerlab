@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
@@ -199,6 +200,80 @@ func TestStateFromTopology(t *testing.T) {
 		server.Ready ||
 		server.LoadBalancerAddress != "" {
 		t.Fatalf("unexpected server state: %+v", server)
+	}
+}
+
+func TestTopologyObjectUsesCurrentC9sAPI(t *testing.T) {
+	t.Parallel()
+
+	obj := topologyObject("lab1", "lab-ns", "", "topology: {}\n")
+	if got := obj.GetAPIVersion(); got != c9sAPIVersion {
+		t.Fatalf("apiVersion = %q, want %q", got, c9sAPIVersion)
+	}
+	if topologyGVR.Group != "c9s.run" || nodeGVR.Group != "c9s.run" {
+		t.Fatalf("unexpected c9s resource groups: topology=%q node=%q",
+			topologyGVR.Group, nodeGVR.Group)
+	}
+}
+
+func TestEnrichStateUsesNodeResources(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "client",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "lab1",
+			},
+		},
+		"spec": map[string]any{
+			"kind":  "linux",
+			"image": "client:latest",
+		},
+		"status": map[string]any{
+			"readiness": "ready",
+			"exposedPorts": map[string]any{
+				"loadBalancerAddress": "192.0.2.10",
+			},
+		},
+	}}
+
+	r := newTestRuntime(node)
+	state := &clablabruntime.LabState{Name: "lab1", Namespace: "lab-ns"}
+	if err := r.enrichState(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(state.Nodes) != 1 {
+		t.Fatalf("len(state.Nodes) = %d, want 1: %+v", len(state.Nodes), state.Nodes)
+	}
+	got := state.Nodes[0]
+	if got.Name != "client" || got.Kind != "linux" || got.Image != "client:latest" ||
+		!got.Ready || got.State != "ready" || got.LoadBalancerAddress != "192.0.2.10" {
+		t.Fatalf("unexpected Node-derived state: %+v", got)
+	}
+	if !state.Ready || state.State != "running" {
+		t.Fatalf("unexpected aggregate state: %+v", state)
+	}
+}
+
+func TestResolveLauncherNode(t *testing.T) {
+	t.Parallel()
+
+	networkModes := map[string]string{
+		"primary":   "",
+		"secondary": "container:primary",
+		"nested":    "container:secondary",
+	}
+
+	if got := resolveLauncherNode("nested", networkModes); got != "primary" {
+		t.Fatalf("resolveLauncherNode(nested) = %q, want primary", got)
+	}
+	if got := resolveLauncherNode("standalone", networkModes); got != "standalone" {
+		t.Fatalf("resolveLauncherNode(standalone) = %q, want standalone", got)
 	}
 }
 
@@ -572,7 +647,14 @@ func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 	}
 
 	return &Runtime{
-		client:     dynamicfake.NewSimpleDynamicClient(k8sruntime.NewScheme(), runtimeObjects...),
+		client: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+			k8sruntime.NewScheme(),
+			map[schema.GroupVersionResource]string{
+				topologyGVR: "TopologyList",
+				nodeGVR:     "NodeList",
+			},
+			runtimeObjects...,
+		),
 		kubeClient: kubefake.NewSimpleClientset(),
 		namespace:  defaultNamespace,
 	}

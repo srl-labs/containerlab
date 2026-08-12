@@ -18,10 +18,6 @@ func (r *Runtime) Start(ctx context.Context, req clablabruntime.NodeRequest) err
 }
 
 func (r *Runtime) Stop(ctx context.Context, req clablabruntime.NodeRequest) error {
-	if err := r.setTopologyIgnoreReconcile(ctx, req.Name, req.Namespace, true); err != nil {
-		return err
-	}
-
 	return r.setNodesReplicas(ctx, req, 0)
 }
 
@@ -30,9 +26,14 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 	if err != nil {
 		return err
 	}
+	launchers, err := r.launcherNodeNames(ctx, req.Name, namespace, targets)
+	if err != nil {
+		return err
+	}
+	launcherNodes := uniqueLauncherNodes(targets, launchers)
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	for _, nodeName := range targets {
+	for _, nodeName := range launcherNodes {
 		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
 		if err != nil {
 			return err
@@ -59,6 +60,11 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 			return err
 		}
 	}
+	for _, nodeName := range launcherNodes {
+		if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, false); err != nil {
+			return err
+		}
+	}
 
 	return r.clearIgnoreWhenAllStarted(ctx, req.Name, namespace)
 }
@@ -72,26 +78,35 @@ func (r *Runtime) targetNodes(
 	}
 
 	namespace := r.namespaceFor(req.Namespace)
-	deployments, err := r.deploymentsForTopology(ctx, req.Name, namespace)
+	nodes, err := r.nodesForTopology(ctx, req.Name, namespace)
 	if err != nil {
 		return nil, "", err
 	}
 
 	known := map[string]struct{}{}
-	for idx := range deployments.Items {
-		nodeName := deployments.Items[idx].Labels[labelTopologyNode]
-		if nodeName != "" {
-			known[nodeName] = struct{}{}
-		}
+	for idx := range nodes.Items {
+		known[nodes.Items[idx].GetName()] = struct{}{}
 	}
 
 	if len(known) == 0 {
-		state, err := r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+		deployments, err := r.deploymentsForTopology(ctx, req.Name, namespace)
 		if err != nil {
 			return nil, "", err
 		}
-		for _, node := range state.Nodes {
-			known[node.Name] = struct{}{}
+		for idx := range deployments.Items {
+			nodeName := deployments.Items[idx].Labels[labelTopologyNode]
+			if nodeName != "" {
+				known[nodeName] = struct{}{}
+			}
+		}
+		if len(known) == 0 {
+			state, err := r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+			if err != nil {
+				return nil, "", err
+			}
+			for _, node := range state.Nodes {
+				known[node.Name] = struct{}{}
+			}
 		}
 	}
 
@@ -130,8 +145,24 @@ func (r *Runtime) setNodesReplicas(
 	if err != nil {
 		return err
 	}
+	launchers, err := r.launcherNodeNames(ctx, req.Name, namespace, targets)
+	if err != nil {
+		return err
+	}
+	launcherNodes := uniqueLauncherNodes(targets, launchers)
 
-	for _, nodeName := range targets {
+	if replicas == 0 {
+		if err := r.setTopologyIgnoreReconcile(ctx, req.Name, namespace, true); err != nil {
+			return err
+		}
+		for _, nodeName := range launcherNodes {
+			if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, nodeName := range launcherNodes {
 		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
 		if err != nil {
 			return err
@@ -151,7 +182,48 @@ func (r *Runtime) setNodesReplicas(
 	}
 
 	if replicas > 0 {
+		for _, nodeName := range launcherNodes {
+			if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, false); err != nil {
+				return err
+			}
+		}
+
 		return r.clearIgnoreWhenAllStarted(ctx, req.Name, namespace)
+	}
+
+	return nil
+}
+
+func (r *Runtime) setNodeIgnoreReconcile(
+	ctx context.Context,
+	topologyName,
+	namespace,
+	nodeName string,
+	enabled bool,
+) error {
+	namespace = r.namespaceFor(namespace)
+	resource := r.client.Resource(nodeGVR).Namespace(namespace)
+
+	node, err := resource.Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get c9s node %s/%s/%s: %w",
+			namespace, topologyName, nodeName, err)
+	}
+
+	labelsMap := node.GetLabels()
+	if labelsMap == nil {
+		labelsMap = map[string]string{}
+	}
+	if enabled {
+		labelsMap[labelIgnoreReconcile] = "true"
+	} else {
+		delete(labelsMap, labelIgnoreReconcile)
+	}
+	node.SetLabels(labelsMap)
+
+	if _, err = resource.Update(ctx, node, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("failed to update c9s node %s/%s/%s labels: %w",
+			namespace, topologyName, nodeName, err)
 	}
 
 	return nil
@@ -273,11 +345,17 @@ func (r *Runtime) deploymentForNode(
 	nodeName string,
 ) (*appsv1.Deployment, error) {
 	namespace = r.namespaceFor(namespace)
+	launchers, err := r.launcherNodeNames(ctx, name, namespace, []string{nodeName})
+	if err != nil {
+		return nil, err
+	}
+	launcherNode := launchers[nodeName]
+
 	list, err := r.kubeClient.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{
 			labelApp:           clabernetesAppValue,
 			labelTopologyOwner: name,
-			labelTopologyNode:  nodeName,
+			labelTopologyNode:  launcherNode,
 		}.String(),
 	})
 	if err != nil {

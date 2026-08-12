@@ -785,7 +785,7 @@ func (r *Runtime) setStagedConfigMapOwnerReferences(
 
 	ownerReferences := []metav1.OwnerReference{
 		{
-			APIVersion: "clabernetes.containerlab.dev/v1alpha1",
+			APIVersion: c9sAPIVersion,
 			Kind:       "Topology",
 			Name:       topology.GetName(),
 			UID:        topology.GetUID(),

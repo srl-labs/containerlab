@@ -1,13 +1,13 @@
 # Topology Configuration
 
-The Topology custom resource (CR) is the primary way to deploy containerlab topologies in Kubernetes. This page covers all available configuration options.
+The Topology custom resource (CR) is the high-level compatibility API for deploying a complete containerlab definition. c9s compiles it into the primary Node, Link, and LauncherProfile resources. This page covers the Topology configuration options.
 
 ## Definition
 
 The `definition` field contains the containerlab topology in YAML format:
 
 ```yaml
-apiVersion: clabernetes.containerlab.dev/v1alpha1
+apiVersion: c9s.run/v1alpha1
 kind: Topology
 metadata:
   name: my-lab
@@ -244,7 +244,7 @@ spec:
 ## Complete Example
 
 ```yaml
-apiVersion: clabernetes.containerlab.dev/v1alpha1
+apiVersion: c9s.run/v1alpha1
 kind: Topology
 metadata:
   name: production-lab

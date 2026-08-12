@@ -29,7 +29,7 @@ Podman containers for the lab nodes. Instead, it renders the final topology and
 stores it in a Clabernetes `Topology` custom resource:
 
 ```yaml
-apiVersion: clabernetes.containerlab.dev/v1alpha1
+apiVersion: c9s.run/v1alpha1
 kind: Topology
 metadata:
   name: <lab-name>
@@ -40,9 +40,10 @@ spec:
       <rendered containerlab topology yaml>
 ```
 
-The Clabernetes manager then reconciles this resource into kubernetes objects,
-usually one launcher Deployment and Pod per topology node. Each launcher pod
-runs containerlab inside the pod and starts the real node container there.
+The Clabernetes manager compiles this compatibility resource into `Node`,
+`Link`, and `LauncherProfile` resources. Each launcher pod runs containerlab
+inside the pod and starts the real node container there. Nodes using
+`network-mode: container:<primary>` share the primary node's launcher pod.
 
 /// note
 The node containers are nested inside the launcher pods. A `docker ps` on the
@@ -69,6 +70,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 The c9s runtime expects:
 
 - a reachable kubernetes cluster
+- kubernetes 1.31 or newer
 - Clabernetes CRDs installed in the cluster
 - the Clabernetes manager running and watching the lab namespace
 - a namespace that already exists for the lab
@@ -126,6 +128,12 @@ CLAB_KUBE_NAMESPACE=lab-a \
 
 creates the `Topology` resource in the `lab-a` namespace when a topology with
 the same name does not already exist there.
+
+/// warning
+In c9s 0.7 and newer, the namespace is also the node-name boundary. Two labs in
+the same namespace cannot both contain a node with the same name. Use a
+dedicated namespace when node names could overlap.
+///
 
 Some commands intentionally look across namespaces:
 
@@ -212,8 +220,8 @@ Useful kubernetes checks for the same state are:
 ```bash
 kubectl get topologies -A
 kubectl -n <namespace> get topology <lab> -o yaml
-kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
-  -l clabernetes/topologyOwner=<lab>
+kubectl -n <namespace> get node.c9s.run,link.c9s.run,launcherprofile.c9s.run,deploy,pod,svc,cm,pvc \
+  -l c9s.run/topologyOwner=<lab>
 ```
 
 ## Exec
@@ -247,18 +255,19 @@ containerlab --runtime clabernetes start -t topo.clab.yml
 containerlab --runtime clabernetes restart -t topo.clab.yml
 ```
 
-`stop` sets the Clabernetes ignore-reconcile label and scales the selected node
-Deployments to `0`:
+`stop` sets the Clabernetes ignore-reconcile label on the `Topology` and the
+selected launcher `Node` resources, then scales their Deployments to `0`:
 
 ```text
-clabernetes/ignoreReconcile=true
+c9s.run/ignoreReconcile=true
 ```
 
 The label prevents the Clabernetes manager from immediately reconciling the
 nodes back to the running state.
 
-`start` scales the selected Deployments back to `1` and clears the
-ignore-reconcile label when all nodes are running again.
+`start` scales the selected Deployments back to `1`, clears the corresponding
+Node labels, and clears the Topology label when all launchers are running
+again. A grouped secondary shares lifecycle with its primary launcher node.
 
 `restart` patches each selected Deployment with a restart annotation and waits
 for it to become ready:
@@ -323,7 +332,7 @@ For c9s, events do not come from Docker events on the outer host. Containerlab
 watches:
 
 - Clabernetes `Topology` resources
-- Pods labeled with `clabernetes/topologyOwner`
+- Pods labeled with `c9s.run/topologyOwner`
 
 With `--initial-state`, the stream starts with synthetic events for the current
 c9s node state and then continues with live watches.
@@ -356,14 +365,14 @@ Related resources are selected with Clabernetes labels:
 
 ```bash
 kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
-  -l clabernetes/topologyOwner=<lab>
+  -l c9s.run/topologyOwner=<lab>
 ```
 
 To find one node launcher pod:
 
 ```bash
 kubectl -n <namespace> get pod \
-  -l clabernetes/topologyOwner=<lab>,clabernetes/topologyNode=<node>
+  -l c9s.run/topologyOwner=<lab>,c9s.run/topologyNode=<node>
 ```
 
 Inside each launcher pod, Clabernetes uses:
@@ -401,17 +410,21 @@ ls -la /clabernetes
 The kube identity used by the outer containerlab process must be able to:
 
 - create, get, list, watch, update, and delete Clabernetes `Topology` resources
+- list, get, and update c9s `Node` resources
 - list and watch Pods
 - list, get, and update Deployments
+- create, get, update, and delete ConfigMaps used for local files
 - exec into launcher Pods with `pods/exec`
 
 Useful checks:
 
 ```bash
-kubectl auth can-i get topologies.clabernetes.containerlab.dev -n <namespace>
-kubectl auth can-i create topologies.clabernetes.containerlab.dev -n <namespace>
-kubectl auth can-i update topologies.clabernetes.containerlab.dev -n <namespace>
-kubectl auth can-i delete topologies.clabernetes.containerlab.dev -n <namespace>
+kubectl auth can-i get topologies.c9s.run -n <namespace>
+kubectl auth can-i create topologies.c9s.run -n <namespace>
+kubectl auth can-i update topologies.c9s.run -n <namespace>
+kubectl auth can-i delete topologies.c9s.run -n <namespace>
+kubectl auth can-i list nodes.c9s.run -n <namespace>
+kubectl auth can-i update nodes.c9s.run -n <namespace>
 kubectl auth can-i list pods -n <namespace>
 kubectl auth can-i watch pods -A
 kubectl auth can-i create pods/exec -n <namespace>
@@ -468,7 +481,7 @@ export CLAB_KUBE_NAMESPACE=<namespace>
 The c9s runtime talks to:
 
 ```text
-topologies.clabernetes.containerlab.dev
+topologies.c9s.run
 ```
 
 Typical symptoms:
@@ -481,7 +494,7 @@ Check:
 
 ```bash
 kubectl api-resources | grep -i clabernetes
-kubectl get crd topologies.clabernetes.containerlab.dev
+kubectl get crd topologies.c9s.run
 ```
 
 Install Clabernetes and its CRDs before using `--runtime clabernetes`.
@@ -497,7 +510,7 @@ Check:
 kubectl get pods -A | grep -i clabernetes
 kubectl -n <namespace> get topology <lab> -o yaml
 kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
-  -l clabernetes/topologyOwner=<lab>
+  -l c9s.run/topologyOwner=<lab>
 ```
 
 If deploy waits until timeout, check the Clabernetes manager logs and verify
@@ -517,7 +530,7 @@ Check:
 kubectl -n <namespace> get topology <lab> -o yaml
 kubectl -n <namespace> describe topology <lab>
 kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
-  -l clabernetes/topologyOwner=<lab>
+  -l c9s.run/topologyOwner=<lab>
 ```
 
 Common causes include bad topology data, image pull failures, missing pull
@@ -549,7 +562,7 @@ Check:
 
 ```bash
 kubectl -n <namespace> get pod \
-  -l clabernetes/topologyOwner=<lab>,clabernetes/topologyNode=<node> \
+  -l c9s.run/topologyOwner=<lab>,c9s.run/topologyNode=<node> \
   -o wide
 kubectl auth can-i create pods/exec -n <namespace>
 kubectl -n <namespace> exec -it <launcher-pod> -- sh
@@ -588,6 +601,6 @@ Use kubernetes and launcher-pod state as the source of truth for c9s labs:
 ```bash
 kubectl get topologies -A
 kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
-  -l clabernetes/topologyOwner=<lab>
+  -l c9s.run/topologyOwner=<lab>
 ```
 ///

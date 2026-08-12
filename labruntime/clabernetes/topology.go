@@ -61,7 +61,7 @@ func topologyObject(
 
 	return &unstructured.Unstructured{
 		Object: map[string]any{
-			"apiVersion": "clabernetes.containerlab.dev/v1alpha1",
+			"apiVersion": c9sAPIVersion,
 			"kind":       "Topology",
 			"metadata":   metadata,
 			"spec":       spec,

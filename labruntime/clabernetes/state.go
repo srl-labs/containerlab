@@ -9,12 +9,43 @@ import (
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
 	if state == nil || state.Name == "" {
 		return nil
+	}
+
+	nodeResources, err := r.nodesForTopology(ctx, state.Name, state.Namespace)
+	if err != nil {
+		return err
+	}
+
+	nodesByName := map[string]clablabruntime.NodeState{}
+	for _, node := range state.Nodes {
+		nodesByName[node.Name] = node
+	}
+
+	networkModes := make(map[string]string, len(nodeResources.Items))
+	for idx := range nodeResources.Items {
+		nodeResource := &nodeResources.Items[idx]
+		nodeName := nodeResource.GetName()
+		node := nodesByName[nodeName]
+		node.Name = nodeName
+		node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
+		node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
+		node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
+		node.Ready = node.State == "ready"
+		node.LoadBalancerAddress, _, _ = unstructured.NestedString(
+			nodeResource.Object,
+			"status",
+			"exposedPorts",
+			"loadBalancerAddress",
+		)
+		nodesByName[nodeName] = node
+		networkModes[nodeName] = nodeNetworkMode(nodeResource)
 	}
 
 	deployments, err := r.deploymentsForTopology(ctx, state.Name, state.Namespace)
@@ -31,11 +62,6 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	if err != nil {
 		return fmt.Errorf("failed to list clabernetes pods for topology %s/%s: %w",
 			state.Namespace, state.Name, err)
-	}
-
-	nodesByName := map[string]clablabruntime.NodeState{}
-	for _, node := range state.Nodes {
-		nodesByName[node.Name] = node
 	}
 
 	podsByNode := map[string]*corev1.Pod{}
@@ -60,29 +86,42 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 			continue
 		}
 
-		node := nodesByName[nodeName]
-		node.Name = nodeName
 		replicas := int32(1)
 		if deployment.Spec.Replicas != nil {
 			replicas = *deployment.Spec.Replicas
 		}
 
+		deploymentState := "notready"
+		deploymentReady := false
 		switch {
 		case replicas == 0:
-			node.State = "stopped"
-			node.Ready = false
+			deploymentState = "stopped"
 		case deployment.Status.ReadyReplicas > 0:
-			node.State = "ready"
-			node.Ready = true
+			deploymentState = "ready"
+			deploymentReady = true
 		case podsByNode[nodeName] != nil && podsByNode[nodeName].Status.Phase != "":
-			node.State = strings.ToLower(string(podsByNode[nodeName].Status.Phase))
-			node.Ready = false
-		default:
-			node.State = "notready"
-			node.Ready = false
+			deploymentState = strings.ToLower(string(podsByNode[nodeName].Status.Phase))
 		}
 
-		nodesByName[nodeName] = node
+		matched := false
+		for logicalNodeName, node := range nodesByName {
+			if resolveLauncherNode(logicalNodeName, networkModes) != nodeName {
+				continue
+			}
+
+			node.State = deploymentState
+			node.Ready = deploymentReady
+			nodesByName[logicalNodeName] = node
+			matched = true
+		}
+
+		if !matched {
+			node := nodesByName[nodeName]
+			node.Name = nodeName
+			node.State = deploymentState
+			node.Ready = deploymentReady
+			nodesByName[nodeName] = node
+		}
 	}
 
 	nodeNames := make([]string, 0, len(nodesByName))
