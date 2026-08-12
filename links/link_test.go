@@ -107,6 +107,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						NewEndpointRaw("srl1", "e1-5", ""),
 						NewEndpointRaw("srl2", "e1-5", ""),
@@ -131,6 +132,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						{Node: "n1", Iface: "e1-1", IPv4: "10.10.10.1/24"},
 						{Node: "n2", Iface: "e1-1"},
@@ -156,6 +158,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						{Node: "n1", Iface: "e1-1"},
 						{Node: "n2", Iface: "e1-1", IPv4: "10.10.10.1/24"},
@@ -182,6 +185,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						{Node: "n1", Iface: "e1-1"},
 						{Node: "n2", Iface: "e1-1", IPv6: "123::4/127"},
@@ -208,6 +212,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						{Node: "n1", Iface: "e1-1", IPv4: "10.10.10.1/24"},
 						{Node: "n2", Iface: "e1-1", IPv4: "10.10.10.2/24"},
@@ -310,6 +315,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						NewEndpointRaw("srl1", "e1-5", ""),
 						NewEndpointRaw("srl2", "e1-5", ""),
@@ -336,6 +342,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
+					fromBrief: true,
 					Endpoints: []*EndpointRaw{
 						NewEndpointRaw("srl1", "e1-5", ""),
 						NewEndpointRaw("srl2", "e1-5", ""),
@@ -543,7 +550,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				return
 			}
 			if !tt.wantErr {
-				if diff := cmp.Diff(rl, tt.want); diff != "" {
+				if diff := cmp.Diff(rl, tt.want, cmp.AllowUnexported(LinkVEthRaw{})); diff != "" {
 					t.Errorf("RawLinkType Unmarshal() = %v, want %v, diff:\n%s", rl, tt.want, diff)
 					return
 				}
@@ -680,43 +687,6 @@ func Test_extractHostNodeInterfaceData(t *testing.T) {
 	}
 }
 
-func TestSanitizeInterfaceName(t *testing.T) {
-	tests := map[string]struct {
-		input string
-		want  string
-	}{
-		"sanitize-test-original": {
-			input: "eth0",
-			want:  "eth0",
-		},
-		"sanitize-test-xrd": {
-			input: "Gi0-0-0-0",
-			want:  "Gi0-0-0-0",
-		},
-		"sanitize-test-c8000": {
-			input: "Hu0_0_0_1",
-			want:  "Hu0_0_0_1",
-		},
-		"sanitize-test-asa": {
-			input: "GigabitEthernet 0/0",
-			want:  "GigabitEthernet-0-0",
-		},
-		"sanitize-test-junos": {
-			input: "ge-0/0/0",
-			want:  "ge-0-0-0",
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := SanitizeInterfaceName(tt.input)
-			if got != tt.want {
-				t.Errorf("got wrong sanitized interface name %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestOwnershipAltName(t *testing.T) {
 	node := newFakeNode("node1")
 	ep1 := NewEndpointVeth(NewEndpointGeneric(node, "eth1", nil))
@@ -751,11 +721,17 @@ func TestHasOwnershipAltName(t *testing.T) {
 	if !hasOwnershipAltName(link) {
 		t.Fatalf("expected ownership marker to be detected")
 	}
+	if !HasOwnershipAltName(link) {
+		t.Fatalf("expected exported ownership marker helper to detect marker")
+	}
 
 	link.Attrs().AltNames = []string{"user-alt"}
 
 	if hasOwnershipAltName(link) {
 		t.Fatalf("did not expect ownership marker to be detected")
+	}
+	if HasOwnershipAltName(link) {
+		t.Fatalf("did not expect exported ownership marker helper to detect marker")
 	}
 }
 

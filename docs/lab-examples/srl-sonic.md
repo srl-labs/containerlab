@@ -191,4 +191,3 @@ rtt min/avg/max/mdev = 2.806/2.985/3.186/0.155 ms
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

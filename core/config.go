@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -167,7 +168,7 @@ func (c *CLab) NewNode(
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
-		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
 	}
 
 	// adding default labels to the node config
@@ -195,21 +196,80 @@ func (c *CLab) NewNode(
 	return nil
 }
 
+// AddPlaceholderNode adds a node whose underlying resource already exists outside this lab.
+func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
+	if nodeCfg == nil || nodeCfg.ShortName == "" || nodeCfg.Kind == "" {
+		return errors.New("placeholder node requires a name and kind")
+	}
+	if _, exists := c.Nodes[nodeCfg.ShortName]; exists {
+		return fmt.Errorf("node %q already exists", nodeCfg.ShortName)
+	}
+	rt, exists := c.Runtimes[nodeCfg.Runtime]
+	if !exists {
+		return fmt.Errorf("runtime %q not found for node %q", nodeCfg.Runtime, nodeCfg.ShortName)
+	}
+	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
+	if err != nil {
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
+	}
+	if err := n.Init(
+		nodeCfg,
+		clabnodes.WithRuntime(rt),
+		clabnodes.WithMgmtNet(c.Config.Mgmt),
+	); err != nil {
+		return fmt.Errorf("initializing node %q: %w", nodeCfg.ShortName, err)
+	}
+
+	if c.Nodes == nil {
+		c.Nodes = make(map[string]clabnodes.Node)
+	}
+	c.Nodes[nodeCfg.ShortName] = n
+
+	return nil
+}
+
+func (c *CLab) privilegedByDefault(kind string) bool {
+	if c.Reg != nil {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			return regEntry.PrivilegedByDefault()
+		}
+	}
+
+	return true
+}
+
+func (c *CLab) nodeLongName(nodeName string) string {
+	switch *c.Config.Prefix {
+	case "":
+		return nodeName
+	case "__lab-name":
+		return fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
+	default:
+		return fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	}
+}
+
+func (c *CLab) resolvePidMode(pidMode string) string {
+	target, isContainerMode := strings.CutPrefix(pidMode, "container:")
+	if !isContainerMode || target == "" {
+		return pidMode
+	}
+	if _, isTopologyNode := c.Config.Topology.Nodes[target]; !isTopologyNode {
+		return pidMode
+	}
+
+	return "container:" + c.nodeLongName(target)
+}
+
 func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeName string,
 	nodeDef *clabtypes.NodeDefinition,
 	idx int,
 ) (*clabtypes.NodeConfig, error) {
-	// default longName follows $prefix-$lab-$nodeName pattern
-	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+	privileged := c.Config.Topology.GetNodePrivileged(nodeName, c.privilegedByDefault(kind))
 
-	switch *c.Config.Prefix {
-	// when prefix is an empty string longName will match shortName/nodeName
-	case "":
-		longName = nodeName
-	case "__lab-name":
-		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
-	}
+	longName := c.nodeLongName(nodeName)
 
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
@@ -218,7 +278,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
-		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		Kind:            kind,
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
@@ -233,6 +293,11 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
+		Privileged:      privileged,
+		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
+		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
+		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
@@ -240,6 +305,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		RestartPolicy:   c.Config.Topology.GetRestartPolicy(nodeName),
+		LinkApplyMode:   c.Config.Topology.GetNodeLinkApplyMode(nodeName),
 		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
@@ -248,13 +314,31 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 
+	if nodeCfg.LinkApplyMode != "" && !nodeCfg.LinkApplyMode.IsValid() {
+		return nil, fmt.Errorf(
+			"node %q has invalid link-apply-mode %q, valid values: %s, %s, %s",
+			nodeName,
+			nodeCfg.LinkApplyMode,
+			clabnodes.LinkApplyModeLive,
+			clabnodes.LinkApplyModeRestart,
+			clabnodes.LinkApplyModeRecreate,
+		)
+	}
+
 	// Resolve credentials: topology settings take priority, falling back to kind's hardcoded
 	// defaults from the node registry.
 	nodeCfg.Credentials.Username = c.Config.Topology.GetNodeUsername(nodeName)
 	nodeCfg.Credentials.Password = c.Config.Topology.GetNodePassword(nodeName)
+	// Resolve the SSH identity-file path against the topology directory (and expand ~) so the
+	// rendered ssh_config works regardless of the cwd ssh is later invoked from.
+	if identityFile := c.Config.Topology.GetNodeIdentityFile(nodeName); identityFile != "" {
+		nodeCfg.Credentials.IdentityFile = clabutils.ResolvePath(
+			identityFile,
+			c.TopoPaths.TopologyFileDir(),
+		)
+	}
 
 	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
-		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 		if regEntry := c.Reg.Kind(kind); regEntry != nil {
 			creds := regEntry.GetCredentials()
 			if nodeCfg.Credentials.Username == "" {
@@ -503,6 +587,16 @@ func (*CLab) loadKernelModules() error {
 		// trying to load the kernel modules.
 		km, err := kmod.New(opts...)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				log.Debugf(
+					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
+					err,
+					m,
+				)
+
+				return nil
+			}
+
 			log.Warnf("Unable to init module loader: %v. Skipping...", err)
 
 			return nil
@@ -510,9 +604,9 @@ func (*CLab) loadKernelModules() error {
 
 		err = km.Load(m, "", 0)
 		if err != nil {
-			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
-
-			return nil
+			return fmt.Errorf(
+				"kernel module %q is not loaded, not built-in and could not be loaded: %w", m, err,
+			)
 		}
 
 		log.Debugf("kernel module %q loaded successfully", m)
@@ -793,21 +887,26 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	}
 }
 
-// processNodeExtras replaces (in place) magic variables in node extras.
+// processNodeExtras replaces magic variables in node extras.
 func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
 	if nodeCfg.Extras == nil {
 		return
 	}
 
 	r := c.magicVarReplacer(nodeCfg.ShortName)
+	extras := *nodeCfg.Extras
 
-	for i, e := range nodeCfg.Extras.CeosCopyToFlash {
-		nodeCfg.Extras.CeosCopyToFlash[i] = r.Replace(e)
+	extras.CeosCopyToFlash = slices.Clone(nodeCfg.Extras.CeosCopyToFlash)
+	for i, e := range extras.CeosCopyToFlash {
+		extras.CeosCopyToFlash[i] = r.Replace(e)
 	}
 
-	for i, e := range nodeCfg.Extras.SRLAgents {
-		nodeCfg.Extras.SRLAgents[i] = r.Replace(e)
+	extras.SRLAgents = slices.Clone(nodeCfg.Extras.SRLAgents)
+	for i, e := range extras.SRLAgents {
+		extras.SRLAgents[i] = r.Replace(e)
 	}
+
+	nodeCfg.Extras = &extras
 }
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.

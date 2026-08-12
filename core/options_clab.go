@@ -39,7 +39,9 @@ func WithLabOwner(owner string) ClabOption {
 			"clab_admins"); err == nil && isClabAdmin {
 			c.customOwner = owner
 		} else if owner != "" {
-			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
+			log.Warn(
+				"Only users in clab_admins group can set custom owner. Using current user as owner.",
+			)
 		}
 
 		return nil
@@ -82,6 +84,7 @@ func WithSkippedBindsPathsCheck() ClabOption {
 func WithManagementNetworkName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.Network = n
+		c.managementNetworkOverridden = true
 
 		return nil
 	}
@@ -92,6 +95,7 @@ func WithManagementNetworkName(n string) ClabOption {
 func WithManagementIpv4Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv4Subnet = s
+		c.managementNetworkOverridden = true
 
 		return nil
 	}
@@ -102,6 +106,7 @@ func WithManagementIpv4Subnet(s string) ClabOption {
 func WithManagementIpv6Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv6Subnet = s
+		c.managementNetworkOverridden = true
 
 		return nil
 	}

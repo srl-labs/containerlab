@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -37,6 +38,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		redeployCmd,
 		saveCmd,
 		toolsCmd,
+		validateCmd,
 	}
 }
 
@@ -217,6 +219,7 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		cobraCmd.Name() != "inspect" &&
 		cobraCmd.Name() != "save" &&
 		cobraCmd.Name() != "graph" &&
+		cobraCmd.Name() != "validate" &&
 		cobraCmd.Name() != "interfaces" {
 		return nil
 	}
@@ -268,11 +271,26 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 	}
 
 	if len(files) > 1 {
-		return fmt.Errorf(
-			"more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, "+
-				"can't pick one: %q",
-			files,
-		)
+		if !term.IsTerminal(os.Stdin.Fd()) {
+			return fmt.Errorf(
+				"more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, "+
+					"can't pick one: %q",
+				files,
+			)
+		}
+
+		running := runningTopoFiles(cobraCmd.Context(), o)
+
+		selected, err := selectTopoFile(files, running)
+		if err != nil {
+			return err
+		}
+
+		o.Global.TopologyFile = selected
+
+		log.Info("Using topology file", "file", selected)
+
+		return nil
 	}
 
 	o.Global.TopologyFile = files[0]

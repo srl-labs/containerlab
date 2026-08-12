@@ -1,3 +1,8 @@
+---
+tags:
+  - GUI
+---
+
 # Containerlab Web GUI
 
 The Containerlab Web GUI is the standalone browser application for Containerlab. It runs as a container, serves the shared [Containerlab GUI](index.md), and connects to one or more reachable [`clab-api-server`](../api-server.md) endpoints.

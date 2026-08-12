@@ -47,6 +47,68 @@ func TestDefaultNodeEndpointOwnership(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
+	tests := []struct {
+		name string
+		old  *clabtypes.NodeConfig
+		new  *clabtypes.NodeConfig
+	}{
+		{
+			name: "exec",
+			old:  &clabtypes.NodeConfig{Exec: []string{"echo old"}},
+			new:  &clabtypes.NodeConfig{Exec: []string{"echo new"}},
+		},
+		{
+			name: "environment",
+			old:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "old"}},
+			new:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "new"}},
+		},
+		{
+			name: "privileged",
+			old:  &clabtypes.NodeConfig{Privileged: true},
+			new:  &clabtypes.NodeConfig{Privileged: false},
+		},
+		{
+			name: "cgroup namespace mode",
+			old:  &clabtypes.NodeConfig{CgroupnsMode: "private"},
+			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
+		},
+		{
+			name: "PID mode",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{PidMode: "host"},
+		},
+		{
+			name: "tmpfs",
+			old:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw"}},
+			new:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw,nosuid"}},
+		},
+		{
+			name: "security options",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
+		},
+		{
+			name: "components",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := &DefaultNode{Cfg: &clabtypes.NodeConfig{LongName: "clab-lab-n1"}}
+			plan := node.ComputeReconcilePlan(node.ComputeDiff(tt.old, tt.new))
+			if plan.Action != clabtypes.TopologyDiffActionRecreate {
+				t.Fatalf("action = %q, want %q", plan.Action, clabtypes.TopologyDiffActionRecreate)
+			}
+			if len(plan.Recreated) != 1 || plan.Recreated[0] != "clab-lab-n1" {
+				t.Fatalf("recreated nodes = %v, want only clab-lab-n1", plan.Recreated)
+			}
+		})
+	}
+}
+
 func TestDefaultNodeAdoptEndpointRejectsForeignOwner(t *testing.T) {
 	d := &DefaultNode{
 		Cfg: &clabtypes.NodeConfig{
@@ -102,6 +164,93 @@ func TestDefaultNodeShouldSkipLifecycle(t *testing.T) {
 			d := &DefaultNode{Cfg: tt.cfg}
 			if got := d.ShouldSkipLifecycle(); got != tt.want {
 				t.Fatalf("ShouldSkipLifecycle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeLinkApplyMode(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *clabtypes.NodeConfig
+		want LinkApplyMode
+	}{
+		{name: "regular", want: LinkApplyModeRecreate},
+		{
+			name: "root namespace",
+			cfg:  &clabtypes.NodeConfig{IsRootNamespaceBased: true},
+			want: LinkApplyModeLive,
+		},
+		{
+			name: "external",
+			cfg:  &clabtypes.NodeConfig{SkipUniquenessCheck: true},
+			want: LinkApplyModeLive,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &DefaultNode{Cfg: tt.cfg}
+			if got := d.LinkApplyMode(context.Background()); got != tt.want {
+				t.Fatalf("LinkApplyMode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeImageLinkApplyMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		labels     map[string]string
+		inspectErr error
+		fallback   LinkApplyMode
+		want       LinkApplyMode
+	}{
+		{
+			name:     "boxen image uses live apply",
+			labels:   map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
+			fallback: LinkApplyModeRecreate,
+			want:     LinkApplyModeLive,
+		},
+		{
+			name:     "missing label keeps restart fallback",
+			labels:   map[string]string{"other": "label"},
+			fallback: LinkApplyModeRestart,
+			want:     LinkApplyModeRestart,
+		},
+		{
+			name:       "inspect error keeps recreate fallback",
+			inspectErr: errors.New("inspect image"),
+			fallback:   LinkApplyModeRecreate,
+			want:       LinkApplyModeRecreate,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			runtime := mockruntime.NewMockContainerRuntime(ctrl)
+			if tt.inspectErr != nil {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(nil, tt.inspectErr)
+			} else {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(&clabruntime.ImageInspect{
+						Config: clabruntime.ImageConfig{Labels: tt.labels},
+					}, nil)
+			}
+
+			d := &DefaultNode{
+				Cfg:     &clabtypes.NodeConfig{Image: "img"},
+				Runtime: runtime,
+			}
+
+			if got := d.ImageLinkApplyMode(context.Background(), tt.fallback); got != tt.want {
+				t.Fatalf("ImageLinkApplyMode() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -173,13 +322,10 @@ func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
 		},
 	}
 
-	err := d.RestoreEndpoints(context.Background())
-	if err == nil {
-		t.Fatalf("expected error when parking netns is missing")
-	}
-
-	if !strings.Contains(err.Error(), "no parking netns found") {
-		t.Fatalf("unexpected error: %v", err)
+	// A node stopped outside of containerlab (or with no dataplane links) has no
+	// parking netns; restoring should be a no-op rather than an error.
+	if err := d.RestoreEndpoints(context.Background()); err != nil {
+		t.Fatalf("expected no error when parking netns is missing, got %v", err)
 	}
 }
 

@@ -1,5 +1,8 @@
 ---
 comments: true
+tags:
+  - Networking
+  - Command
 ---
 
 # Link Impairments

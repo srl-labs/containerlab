@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/mod/semver"
 )
 
@@ -52,6 +54,8 @@ var tlsConfigPre26_3 string
 
 //go:embed version_configs/tls.cfg
 var tlsConfig string
+
+const srlMaxSSHPubKeys = 32
 
 // renderSRLEmbeddedTemplate parses and executes an embedded default-config snippet with the same
 // func map as the main SRL default config template.
@@ -150,7 +154,33 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
-		tplData.SSHPubKeys = clabutils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
+		pubKeys := n.sshPubKeys
+		if len(n.sshPubKeys) > srlMaxSSHPubKeys {
+			log.Warnf(
+				"SR Linux node %q has %d SSH public keys, but SR Linux supports at most %d; "+
+					"only the first %d (sorted deterministically) will be provisioned",
+				n.Cfg.ShortName,
+				len(n.sshPubKeys),
+				srlMaxSSHPubKeys,
+				srlMaxSSHPubKeys,
+			)
+
+			// n.sshPubKeys is gathered from a map in RetrieveSSHPubKeys, so its
+			// order is non-deterministic. Sort a copy by the marshaled key bytes
+			// so the same 32 keys are retained on every deploy and a user does not
+			// randomly lose access to a key between runs.
+			pubKeys = make([]ssh.PublicKey, len(n.sshPubKeys))
+			copy(pubKeys, n.sshPubKeys)
+			sort.Slice(pubKeys, func(i, j int) bool {
+				return bytes.Compare(
+					ssh.MarshalAuthorizedKey(pubKeys[i]),
+					ssh.MarshalAuthorizedKey(pubKeys[j]),
+				) < 0
+			})
+			pubKeys = pubKeys[:srlMaxSSHPubKeys]
+		}
+
+		tplData.SSHPubKeys = clabutils.MarshalAndCatenateSSHPubKeys(pubKeys)
 	}
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access

@@ -1,6 +1,9 @@
 ---
 search:
   boost: 8
+tags:
+  - Configuration
+  - Getting started
 ---
 
 # Topology definition
@@ -8,8 +11,6 @@ search:
 Containerlab builds labs based on the topology information that users pass to it. This topology information is expressed as a code contained in the _topology definition file_ which structure is the prime focus of this document.
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='4', title='', zoom='1.5')}}-
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 ## Topology definition components
 
@@ -269,6 +270,36 @@ links:
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
+
+###### veth-stitch
+
+The veth-stitch link type transparently stitches its two endpoints by using a veth pair per node interface then each veth is joined with a transparent tc stitch to pass the traffic.
+
+```mermaid
+graph LR
+    A[Node A] <-->|veth| B((tc stitch))
+    B <-->|veth| C[Node B]
+```
+
+This is useful for nodes whose datapath interfaces cannot be captured or impaired directly (such as SR-SIM).
+
+```yaml
+links:
+  - type: veth-stitch
+    endpoints:
+      - node: r1
+        interface: 1/1/c1/1
+        mac: <NodeA-Interface-Mac>          # optional
+        ipv4: <NodeA-IPv4-Address>          # optional
+        ipv6: <NodeA-IPv6-Address>          # optional
+      - node: r2
+        interface: 1/1/c1/1
+        mac: <NodeB-Interface-Mac>          # optional
+        ipv4: <NodeB-IPv4-Address>          # optional
+        ipv6: <NodeB-IPv6-Address>          # optional
+```
+
+The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them.
 
 ###### mgmt-net
 
@@ -763,7 +794,7 @@ Magic variables are special strings that get replaced with actual values during 
 Most variables can be used in startup-config paths, bind paths, and exec commands. The Git variables (`__gitBranch__` and `__gitHash__`) are special and today can only be used in the topology `name` field. All variables are replaced with actual values during lab deployment:
 
 | Variable | Description | Example Usage | Expands To |
-|----------|-------------|---------------|------------|
+| ---------- | ------------- | --------------- | ------------ |
 | `__clabLabName__` {: style='white-space: nowrap;'} | Lab longname (same as lab directory basename) | `exec: echo "__clabLabName__"` | `clab-mylab` |
 | `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
 | `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |

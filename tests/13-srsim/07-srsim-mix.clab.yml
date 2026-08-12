@@ -7,15 +7,15 @@ mgmt:
 topology:
   kinds:
     nokia_srsim:
-      license: /opt/nokia/sros/license-sros25.txt
-      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+      license: /opt/nokia/sros/license.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
   nodes:
     srsim10:
       kind: nokia_srsim
       type: sr-7
       certificate:
         issue: true
-        sans: ["10.78.140.2","fd00:10:78:140::2"]
+        sans: ["10.78.140.2", "fd00:10:78:140::2"]
       startup-config: |
         /configure port 1/1/c1 admin-state enable
         /configure port 1/1/c1 connector breakout c4-10g
@@ -61,9 +61,9 @@ topology:
         - slot: 2
           type: iom5-e
           sfm: m-sfm6-7/12
-          mda: 
-             - slot: 1
-               type: me6-100gb-qsfp28
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
     SRSIM11-a:
       kind: nokia_srsim
       type: sr-7

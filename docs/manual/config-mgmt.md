@@ -1,3 +1,8 @@
+---
+tags:
+  - Configuration
+---
+
 # Configuration Management
 
 Containerlab's prime task is to enable its user with a simple and intuitive interface to build, manage and share networking labs. And one of the important aspects of any lab is the configuration of its nodes.

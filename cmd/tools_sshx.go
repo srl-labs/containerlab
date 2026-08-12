@@ -268,6 +268,7 @@ func NewSSHXNode(
 			User:       "admin",
 			Group:      strconv.Itoa(gid), // gid is set to current user's gid to ensure
 			Binds:      binds,
+			Privileged: true,
 		},
 	)
 }

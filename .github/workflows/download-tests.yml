@@ -6,6 +6,9 @@ name: download-tests
       py_ver:
         required: true
         type: string
+      uv_ver:
+        required: true
+        type: string
       runtime:
         type: string
         default: "docker"
@@ -19,11 +22,11 @@ jobs:
           - "*.robot"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: containerlab
 
@@ -33,10 +36,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "0.5.28"
+          version: ${{ inputs.uv_ver }}
           enable-cache: true
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version-file: "pyproject.toml"
 
@@ -63,14 +66,14 @@ jobs:
           bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/09-download/${{ matrix.test-suite }}
 
       - name: Upload test report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 09-download-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-download-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

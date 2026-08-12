@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,6 +36,9 @@ const (
 	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
 	dnsIncompatibleChars = "._"
 	maxNameLength        = 60
+
+	boxenImageVendorLabel = "org.opencontainers.image.vendor"
+	boxenImageVendorValue = "Boxen"
 )
 
 var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
@@ -96,6 +100,9 @@ func (*DefaultNode) PreStop(context.Context) error                           { r
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+	if d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck {
+		return nil
+	}
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
@@ -214,6 +221,208 @@ func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 // ShouldSkipLifecycle reports whether lifecycle operations should no-op for this node.
 func (d *DefaultNode) ShouldSkipLifecycle() bool {
 	return d.Cfg.IsRootNamespaceBased || d.Cfg.AutoRemove
+}
+
+// LinkApplyMode returns the conservative default for node kinds that do not
+// explicitly opt into live hotplug or restart handling.
+func (d *DefaultNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
+	if d.Cfg != nil && (d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck) {
+		return LinkApplyModeLive
+	}
+	return d.ImageLinkApplyMode(ctx, LinkApplyModeRecreate)
+}
+
+// ImageLinkApplyMode allows node kinds to keep their normal fallback behavior
+// while opting into live link apply when their image declares support for it.
+func (d *DefaultNode) ImageLinkApplyMode(
+	ctx context.Context,
+	fallback LinkApplyMode,
+) LinkApplyMode {
+	if d.imageHasBoxenVendorLabel(ctx) {
+		return LinkApplyModeLive
+	}
+
+	return fallback
+}
+
+func (d *DefaultNode) imageHasBoxenVendorLabel(ctx context.Context) bool {
+	if d == nil || d.Cfg == nil || d.Cfg.Image == "" {
+		return false
+	}
+	if d.Runtime == nil {
+		log.Debug("Skipping image label check for apply link hotplug support",
+			"image", d.Cfg.Image,
+			"reason", "node runtime is not initialized",
+		)
+		return false
+	}
+
+	inspect, err := d.Runtime.InspectImage(ctx, d.Cfg.Image)
+	if err != nil {
+		log.Debug("Failed to inspect image for apply link hotplug support",
+			"image", d.Cfg.Image,
+			"error", err,
+		)
+		return false
+	}
+	if inspect == nil || inspect.Config.Labels == nil {
+		return false
+	}
+
+	return inspect.Config.Labels[boxenImageVendorLabel] == boxenImageVendorValue
+}
+
+func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
+	diff := &clabtypes.TopologyDiff{}
+
+	if oldCfg == nil || newCfg == nil {
+		return diff
+	}
+
+	if oldCfg.NodeType != newCfg.NodeType {
+		diff.Fields = append(diff.Fields, "Type")
+	}
+	if oldCfg.Kind != newCfg.Kind {
+		diff.Fields = append(diff.Fields, "Kind")
+	}
+	if oldCfg.Image != newCfg.Image {
+		diff.Fields = append(diff.Fields, "Image")
+	}
+	if oldCfg.Entrypoint != newCfg.Entrypoint {
+		diff.Fields = append(diff.Fields, "Entrypoint")
+	}
+	if oldCfg.Cmd != newCfg.Cmd {
+		diff.Fields = append(diff.Fields, "Cmd")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Exec, newCfg.Exec) {
+		diff.Fields = append(diff.Fields, "Exec")
+	}
+	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Env, newCfg.Env) {
+		diff.Fields = append(diff.Fields, "Env")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Binds, newCfg.Binds) {
+		diff.Fields = append(diff.Fields, "Binds")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Devices, newCfg.Devices) {
+		diff.Fields = append(diff.Fields, "Devices")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.CapAdd, newCfg.CapAdd) {
+		diff.Fields = append(diff.Fields, "CapAdd")
+	}
+	if oldCfg.Privileged != newCfg.Privileged {
+		diff.Fields = append(diff.Fields, "Privileged")
+	}
+	if oldCfg.CgroupnsMode != newCfg.CgroupnsMode {
+		diff.Fields = append(diff.Fields, "CgroupnsMode")
+	}
+	if oldCfg.PidMode != newCfg.PidMode {
+		diff.Fields = append(diff.Fields, "PidMode")
+	}
+	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Tmpfs, newCfg.Tmpfs) {
+		diff.Fields = append(diff.Fields, "Tmpfs")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.SecurityOpts, newCfg.SecurityOpts) {
+		diff.Fields = append(diff.Fields, "SecurityOpts")
+	}
+	if oldCfg.ShmSize != newCfg.ShmSize {
+		diff.Fields = append(diff.Fields, "ShmSize")
+	}
+	if !clabutils.PortSetsEqual(oldCfg.PortSet, newCfg.PortSet) {
+		diff.Fields = append(diff.Fields, "Ports")
+	}
+	if oldCfg.User != newCfg.User {
+		diff.Fields = append(diff.Fields, "User")
+	}
+	if oldCfg.NetworkMode != newCfg.NetworkMode {
+		diff.Fields = append(diff.Fields, "NetworkMode")
+	}
+	if oldCfg.Runtime != newCfg.Runtime {
+		diff.Fields = append(diff.Fields, "Runtime")
+	}
+	if oldCfg.CPU != newCfg.CPU {
+		diff.Fields = append(diff.Fields, "CPU")
+	}
+	if oldCfg.CPUSet != newCfg.CPUSet {
+		diff.Fields = append(diff.Fields, "CPUSet")
+	}
+	if oldCfg.Memory != newCfg.Memory {
+		diff.Fields = append(diff.Fields, "Memory")
+	}
+	if oldCfg.License != newCfg.License {
+		diff.Fields = append(diff.Fields, "License")
+	}
+	if (len(oldCfg.Components) > 0 || len(newCfg.Components) > 0) &&
+		!reflect.DeepEqual(oldCfg.Components, newCfg.Components) {
+		diff.Fields = append(diff.Fields, "Components")
+	}
+
+	return diff
+}
+
+func (d *DefaultNode) ComputeReconcilePlan(diff *clabtypes.TopologyDiff) *ReconcileResult {
+	result := &ReconcileResult{Action: clabtypes.TopologyDiffActionNone}
+
+	if diff == nil || !diff.HasDiff() {
+		return result
+	}
+
+	action := diff.DefaultAction()
+	result.Action = action
+
+	switch action {
+	case clabtypes.TopologyDiffActionRestart:
+		result.Restarted = []string{d.Cfg.LongName}
+	case clabtypes.TopologyDiffActionRecreate:
+		result.Recreated = []string{d.Cfg.LongName}
+	}
+
+	return result
+}
+
+func (d *DefaultNode) GetReconcilePlan(
+	_ context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
+	return d.ComputeReconcilePlan(diff), nil
+}
+
+// Reconcile applies the diff and executes the appropriate action (restart/recreate).
+func (d *DefaultNode) Reconcile(
+	ctx context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
+	result := d.ComputeReconcilePlan(diff)
+
+	if result.Action == clabtypes.TopologyDiffActionNone {
+		return result, nil
+	}
+
+	log.Info(
+		"Applying node changes",
+		"node",
+		d.Cfg.ShortName,
+		"action",
+		result.Action,
+		"fields",
+		diff.Fields,
+	)
+
+	switch result.Action {
+	case clabtypes.TopologyDiffActionRestart:
+		if err := d.Stop(ctx); err != nil {
+			return result, fmt.Errorf("stop failed: %w", err)
+		}
+		if err := d.Start(ctx); err != nil {
+			return result, fmt.Errorf("start failed: %w", err)
+		}
+
+	case clabtypes.TopologyDiffActionRecreate:
+		if err := d.Delete(ctx); err != nil {
+			return result, fmt.Errorf("delete failed: %w", err)
+		}
+	}
+
+	return result, nil
 }
 
 func (d *DefaultNode) parkingNetNSName() string {
@@ -372,7 +581,11 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
 		return calculatedIndex, nil
 	} else {
-		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port' capture group missing?", ifName, d.InterfaceRegexp)
+		return 0, fmt.Errorf(
+			"%q does not have extracted interface index with regexp %q, 'port' capture group missing?",
+			ifName,
+			d.InterfaceRegexp,
+		)
 	}
 }
 
@@ -889,17 +1102,15 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			continue
 		}
 
-		deployable, ok := ep.(clablinks.DeployableEndpoint)
-		if !ok {
-			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
-		}
-
-		err := deployable.Deploy(ctx)
-		if err != nil {
+		if err := ep.Deploy(ctx); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (*DefaultNode) PostDeployEndpoints(context.Context) error {
 	return nil
 }
 
@@ -941,7 +1152,7 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 	}
 
 	if err := parkingNode.RepointSymlink(); err != nil {
-		restoreErr := parkingNode.RestoreTo(ctx, d)
+		_, restoreErr := parkingNode.RestoreTo(ctx, d)
 		cleanupErr := d.cleanupParkingNetNS()
 		if restoreErr != nil || cleanupErr != nil {
 			return errors.Join(
@@ -960,12 +1171,21 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
 	parkPath, err := d.parkingNetNSPath()
 	if err != nil {
-		return fmt.Errorf("no parking netns found for node %q: %w", d.Cfg.ShortName, err)
+		// No parking netns means the node had no parked interfaces - e.g. it was
+		// stopped outside of containerlab (so its interfaces were never parked) or
+		// it has no dataplane links. Nothing to restore.
+		log.Debugf("node %q has no parking netns, nothing to restore", d.Cfg.ShortName)
+		return nil
 	}
 	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
 
-	if err := parkingNode.RestoreTo(ctx, d); err != nil {
+	restored, err := parkingNode.RestoreTo(ctx, d)
+	if err != nil {
 		return err
+	}
+
+	for _, ep := range restored {
+		log.Info("Restored link", "node", d.Cfg.ShortName, "interface", ep.GetIfaceName())
 	}
 
 	if err := d.cleanupParkingNetNS(); err != nil {
@@ -1004,7 +1224,11 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		// Docker/podman may return an error while the container is already stopped.
 		// if ctr is already stopped, this is OK
 		if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.Stopped {
-			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			log.Warnf(
+				"node %q stop returned error but container is stopped: %v",
+				cfg.ShortName,
+				err,
+			)
 			return nil
 		}
 
@@ -1053,7 +1277,11 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	// (for example IP addresses added during deploy exec phase).
 	execCollection := clabexec.NewExecCollection()
 	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
-		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+		log.Errorf(
+			"failed to run exec commands for node %q on lifecycle start: %v",
+			cfg.ShortName,
+			err,
+		)
 	}
 	execCollection.Log()
 

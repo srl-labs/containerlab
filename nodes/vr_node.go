@@ -48,6 +48,12 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 	return vr
 }
 
+// LinkApplyMode keeps vrnetlab-backed VM nodes on the conservative recreate
+// path for apply link changes.
+func (vr *VRNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
+	return vr.ImageLinkApplyMode(ctx, LinkApplyModeRecreate)
+}
+
 // Init stub function.
 func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 	return nil

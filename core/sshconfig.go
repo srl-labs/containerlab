@@ -23,9 +23,10 @@ type SSHConfigTmpl struct {
 // SSHConfigNodeTmpl represents values for a single node
 // in the sshconfig template.
 type SSHConfigNodeTmpl struct {
-	Names     []string
-	Username  string
-	SSHConfig *clabtypes.SSHConfig
+	Names        []string
+	Username     string
+	IdentityFile string
+	SSHConfig    *clabtypes.SSHConfig
 }
 
 // sshConfigTemplate is the SSH config template.
@@ -72,9 +73,10 @@ func (c *CLab) addSSHConfig() error {
 	for _, n := range c.Nodes {
 		cfg := n.Config()
 		nodeData := SSHConfigNodeTmpl{
-			Names:     []string{cfg.LongName},
-			Username:  cfg.Credentials.Username,
-			SSHConfig: n.GetSSHConfig(),
+			Names:        []string{cfg.LongName},
+			Username:     cfg.Credentials.Username,
+			IdentityFile: cfg.Credentials.IdentityFile,
+			SSHConfig:    n.GetSSHConfig(),
 		}
 		if len(cfg.ContainerID) >= 12 {
 			nodeData.Names = append(nodeData.Names, cfg.ContainerID[:12])

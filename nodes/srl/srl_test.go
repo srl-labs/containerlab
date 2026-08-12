@@ -1,6 +1,7 @@
 package srl
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -9,6 +10,12 @@ import (
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
+
+func TestSRLLinkApplyMode(t *testing.T) {
+	if got := (&srl{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
+	}
+}
 
 func TestSRLInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {

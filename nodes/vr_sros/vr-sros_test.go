@@ -3,7 +3,9 @@ package vr_sros
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
@@ -14,6 +16,50 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+func Test_applyPartialConfig_HonorsContextCancellationWhileUnhealthy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	var deadline time.Time
+	var hasDeadline bool
+
+	mockRt.EXPECT().
+		IsHealthy(gomock.Any(), "n1").
+		DoAndReturn(func(ctx context.Context, _ string) (bool, error) {
+			deadline, hasDeadline = ctx.Deadline()
+			cancel()
+			return false, nil
+		}).
+		AnyTimes()
+
+	s := &vrSROS{}
+	s.VRNode = *clabnodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
+	s.Cfg = &clabtypes.NodeConfig{ShortName: "n1", LongName: "n1"}
+	s.OverwriteNode = s
+	s.WithRuntime(mockRt)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- s.applyPartialConfig(
+			ctx,
+			"192.0.2.1",
+			scrapliPlatformName,
+			"admin",
+			"admin",
+			strings.NewReader("configure system name n1"),
+		)
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+		require.True(t, hasDeadline)
+		assert.WithinDuration(t, time.Now().Add(readyTimeout), deadline, time.Second)
+	case <-time.After(time.Second):
+		t.Fatal("applyPartialConfig did not return after context cancellation")
+	}
+}
 
 func TestAosCXInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
@@ -123,19 +169,43 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 	}
 }
 
-func Test_vrSROS_Init_withComponents_warns(t *testing.T) {
+func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &clabtypes.NodeConfig{
-		ShortName:  "sros1",
-		LabDir:     dir,
-		Env:        map[string]string{},
-		Components: []*clabtypes.Component{{Slot: "A"}},
+		ShortName: "sros1",
+		LabDir:    dir,
+		NodeType:  "ixr-e",
+		Env:       map[string]string{},
+		Components: []*clabtypes.Component{
+			{Slot: "A", Type: "cpm-ixr-e"},
+			{
+				Slot: "1",
+				Type: "imm24-sfp++8-sfp28+2-qsfp28",
+				MDA:  clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
+			},
+		},
 	}
 	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
 	s := new(vrSROS)
 	err := s.Init(cfg, clabnodes.WithMgmtNet(mgmt))
 	require.NoError(t, err)
-	assert.NotEmpty(t, s.Cfg.Components)
+	assert.Contains(t, s.Cfg.Cmd, "cp: chassis=ixr-e slot=A card=cpm-ixr-e ___ "+
+		"lc: max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
+}
+
+func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &clabtypes.NodeConfig{
+		ShortName:  "sros1",
+		LabDir:     dir,
+		NodeType:   "sr-7",
+		Env:        map[string]string{},
+		Components: []*clabtypes.Component{{Slot: "A", Type: "cpm5"}, {Slot: "B", Type: "cpm5"}},
+	}
+	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
+	s := new(vrSROS)
+	err := s.Init(cfg, clabnodes.WithMgmtNet(mgmt))
+	require.Error(t, err)
 }
 
 func Test_vrSROS_verifyNokiaSrosImage(t *testing.T) {

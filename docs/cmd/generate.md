@@ -28,7 +28,6 @@ The user configures the CLOS fabric topology by using the `--nodes` flag. The fl
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page=12, title='')}}-
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 For example, the following flag value will define a 2-tier CLOS fabric with tier1 (leafs) consists of 4x SR Linux containers of IXR-D3 type and the 2x Arista cEOS spines:
 

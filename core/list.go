@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/log"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
@@ -153,7 +154,43 @@ func (c *CLab) ListContainerInterfaces(
 
 	log.Debugf("Fetched %v interfaces for %v", len(interfaces), containerInterfaces.ContainerName)
 
+	overlayToolsIfaces(container.Labels, containerInterfaces.Interfaces)
+
 	return &containerInterfaces, nil
+}
+
+// overlayToolsIfaces replaces the details of each interface that has a tools
+// interface in the host netns (see utils.StitchAltName) with that interface's.
+// Impairment and packet capture must use the tools interface because the
+// container-side interface does not carry the wire traffic (e.g. veth-stitch).
+func overlayToolsIfaces(labels map[string]string, ifaces []*clabtypes.ContainerInterfaceDetails) {
+	lab, node := topoIdentity(labels)
+	if lab == "" || node == "" {
+		return
+	}
+
+	for _, iface := range ifaces {
+		// Kinds may remap interface names and keep the topology name as the
+		// alias; tools interfaces are published under the topology name.
+		topoName := iface.InterfaceAlias
+		if topoName == "" {
+			topoName = iface.InterfaceName
+		}
+
+		toolsIface, err := netlink.LinkByName(clablinks.StitchAltName(lab, node, topoName))
+		if err != nil {
+			continue
+		}
+
+		attrs := toolsIface.Attrs()
+		iface.InterfaceName = attrs.Name
+		iface.InterfaceAlias = topoName
+		iface.InterfaceMAC = attrs.HardwareAddr.String()
+		iface.InterfaceIndex = attrs.Index
+		iface.InterfaceMTU = attrs.MTU
+		iface.InterfaceType = toolsIface.Type()
+		iface.InterfaceState = attrs.OperState.String()
+	}
 }
 
 // ListContainersInterfaces list interfaces of all given containers.

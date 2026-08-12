@@ -17,9 +17,10 @@ type srosTemplateData struct {
 	TLSAnchor string
 
 	// Banner and SSH
-	Banner          string
-	SSHPubKeysRSA   []string
-	SSHPubKeysECDSA []string
+	Banner            string
+	SSHPubKeysRSA     []string
+	SSHPubKeysECDSA   []string
+	SSHPubKeysED25519 []string
 
 	// Network configuration
 	IFaces     map[string]tplIFace

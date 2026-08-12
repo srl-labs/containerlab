@@ -1,5 +1,7 @@
 ---
 status: new
+tags:
+  - Clabernetes
 ---
 
 # Clabernetes

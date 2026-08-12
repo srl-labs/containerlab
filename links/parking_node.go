@@ -2,7 +2,6 @@ package links
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -31,7 +30,7 @@ func (p *ParkingNode) RepointSymlink() error {
 	return clabutils.LinkContainerNS(p.nspath, p.containerName)
 }
 
-func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error {
+func (p *ParkingNode) CaptureFrom(ctx context.Context, src Node) error {
 	endpoints, err := p.captureCandidates(ctx, src)
 	if err != nil {
 		return err
@@ -39,9 +38,9 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 
 	moved := make([]Endpoint, 0, len(endpoints))
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, p); err != nil {
+		if err := moveEndpoint(ctx, ep, p); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				if err := moved[i].MoveTo(ctx, src); err == nil {
+				if err := moveEndpoint(ctx, moved[i], src); err == nil {
 					_ = moved[i].Activate(ctx)
 				}
 			}
@@ -58,20 +57,20 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 	return nil
 }
 
-func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
+func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, error) {
 	if err := p.DiscoverOwnedEndpoints(ctx, dst); err != nil {
-		return err
+		return nil, err
 	}
 
 	endpoints := append([]Endpoint(nil), p.GetEndpoints()...)
 	moved := make([]Endpoint, 0, len(endpoints))
 
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, dst); err != nil {
+		if err := moveEndpoint(ctx, ep, dst); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, p)
+				_ = moveEndpoint(ctx, moved[i], p)
 			}
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"failed to restore interface %q for node %q: %w",
 				ep.GetIfaceName(),
 				dst.GetShortName(),
@@ -79,11 +78,11 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 			)
 		}
 		if err := ep.Activate(ctx); err != nil {
-			_ = ep.MoveTo(ctx, p)
+			_ = moveEndpoint(ctx, ep, p)
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, p)
+				_ = moveEndpoint(ctx, moved[i], p)
 			}
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"failed to activate interface %q for node %q: %w",
 				ep.GetIfaceName(),
 				dst.GetShortName(),
@@ -93,10 +92,10 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 		moved = append(moved, ep)
 	}
 
-	return nil
+	return moved, nil
 }
 
-func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original EndpointOwner) error {
+func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Node) error {
 	ifaceNames, err := listOwnedInterfaceNames(
 		ctx,
 		p,
@@ -143,15 +142,7 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 				continue
 			}
 
-			currentOwner, ok := ep.GetNode().(EndpointOwner)
-			if !ok {
-				return fmt.Errorf(
-					"node %q does not support endpoint ownership moves",
-					ep.GetNode().GetShortName(),
-				)
-			}
-
-			if err := currentOwner.ReleaseEndpoint(ep); err != nil {
+			if err := ep.GetNode().ReleaseEndpoint(ep); err != nil {
 				return err
 			}
 			ep.SetNode(p)
@@ -172,39 +163,14 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 
 func (p *ParkingNode) captureCandidates(
 	ctx context.Context,
-	src EndpointOwner,
+	src Node,
 ) ([]Endpoint, error) {
-	tracked := append([]Endpoint(nil), src.GetEndpoints()...)
-	endpoints := make([]Endpoint, 0, len(tracked))
-	knownIfaceNames := make(map[string]struct{}, len(tracked))
-
-	for _, ep := range tracked {
-		if ep.IsRuntimeDiscovered() {
-			endpoints = append(endpoints, ep)
-			knownIfaceNames[ep.GetIfaceName()] = struct{}{}
-			continue
-		}
-
-		link := ep.GetLink()
-		if link == nil || link.GetType() != LinkTypeVEth {
-			linkType := "runtime-unknown"
-			if link != nil {
-				linkType = string(link.GetType())
-			}
-
-			return nil, fmt.Errorf(
-				"node %q endpoint %q is linked via %q, but lifecycle stop/start supports only veth dataplane links",
-				src.GetShortName(),
-				ep.GetIfaceName(),
-				linkType,
-			)
-		}
-
-		endpoints = append(endpoints, ep)
-		knownIfaceNames[ep.GetIfaceName()] = struct{}{}
+	trackedEndpoints := src.GetEndpoints()
+	tracked := make(map[string]Endpoint, len(trackedEndpoints))
+	for _, ep := range trackedEndpoints {
+		tracked[ep.GetIfaceName()] = ep
 	}
-
-	runtimeIfaceNames, err := listOwnedInterfaceNames(ctx, src, nil)
+	presentIfaceNames, err := listOwnedInterfaceNames(ctx, src, trackedIfaceNames(trackedEndpoints))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to discover runtime interfaces for node %q: %w",
@@ -213,18 +179,17 @@ func (p *ParkingNode) captureCandidates(
 		)
 	}
 
-	for _, ifaceName := range runtimeIfaceNames {
-		if _, known := knownIfaceNames[ifaceName]; known {
-			continue
+	endpoints := make([]Endpoint, 0, len(presentIfaceNames))
+	for _, ifaceName := range presentIfaceNames {
+		ep, ok := tracked[ifaceName]
+		if !ok {
+			ep = NewRuntimeEndpoint(src, ifaceName)
+			if err := src.AdoptEndpoint(ep); err != nil {
+				return nil, err
+			}
 		}
 
-		runtimeEp := NewRuntimeEndpoint(src, ifaceName)
-		if err := src.AdoptEndpoint(runtimeEp); err != nil {
-			return nil, err
-		}
-
-		endpoints = append(endpoints, runtimeEp)
-		knownIfaceNames[ifaceName] = struct{}{}
+		endpoints = append(endpoints, ep)
 	}
 
 	return endpoints, nil
@@ -281,31 +246,11 @@ func isOwnedInterface(link netlink.Link, knownIfaceNames map[string]struct{}) bo
 		return false
 	}
 
-	if link.Type() != "veth" {
-		return false
-	}
-
 	if _, known := knownIfaceNames[name]; !known && !hasOwnershipAltName(link) {
 		return false
 	}
 
-	veth, ok := link.(*netlink.Veth)
-	if !ok {
-		return false
-	}
-
-	peerIndex, err := netlink.VethPeerIndex(veth)
-	if err != nil {
-		return false
-	}
-
-	_, err = netlink.LinkByIndex(peerIndex)
-	if err == nil {
-		return false
-	}
-
-	var notFoundErr netlink.LinkNotFoundError
-	return errors.As(err, &notFoundErr)
+	return true
 }
 
 func (*ParkingNode) GetLinkEndpointType() LinkEndpointType {

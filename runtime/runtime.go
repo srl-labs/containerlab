@@ -215,12 +215,22 @@ func WaitForContainerRunning(
 	contName, nodeName string,
 ) error {
 	ticker := time.NewTicker(3 * time.Second)
-	timeout := time.After(15 * time.Minute)
+	defer ticker.Stop()
+
+	timeout := time.NewTimer(15 * time.Minute)
+	defer timeout.Stop()
 
 	startTime := time.Now()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return fmt.Errorf(
+				"node %q waiting for external container %q: %w",
+				nodeName,
+				contName,
+				ctx.Err(),
+			)
 		case <-ticker.C:
 			runtimeStatus := r.GetContainerStatus(ctx, contName)
 
@@ -235,7 +245,7 @@ func WaitForContainerRunning(
 				contName,
 				time.Since(startTime).Truncate(time.Second),
 			)
-		case <-timeout:
+		case <-timeout.C:
 			log.Errorf(
 				"node %q waited %s for external dependency container %q to come up, "+
 					"which did not happen. Giving up now",

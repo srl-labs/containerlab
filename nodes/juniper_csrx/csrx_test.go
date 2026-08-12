@@ -98,7 +98,11 @@ func TestCreateCSRXFilesCopiesStartupConfigAndLicense(t *testing.T) {
 	labDir := t.TempDir()
 
 	startupConfig := filepath.Join(labDir, "startup.conf")
-	if err := os.WriteFile(startupConfig, []byte("system { host-name csrx1; }\n"), 0o644); err != nil {
+	if err := os.WriteFile(
+		startupConfig,
+		[]byte("system { host-name csrx1; }\n"),
+		0o644,
+	); err != nil {
 		t.Fatalf("failed to write startup config: %v", err)
 	}
 

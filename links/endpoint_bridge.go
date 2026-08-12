@@ -58,14 +58,6 @@ func (e *EndpointBridge) IsNodeless() bool {
 	return e.isMgmtBridgeEndpoint
 }
 
-func (e *EndpointBridge) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
-
-func (e *EndpointBridge) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}
-
 // CheckBridgeExists verifies that the given bridge is present in the
 // network namespace referenced via the provided nspath handle.
 func CheckBridgeExists(ctx context.Context, n Node) error {

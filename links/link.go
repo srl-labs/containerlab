@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -65,6 +66,7 @@ type LinkType string
 
 const (
 	LinkTypeVEth        LinkType = "veth"
+	LinkTypeVethStitch  LinkType = "veth-stitch"
 	LinkTypeMgmtNet     LinkType = "mgmt-net"
 	LinkTypeMacVLan     LinkType = "macvlan"
 	LinkTypeHost        LinkType = "host"
@@ -87,6 +89,9 @@ func parseLinkType(s string) (LinkType, error) {
 
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
+
+	case string(LinkTypeVethStitch):
+		return LinkTypeVethStitch, nil
 
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
@@ -163,6 +168,19 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 			return err
 		}
 		ld.Link = &l.LinkVEthRaw
+
+	case LinkTypeVethStitch:
+		var l struct {
+			// the Type field is injected artificially
+			// to allow strict yaml parsing to work.
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		ld.Link = &l.LinkVEthStitchedRaw
 
 	case LinkTypeMgmtNet:
 		var l struct {
@@ -251,6 +269,10 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 			return err
 		}
 
+		if veth, ok := ld.Link.(*LinkVEthRaw); ok {
+			veth.fromBrief = true
+		}
+
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
@@ -282,6 +304,15 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 		}{
 			LinkVEthRaw: *r.Link.(*LinkVEthRaw),
 			Type:        string(LinkTypeVEth),
+		}
+		return x, nil
+	case LinkTypeVethStitch:
+		x := struct {
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}{
+			LinkVEthStitchedRaw: *r.Link.(*LinkVEthStitchedRaw),
+			Type:                string(LinkTypeVethStitch),
 		}
 		return x, nil
 	case LinkTypeMgmtNet:
@@ -336,17 +367,54 @@ type RawLink interface {
 	GetType() LinkType
 }
 
+type filteredLinkCleaner interface {
+	cleanupFilteredLink(context.Context, string, []string) error
+}
+
+// CleanupFilteredLinks lets raw link types remove resources that cannot be
+// reached through resolved links after a node filter excludes one endpoint.
+func CleanupFilteredLinks(
+	ctx context.Context,
+	linkDefs []*LinkDefinition,
+	labName string,
+	nodesFilter []string,
+) error {
+	if len(nodesFilter) == 0 {
+		return nil
+	}
+
+	for i, linkDef := range linkDefs {
+		if linkDef == nil {
+			continue
+		}
+		cleaner, ok := linkDef.Link.(filteredLinkCleaner)
+		if !ok {
+			continue
+		}
+		if err := cleaner.cleanupFilteredLink(ctx, labName, nodesFilter); err != nil {
+			return fmt.Errorf("failed cleaning up filtered link %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
 // Link is an interface that all concrete link types must implement.
 // Concrete link types are resolved from raw links and become part of CLab.Links.
 type Link interface {
 	// Deploy deploys the link. Endpoint is the endpoint that triggers the creation of the link.
 	Deploy(context.Context, Endpoint) error
+	// PostDeploy runs link work that must happen after endpoint deployment.
+	PostDeploy(context.Context) error
 	// Remove removes the link.
 	Remove(context.Context) error
 	// GetType returns the type of the link.
 	GetType() LinkType
 	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
+	// GetRuntimeEndpoints returns endpoints apply/deploy may create, discover, or remove.
+	// Parent-only and remote metadata endpoints are excluded where applicable.
+	GetRuntimeEndpoints() []Endpoint
 	// GetMTU returns the Link MTU.
 	GetMTU() int
 	// GetVars returns the link-level vars.
@@ -473,20 +541,14 @@ type Node interface {
 	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
 	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e Endpoint) error
+	AdoptEndpoint(e Endpoint) error
+	ReleaseEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
-}
-
-// EndpointOwner is implemented by nodes that keep runtime endpoint ownership in sync with the
-// actual namespace that owns an interface.
-type EndpointOwner interface {
-	Node
-	AdoptEndpoint(e Endpoint) error
-	ReleaseEndpoint(e Endpoint) error
 }
 
 type LinkEndpointType string
@@ -511,7 +573,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		} else {
 			// when the name is too long, we add a sanitized interface name as AltName
-			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceName())
+			sanitizedIfaceName := clabutils.SanitizeInterfaceName(endpt.GetIfaceName())
 			err := netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return fmt.Errorf(
@@ -533,7 +595,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 				return err
 			}
 			// Set a sanitized altname for ease of access. '/', and ' ' are changed to '-'
-			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceAlias())
+			sanitizedIfaceName := clabutils.SanitizeInterfaceName(endpt.GetIfaceAlias())
 			err = netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return err
@@ -569,6 +631,11 @@ func hasOwnershipAltName(link netlink.Link) bool {
 	return false
 }
 
+// HasOwnershipAltName reports whether link carries a containerlab ownership marker.
+func HasOwnershipAltName(link netlink.Link) bool {
+	return hasOwnershipAltName(link)
+}
+
 func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 	if hasOwnershipAltName(link) {
 		return nil
@@ -601,6 +668,9 @@ func isAltNameNotSupportedErr(err error) bool {
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// LabName is the name of the lab, used to scope generated host-global
+	// resources such as veth-stitch network namespaces.
+	LabName string
 	// list of node shortnames that user
 	// passed as a node filter
 	NodesFilter []string
@@ -638,24 +708,6 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	}
 
 	return true
-}
-
-// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
-// Making it suitable to write as AltName for the interface.
-func SanitizeInterfaceName(ifaceName string) string {
-	var sb strings.Builder
-	sb.Grow(len(ifaceName))
-
-	for _, char := range ifaceName {
-		switch char {
-		case '/', ' ':
-			sb.WriteRune('-')
-		default:
-			sb.WriteRune(char)
-		}
-	}
-
-	return sb.String()
 }
 
 // IsValidInterfaceName checks if the interface name is valid

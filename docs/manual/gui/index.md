@@ -1,3 +1,8 @@
+---
+tags:
+  - GUI
+---
+
 # Containerlab GUI
 
 Containerlab GUI is the graphical way to create, edit, deploy, and operate Containerlab labs. The same topology UI is used by the VS Code extension, the Desktop app, and the Web app; what changes is the host that performs the privileged work.

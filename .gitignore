@@ -31,6 +31,7 @@ license.key
 container-lab
 containerlab
 site/
+.cache/
 .vscode/
 .idea/
 .DS_Store
