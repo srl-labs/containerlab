@@ -1775,6 +1775,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#patches" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Patches
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Patches">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0781" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.78.1
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3859,6 +3887,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#patches" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Patches
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Patches">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0781" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.78.1
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4165,6 +4221,14 @@
 <li>Node health and exit wait loops now honor context cancellation. Thanks <a class="magiclink magiclink-github magiclink-mention" href="https://github.com/mvanhorn" title="GitHub User: mvanhorn">@mvanhorn</a> <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3257" title="GitHub Issue: srl-labs/containerlab #3257">#3257</a></li>
 <li>Post-install instructions for adding a user to the <code>docker</code> group were clarified. Thanks <a class="magiclink magiclink-github magiclink-mention" href="https://github.com/skoll43" title="GitHub User: skoll43">@skoll43</a> <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3297" title="GitHub Issue: srl-labs/containerlab #3297">#3297</a></li>
 <li>The structured <a href="../../manual/kinds/vr-sros/#components"><code>components</code></a> syntax that SR-SIM introduced in 0.75 now also works with Nokia SR OS vSIM (<code>nokia_sros</code>). Thanks <a class="magiclink magiclink-github magiclink-mention" href="https://github.com/kaelemc" title="GitHub User: kaelemc">@kaelemc</a> <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3240" title="GitHub Issue: srl-labs/containerlab #3240">#3240</a></li>
+</ul>
+<h2 id="patches">Patches<a class="headerlink" href="#patches" title="Permanent link">#</a></h2>
+<h3 id="0781">0.78.1<a class="headerlink" href="#0781" title="Permanent link">#</a></h3>
+<ul>
+<li>Fixed reconciliation of host bridge links during repeated <code>deploy</code>/<code>apply</code>, including stale endpoint ownership and link remapping. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3314" title="GitHub Issue: srl-labs/containerlab #3314">#3314</a></li>
+<li>Fixed saved RouterOS configurations incorrectly dropping IP addresses from <code>ether10</code> and higher interfaces when removing the management <code>ether1</code> entry. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3313" title="GitHub Issue: srl-labs/containerlab #3313">#3313</a></li>
+<li>Allowed external CA certificate and key environment variables to be used without certificate authority settings in the topology. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3316" title="GitHub Issue: srl-labs/containerlab #3316">#3316</a></li>
+<li>Updated Ciena SAOS documentation for brand compliance and distributed image tags. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3310" title="GitHub Issue: srl-labs/containerlab #3310">#3310</a></li>
 </ul>
   
 
