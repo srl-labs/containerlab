@@ -407,8 +407,9 @@ func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
 		t.Fatal("expected link with mismatched live peers to be redeployed")
 	}
 
-	plan.liveEndpointInfo[applyEndpointKey{node: "n1", iface: "eth1"}] =
-		clablinks.OwnedInterface{Name: "eth1", Index: 11, PeerIndex: 22}
+	plan.liveEndpointInfo[applyEndpointKey{node: "n1", iface: "eth1"}] = clablinks.OwnedInterface{
+		Name: "eth1", Index: 11, PeerIndex: 22,
+	}
 	if plan.linkNeedsDeploy(link) {
 		t.Fatal("expected link with matching live peers to be preserved")
 	}
