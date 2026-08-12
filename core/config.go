@@ -545,12 +545,23 @@ func (c *CLab) verifyRootNetNSLinks() error {
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
 func (c *CLab) verifyLinks(ctx context.Context) error {
+	var params *clablinks.VerifyLinkParams
+	if len(c.Endpoints) > 0 {
+		params = c.globalRuntime().Config().VerifyLinkParams
+	}
+	return c.verifyLinksWithParams(ctx, params)
+}
+
+func (c *CLab) verifyLinksWithParams(
+	ctx context.Context,
+	params *clablinks.VerifyLinkParams,
+) error {
 	var err error
 
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
-		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, params)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}

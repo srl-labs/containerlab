@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/vishvananda/netlink"
 )
 
 func TestRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
@@ -69,6 +71,30 @@ func TestEndpointByInterfaceName(t *testing.T) {
 
 	if _, ok := endpointByInterfaceName([]Endpoint{nodeEp, hostEp}, "missing"); ok {
 		t.Fatal("expected missing endpoint not to be found")
+	}
+}
+
+func TestHasOwnershipAltNameForScopesOwnershipToLogicalEndpoint(t *testing.T) {
+	t.Parallel()
+
+	link := &netlink.Dummy{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: "eth1",
+			AltNames: []string{
+				ownershipAltNameFor("bridge-a", "eth1"),
+				ownershipAltNameFor("bridge-b", "eth2"),
+			},
+		},
+	}
+
+	if !HasOwnershipAltNameFor(link, "bridge-a", "eth1") {
+		t.Fatal("expected exact logical endpoint ownership marker")
+	}
+	if HasOwnershipAltNameFor(link, "bridge-a", "eth2") {
+		t.Fatal("did not expect another interface to match the marker")
+	}
+	if HasOwnershipAltNameFor(link, "bridge-b", "eth1") {
+		t.Fatal("did not expect another node to match the marker")
 	}
 }
 
