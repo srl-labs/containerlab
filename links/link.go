@@ -617,7 +617,11 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 }
 
 func ownershipAltName(endpt Endpoint) string {
-	sum := sha1.Sum([]byte(endpt.GetNode().GetShortName() + "\x00" + endpt.GetIfaceName()))
+	return ownershipAltNameFor(endpt.GetNode().GetShortName(), endpt.GetIfaceName())
+}
+
+func ownershipAltNameFor(nodeName, ifaceName string) string {
+	sum := sha1.Sum([]byte(nodeName + "\x00" + ifaceName))
 	return ownershipAltNamePrefix + hex.EncodeToString(sum[:8])
 }
 
@@ -634,6 +638,23 @@ func hasOwnershipAltName(link netlink.Link) bool {
 // HasOwnershipAltName reports whether link carries a containerlab ownership marker.
 func HasOwnershipAltName(link netlink.Link) bool {
 	return hasOwnershipAltName(link)
+}
+
+// HasOwnershipAltNameFor reports whether link is owned by the logical endpoint
+// identified by nodeName and ifaceName.
+func HasOwnershipAltNameFor(link netlink.Link, nodeName, ifaceName string) bool {
+	if link == nil || nodeName == "" || ifaceName == "" {
+		return false
+	}
+
+	want := ownershipAltNameFor(nodeName, ifaceName)
+	for _, altName := range link.Attrs().AltNames {
+		if altName == want {
+			return true
+		}
+	}
+
+	return false
 }
 
 func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
@@ -682,7 +703,8 @@ type ResolveParams struct {
 }
 
 type VerifyLinkParams struct {
-	RunBridgeExistsCheck bool
+	RunBridgeExistsCheck  bool
+	AllowExistingEndpoint bool
 }
 
 func NewVerifyLinkParams() *VerifyLinkParams {

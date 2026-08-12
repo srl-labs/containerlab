@@ -43,6 +43,7 @@ type applyPlan struct {
 	staleEndpoints     []applyEndpointRef
 	desiredEndpointSet map[applyEndpointKey]struct{}
 	liveEndpointSet    map[applyEndpointKey]struct{}
+	liveEndpointInfo   map[applyEndpointKey]clablinks.OwnedInterface
 	endpointNodes      map[string]clablinks.Node
 	state              *LabState
 	parkedNodeSet      map[string]struct{}
@@ -77,6 +78,7 @@ func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *a
 		plannedLinkSet:     map[int]struct{}{},
 		desiredEndpointSet: map[applyEndpointKey]struct{}{},
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
+		liveEndpointInfo:   map[applyEndpointKey]clablinks.OwnedInterface{},
 		endpointNodes:      map[string]clablinks.Node{},
 		state:              state,
 		nodeChangeReasons:  map[string]string{},
@@ -89,6 +91,18 @@ func (p *applyPlan) isExternallyManaged(nodeName string) bool {
 	}
 	node := p.currentNodes[nodeName]
 	return node != nil && node.external
+}
+
+func (p *applyPlan) isRootNamespaceNode(nodeName string) bool {
+	if p == nil {
+		return false
+	}
+	node := p.currentNodes[nodeName]
+	return node != nil && node.rootNamespaceBased
+}
+
+func (p *applyPlan) isNonContainerNode(nodeName string) bool {
+	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
 }
 
 func (c *CLab) planApply(
@@ -137,6 +151,10 @@ func (c *CLab) planApply(
 	}
 
 	if err := c.discoverLiveApplyEndpoints(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if err := c.validateDesiredEndpointOwnership(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -203,7 +221,7 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.currentNodes {
-		if plan.isExternallyManaged(nodeName) {
+		if plan.isNonContainerNode(nodeName) {
 			continue
 		}
 		node, exists := c.Nodes[nodeName]
@@ -376,7 +394,7 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				continue
 			}
 			n = parkingNode
-		} else if !isApplySpecialNode(nodeName) {
+		} else if !isApplySpecialNode(nodeName) && !plan.isRootNamespaceNode(nodeName) {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if !clabruntime.ContainerHasJoinableNetns(status) {
 				if plan.isExternallyManaged(nodeName) {
@@ -397,9 +415,10 @@ func (c *CLab) discoverLiveApplyEndpoints(
 
 		plan.setEndpointNode(nodeName, n)
 
-		ifaceNames, err := clablinks.DiscoverOwnedInterfaceNames(
+		interfaces, err := clablinks.DiscoverOwnedInterfacesFor(
 			ctx,
 			n,
+			nodeName,
 			c.applyKnownEndpointNames(plan, nodeName),
 		)
 		if err != nil {
@@ -410,8 +429,44 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			)
 		}
 
-		for _, ifaceName := range ifaceNames {
-			plan.liveEndpointSet[applyEndpointKey{node: nodeName, iface: ifaceName}] = struct{}{}
+		for _, iface := range interfaces {
+			key := applyEndpointKey{node: nodeName, iface: iface.Name}
+			plan.liveEndpointSet[key] = struct{}{}
+			plan.liveEndpointInfo[key] = iface
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) validateDesiredEndpointOwnership(
+	ctx context.Context,
+	plan *applyPlan,
+) error {
+	for _, key := range sortedEndpointKeys(plan.desiredEndpointSet) {
+		if _, added := plan.addedNodeSet[key.node]; added {
+			continue
+		}
+
+		node, exists := plan.endpointNode(key.node)
+		if !exists {
+			node, exists = c.applyLinkNode(key.node)
+		}
+		if !exists {
+			continue
+		}
+
+		if err := clablinks.ValidateOwnedInterfaceFor(
+			ctx,
+			node,
+			key.node,
+			key.iface,
+		); err != nil {
+			return fmt.Errorf(
+				"desired endpoint %s cannot be reconciled: %w",
+				key.String(),
+				err,
+			)
 		}
 	}
 
@@ -622,7 +677,7 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		if err != nil {
 			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
 		}
-		if plan.isExternallyManaged(nodeName) && result.Action != clabtypes.TopologyDiffActionNone {
+		if plan.isNonContainerNode(nodeName) && result.Action != clabtypes.TopologyDiffActionNone {
 			return fmt.Errorf(
 				"node %q is externally managed and cannot be %s for %s",
 				nodeName,
@@ -663,6 +718,9 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 			continue
 		}
 		if _, added := plan.addedNodeSet[nodeName]; added {
+			continue
+		}
+		if plan.isRootNamespaceNode(nodeName) {
 			continue
 		}
 		// Recreated nodes are handled exclusively by the apply pipeline
@@ -706,7 +764,36 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 		}
 	}
 
-	return false
+	return !p.linkIntact(link)
+}
+
+func (p *applyPlan) linkIntact(link clablinks.Link) bool {
+	endpoints := clablinks.RuntimeEndpoints(link)
+	if len(endpoints) != 2 || len(p.liveEndpointInfo) == 0 {
+		return true
+	}
+
+	left, leftOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[0])]
+	right, rightOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[1])]
+	if !leftOK || !rightOK {
+		return false
+	}
+
+	if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+		!endpoints[0].IsNodeless() &&
+		left.MasterName != endpoints[0].GetNode().GetShortName() {
+		return false
+	}
+	if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+		!endpoints[1].IsNodeless() &&
+		right.MasterName != endpoints[1].GetNode().GetShortName() {
+		return false
+	}
+
+	return left.PeerIndex != 0 &&
+		right.PeerIndex != 0 &&
+		left.PeerIndex == right.Index &&
+		right.PeerIndex == left.Index
 }
 
 func (p *applyPlan) deployNodeNames() []string {
