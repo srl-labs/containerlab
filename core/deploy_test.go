@@ -5,11 +5,17 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	clabcert "github.com/srl-labs/containerlab/cert"
 )
 
 func TestWaitForNodeDeployErrorPrecedence(t *testing.T) {
@@ -86,5 +92,57 @@ func TestCheckReconcileDeployOptionsAllowsTopologyManagementNetwork(t *testing.T
 
 	if err := c.checkReconcileDeployOptions(&DeployOptions{}); err != nil {
 		t.Fatalf("topology management settings must not be treated as overrides: %v", err)
+	}
+}
+
+func TestCertificateAuthoritySetupUsesEnvironmentCAWithoutSettings(t *testing.T) {
+	tempDir := t.TempDir()
+	topoFile := filepath.Join(tempDir, "topology.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: env-ca\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.TopoPaths.SetTopologyFilePath(topoFile); err != nil {
+		t.Fatal(err)
+	}
+	c.Config.Name = "env-ca"
+	if err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	externalCA, err := clabcert.NewCA().GenerateCACert(&clabcert.CACSRInput{
+		CommonName: "CA-FROM-ENV",
+		Country:    "US",
+		Expiry:     time.Hour,
+		KeySize:    1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certFile := filepath.Join(tempDir, "ca.pem")
+	keyFile := filepath.Join(tempDir, "ca.key")
+	if err := externalCA.Write(certFile, keyFile, ""); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CLAB_CA_CERT_FILE", certFile)
+	t.Setenv("CLAB_CA_KEY_FILE", keyFile)
+
+	if err := c.certificateAuthoritySetup(); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := c.TopoPaths.CaCertAbsFilename(); got != certFile {
+		t.Fatalf("CA certificate path = %q, want %q", got, certFile)
+	}
+	loadedCA, err := c.Cert.LoadCaCert()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(loadedCA.Cert, externalCA.Cert) {
+		t.Fatal("certificateAuthoritySetup did not load the CA certificate from CLAB_CA_CERT_FILE")
 	}
 }

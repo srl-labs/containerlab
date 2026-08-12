@@ -381,6 +381,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	// Set defaults for the CA parameters
 	keySize := 2048
 	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
+	var extCACert, extCAKey string
 
 	// check that Settings.CertificateAuthority exists.
 	if s != nil && s.CertificateAuthority != nil {
@@ -395,23 +396,23 @@ func (c *CLab) certificateAuthoritySetup() error {
 		}
 
 		// if external CA cert and key are set, propagate to topopaths
-		extCACert := s.CertificateAuthority.Cert
-		extCAKey := s.CertificateAuthority.Key
+		extCACert = s.CertificateAuthority.Cert
+		extCAKey = s.CertificateAuthority.Key
+	}
 
-		// override external ca and key from env vars
-		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
-			extCAKey = v
-		}
+	// override external ca and key from env vars
+	if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
+		extCAKey = v
+	}
 
-		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
-			extCACert = v
-		}
+	if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
+		extCACert = v
+	}
 
-		if extCACert != "" && extCAKey != "" {
-			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
-			if err != nil {
-				return err
-			}
+	if extCACert != "" && extCAKey != "" {
+		err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
+		if err != nil {
+			return err
 		}
 	}
 
