@@ -166,8 +166,12 @@ func (r *Runtime) execInPod(
 		}
 	}
 	if err != nil {
-		return stdout.Bytes(), stderr.Bytes(), rc, fmt.Errorf("failed to execute command in pod %s/%s: %w",
-			pod.Namespace, pod.Name, err)
+		return stdout.Bytes(), stderr.Bytes(), rc, fmt.Errorf(
+			"failed to execute command in pod %s/%s: %w",
+			pod.Namespace,
+			pod.Name,
+			err,
+		)
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), rc, nil

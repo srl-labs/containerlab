@@ -8,6 +8,7 @@ import (
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -56,7 +57,13 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 				namespace, req.Name, nodeName, err)
 		}
 
-		if err := r.waitDeploymentReplicas(ctx, namespace, deployment.Name, 1, req.Timeout); err != nil {
+		if err := r.waitDeploymentReplicas(
+			ctx,
+			namespace,
+			deployment.Name,
+			1,
+			req.Timeout,
+		); err != nil {
 			return err
 		}
 	}
@@ -100,7 +107,10 @@ func (r *Runtime) targetNodes(
 			}
 		}
 		if len(known) == 0 {
-			state, err := r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+			state, err := r.Inspect(
+				ctx,
+				clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace},
+			)
 			if err != nil {
 				return nil, "", err
 			}
@@ -156,7 +166,13 @@ func (r *Runtime) setNodesReplicas(
 			return err
 		}
 		for _, nodeName := range launcherNodes {
-			if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, true); err != nil {
+			if err := r.setNodeIgnoreReconcile(
+				ctx,
+				req.Name,
+				namespace,
+				nodeName,
+				true,
+			); err != nil {
 				return err
 			}
 		}
@@ -176,14 +192,26 @@ func (r *Runtime) setNodesReplicas(
 				namespace, req.Name, nodeName, replicas, err)
 		}
 
-		if err := r.waitDeploymentReplicas(ctx, namespace, deployment.Name, replicas, req.Timeout); err != nil {
+		if err := r.waitDeploymentReplicas(
+			ctx,
+			namespace,
+			deployment.Name,
+			replicas,
+			req.Timeout,
+		); err != nil {
 			return err
 		}
 	}
 
 	if replicas > 0 {
 		for _, nodeName := range launcherNodes {
-			if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, false); err != nil {
+			if err := r.setNodeIgnoreReconcile(
+				ctx,
+				req.Name,
+				namespace,
+				nodeName,
+				false,
+			); err != nil {
 				return err
 			}
 		}
@@ -262,6 +290,10 @@ func (r *Runtime) setTopologyIgnoreReconcile(
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
 
 	obj, err := resource.Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		// Primary Node/Link labs deliberately have no compatibility Topology object.
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
 			namespace, name, err)

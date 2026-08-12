@@ -397,7 +397,13 @@ func stageLicenseFile(
 		safeKubernetesName(topologyName, nodeName, "files"),
 	)
 
-	return stageSourcePathIntoConfigMap(configMap, license, nodeName, topologyFileDir, topologyLabDir)
+	return stageSourcePathIntoConfigMap(
+		configMap,
+		license,
+		nodeName,
+		topologyFileDir,
+		topologyLabDir,
+	)
 }
 
 func stageBindFiles(
@@ -454,7 +460,12 @@ func stageSourcePathIntoConfigMap(
 ) error {
 	files, err := resolveLocalFiles(sourcePath, nodeName, topologyFileDir, topologyLabDir)
 	if err != nil {
-		return fmt.Errorf("failed staging source path %q for node %q: %w", sourcePath, nodeName, err)
+		return fmt.Errorf(
+			"failed staging source path %q for node %q: %w",
+			sourcePath,
+			nodeName,
+			err,
+		)
 	}
 
 	for _, file := range files {
@@ -773,33 +784,44 @@ func stagedConfigMapObject(
 	}
 }
 
-func (r *Runtime) setStagedConfigMapOwnerReferences(
+func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 	ctx context.Context,
 	namespace string,
 	configMaps []stagedConfigMap,
-	topology *unstructured.Unstructured,
+	nodes map[string]*unstructured.Unstructured,
 ) error {
 	if len(configMaps) == 0 {
 		return nil
 	}
 
-	ownerReferences := []metav1.OwnerReference{
-		{
-			APIVersion: c9sAPIVersion,
-			Kind:       "Topology",
-			Name:       topology.GetName(),
-			UID:        topology.GetUID(),
-		},
-	}
-
 	for _, staged := range configMaps {
+		node := nodes[staged.nodeName]
+		if node == nil {
+			return fmt.Errorf("failed to find c9s node %s/%s for staged ConfigMap ownership",
+				namespace, staged.nodeName)
+		}
+		ownerReferences := []metav1.OwnerReference{
+			{
+				APIVersion: c9sAPIVersion,
+				Kind:       "Node",
+				Name:       node.GetName(),
+				UID:        node.GetUID(),
+			},
+		}
+
 		configMap, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
 			Get(ctx, staged.name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			configMap = stagedConfigMapObject(namespace, topology.GetName(), staged, ownerReferences)
+			configMap = stagedConfigMapObject(
+				namespace,
+				node.GetLabels()[labelTopologyOwner],
+				staged,
+				ownerReferences,
+			)
 			if _, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
 				Create(ctx, configMap, metav1.CreateOptions{}); err != nil {
-				return fmt.Errorf("failed to recreate staged ConfigMap %s/%s with owner references: %w",
+				return fmt.Errorf(
+					"failed to recreate staged ConfigMap %s/%s with owner references: %w",
 					namespace,
 					staged.name,
 					err,

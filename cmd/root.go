@@ -87,7 +87,7 @@ func Entrypoint() (*cobra.Command, error) {
 		"timeout",
 		"",
 		o.Global.Timeout,
-		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s",
+		"timeout for external API requests (e.g. container runtimes); lab runtimes default to 10m",
 	)
 	c.PersistentFlags().StringVarP(
 		&o.Global.Runtime,
@@ -131,6 +131,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if v != nil {
 		updateOptionsFromViper(cobraCmd, o)
 	}
+	applyLabRuntimeDefaultTimeout(cobraCmd, o)
 
 	// setting log level
 	switch {
@@ -170,6 +171,26 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	return getTopoFilePath(cobraCmd, o)
+}
+
+// applyLabRuntimeDefaultTimeout gives remote, controller-driven lab runtimes enough time to load
+// large node images. An explicit flag or environment value always wins. Local Docker and Podman
+// retain their existing two-minute default.
+func applyLabRuntimeDefaultTimeout(cobraCmd *cobra.Command, o *Options) {
+	if !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return
+	}
+
+	timeoutFlag := cobraCmd.Flag("timeout")
+	if timeoutFlag != nil && timeoutFlag.Changed {
+		return
+	}
+
+	if value, ok := os.LookupEnv(envPrefix + "_TIMEOUT"); ok && strings.TrimSpace(value) != "" {
+		return
+	}
+
+	o.Global.Timeout = defaultLabRuntimeTimeout
 }
 
 func globalRuntimeRequiresRoot(name string) bool {

@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -49,6 +51,92 @@ func TestRootRequirementHelpers(t *testing.T) {
 			if got := commandSkipsRoot(tt.runtime); got != tt.wantCommandSkipped {
 				t.Fatalf("commandSkipsRoot(%q) = %v, want %v",
 					tt.runtime, got, tt.wantCommandSkipped)
+			}
+		})
+	}
+}
+
+func TestApplyLabRuntimeDefaultTimeout(t *testing.T) {
+	tests := []struct {
+		name            string
+		runtime         string
+		explicitFlag    string
+		explicitEnv     string
+		initialTimeout  time.Duration
+		expectedTimeout time.Duration
+	}{
+		{
+			name:            "clabernetes default",
+			runtime:         "clabernetes",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: defaultLabRuntimeTimeout,
+		},
+		{
+			name:            "docker default unchanged",
+			runtime:         "docker",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: defaultTimeout,
+		},
+		{
+			name:            "explicit flag wins",
+			runtime:         "clabernetes",
+			explicitFlag:    "45s",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: 45 * time.Second,
+		},
+		{
+			name:            "explicit environment wins",
+			runtime:         "clabernetes",
+			explicitEnv:     "3m",
+			initialTimeout:  3 * time.Minute,
+			expectedTimeout: 3 * time.Minute,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalTimeout, timeoutWasSet := os.LookupEnv("CLAB_TIMEOUT")
+			if tt.explicitEnv == "" {
+				if err := os.Unsetenv("CLAB_TIMEOUT"); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				t.Setenv("CLAB_TIMEOUT", tt.explicitEnv)
+			}
+			t.Cleanup(func() {
+				if timeoutWasSet {
+					_ = os.Setenv("CLAB_TIMEOUT", originalTimeout)
+				} else {
+					_ = os.Unsetenv("CLAB_TIMEOUT")
+				}
+			})
+
+			root := &cobra.Command{Use: "containerlab"}
+			options := &Options{Global: &GlobalOptions{
+				Runtime: tt.runtime,
+				Timeout: tt.initialTimeout,
+			}}
+			root.PersistentFlags().DurationVar(
+				&options.Global.Timeout,
+				"timeout",
+				options.Global.Timeout,
+				"timeout",
+			)
+			deploy := &cobra.Command{Use: "deploy"}
+			root.AddCommand(deploy)
+			if tt.explicitFlag != "" {
+				if err := root.PersistentFlags().Set("timeout", tt.explicitFlag); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			applyLabRuntimeDefaultTimeout(deploy, options)
+			if options.Global.Timeout != tt.expectedTimeout {
+				t.Fatalf(
+					"timeout = %s, want %s",
+					options.Global.Timeout,
+					tt.expectedTimeout,
+				)
 			}
 		})
 	}

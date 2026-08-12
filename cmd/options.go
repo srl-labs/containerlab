@@ -15,6 +15,7 @@ import (
 const (
 	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
 	defaultTimeout             = 120 * time.Second
+	defaultLabRuntimeTimeout   = 10 * time.Minute
 	defaultToolsServerPort     = 8080
 	defaultToolsAPIServerPort  = 8090
 	defaultToolsApiSSHBasePort = 2223

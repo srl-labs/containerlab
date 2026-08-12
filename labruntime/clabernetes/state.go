@@ -6,12 +6,50 @@ import (
 	"sort"
 	"strings"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+func stateFromNodeResources(
+	name,
+	namespace string,
+	nodeResources []unstructured.Unstructured,
+) *clablabruntime.LabState {
+	state := &clablabruntime.LabState{
+		Name:         name,
+		Namespace:    namespace,
+		TopologyPath: fmt.Sprintf("k8s://%s/labs/%s", namespace, name),
+	}
+	if len(nodeResources) != 0 {
+		state.Owner = nodeResources[0].GetLabels()[clabconstants.Owner]
+		if state.Owner == "" {
+			state.Owner = nodeResources[0].GetAnnotations()[clabconstants.Owner]
+		}
+	}
+
+	state.Nodes = make([]clablabruntime.NodeState, 0, len(nodeResources))
+	for idx := range nodeResources {
+		nodeResource := &nodeResources[idx]
+		node := clablabruntime.NodeState{Name: nodeResource.GetName()}
+		node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
+		node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
+		node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
+		node.Ready = node.State == "ready"
+		node.LoadBalancerAddress, _, _ = unstructured.NestedString(
+			nodeResource.Object,
+			"status",
+			"exposedPorts",
+			"loadBalancerAddress",
+		)
+		state.Nodes = append(state.Nodes, node)
+	}
+
+	return state
+}
 
 func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
 	if state == nil || state.Name == "" {
@@ -109,8 +147,14 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 				continue
 			}
 
-			node.State = deploymentState
-			node.Ready = deploymentReady
+			// Node status is the authoritative signal that the nested containerlab node is ready.
+			// A launcher Deployment can be ready before containerlab has created the inner
+			// container. Deployment state remains the fallback for older resources without Node
+			// readiness, and replicas=0 is always an explicit stopped state.
+			if replicas == 0 || node.State == "" {
+				node.State = deploymentState
+				node.Ready = deploymentReady
+			}
 			nodesByName[logicalNodeName] = node
 			matched = true
 		}

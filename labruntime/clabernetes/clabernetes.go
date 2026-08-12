@@ -20,6 +20,7 @@ const (
 	envNamespace  = "CLAB_KUBE_NAMESPACE"
 
 	c9sAPIVersion         = "c9s.run/v1alpha1"
+	labelRuntime          = "containerlab.dev/runtime"
 	labelApp              = "c9s.run/app"
 	labelTopologyOwner    = "c9s.run/topologyOwner"
 	labelTopologyNode     = "c9s.run/topologyNode"
@@ -38,6 +39,18 @@ var nodeGVR = schema.GroupVersionResource{
 	Group:    "c9s.run",
 	Version:  "v1alpha1",
 	Resource: "nodes",
+}
+
+var linkGVR = schema.GroupVersionResource{
+	Group:    "c9s.run",
+	Version:  "v1alpha1",
+	Resource: "links",
+}
+
+var launcherProfileGVR = schema.GroupVersionResource{
+	Group:    "c9s.run",
+	Version:  "v1alpha1",
+	Resource: "launcherprofiles",
 }
 
 type Runtime struct {

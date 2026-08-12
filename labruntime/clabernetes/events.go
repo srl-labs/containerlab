@@ -19,7 +19,7 @@ func (r *Runtime) StreamEvents(
 	req clablabruntime.EventStreamRequest,
 ) (<-chan clablabruntime.Event, <-chan error, error) {
 	events := make(chan clablabruntime.Event, 128)
-	errs := make(chan error, 2)
+	errs := make(chan error, 3)
 
 	namespace := r.namespaceFor(req.Namespace)
 	if req.AllNamespaces {
@@ -35,9 +35,88 @@ func (r *Runtime) StreamEvents(
 	}
 
 	go r.watchTopologies(ctx, namespace, events, errs)
+	go r.watchNodes(ctx, namespace, events, errs)
 	go r.watchPods(ctx, namespace, events, errs)
 
 	return events, errs, nil
+}
+
+func (r *Runtime) watchNodes(
+	ctx context.Context,
+	namespace string,
+	eventSink chan<- clablabruntime.Event,
+	errSink chan<- error,
+) {
+	resource := r.client.Resource(nodeGVR).Namespace(namespace)
+
+	for {
+		watcher, err := resource.Watch(ctx, metav1.ListOptions{LabelSelector: labelTopologyOwner})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+
+			sendEventError(ctx, errSink, fmt.Errorf("failed to watch c9s nodes: %w", err))
+			return
+		}
+
+		if !r.forwardNodeWatch(ctx, watcher, eventSink, errSink) {
+			return
+		}
+
+		if !sleepContext(ctx, pollInterval) {
+			return
+		}
+	}
+}
+
+func (r *Runtime) forwardNodeWatch(
+	ctx context.Context,
+	watcher watch.Interface,
+	eventSink chan<- clablabruntime.Event,
+	errSink chan<- error,
+) bool {
+	defer watcher.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		case ev, ok := <-watcher.ResultChan():
+			if !ok {
+				log.Debug("c9s node watch closed, reconnecting")
+				return true
+			}
+			if ev.Type == watch.Error {
+				sendEventError(ctx, errSink, fmt.Errorf("c9s node watch returned an error"))
+				return false
+			}
+
+			node, ok := ev.Object.(*unstructured.Unstructured)
+			if !ok {
+				continue
+			}
+
+			labName := node.GetLabels()[labelTopologyOwner]
+			if labName == "" {
+				continue
+			}
+			readiness, _, _ := unstructured.NestedString(node.Object, "status", "readiness")
+			r.sendEvent(ctx, eventSink, clablabruntime.Event{
+				Timestamp: time.Now(),
+				Type:      "container",
+				Action:    strings.ToLower(string(ev.Type)),
+				ActorID:   fmt.Sprintf("%s/%s/%s", node.GetNamespace(), labName, node.GetName()),
+				ActorName: fmt.Sprintf("%s-%s", labName, node.GetName()),
+				Attributes: map[string]string{
+					"namespace": node.GetNamespace(),
+					"lab":       labName,
+					"node":      node.GetName(),
+					"state":     readiness,
+				},
+			})
+		}
+	}
 }
 
 func (r *Runtime) emitInitialEvents(
@@ -96,7 +175,11 @@ func (r *Runtime) watchTopologies(
 				return
 			}
 
-			sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes topologies: %w", err))
+			sendEventError(
+				ctx,
+				errSink,
+				fmt.Errorf("failed to watch clabernetes topologies: %w", err),
+			)
 			return
 		}
 
@@ -129,7 +212,11 @@ func (r *Runtime) forwardTopologyWatch(
 				return true
 			}
 			if ev.Type == watch.Error {
-				sendEventError(ctx, errSink, fmt.Errorf("clabernetes topology watch returned an error"))
+				sendEventError(
+					ctx,
+					errSink,
+					fmt.Errorf("clabernetes topology watch returned an error"),
+				)
 				return false
 			}
 
@@ -171,7 +258,8 @@ func (r *Runtime) watchPods(
 				return
 			}
 
-			sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes pods: %w", err))
+			sendEventError(ctx, errSink, fmt.Errorf(
+				"failed to watch clabernetes pods: %w", err))
 			return
 		}
 
@@ -203,7 +291,8 @@ func (r *Runtime) forwardPodWatch(
 				return true
 			}
 			if ev.Type == watch.Error {
-				sendEventError(ctx, errSink, fmt.Errorf("clabernetes pod watch returned an error"))
+				sendEventError(ctx, errSink, fmt.Errorf(
+					"clabernetes pod watch returned an error"))
 				return false
 			}
 

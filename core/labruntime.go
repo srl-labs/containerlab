@@ -263,7 +263,9 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 	return c.copyLabRuntimeSavedFiles(result, opts.copyDst)
 }
 
-func (c *CLab) containersFromLabState(state *clablabruntime.LabState) []clabruntime.GenericContainer {
+func (c *CLab) containersFromLabState(
+	state *clablabruntime.LabState,
+) []clabruntime.GenericContainer {
 	if state == nil {
 		return nil
 	}
@@ -474,7 +476,10 @@ func (c *CLab) copyLabRuntimeSavedFiles(
 
 		nodeDstDir := filepath.Join(dstRoot, file.NodeName)
 		dstPath := filepath.Join(nodeDstDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(dstPath), clabconstants.PermissionsDirDefault); err != nil {
+		if err := os.MkdirAll(
+			filepath.Dir(dstPath),
+			clabconstants.PermissionsDirDefault,
+		); err != nil {
 			return fmt.Errorf("failed to create save dst directory %q: %w",
 				filepath.Dir(dstPath), err)
 		}

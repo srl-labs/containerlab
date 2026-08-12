@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -68,7 +69,12 @@ func TestCleanTarPath(t *testing.T) {
 		want string
 		ok   bool
 	}{
-		{name: "relative path", in: "./configs/startup.json", want: "configs/startup.json", ok: true},
+		{
+			name: "relative path",
+			in:   "./configs/startup.json",
+			want: "configs/startup.json",
+			ok:   true,
+		},
 		{name: "current directory", in: ".", want: ".", ok: true},
 		{name: "parent path", in: "../secret", ok: false},
 		{name: "absolute path", in: "/etc/passwd", ok: false},
@@ -203,16 +209,109 @@ func TestStateFromTopology(t *testing.T) {
 	}
 }
 
-func TestTopologyObjectUsesCurrentC9sAPI(t *testing.T) {
+func TestPrimitiveResourcesUseCurrentC9sAPI(t *testing.T) {
 	t.Parallel()
 
-	obj := topologyObject("lab1", "lab-ns", "", "topology: {}\n")
-	if got := obj.GetAPIVersion(); got != c9sAPIVersion {
-		t.Fatalf("apiVersion = %q, want %q", got, c9sAPIVersion)
+	for name, gvr := range map[string]schema.GroupVersionResource{
+		"topology":         topologyGVR,
+		"node":             nodeGVR,
+		"link":             linkGVR,
+		"launcher profile": launcherProfileGVR,
+	} {
+		if gvr.Group != "c9s.run" || gvr.Version != "v1alpha1" {
+			t.Fatalf("unexpected %s GVR: %+v", name, gvr)
+		}
 	}
-	if topologyGVR.Group != "c9s.run" || nodeGVR.Group != "c9s.run" {
-		t.Fatalf("unexpected c9s resource groups: topology=%q node=%q",
-			topologyGVR.Group, nodeGVR.Group)
+}
+
+func TestPrimitiveResourceGroupsCreateLinksBeforeNodes(t *testing.T) {
+	t.Parallel()
+
+	set := &primitiveResourceSet{}
+	groups := set.groups()
+	want := []string{"LauncherProfile", "Link", "Node"}
+	got := make([]string, 0, len(groups))
+	for _, group := range groups {
+		got = append(got, group.kind)
+	}
+
+	if !slices.Equal(got, want) {
+		t.Fatalf("primitive creation order = %v, want %v", got, want)
+	}
+}
+
+func TestStageAndEnablePrimitiveNodeDeployments(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "node1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				"keep": "value",
+			},
+		},
+	}}
+	set := &primitiveResourceSet{nodes: []*unstructured.Unstructured{node}}
+	stagePrimitiveNodeDeployments(set)
+
+	if node.GetLabels()[clabernetesconstants.LabelDisableDeployments] != "true" {
+		t.Fatalf("staged node labels = %v", node.GetLabels())
+	}
+
+	r := newTestRuntime()
+	created, err := r.client.Resource(nodeGVR).Namespace("lab-ns").Create(
+		context.Background(),
+		node,
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.enablePrimitiveNodeDeployments(
+		context.Background(),
+		"lab-ns",
+		map[string]*unstructured.Unstructured{"node1": created},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	actual := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	if _, exists := actual.GetLabels()[clabernetesconstants.LabelDisableDeployments]; exists {
+		t.Fatalf("enabled node retains staging label: %v", actual.GetLabels())
+	}
+	if actual.GetLabels()["keep"] != "value" {
+		t.Fatalf("enable patch did not preserve labels: %v", actual.GetLabels())
+	}
+}
+
+func TestPrimitiveLinkPendingReason(t *testing.T) {
+	t.Parallel()
+
+	link := &unstructured.Unstructured{Object: map[string]any{
+		"status": map[string]any{
+			"resolvedEndpoints": map[string]any{
+				"endpointA": map[string]any{"nodeName": "node1", "uid": "uid-1"},
+				"endpointB": map[string]any{"nodeName": "host"},
+			},
+		},
+	}}
+	if reason := primitiveLinkPendingReason(link); reason != "" {
+		t.Fatalf("resolved link reported pending: %q", reason)
+	}
+
+	if err := unstructured.SetNestedField(
+		link.Object,
+		"endpoint node missing",
+		"status",
+		"error",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if reason := primitiveLinkPendingReason(link); reason != "endpoint node missing" {
+		t.Fatalf("pending reason = %q, want endpoint status error", reason)
 	}
 }
 
@@ -260,6 +359,123 @@ func TestEnrichStateUsesNodeResources(t *testing.T) {
 	}
 }
 
+func TestWaitReadyTimeoutReportsPendingNodes(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "slow-node",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "lab1",
+			},
+		},
+		"spec": map[string]any{
+			"kind":  "arbitrary-kind",
+			"image": "example.invalid/arbitrary-kind:latest",
+		},
+		"status": map[string]any{"readiness": "notready"},
+	}}
+
+	r := newTestRuntime(node)
+	err := r.waitReady(context.Background(), "lab1", "lab-ns", 20*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected readiness timeout")
+	}
+	if !strings.Contains(err.Error(), "timed out after 20ms") ||
+		!strings.Contains(err.Error(), "pending nodes: slow-node (notready)") ||
+		strings.Contains(err.Error(), "rate limiter") {
+		t.Fatalf("unexpected readiness timeout: %v", err)
+	}
+}
+
+func TestManagePrimitiveOnlyLab(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "node1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner:  "primitive-lab",
+				clabconstants.Owner: "alice",
+			},
+		},
+		"spec": map[string]any{"kind": "linux", "image": "alpine:3"},
+		"status": map[string]any{
+			"readiness": "ready",
+		},
+	}}
+	link := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Link",
+		"metadata": map[string]any{
+			"name":      "node1-eth1-host-eth1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "primitive-lab",
+			},
+		},
+	}}
+	profile := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "LauncherProfile",
+		"metadata": map[string]any{
+			"name":      "primitive-lab",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "primitive-lab",
+			},
+		},
+	}}
+
+	r := newTestRuntime(node, link, profile)
+	state, err := r.Inspect(context.Background(), clablabruntime.InspectRequest{
+		Name:      "primitive-lab",
+		Namespace: "lab-ns",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "primitive-lab" || state.Owner != "alice" || !state.Ready ||
+		len(state.Nodes) != 1 || state.Nodes[0].Name != "node1" {
+		t.Fatalf("unexpected primitive-only inspect state: %+v", state)
+	}
+
+	states, err := r.List(context.Background(), clablabruntime.ListRequest{Namespace: "lab-ns"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(states) != 1 || states[0].Name != "primitive-lab" {
+		t.Fatalf("unexpected primitive-only list state: %+v", states)
+	}
+
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name:      "primitive-lab",
+		Namespace: "lab-ns",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, resource := range []struct {
+		gvr  schema.GroupVersionResource
+		name string
+	}{
+		{gvr: nodeGVR, name: "node1"},
+		{gvr: linkGVR, name: "node1-eth1-host-eth1"},
+		{gvr: launcherProfileGVR, name: "primitive-lab"},
+	} {
+		_, err := r.client.Resource(resource.gvr).Namespace("lab-ns").
+			Get(context.Background(), resource.name, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Fatalf("expected %s to be deleted, got %v", resource.name, err)
+		}
+	}
+}
+
 func TestResolveLauncherNode(t *testing.T) {
 	t.Parallel()
 
@@ -277,7 +493,7 @@ func TestResolveLauncherNode(t *testing.T) {
 	}
 }
 
-func TestDeployCreatesTopology(t *testing.T) {
+func TestDeployCreatesPrimitiveResources(t *testing.T) {
 	t.Parallel()
 
 	const definition = `topology:
@@ -285,6 +501,11 @@ func TestDeployCreatesTopology(t *testing.T) {
     node1:
       kind: linux
       image: alpine:latest
+    node2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
 `
 
 	r := newTestRuntime()
@@ -302,9 +523,45 @@ func TestDeployCreatesTopology(t *testing.T) {
 		t.Fatalf("unexpected deploy state: %+v", state)
 	}
 
-	obj := getTestTopology(t, r, "lab-ns", "lab1")
-	if got := topologyDefinition(t, obj); got != definition {
-		t.Fatalf("topology definition = %q, want %q", got, definition)
+	assertNoTestTopology(t, r, "lab-ns", "lab1")
+	node := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	if node.GetLabels()[labelTopologyOwner] != "lab1" ||
+		node.GetLabels()[labelRuntime] != clabernetesAppValue ||
+		node.GetLabels()[clabconstants.Owner] != "alice" {
+		t.Fatalf("unexpected node labels: %v", node.GetLabels())
+	}
+	if got, _, _ := unstructured.NestedString(
+		node.Object,
+		"spec",
+		"image",
+	); got != "alpine:latest" {
+		t.Fatalf("node image = %q, want alpine:latest", got)
+	}
+
+	profiles, err := r.client.Resource(launcherProfileGVR).Namespace("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles.Items) != 1 || profiles.Items[0].GetName() != "lab1" {
+		t.Fatalf("unexpected launcher profiles: %+v", profiles.Items)
+	}
+
+	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links.Items) != 1 {
+		t.Fatalf("len(links) = %d, want 1", len(links.Items))
+	}
+	if got, _, _ := unstructured.NestedString(
+		links.Items[0].Object,
+		"spec",
+		"endpointA",
+		"nodeName",
+	); got != "node1" {
+		t.Fatalf("link endpointA nodeName = %q, want node1", got)
 	}
 }
 
@@ -313,8 +570,18 @@ func TestDeployStagesLocalFilesFromTopology(t *testing.T) {
 
 	topologyDir := t.TempDir()
 	writeFile(t, filepath.Join(topologyDir, "configs", "client2", "iperf.sh"), "#!/bin/sh\n", 0o755)
-	writeFile(t, filepath.Join(topologyDir, "configs", "prometheus", "prometheus.yml"), "global: {}\n", 0o644)
-	writeFile(t, filepath.Join(topologyDir, "configs", "fabric", "leaf1.cfg"), "set / system name leaf1\n", 0o644)
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "prometheus", "prometheus.yml"),
+		"global: {}\n",
+		0o644,
+	)
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "fabric", "leaf1.cfg"),
+		"set / system name leaf1\n",
+		0o644,
+	)
 
 	const definition = `name: lab1
 topology:
@@ -358,20 +625,22 @@ topology:
 	}
 
 	prometheusConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-prometheus-files")
-	if got := string(prometheusConfigMap.BinaryData["configs-prometheus-prometheus-yml"]); got != "global: {}\n" {
+	if got := string(
+		prometheusConfigMap.BinaryData["configs-prometheus-prometheus-yml"],
+	); got != "global: {}\n" {
 		t.Fatalf("unexpected prometheus staged file content: %q", got)
 	}
 
 	startupConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-leaf1-startup-config")
-	if got := string(startupConfigMap.BinaryData["startup-config"]); got != "set / system name leaf1\n" {
+	if got := string(
+		startupConfigMap.BinaryData["startup-config"],
+	); got != "set / system name leaf1\n" {
 		t.Fatalf("unexpected startup config content: %q", got)
 	}
 
-	obj := getTestTopology(t, r, "lab-ns", "lab1")
 	assertFileMount(
 		t,
-		obj,
-		"client2",
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "client2"),
 		"configs/client2/iperf.sh",
 		"lab1-client2-files",
 		"configs-client2-iperf-sh",
@@ -379,8 +648,7 @@ topology:
 	)
 	assertFileMount(
 		t,
-		obj,
-		"prometheus",
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus"),
 		"configs/prometheus/prometheus.yml",
 		"lab1-prometheus-files",
 		"configs-prometheus-prometheus-yml",
@@ -388,13 +656,23 @@ topology:
 	)
 	assertFileMount(
 		t,
-		obj,
-		"leaf1",
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "leaf1"),
 		"configs/fabric/leaf1.cfg",
 		"lab1-leaf1-startup-config",
 		"startup-config",
 		"read",
 	)
+
+	for _, configMap := range []*corev1.ConfigMap{
+		clientConfigMap,
+		prometheusConfigMap,
+		startupConfigMap,
+	} {
+		if len(configMap.OwnerReferences) != 1 || configMap.OwnerReferences[0].Kind != "Node" {
+			t.Fatalf("ConfigMap %s owner references = %+v, want one Node owner",
+				configMap.Name, configMap.OwnerReferences)
+		}
+	}
 }
 
 func TestDeployPreservesDockerCompatibleNamesForEmptyPrefixTopology(t *testing.T) {
@@ -422,10 +700,9 @@ topology:
 		t.Fatal(err)
 	}
 
-	obj := getTestTopology(t, r, "lab-ns", "st")
-	if got := topologyNaming(t, obj); got != "non-prefixed" {
-		t.Fatalf("topology naming = %q, want %q", got, "non-prefixed")
-	}
+	assertNoTestTopology(t, r, "lab-ns", "st")
+	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "leaf1")
+	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus")
 }
 
 func TestDeployExposesGNMICMetricsPortForClabernetes(t *testing.T) {
@@ -464,30 +741,52 @@ topology:
 		t.Fatal(err)
 	}
 
-	definitionAfterDeploy := topologyDefinition(t, getTestTopology(t, r, "lab-ns", "st"))
-	if !strings.Contains(definitionAfterDeploy, "mgmt:\n  network: st\n  ipv4-subnet: 172.20.20.0/24") {
-		t.Fatalf("topology definition did not preserve mgmt config:\n%s", definitionAfterDeploy)
+	assertNoTestTopology(t, r, "lab-ns", "st")
+	gnmic := getTestPrimitive(t, r, nodeGVR, "lab-ns", "gnmic")
+	ports, found, err := unstructured.NestedStringSlice(gnmic.Object, "spec", "ports")
+	if err != nil || !found {
+		t.Fatalf("failed to read gnmic ports: found=%t err=%v", found, err)
 	}
-	if !strings.Contains(definitionAfterDeploy, "- leaf1:e1-1") ||
-		!strings.Contains(definitionAfterDeploy, "- prometheus:eth1") {
-		t.Fatalf("topology definition did not preserve brief link endpoints:\n%s", definitionAfterDeploy)
-	}
-	if strings.Contains(definitionAfterDeploy, "node: leaf1") ||
-		strings.Contains(definitionAfterDeploy, "interface: e1-1") {
-		t.Fatalf("topology definition rendered structured link endpoints:\n%s", definitionAfterDeploy)
+	if !slices.Contains(ports, "9273/tcp") {
+		t.Fatalf("gnmic ports = %v, want 9273/tcp", ports)
 	}
 
-	var config clabRuntimeConfig
-	if err := yaml.Unmarshal([]byte(definitionAfterDeploy), &config); err != nil {
+	profile := getTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "st")
+	if enabled, found, err := unstructured.NestedBool(
+		profile.Object,
+		"spec",
+		"statusProbes",
+		"enabled",
+	); err != nil || !found || !enabled {
+		t.Fatalf("status probes enabled = %t, found=%t, err=%v; want true", enabled, found, err)
+	}
+	statusProbes, found, err := unstructured.NestedMap(profile.Object, "spec", "statusProbes")
+	if err != nil || !found {
+		t.Fatalf("failed to read status probe configuration: found=%t err=%v", found, err)
+	}
+	if configurations, found := statusProbes["nodeProbeConfigurations"]; found &&
+		configurations != nil {
+		t.Fatalf("containerlab must not infer node probe configurations: %v", statusProbes)
+	}
+	if excludedNodes, found := statusProbes["excludedNodes"]; found && excludedNodes != nil {
+		t.Fatalf("containerlab must not exclude kinds from generic readiness: %v", statusProbes)
+	}
+	if got, _, _ := unstructured.NestedString(
+		profile.Object,
+		"spec",
+		"mgmt",
+		"ipv4-subnet",
+	); got != "172.20.20.0/24" {
+		t.Fatalf("launcher profile management subnet = %q, want 172.20.20.0/24", got)
+	}
+
+	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	gnmic := config.Topology.Nodes["gnmic"]
-	if gnmic == nil {
-		t.Fatal("gnmic node was not found in topology definition")
-	}
-	if !slices.Contains(gnmic.Ports, "9273:9273/tcp") {
-		t.Fatalf("gnmic ports = %v, want 9273:9273/tcp", gnmic.Ports)
+	if len(links.Items) != 1 {
+		t.Fatalf("len(links) = %d, want 1", len(links.Items))
 	}
 }
 
@@ -552,7 +851,8 @@ func TestDeployDuplicateCheckIsNamespaceScoped(t *testing.T) {
 	}
 
 	_ = getTestTopology(t, r, "lab-a", "lab1")
-	_ = getTestTopology(t, r, "lab-b", "lab1")
+	assertNoTestTopology(t, r, "lab-b", "lab1")
+	_ = getTestPrimitive(t, r, nodeGVR, "lab-b", "node1")
 }
 
 func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
@@ -650,8 +950,10 @@ func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 		client: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
 			k8sruntime.NewScheme(),
 			map[schema.GroupVersionResource]string{
-				topologyGVR: "TopologyList",
-				nodeGVR:     "NodeList",
+				topologyGVR:        "TopologyList",
+				nodeGVR:            "NodeList",
+				linkGVR:            "LinkList",
+				launcherProfileGVR: "LauncherProfileList",
 			},
 			runtimeObjects...,
 		),
@@ -669,6 +971,40 @@ func getTestTopology(
 	t.Helper()
 
 	obj, err := r.client.Resource(topologyGVR).Namespace(namespace).
+		Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return obj
+}
+
+func assertNoTestTopology(
+	t *testing.T,
+	r *Runtime,
+	namespace string,
+	name string,
+) {
+	t.Helper()
+
+	_, err := r.client.Resource(topologyGVR).Namespace(namespace).
+		Get(context.Background(), name, metav1.GetOptions{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected compatibility Topology %s/%s not to exist, got %v",
+			namespace, name, err)
+	}
+}
+
+func getTestPrimitive(
+	t *testing.T,
+	r *Runtime,
+	gvr schema.GroupVersionResource,
+	namespace string,
+	name string,
+) *unstructured.Unstructured {
+	t.Helper()
+
+	obj, err := r.client.Resource(gvr).Namespace(namespace).
 		Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -730,7 +1066,6 @@ func getTestConfigMap(
 func assertFileMount(
 	t *testing.T,
 	obj *unstructured.Unstructured,
-	nodeName,
 	filePath,
 	configMapName,
 	configMapPath,
@@ -738,10 +1073,9 @@ func assertFileMount(
 ) {
 	t.Helper()
 
-	filesFromConfigMap, found, err := unstructured.NestedMap(
+	filesFromConfigMap, found, err := unstructured.NestedSlice(
 		obj.Object,
 		"spec",
-		"deployment",
 		"filesFromConfigMap",
 	)
 	if err != nil {
@@ -751,12 +1085,7 @@ func assertFileMount(
 		t.Fatal("filesFromConfigMap was not found")
 	}
 
-	rawMounts, ok := filesFromConfigMap[nodeName].([]any)
-	if !ok {
-		t.Fatalf("filesFromConfigMap[%s] has unexpected type %T", nodeName, filesFromConfigMap[nodeName])
-	}
-
-	for _, rawMount := range rawMounts {
+	for _, rawMount := range filesFromConfigMap {
 		mount, ok := rawMount.(map[string]any)
 		if !ok {
 			t.Fatalf("mount has unexpected type %T", rawMount)
@@ -775,7 +1104,7 @@ func assertFileMount(
 		configMapName,
 		configMapPath,
 		mode,
-		rawMounts,
+		filesFromConfigMap,
 	)
 }
 

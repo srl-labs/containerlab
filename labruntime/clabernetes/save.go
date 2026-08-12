@@ -51,10 +51,22 @@ func (r *Runtime) Save(
 		}
 
 		if len(stdout) != 0 {
-			log.Info("clabernetes save output", "node", nodeName, "stdout", strings.TrimSpace(string(stdout)))
+			log.Info(
+				"clabernetes save output",
+				"node",
+				nodeName,
+				"stdout",
+				strings.TrimSpace(string(stdout)),
+			)
 		}
 		if len(stderr) != 0 {
-			log.Info("clabernetes save output", "node", nodeName, "stderr", strings.TrimSpace(string(stderr)))
+			log.Info(
+				"clabernetes save output",
+				"node",
+				nodeName,
+				"stderr",
+				strings.TrimSpace(string(stderr)),
+			)
 		}
 		if rc != 0 {
 			return nil, fmt.Errorf("save failed for clabernetes node %s/%s/%s: rc=%d",

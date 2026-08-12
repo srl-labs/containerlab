@@ -26,6 +26,26 @@ Deploy c9s linux lab
     ${output} =    Run Clab Command    deploy -t ${topo}
     Should Be Equal As Integers    ${output.rc}    0
 
+Deploy emits primary c9s resources without a Topology payload
+    ${nodes} =    Process.Run Process
+    ...    kubectl -n default get nodes.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${nodes.rc}    0
+    Should Contain    ${nodes.stdout}    node.c9s.run/client
+    Should Contain    ${nodes.stdout}    node.c9s.run/server
+
+    ${links} =    Process.Run Process
+    ...    kubectl -n default get links.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${links.rc}    0
+    Should Not Be Empty    ${links.stdout}
+
+    ${topology} =    Process.Run Process
+    ...    kubectl -n default get topology.c9s.run ${lab-name} --ignore-not-found -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${topology.rc}    0
+    Should Be Empty    ${topology.stdout}
+
 Inspect c9s linux lab by topology and name
     ${topology_inspect} =    Run Clab Command    inspect -t ${topo}
     Should Be Equal As Integers    ${topology_inspect.rc}    0
