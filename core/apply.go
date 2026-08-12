@@ -243,7 +243,7 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 		}
 	}
 	params.AllowExistingEndpoint = true
-	if err := c.verifyLinksWithParams(ctx, &params); err != nil {
+	if err := c.verifyLinks(ctx, &params); err != nil {
 		return err
 	}
 

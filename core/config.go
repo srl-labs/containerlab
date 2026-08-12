@@ -470,7 +470,7 @@ func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx, c.globalRuntime().Config().VerifyLinkParams); err != nil {
 		return err
 	}
 
@@ -544,15 +544,7 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks(ctx context.Context) error {
-	var params *clablinks.VerifyLinkParams
-	if len(c.Endpoints) > 0 {
-		params = c.globalRuntime().Config().VerifyLinkParams
-	}
-	return c.verifyLinksWithParams(ctx, params)
-}
-
-func (c *CLab) verifyLinksWithParams(
+func (c *CLab) verifyLinks(
 	ctx context.Context,
 	params *clablinks.VerifyLinkParams,
 ) error {
