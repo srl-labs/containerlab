@@ -5,8 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
@@ -36,9 +39,14 @@ func (r *Runtime) Exec(
 		return nil, err
 	}
 
+	containerName, err := r.nestedContainerName(ctx, pod, req.NodeName)
+	if err != nil {
+		return nil, err
+	}
+
 	execCmd := clabexec.NewExecCmdFromSlice(req.Command)
 	result := clabexec.NewExecResult(execCmd)
-	cmd := append([]string{"docker", "exec", req.NodeName}, req.Command...)
+	cmd := append([]string{"docker", "exec", containerName}, req.Command...)
 
 	stdout, stderr, rc, err := r.execInPod(ctx, pod, cmd)
 	if err != nil {
@@ -50,6 +58,101 @@ func (r *Runtime) Exec(
 	result.SetStdErr(stderr)
 
 	return result, nil
+}
+
+func (r *Runtime) nestedContainerName(
+	ctx context.Context,
+	pod *corev1.Pod,
+	nodeName string,
+) (string, error) {
+	exactNames, err := r.nestedContainerNamesByLabel(
+		ctx,
+		pod,
+		clabconstants.NodeName,
+		nodeName,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	componentNames := []string(nil)
+	if len(exactNames) == 0 {
+		componentNames, err = r.nestedContainerNamesByLabel(
+			ctx,
+			pod,
+			clabconstants.RootNodeName,
+			nodeName,
+		)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return preferredNestedContainerName(nodeName, exactNames, componentNames)
+}
+
+func (r *Runtime) nestedContainerNamesByLabel(
+	ctx context.Context,
+	pod *corev1.Pod,
+	label,
+	value string,
+) ([]string, error) {
+	stdout, stderr, rc, err := r.execInPod(ctx, pod, []string{
+		"docker",
+		"ps",
+		"--all",
+		"--filter",
+		fmt.Sprintf("label=%s=%s", label, value),
+		"--format",
+		"{{.Names}}",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if rc != 0 {
+		return nil, fmt.Errorf(
+			"failed listing nested containers for node %q: rc=%d stderr=%s",
+			value,
+			rc,
+			strings.TrimSpace(string(stderr)),
+		)
+	}
+
+	return strings.Fields(string(stdout)), nil
+}
+
+func preferredNestedContainerName(
+	nodeName string,
+	exactNames,
+	componentNames []string,
+) (string, error) {
+	switch len(exactNames) {
+	case 1:
+		return exactNames[0], nil
+	case 0:
+	default:
+		return "", fmt.Errorf("multiple nested containers matched node %q: %v", nodeName, exactNames)
+	}
+
+	slices.Sort(componentNames)
+
+	for _, cpmSuffix := range []string{"-a", "-b"} {
+		for _, componentName := range componentNames {
+			if strings.EqualFold(componentName, nodeName+cpmSuffix) {
+				return componentName, nil
+			}
+		}
+	}
+
+	if len(componentNames) == 0 {
+		return "", fmt.Errorf("nested container for node %q was not found", nodeName)
+	}
+
+	return "", fmt.Errorf(
+		"CPM component container for node %q was not found among %v",
+		nodeName,
+		componentNames,
+	)
 }
 
 func (r *Runtime) launcherPod(

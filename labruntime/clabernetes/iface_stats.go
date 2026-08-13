@@ -53,8 +53,20 @@ func (r *Runtime) pollInterfaceStats(
 					continue
 				}
 
+				containerName, err := r.nestedContainerName(ctx, pod, node.Name)
+				if err != nil {
+					log.Debug("failed to resolve nested container for interface stats",
+						"namespace", state.Namespace,
+						"lab", state.Name,
+						"node", node.Name,
+						"error", err,
+					)
+
+					continue
+				}
+
 				stdout, stderr, rc, err := r.execInPod(ctx, pod,
-					[]string{"docker", "exec", node.Name, "cat", "/proc/net/dev"})
+					[]string{"docker", "exec", containerName, "cat", "/proc/net/dev"})
 				if err != nil {
 					log.Debug("failed to collect clabernetes interface stats",
 						"namespace", state.Namespace,

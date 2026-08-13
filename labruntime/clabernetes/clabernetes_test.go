@@ -60,6 +60,84 @@ func TestParseProcNetDevRejectsMalformedLine(t *testing.T) {
 	}
 }
 
+func TestPreferredNestedContainerName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		nodeName       string
+		exactNames     []string
+		componentNames []string
+		want           string
+		wantError      string
+	}{
+		{
+			name:       "regular-node",
+			nodeName:   "router",
+			exactNames: []string{"router"},
+			want:       "router",
+		},
+		{
+			name:           "components-prefer-cpm-a",
+			nodeName:       "srsim",
+			componentNames: []string{"srsim-2", "srsim-b", "srsim-1", "srsim-a"},
+			want:           "srsim-a",
+		},
+		{
+			name:           "components-fall-back-to-cpm-b",
+			nodeName:       "srsim",
+			componentNames: []string{"srsim-1", "srsim-b"},
+			want:           "srsim-b",
+		},
+		{
+			name:      "missing-node",
+			nodeName:  "missing",
+			wantError: "was not found",
+		},
+		{
+			name:           "missing-cpm",
+			nodeName:       "srsim",
+			componentNames: []string{"srsim-1", "srsim-2"},
+			wantError:      "CPM component container",
+		},
+		{
+			name:       "ambiguous-exact-node",
+			nodeName:   "router",
+			exactNames: []string{"router-duplicate", "router"},
+			wantError:  "multiple nested containers",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := preferredNestedContainerName(
+				tt.nodeName,
+				tt.exactNames,
+				tt.componentNames,
+			)
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf(
+						"preferredNestedContainerName() error = %v, want %q",
+						err,
+						tt.wantError,
+					)
+				}
+
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Fatalf("preferredNestedContainerName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCleanTarPath(t *testing.T) {
 	t.Parallel()
 
