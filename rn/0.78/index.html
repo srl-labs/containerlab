@@ -1798,6 +1798,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#0782" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.78.2
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3910,6 +3921,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#0782" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.78.2
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4229,6 +4251,11 @@
 <li>Fixed saved RouterOS configurations incorrectly dropping IP addresses from <code>ether10</code> and higher interfaces when removing the management <code>ether1</code> entry. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3313" title="GitHub Issue: srl-labs/containerlab #3313">#3313</a></li>
 <li>Allowed external CA certificate and key environment variables to be used without certificate authority settings in the topology. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3316" title="GitHub Issue: srl-labs/containerlab #3316">#3316</a></li>
 <li>Updated Ciena SAOS documentation for brand compliance and distributed image tags. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3310" title="GitHub Issue: srl-labs/containerlab #3310">#3310</a></li>
+</ul>
+<h3 id="0782">0.78.2<a class="headerlink" href="#0782" title="Permanent link">#</a></h3>
+<ul>
+<li>Improved <code>veth-stitch</code> and <code>vxlan-stitch</code> deployment reliability by retrying transient netlink errors and ensuring stitch rules are applied after both endpoints are ready. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3319" title="GitHub Issue: srl-labs/containerlab #3319">#3319</a></li>
+<li>Updated <a href="../../cmd/events/"><code>events</code></a> to report host-side stitch interfaces and their metadata, matching <code>inspect interfaces</code> for stitched links. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3319" title="GitHub Issue: srl-labs/containerlab #3319">#3319</a></li>
 </ul>
   
 
