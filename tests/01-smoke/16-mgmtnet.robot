@@ -16,7 +16,7 @@ ${runtime}          docker
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    ${result} =    Run Process   
+    ${result} =    Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     ...    shell=True
     Log    ${result.stdout}
