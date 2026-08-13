@@ -31,7 +31,6 @@ const (
 	inlineStartupConfigMountPath = "/clabernetes/startup-config"
 	maxConfigMapFileBytes        = 950_000
 	kubernetesNameMaxLen         = 63
-	gnmicPrometheusPort          = 9273
 	clabernetesNamingNonPrefixed = "non-prefixed"
 
 	clabDirVar     = "__clabDir__"
@@ -111,13 +110,9 @@ func stageTopologyLocalFiles(
 
 	extraConfigMaps := map[string]*stagedConfigMap{}
 	startupConfigMaps := map[string]*stagedConfigMap{}
-	// Always render parsed links through the c9s brief-link boundary. Previously this happened
-	// only as a side effect of staging an unrelated file or compatibility port, which made an
-	// extended link's behavior depend on whether some other field changed the definition.
+	// Always render parsed links through the c9s brief-link boundary so an extended link's
+	// behavior does not depend on whether some unrelated field changed the definition.
 	definitionChanged := len(config.Topology.Links) > 0
-	if exposeClabernetesCompatibilityPorts(config) {
-		definitionChanged = true
-	}
 
 	nodeNames := make([]string, 0, len(config.Topology.Nodes))
 	for nodeName := range config.Topology.Nodes {
@@ -278,64 +273,6 @@ func clabernetesNamingMode(config *clabRuntimeConfig) string {
 	}
 
 	return clabernetesNamingNonPrefixed
-}
-
-func exposeClabernetesCompatibilityPorts(config *clabRuntimeConfig) bool {
-	if config == nil || config.Topology == nil {
-		return false
-	}
-
-	definitionChanged := false
-
-	for nodeName, nodeDefinition := range config.Topology.Nodes {
-		if nodeDefinition == nil || !isGNMICNode(nodeName, nodeDefinition) {
-			continue
-		}
-
-		if hasDestinationPort(nodeDefinition.Ports, gnmicPrometheusPort, "tcp") {
-			continue
-		}
-
-		nodeDefinition.Ports = append(
-			nodeDefinition.Ports,
-			fmt.Sprintf("%d/tcp", gnmicPrometheusPort),
-		)
-		definitionChanged = true
-	}
-
-	return definitionChanged
-}
-
-func isGNMICNode(nodeName string, nodeDefinition *clabtypes.NodeDefinition) bool {
-	nodeName = strings.ToLower(nodeName)
-	image := strings.ToLower(nodeDefinition.Image)
-
-	return nodeName == "gnmic" || strings.Contains(image, "gnmic")
-}
-
-func hasDestinationPort(portDefinitions []string, destinationPort int, protocol string) bool {
-	for _, portDefinition := range portDefinitions {
-		port, portProtocol := splitPortProtocol(portDefinition)
-		if portProtocol != "" && !strings.EqualFold(portProtocol, protocol) {
-			continue
-		}
-
-		parts := strings.Split(port, ":")
-		if parts[len(parts)-1] == fmt.Sprint(destinationPort) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func splitPortProtocol(portDefinition string) (port, protocol string) {
-	port, protocol, found := strings.Cut(portDefinition, "/")
-	if !found {
-		return portDefinition, ""
-	}
-
-	return port, protocol
 }
 
 func stageStartupConfig(

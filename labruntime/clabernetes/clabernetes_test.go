@@ -1250,7 +1250,7 @@ topology:
 	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus")
 }
 
-func TestDeployExposesGNMICMetricsPortForClabernetes(t *testing.T) {
+func TestDeployDoesNotInferApplicationPorts(t *testing.T) {
 	t.Parallel()
 
 	const definition = `name: st
@@ -1289,11 +1289,11 @@ topology:
 	assertNoTestTopology(t, r, "lab-ns", "st")
 	gnmic := getTestPrimitive(t, r, nodeGVR, "lab-ns", "gnmic")
 	ports, found, err := unstructured.NestedStringSlice(gnmic.Object, "spec", "ports")
-	if err != nil || !found {
-		t.Fatalf("failed to read gnmic ports: found=%t err=%v", found, err)
+	if err != nil {
+		t.Fatalf("failed to read gnmic ports: %v", err)
 	}
-	if !slices.Contains(ports, "9273/tcp") {
-		t.Fatalf("gnmic ports = %v, want 9273/tcp", ports)
+	if found || len(ports) != 0 {
+		t.Fatalf("gnmic ports = %v, found=%t; want no inferred application ports", ports, found)
 	}
 	prometheus := getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus")
 	ports, found, err = unstructured.NestedStringSlice(prometheus.Object, "spec", "ports")
