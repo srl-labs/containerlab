@@ -52,8 +52,9 @@ func prepareDesiredDeployment(
 	}, nil
 }
 
-// Validate compiles the strict containerlab/c9s subset and stages all local-path inputs in
-// memory. It deliberately performs no Kubernetes reads or writes.
+// Validate compiles the containerlab/c9s subset and stages all local-path inputs in memory.
+// Lossy-but-deployable fields produce warnings; structurally impossible constructs remain
+// errors. Validation deliberately performs no Kubernetes reads or writes.
 func (r *Runtime) Validate(_ context.Context, req clablabruntime.DeployRequest) error {
 	if req.Name == "" {
 		return fmt.Errorf("topology name is required")
@@ -72,8 +73,8 @@ func (r *Runtime) Validate(_ context.Context, req clablabruntime.DeployRequest) 
 	return err
 }
 
-// Plan compiles the strict c9s topology and returns the complete primitive/configuration diff
-// against the running cluster without changing any resource.
+// Plan compiles the c9s topology and returns the complete primitive/configuration diff against
+// the running cluster without changing any resource.
 func (r *Runtime) Plan(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,

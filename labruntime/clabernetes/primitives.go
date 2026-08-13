@@ -74,7 +74,7 @@ func compilePrimitiveResources(
 		c9sCompileLogger{},
 		topology,
 		clabernetescontrollerstopology.CompileOptions{
-			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyError,
+			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyWarn,
 		},
 	)
 	if err != nil {

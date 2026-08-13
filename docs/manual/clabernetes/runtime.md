@@ -80,7 +80,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `restart` | restarts node Deployments |
 | `save` | runs `containerlab save` inside launcher pods |
 | `events` | watches Clabernetes resources and pods |
-| `validate` | runs the strict c9s compiler without creating Kubernetes resources |
+| `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, LauncherProfile, Link, and Node resources without changing them |
 
 ## Requirements
@@ -269,8 +269,8 @@ later corrective reconciliation.
 
 ### Validation and dry-run
 
-Both commands use the same strict c9s preparation path as deploy, including
-extended-link normalization and local-file staging checks:
+Both commands use the same c9s preparation path as deploy, including extended-link
+normalization, compatibility warnings, and local-file staging checks:
 
 ```bash
 containerlab --runtime clabernetes validate -t topo.clab.yml
@@ -278,10 +278,11 @@ containerlab --runtime clabernetes deploy --dry-run -t topo.clab.yml
 containerlab --runtime clabernetes deploy --dry-run --format json -t topo.clab.yml
 ```
 
-`validate` reports whether the topology fits the c9s runtime subset without
-reading or changing lab resources. `deploy --dry-run` additionally reads the
-selected cluster and reports the exact create, update, and delete plan for
-Namespace, ConfigMap, LauncherProfile, Link, Node, or an older compatibility
+`validate` reports whether the topology can be represented by the c9s runtime without reading
+or changing lab resources. Fields whose semantics cannot be preserved exactly are reported as
+warnings and normalized or omitted. Structurally impossible constructs remain errors.
+`deploy --dry-run` additionally reads the selected cluster and reports the exact create, update,
+and delete plan for Namespace, ConfigMap, LauncherProfile, Link, Node, or an older compatibility
 Topology. An empty `changes` list means the deployed resources already conform.
 
 ## Inspect
@@ -709,18 +710,21 @@ The runtime divides compatibility into three categories:
 - Documented c9s semantics: Kubernetes Service/LoadBalancer management access,
   `host:` endpoints in the launcher Pod network namespace, c9s internal
   cross-Pod link transport, and ConfigMap-backed local files.
+- Accepted with warnings: topology fields that c9s cannot preserve exactly, including
+  shared-management-network settings, pinned host-side ports, node groups, link labels or vars,
+  and other unsupported vocabulary. These fields are normalized or omitted before resources are
+  created.
 - Rejected: external bridge/host pseudo-nodes, macvlan and `mgmt-net:` links,
-  explicit native VXLAN/stitch/dummy link types, link labels or vars that would
-  be discarded, native shared-management-network settings, and commands or
-  flags with no c9s implementation.
+  explicit native VXLAN/stitch/dummy link types, invalid launcher grouping, and commands or flags
+  with no c9s implementation.
 
 Management access is not a shared management network. Each launcher has its
 own nested Docker management network, so static `mgmt-ipv4`/`mgmt-ipv6`
 addresses are launcher-local and are not cluster-routable between Pods.
-Kubernetes Services, LoadBalancers, and DNS are the supported management access
-path. Explicit topology `mgmt` settings and the `--network`, `--ipv4-subnet`,
-and `--ipv6-subnet` flags are rejected to avoid implying native Docker-network
-semantics.
+Kubernetes Services, LoadBalancers, and DNS are the supported management access path. Explicit
+topology `mgmt` settings produce a warning and apply only inside each launcher. The `--network`,
+`--ipv4-subnet`, and `--ipv6-subnet` flags remain rejected because they imply native
+Docker-network semantics.
 
 Known command differences:
 

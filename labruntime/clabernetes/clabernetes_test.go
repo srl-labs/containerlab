@@ -913,13 +913,12 @@ topology:
 	}
 }
 
-func TestValidateStrictlyRejectsUnsupportedContainerlabSemantics(t *testing.T) {
+func TestValidateAcceptsLossyContainerlabSemantics(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name       string
 		definition string
-		want       string
 	}{
 		{
 			name: "management network",
@@ -931,16 +930,18 @@ topology:
       kind: linux
       image: alpine
 `,
-			want: "management network",
 		},
 		{
-			name: "external bridge",
+			name: "group and pinned host port",
 			definition: `topology:
   nodes:
-    br0:
-      kind: bridge
+    node1:
+      kind: linux
+      image: alpine
+      group: clients
+      ports:
+        - 8080:80
 `,
-			want: "pseudo-node",
 		},
 		{
 			name: "lossy link metadata",
@@ -957,7 +958,6 @@ topology:
       labels:
         purpose: test
 `,
-			want: "link labels",
 		},
 	}
 
@@ -966,15 +966,32 @@ topology:
 			t.Parallel()
 
 			r := newTestRuntime()
-			err := r.Validate(context.Background(), clablabruntime.DeployRequest{
-				Name:               "strict",
+			if err := r.Validate(context.Background(), clablabruntime.DeployRequest{
+				Name:               "lossy",
 				Namespace:          "lab-ns",
 				TopologyDefinition: []byte(tt.definition),
-			})
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("Validate() error = %v, want substring %q", err, tt.want)
+			}); err != nil {
+				t.Fatalf("Validate() error = %v, want lossy topology to be accepted", err)
 			}
 		})
+	}
+}
+
+func TestValidateRejectsStructurallyUnsupportedContainerlabSemantics(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRuntime()
+	err := r.Validate(context.Background(), clablabruntime.DeployRequest{
+		Name:      "structurally-unsupported",
+		Namespace: "lab-ns",
+		TopologyDefinition: []byte(`topology:
+  nodes:
+    br0:
+      kind: bridge
+`),
+	})
+	if err == nil || !strings.Contains(err.Error(), "pseudo-node") {
+		t.Fatalf("Validate() error = %v, want structurally unsupported pseudo-node error", err)
 	}
 }
 
@@ -1238,6 +1255,9 @@ func TestDeployExposesGNMICMetricsPortForClabernetes(t *testing.T) {
 
 	const definition = `name: st
 prefix: ""
+mgmt:
+  network: st
+  ipv4-subnet: 172.20.20.0/24
 topology:
   nodes:
     leaf1:
@@ -1251,7 +1271,7 @@ topology:
       kind: linux
       image: quay.io/prometheus/prometheus:v2.54.1
       ports:
-        - 9090/tcp
+        - 9090:9090
   links:
     - endpoints: ["leaf1:e1-1", "prometheus:eth1"]
 `
@@ -1275,6 +1295,11 @@ topology:
 	if !slices.Contains(ports, "9273/tcp") {
 		t.Fatalf("gnmic ports = %v, want 9273/tcp", ports)
 	}
+	prometheus := getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus")
+	ports, found, err = unstructured.NestedStringSlice(prometheus.Object, "spec", "ports")
+	if err != nil || !found || !slices.Contains(ports, "9090") {
+		t.Fatalf("prometheus normalized ports = %v, found=%t, err=%v; want 9090", ports, found, err)
+	}
 
 	profile := getTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "st")
 	if enabled, found, err := unstructured.NestedBool(
@@ -1295,6 +1320,14 @@ topology:
 	}
 	if excludedNodes, found := statusProbes["excludedNodes"]; found && excludedNodes != nil {
 		t.Fatalf("containerlab must not exclude kinds from generic readiness: %v", statusProbes)
+	}
+	if got, _, _ := unstructured.NestedString(
+		profile.Object,
+		"spec",
+		"mgmt",
+		"ipv4-subnet",
+	); got != "172.20.20.0/24" {
+		t.Fatalf("launcher profile management subnet = %q, want 172.20.20.0/24", got)
 	}
 	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
 		List(context.Background(), metav1.ListOptions{})
