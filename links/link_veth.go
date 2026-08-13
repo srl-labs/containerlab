@@ -248,18 +248,13 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 		return err
 	}
 
-	// Nodeless endpoints (host ns) already live in the current
-	// namespace; set them up in place.
-	if ep.IsNodeless() {
+	// Host endpoints already live in the current namespace; set them up in place.
+	// Other nodeless endpoints, such as the management bridge, still need their
+	// node-specific setup.
+	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == LinkEndpointTypeHost {
 		if err := SetNameMACAndUpInterface(link, ep)(nil); err != nil {
 			return err
 		}
-		// the link needs to be moved to the relevant network namespace
-		// and enabled (up). This is done via linkSetupFunc.
-		// based on the endpoint type the link setup function is different.
-		// linkSetupFunc is executed in a netns of a node.
-		// if the node is a regular namespace node
-		// add link to node, rename, set mac and Up
 	} else if err = ep.GetNode().AddLinkToContainer(ctx, link,
 		SetNameMACAndUpInterface(link, ep)); err != nil {
 		return err

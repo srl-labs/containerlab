@@ -38,7 +38,7 @@ Check host side interface is attached to mgmt bridge and up
 *** Keywords ***
 Teardown
     # destroy all labs
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -a
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -a -y
 
 Setup
     # skipping this test suite for podman for now
