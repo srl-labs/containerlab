@@ -3,6 +3,8 @@ package links
 import (
 	"context"
 	"errors"
+	"net"
+	"os"
 	"syscall"
 	"testing"
 
@@ -375,6 +377,54 @@ func TestLinkVEthRaw_BriefDefaultLinkType(t *testing.T) {
 			t.Fatalf("node endpoint IPv6 = %q, want 2001:db8::1/127", got)
 		}
 	})
+}
+
+// TestLinkVEthDeployBEndNodelessInPlace checks that a nodeless endpoint is renamed
+// and brought up in the current namespace without a namespace move.
+func TestLinkVEthDeployBEndNodelessInPlace(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires root to create veth interfaces")
+	}
+
+	l := &LinkVEth{LinkCommonParams: LinkCommonParams{MTU: 1500}}
+	// Final name is <= 15 chars so it is applied via rename rather than an altname.
+	farEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), "clab-s-abcd0001", l))
+	peer := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), "clab-s-abcd0002", l))
+	l.Endpoints = []Endpoint{peer, farEp}
+
+	// deployBEnd looks the far end up by its random name before renaming it.
+	randName := farEp.GetRandIfaceName()
+	if err := netlink.LinkAdd(&netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: randName, MTU: 1500},
+		PeerName:  "clabtst-peer0",
+	}); err != nil {
+		t.Fatalf("failed to create test veth: %v", err)
+	}
+	defer func() {
+		for _, n := range []string{farEp.GetIfaceName(), randName} {
+			if lk, err := netlink.LinkByName(n); err == nil {
+				_ = netlink.LinkDel(lk)
+			}
+		}
+	}()
+
+	if err := l.deployBEnd(context.Background(), 1); err != nil {
+		t.Fatalf("deployBEnd() error = %v", err)
+	}
+
+	lk, err := netlink.LinkByName(farEp.GetIfaceName())
+	if err != nil {
+		t.Fatalf("far end %q not found after in-place setup: %v", farEp.GetIfaceName(), err)
+	}
+	if lk.Attrs().Flags&net.FlagUp == 0 {
+		t.Fatalf("far end %q was not brought up", farEp.GetIfaceName())
+	}
+	if _, err := netlink.LinkByName(randName); err == nil {
+		t.Fatalf("random name %q still present; in-place rename did not happen", randName)
+	}
+	if l.DeploymentState != LinkDeploymentStateFullDeployed {
+		t.Fatalf("DeploymentState = %d, want full-deployed", l.DeploymentState)
+	}
 }
 
 // fakeNode is a fake implementation of Node for testing.
