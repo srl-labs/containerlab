@@ -172,6 +172,20 @@ func TestVethStitchedRemoveConcurrent(t *testing.T) {
 	}
 }
 
+func TestToolsInterfaceGuardsEmptyIdentity(t *testing.T) {
+	for name, args := range map[string][3]string{
+		"empty lab":   {"", "n1", "e1"},
+		"empty node":  {"lab", "", "e1"},
+		"empty iface": {"lab", "n1", ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if link, ok := ToolsInterface(args[0], args[1], args[2]); ok || link != nil {
+				t.Fatalf("expected no tools interface for %v, got (%v, %v)", args, link, ok)
+			}
+		})
+	}
+}
+
 func TestFilteredVethStitchAltNames(t *testing.T) {
 	got := filteredVethStitchAltNames(
 		"lab",

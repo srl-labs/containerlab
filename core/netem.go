@@ -10,7 +10,6 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	"github.com/vishvananda/netlink"
 )
 
 // NetemTarget is the netns and interface `tools netem` applies impairment to.
@@ -29,10 +28,10 @@ type NetemNode struct {
 	lab, node string // from container labels; empty when unresolvable
 }
 
-// topoIdentity returns the lab and node name recorded in a container's labels.
+// TopoIdentity returns the lab and node name recorded in a container's labels.
 // A component of a multi-container node (e.g. a multi-slot SR-SIM slot) yields
 // its root node name, the name topology links reference.
-func topoIdentity(labels map[string]string) (lab, node string) {
+func TopoIdentity(labels map[string]string) (lab, node string) {
 	node = labels[clabconstants.NodeName]
 	if root := labels[clabconstants.RootNodeName]; root != "" {
 		node = root
@@ -75,7 +74,7 @@ func ResolveNetemNode(
 		{FilterType: "name", Match: containerName},
 	})
 	if err == nil && len(cnts) == 1 {
-		n.lab, n.node = topoIdentity(cnts[0].Labels)
+		n.lab, n.node = TopoIdentity(cnts[0].Labels)
 	}
 
 	return n, nil
@@ -85,16 +84,11 @@ func ResolveNetemNode(
 // published for node:iface (see utils.StitchAltName), or "" when no link
 // published one.
 func (n *NetemNode) ToolsIfaceFor(iface string) string {
-	if n.lab == "" || n.node == "" || iface == "" {
+	if _, ok := clablinks.ToolsInterface(n.lab, n.node, iface); !ok {
 		return ""
 	}
 
-	altName := clablinks.StitchAltName(n.lab, n.node, iface)
-	if _, err := netlink.LinkByName(altName); err != nil {
-		return ""
-	}
-
-	return altName
+	return clablinks.StitchAltName(n.lab, n.node, iface)
 }
 
 // TargetFor returns the netns and interface where impairment of iface must be

@@ -278,3 +278,19 @@ func filteredVethStitchAltNames(
 func StitchAltName(labName, node, iface string) string {
 	return "clab-stitch-" + clabutils.SanitizeInterfaceName(labName+"-"+node+"-"+iface)
 }
+
+// ToolsInterface returns the host-netns interface veth-stitch (and similar
+// kinds) publish for node:iface under StitchAltName, or (nil, false) if none.
+// Single seam for reporting/impairing the host side of the stitch.
+func ToolsInterface(labName, node, iface string) (netlink.Link, bool) {
+	if labName == "" || node == "" || iface == "" {
+		return nil, false
+	}
+
+	link, err := netlink.LinkByName(StitchAltName(labName, node, iface))
+	if err != nil {
+		return nil, false
+	}
+
+	return link, true
+}
