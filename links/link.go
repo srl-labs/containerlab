@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -29,9 +30,13 @@ const (
 	LinkDeploymentStateHalfDeployed
 	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
+
+ 	ownershipAltNamePrefix = "clab-o-"
+
+ 	linkDeployRetries      = 3
+	linkDeployRetryBackoff = 100 * time.Millisecond
 )
 
-const ownershipAltNamePrefix = "clab-o-"
 
 var linkAddAltName = netlink.LinkAddAltName
 
@@ -681,6 +686,45 @@ func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 
 func isAltNameNotSupportedErr(err error) bool {
 	return errors.Is(err, syscall.EOPNOTSUPP)
+}
+
+// isTransientNetlinkErr returns true for errors caused by transient kernel-level
+// race conditions during concurrent netlink operations (e.g. EFAULT, ENODEV).
+func isTransientNetlinkErr(err error) bool {
+	for _, errno := range []syscall.Errno{
+		syscall.EFAULT, // "bad address" - concurrent namespace operations
+		syscall.ENODEV, // "no such device" - interface not yet visible
+		syscall.ENOENT, // "no such file or directory" - namespace path race
+	} {
+		if errors.Is(err, errno) {
+			return true
+		}
+	}
+	return false
+}
+
+// retryTransientNetlink runs fn retrying up to linkDeployRetries times with
+// backoff on the transient races (see isTransientNetlinkErr).
+func retryTransientNetlink(ctx context.Context, operationDesc string, fn func() error) error {
+	var lastErr error
+
+	for attempt := range linkDeployRetries {
+		lastErr = fn()
+		if lastErr == nil || !isTransientNetlinkErr(lastErr) {
+			return lastErr
+		}
+
+		log.Debugf("transient netlink error during %s (attempt %d/%d): %v",
+			operationDesc, attempt+1, linkDeployRetries, lastErr)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(linkDeployRetryBackoff << attempt):
+		}
+	}
+
+	return lastErr
 }
 
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link

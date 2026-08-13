@@ -105,6 +105,10 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()
 
+	if l.DeploymentState == LinkDeploymentStateFullDeployed {
+		return nil
+	}
+
 	var err error
 	switch ep {
 	case l.segA.Endpoints[0]:
@@ -115,16 +119,23 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 		return fmt.Errorf("endpoint %s does not belong to link [ %s, %s ]",
 			ep, l.segA.Endpoints[0], l.segB.Endpoints[0])
 	}
-
-	if err == nil {
-		l.DeploymentState = LinkDeploymentStateHalfDeployed
+	if err != nil {
+		return err
 	}
 
-	return err
+	l.DeploymentState = LinkDeploymentStateHalfDeployed
+
+	if l.segA.DeploymentState == LinkDeploymentStateFullDeployed &&
+		l.segB.DeploymentState == LinkDeploymentStateFullDeployed {
+		return l.stitchSegments(ctx)
+	}
+
+	return nil
 }
 
 // PostDeploy tags the two root-ns far ends and joins them with tc.
-func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
+// if they weren't already stitched in Deploy
+func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()
 
@@ -136,20 +147,20 @@ func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
 		return fmt.Errorf("cannot stitch veth segments before both are fully deployed")
 	}
 
-	if err := markFarEnd(l.epB, l.segA.Endpoints[0], l.labName); err != nil {
-		return err
-	}
+	return l.stitchSegments(ctx)
+}
 
-	if err := markFarEnd(l.epA, l.segB.Endpoints[0], l.labName); err != nil {
-		return err
+func (l *LinkVEthStitched) stitchSegments(ctx context.Context) error {
+	steps := []func() error{
+		func() error { return markFarEnd(l.epB, l.segA.Endpoints[0], l.labName) },
+		func() error { return markFarEnd(l.epA, l.segB.Endpoints[0], l.labName) },
+		func() error { return stitch(l.epA, l.epB) },
+		func() error { return stitch(l.epB, l.epA) },
 	}
-
-	if err := stitch(l.epA, l.epB); err != nil {
-		return err
-	}
-
-	if err := stitch(l.epB, l.epA); err != nil {
-		return err
+	for _, step := range steps {
+		if err := retryTransientNetlink(ctx, "veth-stitch", step); err != nil {
+			return err
+		}
 	}
 
 	l.DeploymentState = LinkDeploymentStateFullDeployed
@@ -191,7 +202,9 @@ func buildVEthStitchSegment(
 	// the far end sits in the root namespace (host node) with a short hash name
 	// that fits the 15 char name limit.
 	farName := stitchFarEndName(params.LabName, nodeEpRaw.Node, nodeEpRaw.Iface)
-	farEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), farName, seg))
+	farGeneric := NewEndpointGeneric(GetHostLinkNode(), farName, seg)
+	farGeneric.MAC = nodeEp.GetMac()
+	farEp := NewEndpointHost(farGeneric)
 	seg.Endpoints = []Endpoint{nodeEp, farEp}
 
 	return seg, farEp, nil
@@ -281,4 +294,20 @@ func filteredVethStitchAltNames(
 // StitchAltName returns a unique name for veth-stitch links.
 func StitchAltName(labName, node, iface string) string {
 	return "clab-stitch-" + clabutils.SanitizeInterfaceName(labName+"-"+node+"-"+iface)
+}
+
+// ToolsInterface returns the host-netns interface veth-stitch (and similar
+// kinds) publish for node:iface under StitchAltName, or (nil, false) if none.
+// Single seam for reporting/impairing the host side of the stitch.
+func ToolsInterface(labName, node, iface string) (netlink.Link, bool) {
+	if labName == "" || node == "" || iface == "" {
+		return nil, false
+	}
+
+	link, err := netlink.LinkByName(StitchAltName(labName, node, iface))
+	if err != nil {
+		return nil, false
+	}
+
+	return link, true
 }
