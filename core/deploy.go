@@ -18,6 +18,7 @@ import (
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 // DeployResult holds the outcome of a Deploy call.
@@ -216,11 +217,17 @@ func (c *CLab) deploy( //nolint: funlen
 	// Stitch links after node workers and host endpoints have finished.
 	// The veth pair is already created by node workers and the VxLAN interface is created
 	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
+	var linkPostDeployWorkers errgroup.Group
+	linkPostDeployWorkers.SetLimit(int(options.maxWorkers))
 	for _, link := range c.Links {
-		if err = link.PostDeploy(ctx); err != nil {
-			log.Warnf("failed post-deploying link: %v", err)
-		}
+		linkPostDeployWorkers.Go(func() error {
+			if err := link.PostDeploy(ctx); err != nil {
+				log.Warnf("failed post-deploying link: %v", err)
+			}
+			return nil
+		})
 	}
+	_ = linkPostDeployWorkers.Wait()
 
 	execCollection.Log()
 

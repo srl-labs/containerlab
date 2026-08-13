@@ -2,6 +2,8 @@ package links
 
 import (
 	"context"
+	"errors"
+	"syscall"
 	"testing"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -9,6 +11,38 @@ import (
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
+
+func TestRetryTransientNetlink(t *testing.T) {
+	// A transient error is retried until the operation succeeds.
+	calls := 0
+	err := retryTransientNetlink(context.Background(), "test", func() error {
+		calls++
+		if calls < linkDeployRetries {
+			return syscall.ENODEV
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("retryTransientNetlink() error = %v, want nil", err)
+	}
+	if calls != linkDeployRetries {
+		t.Fatalf("retryTransientNetlink() calls = %d, want %d", calls, linkDeployRetries)
+	}
+
+	// A non-transient error is returned immediately without retrying.
+	sentinel := errors.New("boom")
+	calls = 0
+	err = retryTransientNetlink(context.Background(), "test", func() error {
+		calls++
+		return sentinel
+	})
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("retryTransientNetlink() error = %v, want %v", err, sentinel)
+	}
+	if calls != 1 {
+		t.Fatalf("retryTransientNetlink() calls = %d, want 1 (no retry on permanent error)", calls)
+	}
+}
 
 func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 	type fields struct {

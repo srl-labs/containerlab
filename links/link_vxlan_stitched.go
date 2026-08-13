@@ -58,8 +58,8 @@ func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	return l.internalDeploy(ctx, ep, false)
 }
 
-func (l *VxlanStitched) PostDeploy(context.Context) error {
-	return l.Stitch()
+func (l *VxlanStitched) PostDeploy(ctx context.Context) error {
+	return retryTransientNetlink(ctx, "vxlan-stitch post-deploy", l.Stitch)
 }
 
 func (l *VxlanStitched) internalDeploy(
