@@ -105,6 +105,10 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()
 
+	if l.DeploymentState == LinkDeploymentStateFullDeployed {
+		return nil
+	}
+
 	var err error
 	switch ep {
 	case l.segA.Endpoints[0]:
@@ -115,15 +119,22 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 		return fmt.Errorf("endpoint %s does not belong to link [ %s, %s ]",
 			ep, l.segA.Endpoints[0], l.segB.Endpoints[0])
 	}
-
-	if err == nil {
-		l.DeploymentState = LinkDeploymentStateHalfDeployed
+	if err != nil {
+		return err
 	}
 
-	return err
+	l.DeploymentState = LinkDeploymentStateHalfDeployed
+
+	if l.segA.DeploymentState == LinkDeploymentStateFullDeployed &&
+		l.segB.DeploymentState == LinkDeploymentStateFullDeployed {
+		return l.stitchSegments(ctx)
+	}
+
+	return nil
 }
 
 // PostDeploy tags the two root-ns far ends and joins them with tc.
+// if they weren't already stitched in Deploy
 func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()
@@ -136,6 +147,10 @@ func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
 		return fmt.Errorf("cannot stitch veth segments before both are fully deployed")
 	}
 
+	return l.stitchSegments(ctx)
+}
+
+func (l *LinkVEthStitched) stitchSegments(ctx context.Context) error {
 	steps := []func() error{
 		func() error { return markFarEnd(l.epB, l.segA.Endpoints[0], l.labName) },
 		func() error { return markFarEnd(l.epA, l.segB.Endpoints[0], l.labName) },
@@ -143,7 +158,7 @@ func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
 		func() error { return stitch(l.epB, l.epA) },
 	}
 	for _, step := range steps {
-		if err := retryTransientNetlink(ctx, "veth-stitch post-deploy", step); err != nil {
+		if err := retryTransientNetlink(ctx, "veth-stitch", step); err != nil {
 			return err
 		}
 	}
