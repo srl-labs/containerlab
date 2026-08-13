@@ -134,7 +134,7 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 }
 
 // PostDeploy tags the two root-ns far ends and joins them with tc.
-// if they weren't already stitched in Deploy
+// if they weren't already stitched in Deploy.
 func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()

@@ -31,12 +31,11 @@ const (
 	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
 
- 	ownershipAltNamePrefix = "clab-o-"
+	ownershipAltNamePrefix = "clab-o-"
 
- 	linkDeployRetries      = 3
+	linkDeployRetries      = 3
 	linkDeployRetryBackoff = 100 * time.Millisecond
 )
-
 
 var linkAddAltName = netlink.LinkAddAltName
 
