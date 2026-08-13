@@ -133,6 +133,9 @@ func TestResolveVethStitched(t *testing.T) {
 	if got := stitched.GetEndpoints()[0].GetMac().String(); got != "02:00:00:00:00:01" {
 		t.Fatalf("node endpoint MAC = %q, want 02:00:00:00:00:01", got)
 	}
+	if got := stitched.epA.GetMac().String(); got != "02:00:00:00:00:01" {
+		t.Fatalf("far-end MAC = %q, want node-side 02:00:00:00:00:01", got)
+	}
 }
 
 func TestVethStitchedRemoveConcurrent(t *testing.T) {

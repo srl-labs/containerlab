@@ -187,7 +187,9 @@ func buildVEthStitchSegment(
 	// the far end sits in the root namespace (host node) with a short hash name
 	// that fits the 15 char name limit.
 	farName := stitchFarEndName(params.LabName, nodeEpRaw.Node, nodeEpRaw.Iface)
-	farEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), farName, seg))
+	farGeneric := NewEndpointGeneric(GetHostLinkNode(), farName, seg)
+	farGeneric.MAC = nodeEp.GetMac()
+	farEp := NewEndpointHost(farGeneric)
 	seg.Endpoints = []Endpoint{nodeEp, farEp}
 
 	return seg, farEp, nil
