@@ -315,6 +315,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.CgroupnsMode != newCfg.CgroupnsMode {
 		diff.Fields = append(diff.Fields, "CgroupnsMode")
 	}
+	if oldCfg.CgroupParent != newCfg.CgroupParent {
+		diff.Fields = append(diff.Fields, "CgroupParent")
+	}
 	if oldCfg.PidMode != newCfg.PidMode {
 		diff.Fields = append(diff.Fields, "PidMode")
 	}

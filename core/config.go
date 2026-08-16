@@ -295,6 +295,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
 		Privileged:      privileged,
 		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		CgroupParent:    c.Config.Topology.GetNodeCgroupParent(nodeName),
 		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
@@ -470,7 +471,7 @@ func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx, c.globalRuntime().Config().VerifyLinkParams); err != nil {
 		return err
 	}
 
@@ -544,13 +545,16 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks(ctx context.Context) error {
+func (c *CLab) verifyLinks(
+	ctx context.Context,
+	params *clablinks.VerifyLinkParams,
+) error {
 	var err error
 
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
-		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, params)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}

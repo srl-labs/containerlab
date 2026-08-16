@@ -502,6 +502,10 @@
                         "private"
                     ]
                 },
+                "cgroup-parent": {
+                    "type": "string",
+                    "markdownDescription": "[parent cgroup](https://containerlab.dev/manual/nodes/#cgroup-parent) for the container"
+                },
                 "pid-mode": {
                     "type": "string",
                     "description": "PID namespace mode for the container",

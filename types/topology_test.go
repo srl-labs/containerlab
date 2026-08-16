@@ -1482,6 +1482,50 @@ func TestGetNodeRuntimeOptions(t *testing.T) {
 	}
 }
 
+func TestGetNodeCgroupParent(t *testing.T) {
+	topo := &Topology{
+		Defaults: &NodeDefinition{CgroupParent: "/defaults"},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {CgroupParent: "/kind"},
+		},
+		Groups: map[string]*NodeDefinition{
+			"leaves":      {CgroupParent: "/group"},
+			"empty-group": {},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"direct":        {Kind: "linux", Group: "leaves", CgroupParent: "/node"},
+			"from-group":    {Kind: "linux", Group: "leaves"},
+			"from-kind":     {Kind: "linux", Group: "empty-group"},
+			"from-defaults": {},
+			"omitted":       {},
+		},
+	}
+
+	tests := map[string]string{
+		"direct":        "/node",
+		"from-group":    "/group",
+		"from-kind":     "/kind",
+		"from-defaults": "/defaults",
+	}
+	for nodeName, want := range tests {
+		if got := topo.GetNodeCgroupParent(nodeName); got != want {
+			t.Errorf("%s cgroup-parent = %q, want %q", nodeName, got, want)
+		}
+	}
+
+	// Empty values are treated as omitted and therefore do not mask inherited values.
+	topo.Nodes["from-group"].CgroupParent = ""
+	if got := topo.GetNodeCgroupParent("from-group"); got != "/group" {
+		t.Errorf("empty node cgroup-parent = %q, want inherited /group", got)
+	}
+
+	emptyTopo := NewTopology()
+	emptyTopo.Nodes["omitted"] = &NodeDefinition{}
+	if got := emptyTopo.GetNodeCgroupParent("omitted"); got != "" {
+		t.Errorf("omitted cgroup-parent = %q, want empty runtime default", got)
+	}
+}
+
 func TestGetNodePrivilegedDefault(t *testing.T) {
 	topo := &Topology{
 		Nodes: map[string]*NodeDefinition{

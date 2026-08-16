@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -29,9 +30,12 @@ const (
 	LinkDeploymentStateHalfDeployed
 	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
-)
 
-const ownershipAltNamePrefix = "clab-o-"
+	ownershipAltNamePrefix = "clab-o-"
+
+	linkDeployRetries      = 3
+	linkDeployRetryBackoff = 100 * time.Millisecond
+)
 
 var linkAddAltName = netlink.LinkAddAltName
 
@@ -617,7 +621,11 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 }
 
 func ownershipAltName(endpt Endpoint) string {
-	sum := sha1.Sum([]byte(endpt.GetNode().GetShortName() + "\x00" + endpt.GetIfaceName()))
+	return ownershipAltNameFor(endpt.GetNode().GetShortName(), endpt.GetIfaceName())
+}
+
+func ownershipAltNameFor(nodeName, ifaceName string) string {
+	sum := sha1.Sum([]byte(nodeName + "\x00" + ifaceName))
 	return ownershipAltNamePrefix + hex.EncodeToString(sum[:8])
 }
 
@@ -634,6 +642,23 @@ func hasOwnershipAltName(link netlink.Link) bool {
 // HasOwnershipAltName reports whether link carries a containerlab ownership marker.
 func HasOwnershipAltName(link netlink.Link) bool {
 	return hasOwnershipAltName(link)
+}
+
+// HasOwnershipAltNameFor reports whether link is owned by the logical endpoint
+// identified by nodeName and ifaceName.
+func HasOwnershipAltNameFor(link netlink.Link, nodeName, ifaceName string) bool {
+	if link == nil || nodeName == "" || ifaceName == "" {
+		return false
+	}
+
+	want := ownershipAltNameFor(nodeName, ifaceName)
+	for _, altName := range link.Attrs().AltNames {
+		if altName == want {
+			return true
+		}
+	}
+
+	return false
 }
 
 func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
@@ -662,6 +687,45 @@ func isAltNameNotSupportedErr(err error) bool {
 	return errors.Is(err, syscall.EOPNOTSUPP)
 }
 
+// isTransientNetlinkErr returns true for errors caused by transient kernel-level
+// race conditions during concurrent netlink operations (e.g. EFAULT, ENODEV).
+func isTransientNetlinkErr(err error) bool {
+	for _, errno := range []syscall.Errno{
+		syscall.EFAULT, // "bad address" - concurrent namespace operations
+		syscall.ENODEV, // "no such device" - interface not yet visible
+		syscall.ENOENT, // "no such file or directory" - namespace path race
+	} {
+		if errors.Is(err, errno) {
+			return true
+		}
+	}
+	return false
+}
+
+// retryTransientNetlink runs fn retrying up to linkDeployRetries times with
+// backoff on the transient races (see isTransientNetlinkErr).
+func retryTransientNetlink(ctx context.Context, operationDesc string, fn func() error) error {
+	var lastErr error
+
+	for attempt := range linkDeployRetries {
+		lastErr = fn()
+		if lastErr == nil || !isTransientNetlinkErr(lastErr) {
+			return lastErr
+		}
+
+		log.Debugf("transient netlink error during %s (attempt %d/%d): %v",
+			operationDesc, attempt+1, linkDeployRetries, lastErr)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(linkDeployRetryBackoff << attempt):
+		}
+	}
+
+	return lastErr
+}
+
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link
 // to resolve it to a concrete link type.
 // Parameters include all nodes of a topology and the name of the management bridge.
@@ -682,7 +746,8 @@ type ResolveParams struct {
 }
 
 type VerifyLinkParams struct {
-	RunBridgeExistsCheck bool
+	RunBridgeExistsCheck  bool
+	AllowExistingEndpoint bool
 }
 
 func NewVerifyLinkParams() *VerifyLinkParams {
