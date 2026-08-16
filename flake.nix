@@ -38,9 +38,11 @@
           ];
 
           # stamp the build date (ISO 8601, UTC) of the flake revision,
-          # which keeps the build reproducible for a given input
+          # which keeps the build reproducible for a given input.
+          # note: self.lastModified (epoch) is used instead of
+          # self.lastModifiedDate, whose format varies across nix versions.
           preBuild = ''
-            ldflags+=" -X github.com/srl-labs/containerlab/cmd.date=$(date -u -d @${self.lastModifiedDate} +%Y-%m-%dT%H:%M:%SZ)"
+            ldflags+=" -X github.com/srl-labs/containerlab/cmd.date=$(date -u -d @${toString self.lastModified} +%Y-%m-%dT%H:%M:%SZ)"
           '';
 
           # tests need docker/root, skip them here
