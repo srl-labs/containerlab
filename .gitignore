@@ -62,3 +62,11 @@ venv/
 # rf test report files
 tests/*.xml
 tests/*.html
+
+# nix
+result
+result-*
+
+# local agent/editor state
+.claude/
+.cursor/

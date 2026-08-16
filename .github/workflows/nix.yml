@@ -5,10 +5,13 @@ name: nix
 
 on:
   push:
-    branches: [main]
-    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+    branches: [main, nix-flake]
+    # releases always bump go.mod/go.sum or touch the release notes in docs/rn
+    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml, docs/rn/**]
   pull_request:
     paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+  schedule:
+    - cron: "0 3 * * 0" # weekly on Sundays 03:00 UTC, catches releases that changed nothing above
   workflow_dispatch:
 
 permissions:
@@ -21,16 +24,30 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # git describe needs tags
+          fetch-depth: 0 # full history, tag handling below needs it
       - uses: cachix/install-nix-action@v31
+
+      # Forks do not inherit tags created after the fork point, and the
+      # checkout action does not fetch tags from upstream either. Fetch the
+      # upstream tags explicitly so the "latest stable release" detection
+      # below is reliable both here and on forks.
+      - name: Fetch upstream tags
+        run: git fetch --tags --force https://github.com/srl-labs/containerlab.git '+refs/tags/v*:refs/tags/v*'
 
       # version + vendorHash are the only things in flake.nix that go stale.
       - name: Refresh flake.nix
         id: refresh
         run: |
-          version=$(git describe --tags --abbrev=0 | tr -d v)
+          version=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v -- '-' | head -1 | tr -d v)
+          if [ -z "$version" ]; then
+            echo "::error::no v* release tags found after upstream tag fetch"
+            exit 1
+          fi
+          echo "latest stable release: $version"
           sed -i "s|version = \".*\";|version = \"$version\";|" flake.nix
-          got=$(nix build .#containerlab --no-link 2>&1 | awk '/got:/{print $2}')
+          # a mismatching vendorHash is expected whenever go.mod/go.sum changed;
+          # `|| true` keeps the step alive so the reported got: hash can be used
+          got=$(nix build .#containerlab --no-link 2>&1 | awk '/got:/{print $2}' || true)
           if [ -n "$got" ]; then
             sed -i "s|vendorHash = \".*\";|vendorHash = \"$got\";|" flake.nix
           fi
@@ -41,9 +58,20 @@ jobs:
         if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
         run: git diff flake.nix && exit 1
 
+      # On the upstream repo the refresh lands via a bot PR;
+      # on forks (used as nix flake inputs) commit straight to the branch.
       - uses: peter-evans/create-pull-request@v7
-        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository == 'srl-labs/containerlab'
         with:
           branch: update-flake
           title: "chore: update flake.nix"
           commit-message: "chore: update flake.nix"
+
+      - name: Commit refreshed flake.nix (forks only)
+        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository != 'srl-labs/containerlab'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.nix
+          git commit -m "chore: update flake.nix"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

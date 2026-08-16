@@ -6,18 +6,19 @@
   outputs =
     { self, nixpkgs }:
     let
-      # ponytail: linux-only, matching .goreleaser.yml's goos list
+      # linux-only, matching .goreleaser.yml's goos list
       systems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
       forAll = f: nixpkgs.lib.genAttrs systems (s: f nixpkgs.legacyPackages.${s});
+      version = "0.78.2";
     in
     {
       packages = forAll (pkgs: rec {
         containerlab = pkgs.buildGoModule {
           pname = "containerlab";
-          version = "0.78.0";
+          inherit version;
           src = ./.;
           vendorHash = "sha256-kRBYjxirApj91hNBz3a+NyRm8SqRTVeQQCz+JFsKY0U=";
 
@@ -32,17 +33,25 @@
           ldflags = [
             "-s"
             "-w"
-            "-X github.com/srl-labs/containerlab/cmd.Version=${containerlab.version}"
+            "-X github.com/srl-labs/containerlab/cmd.Version=${version}"
+            "-X github.com/srl-labs/containerlab/cmd.commit=${self.shortRev or "unknown"}"
           ];
 
-          # ponytail: tests need docker/root, skip them here
+          # stamp the build date (ISO 8601, UTC) of the flake revision,
+          # which keeps the build reproducible for a given input
+          preBuild = ''
+            ldflags+=" -X github.com/srl-labs/containerlab/cmd.date=$(date -u -d @${self.lastModifiedDate} +%Y-%m-%dT%H:%M:%SZ)"
+          '';
+
+          # tests need docker/root, skip them here
           doCheck = false;
 
           meta = {
             description = "Container-based networking labs";
             homepage = "https://containerlab.dev";
-            license = pkgs.lib.licenses.bsd3;
+            license = nixpkgs.lib.licenses.bsd3;
             mainProgram = "containerlab";
+            platforms = nixpkgs.lib.platforms.linux;
           };
         };
         default = containerlab;
