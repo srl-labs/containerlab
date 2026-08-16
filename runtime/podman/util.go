@@ -128,7 +128,8 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 
 	specCgroupConfig := specgen.ContainerCgroupConfig{
-		CgroupNS: specgen.Namespace{},
+		CgroupNS:     specgen.Namespace{},
+		CgroupParent: cfg.CgroupParent,
 	}
 	if cfg.CgroupnsMode != "" {
 		specCgroupConfig.CgroupNS, err = specgen.ParseCgroupNamespace(cfg.CgroupnsMode)

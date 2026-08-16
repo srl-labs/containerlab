@@ -20,6 +20,7 @@ func TestCreateContainerSpecAppliesRuntimeNamespaceAndTmpfs(t *testing.T) {
 		Labels:       map[string]string{},
 		NetworkMode:  "host",
 		CgroupnsMode: "host",
+		CgroupParent: "/xform/my-lab/leaves",
 		ShmSize:      "64m",
 		Tmpfs:        map[string]string{"/run": "rw,nosuid,nodev", "/run/lock": "rw"},
 		Devices:      []string{"/dev/null"},
@@ -33,6 +34,9 @@ func TestCreateContainerSpecAppliesRuntimeNamespaceAndTmpfs(t *testing.T) {
 
 	if sg.CgroupNS.NSMode != specgen.Host {
 		t.Fatalf("CgroupNS mode = %q, want %q", sg.CgroupNS.NSMode, specgen.Host)
+	}
+	if sg.CgroupParent != "/xform/my-lab/leaves" {
+		t.Fatalf("CgroupParent = %q, want /xform/my-lab/leaves", sg.CgroupParent)
 	}
 	if sg.ShmSize == nil || *sg.ShmSize != 64*1000*1000 {
 		t.Fatalf("ShmSize = %v, want 64000000", sg.ShmSize)

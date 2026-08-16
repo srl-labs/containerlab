@@ -295,6 +295,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
 		Privileged:      privileged,
 		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		CgroupParent:    c.Config.Topology.GetNodeCgroupParent(nodeName),
 		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),

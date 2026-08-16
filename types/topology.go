@@ -444,6 +444,18 @@ func (t *Topology) GetNodeCgroupnsMode(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeCgroupParent(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.CgroupParent },
+		func(group *NodeDefinition) string { return group.CgroupParent },
+		func(kind *NodeDefinition) string { return kind.CgroupParent },
+		func(defaults *NodeDefinition) string { return defaults.CgroupParent },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodePidMode(nodeName string) string {
 	return getField(
 		t,

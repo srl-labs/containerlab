@@ -778,6 +778,7 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	topo.Nodes["n1"] = &clabtypes.NodeDefinition{
 		Kind:         "test",
 		CgroupnsMode: "host",
+		CgroupParent: "/xform/my-lab/leaves",
 		PidMode:      "host",
 		Tmpfs:        map[string]string{"/run": "rw,nosuid"},
 		SecurityOpts: []string{"seccomp=unconfined"},
@@ -789,6 +790,9 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	}
 	if cfg.CgroupnsMode != "host" {
 		t.Fatalf("CgroupnsMode = %q, want host", cfg.CgroupnsMode)
+	}
+	if cfg.CgroupParent != "/xform/my-lab/leaves" {
+		t.Fatalf("CgroupParent = %q, want /xform/my-lab/leaves", cfg.CgroupParent)
 	}
 	if cfg.PidMode != "host" {
 		t.Fatalf("PidMode = %q, want host", cfg.PidMode)

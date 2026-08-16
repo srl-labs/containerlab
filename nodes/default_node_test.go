@@ -74,6 +74,11 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
 		},
 		{
+			name: "cgroup parent",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{CgroupParent: "/xform/my-lab/leaves"},
+		},
+		{
 			name: "PID mode",
 			old:  &clabtypes.NodeConfig{},
 			new:  &clabtypes.NodeConfig{PidMode: "host"},
