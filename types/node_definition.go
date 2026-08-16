@@ -80,6 +80,8 @@ type NodeDefinition struct {
 	Privileged *bool `yaml:"privileged,omitempty"`
 	// Cgroup namespace mode for the container.
 	CgroupnsMode string `yaml:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `yaml:"cgroup-parent,omitempty"`
 	// PID namespace mode for the container.
 	PidMode string `yaml:"pid-mode,omitempty"`
 	// Tmpfs mounts to add to the container, keyed by destination path.

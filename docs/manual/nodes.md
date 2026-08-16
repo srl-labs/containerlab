@@ -789,6 +789,24 @@ my-node:
   cgroupns-mode: host
 ```
 
+### cgroup-parent
+
+The `cgroup-parent` parameter places a node's container under the specified parent cgroup. It has the same semantics as Docker's [`--cgroup-parent`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) option and is supported by the Docker and Podman runtimes. An empty or omitted value leaves parent selection to the runtime.
+
+This setting is inherited using the standard node, group, kind, then defaults precedence. It is independent of [`cgroupns-mode`](#cgroupns-mode), which selects the cgroup namespace visible inside the container rather than its placement in the host cgroup hierarchy.
+
+```yaml
+topology:
+  groups:
+    leaves:
+      cgroup-parent: /xform/my-lab/leaves
+  nodes:
+    leaf1:
+      group: leaves
+    leaf2:
+      group: leaves
+```
+
 ### pid-mode
 
 The `pid-mode` parameter controls the PID namespace mode used by the container runtime.

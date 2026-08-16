@@ -713,6 +713,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 	if err := d.processCgroupnsMode(node, containerHostConfig); err != nil {
 		return "", err
 	}
+	d.processCgroupParent(node, containerHostConfig)
 
 	// regular linux containers may benefit from automatic restart on failure
 	// note, that veth pairs added to this container (outside of eth0) will be lost on restart
@@ -1505,6 +1506,13 @@ func (*DockerRuntime) processCgroupnsMode(
 	containerHostConfig.CgroupnsMode = cgroupnsMode
 
 	return nil
+}
+
+func (*DockerRuntime) processCgroupParent(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) {
+	containerHostConfig.CgroupParent = node.CgroupParent
 }
 
 func (d *DockerRuntime) processNetworkMode(

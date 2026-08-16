@@ -633,6 +633,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		CapAdd:       topo.GetNodeCapAdd(nodeName),
 		Privileged:   privileged,
 		CgroupnsMode: topo.GetNodeCgroupnsMode(nodeName),
+		CgroupParent: topo.GetNodeCgroupParent(nodeName),
 		PidMode:      topo.GetNodePidMode(nodeName),
 		Tmpfs:        topo.GetNodeTmpfs(nodeName),
 		SecurityOpts: topo.GetNodeSecurityOpts(nodeName),

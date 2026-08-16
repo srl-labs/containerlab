@@ -172,6 +172,8 @@ type NodeConfig struct {
 	Privileged bool `json:"privileged,omitempty"`
 	// Cgroup namespace mode for the container.
 	CgroupnsMode string `json:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `json:"cgroup-parent,omitempty"`
 	// PID namespace mode for the container.
 	PidMode string `json:"pidmode,omitempty"`
 	// Tmpfs mounts to add to the container, keyed by destination path.
