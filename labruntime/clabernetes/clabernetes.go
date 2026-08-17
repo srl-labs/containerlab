@@ -53,6 +53,12 @@ var launcherProfileGVR = schema.GroupVersionResource{
 	Resource: "launcherprofiles",
 }
 
+var imageRequestGVR = schema.GroupVersionResource{
+	Group:    "c9s.run",
+	Version:  "v1alpha1",
+	Resource: "imagerequests",
+}
+
 type Runtime struct {
 	client     dynamic.Interface
 	kubeClient kubernetes.Interface

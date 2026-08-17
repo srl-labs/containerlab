@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -671,6 +672,189 @@ func TestWaitReadyTimeoutReportsPendingNodes(t *testing.T) {
 		!strings.Contains(err.Error(), "pending nodes: slow-node (notready)") ||
 		strings.Contains(err.Error(), "rate limiter") {
 		t.Fatalf("unexpected readiness timeout: %v", err)
+	}
+}
+
+func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
+	var output bytes.Buffer
+	oldLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel)
+	log.SetOutput(&output)
+	defer func() {
+		log.SetLevel(oldLevel)
+		log.SetOutput(os.Stderr)
+	}()
+
+	progress := nodeReadinessProgress{}
+	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+		{Name: "node1", State: "notready"},
+		{Name: "node2", State: "ready", Ready: true},
+	}})
+
+	got := output.String()
+	if strings.Contains(got, "node=node1") {
+		t.Fatalf("initial non-ready node should not produce a log line:\n%s", got)
+	}
+	if !strings.Contains(got, "Clabernetes node is ready") ||
+		!strings.Contains(got, "node=node2") ||
+		!strings.Contains(got, "ready=1") ||
+		!strings.Contains(got, "total=2") {
+		t.Fatalf("initial ready node progress was not reported:\n%s", got)
+	}
+
+	output.Reset()
+	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+		{Name: "node1", State: "ready", Ready: true},
+		{Name: "node2", State: "ready", Ready: true},
+	}})
+	got = output.String()
+	if strings.Count(got, "Clabernetes node is ready") != 1 ||
+		!strings.Contains(got, "node=node1") ||
+		!strings.Contains(got, "ready=2") {
+		t.Fatalf("newly ready node progress was not reported exactly once:\n%s", got)
+	}
+
+	output.Reset()
+	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+		{Name: "node1", State: "ready", Ready: true},
+		{Name: "node2", State: "notready"},
+	}})
+	got = output.String()
+	if !strings.Contains(got, "Clabernetes node is not ready") ||
+		!strings.Contains(got, "node=node2") ||
+		!strings.Contains(got, "state=notready") ||
+		!strings.Contains(got, "ready=1") {
+		t.Fatalf("readiness regression was not reported:\n%s", got)
+	}
+
+	output.Reset()
+	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+		{Name: "node1", State: "ready", Ready: true},
+		{Name: "node2", State: "notready"},
+	}})
+	if output.Len() != 0 {
+		t.Fatalf("unchanged readiness should not produce repeated log lines:\n%s", output.String())
+	}
+}
+
+func TestImagePullRequestsFilterAndProgress(t *testing.T) {
+	request := func(name, node, image, kubernetesNode string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": c9sAPIVersion,
+			"kind":       "ImageRequest",
+			"metadata": map[string]any{
+				"name":      name,
+				"namespace": "lab-ns",
+			},
+			"spec": map[string]any{
+				"topologyNodeName": node,
+				"requestedImage":   image,
+				"kubernetesNode":   kubernetesNode,
+			},
+		}}
+	}
+
+	r := newTestRuntime(
+		request("node1-image", "node1", "example/node1:latest", "worker-a"),
+		request("node1-other-image", "node1", "example/other:latest", "worker-a"),
+		request("foreign-image", "foreign", "example/foreign:latest", "worker-b"),
+	)
+	requests, err := r.imagePullRequests(
+		context.Background(),
+		"lab-ns",
+		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+			{Name: "node1", Image: "example/node1:latest"},
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 1 || requests[0].name != "node1-image" {
+		t.Fatalf("image pull requests = %+v, want only node1-image", requests)
+	}
+
+	var output bytes.Buffer
+	oldLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel)
+	log.SetOutput(&output)
+	defer func() {
+		log.SetLevel(oldLevel)
+		log.SetOutput(os.Stderr)
+	}()
+
+	progress := imagePullProgress{}
+	progress.report(requests)
+	got := output.String()
+	if !strings.Contains(got, "Pulling clabernetes node image") ||
+		!strings.Contains(got, "node=node1") ||
+		!strings.Contains(got, "image=example/node1:latest") ||
+		!strings.Contains(got, "kubernetes-node=worker-a") {
+		t.Fatalf("image pull start was not reported:\n%s", got)
+	}
+
+	output.Reset()
+	progress.report(requests)
+	if output.Len() != 0 {
+		t.Fatalf("unchanged image pull should not produce repeated log lines:\n%s", output.String())
+	}
+
+	output.Reset()
+	progress.report(nil)
+	got = output.String()
+	if !strings.Contains(got, "Clabernetes node image pull completed") ||
+		!strings.Contains(got, "node=node1") ||
+		!strings.Contains(got, "image=example/node1:latest") {
+		t.Fatalf("image pull completion was not reported:\n%s", got)
+	}
+
+	output.Reset()
+	progress.report(nil)
+	if output.Len() != 0 {
+		t.Fatalf("completed image pull should not produce repeated log lines:\n%s", output.String())
+	}
+
+	output.Reset()
+	progress.reportLauncherLog(launcherImageLog{
+		podName:        "pod1",
+		node:           "node1",
+		image:          "example/node1:latest",
+		kubernetesNode: "worker-a",
+		content: "image \"example/node1:latest\" is present, begin copy to docker daemon...\n" +
+			"Loaded image: example/node1:latest\n",
+	})
+	got = output.String()
+	if !strings.Contains(got, "already present on Kubernetes node") ||
+		strings.Contains(got, "copied to launcher Docker daemon") ||
+		strings.Count(got, "node=node1") != 1 {
+		t.Fatalf("cached image copy lifecycle was not reported:\n%s", got)
+	}
+
+	output.Reset()
+	progress.reportLauncherLog(launcherImageLog{
+		podName:        "pod1",
+		node:           "node1",
+		image:          "example/node1:latest",
+		kubernetesNode: "worker-a",
+		content:        "Loaded image: example/node1:latest\n",
+	})
+	if output.Len() != 0 {
+		t.Fatalf("completed image copy should not produce repeated log lines:\n%s", output.String())
+	}
+
+	output.Reset()
+	progress.reportLauncherLog(launcherImageLog{
+		podName:        "pod2",
+		node:           "node2",
+		image:          "example/node2:latest",
+		kubernetesNode: "worker-b",
+		content: "image \"example/node2:latest\" is now available on node, continuing...\n" +
+			"Loaded image: example/node2:latest\n",
+	})
+	got = output.String()
+	if !strings.Contains(got, "Copying clabernetes node image") ||
+		strings.Contains(got, "already present") ||
+		strings.Contains(got, "copied to launcher Docker daemon") {
+		t.Fatalf("pulled image copy lifecycle was not reported:\n%s", got)
 	}
 }
 
@@ -1717,6 +1901,7 @@ func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 				nodeGVR:            "NodeList",
 				linkGVR:            "LinkList",
 				launcherProfileGVR: "LauncherProfileList",
+				imageRequestGVR:    "ImageRequestList",
 			},
 			runtimeObjects...,
 		),

@@ -241,20 +241,25 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		printApplyResult(result.Apply)
 	}
 
-	// historically i think this was 5s, but we will already have had at least some time for
-	// the manager to have gone off and fetched the version, so 3s max to wrap that up and print
-	// seems reasonable
-	versionCheckContext, cancel := context.WithTimeout(
-		cobraCmd.Context(),
-		postDeployVersionCheckTimeout,
-	)
-	defer cancel()
+	if shouldDisplayPostDeployVersion(o.Global.Runtime) {
+		// The manager has fetched in the background during deploy, so allow at most three more
+		// seconds to finish and print the available containerlab release.
+		versionCheckContext, cancel := context.WithTimeout(
+			cobraCmd.Context(),
+			postDeployVersionCheckTimeout,
+		)
+		defer cancel()
 
-	m := getVersionManager()
-	m.DisplayNewVersionAvailable(versionCheckContext, false)
+		m := getVersionManager()
+		m.DisplayNewVersionAvailable(versionCheckContext, false)
+	}
 
 	// print table summary
 	return PrintContainerInspect(result.Containers, o)
+}
+
+func shouldDisplayPostDeployVersion(runtimeName string) bool {
+	return !clablabruntime.IsLabRuntimeName(runtimeName)
 }
 
 // printDryRunResult prints the planned changes of a dry run, as JSON when requested via

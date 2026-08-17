@@ -34,6 +34,7 @@ func (r *Runtime) Deploy(
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Preparing clabernetes lab", "name", req.Name, "namespace", namespace)
 	topologyResource := r.client.Resource(topologyGVR).Namespace(namespace)
 
 	existingTopology, err := topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
@@ -58,6 +59,12 @@ func (r *Runtime) Deploy(
 	desiredTopology := prepared.topology
 	stagedConfigMaps := prepared.configMaps
 	primitives := prepared.primitives
+	log.Info(
+		"Staging clabernetes lab artifacts",
+		"name", req.Name,
+		"namespace", namespace,
+		"config-maps", len(stagedConfigMaps),
+	)
 
 	// Compatibility Topologies are still supported for labs created by older versions. Keep
 	// their controller ownership intact and reconcile the definition in place. New labs and
@@ -99,7 +106,13 @@ func (r *Runtime) Deploy(
 	if primitiveExists {
 		operation = "Reconciling"
 	}
-	log.Info(operation+" clabernetes primitive resources", "name", req.Name, "namespace", namespace)
+	log.Info(
+		operation+" clabernetes lab resources",
+		"name", req.Name,
+		"namespace", namespace,
+		"nodes", len(primitives.nodes),
+		"links", len(primitives.links),
+	)
 	appliedNodes, createdNodes, createdResources, err := r.reconcilePrimitiveResources(
 		ctx,
 		namespace,
@@ -416,6 +429,9 @@ func (r *Runtime) waitReady(
 	defer cancel()
 
 	var lastState *clablabruntime.LabState
+	readinessProgress := nodeReadinessProgress{}
+	imageProgress := imagePullProgress{}
+	log.Info("Waiting for clabernetes lab to become ready", "name", name, "namespace", namespace)
 
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
 		func(ctx context.Context) (bool, error) {
@@ -435,6 +451,14 @@ func (r *Runtime) waitReady(
 					namespace, name, err)
 			}
 			lastState = state
+			imageRequests, imageErr := r.imagePullRequests(ctx, namespace, state)
+			if imageErr != nil {
+				imageProgress.reportListError(imageErr)
+			} else {
+				imageProgress.report(imageRequests)
+			}
+			imageProgress.inspectLauncherCopies(ctx, r, namespace, state)
+			readinessProgress.report(state)
 
 			if state.Ready {
 				return true, nil
@@ -453,6 +477,8 @@ func (r *Runtime) waitReady(
 			return false, nil
 		})
 	if err == nil {
+		log.Info("Clabernetes lab is ready", "name", name, "namespace", namespace)
+
 		return nil
 	}
 	if !errors.Is(err, context.DeadlineExceeded) {
@@ -490,6 +516,68 @@ func (r *Runtime) waitReady(
 		name,
 		strings.Join(pendingNodes, ", "),
 	)
+}
+
+type trackedNodeReadiness struct {
+	state string
+	ready bool
+}
+
+type nodeReadinessProgress struct {
+	nodes map[string]trackedNodeReadiness
+}
+
+func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
+	if state == nil {
+		return
+	}
+
+	readyCount := 0
+	for _, node := range state.Nodes {
+		if node.Ready {
+			readyCount++
+		}
+	}
+
+	next := make(map[string]trackedNodeReadiness, len(state.Nodes))
+	for _, node := range state.Nodes {
+		current := trackedNodeReadiness{state: node.State, ready: node.Ready}
+		previous, seen := p.nodes[node.Name]
+		next[node.Name] = current
+
+		// The initial non-ready snapshot is summarized by the wait message. Report nodes that
+		// are already ready on the first poll, and every meaningful transition after that.
+		if !node.Ready && (!seen || previous == current) {
+			continue
+		}
+		if seen && previous == current {
+			continue
+		}
+
+		if node.Ready {
+			log.Info(
+				"Clabernetes node is ready",
+				"node", node.Name,
+				"ready", readyCount,
+				"total", len(state.Nodes),
+			)
+			continue
+		}
+
+		nodeState := node.State
+		if nodeState == "" {
+			nodeState = "unknown"
+		}
+		log.Info(
+			"Clabernetes node is not ready",
+			"node", node.Name,
+			"state", nodeState,
+			"ready", readyCount,
+			"total", len(state.Nodes),
+		)
+	}
+
+	p.nodes = next
 }
 
 func contextDeadlineIsImminent(ctx context.Context) bool {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
 	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -88,6 +89,11 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	if len(desiredLinks) == 0 {
 		return nil
 	}
+	log.Info(
+		"Waiting for clabernetes links to resolve",
+		"namespace", namespace,
+		"links", len(desiredLinks),
+	)
 
 	desiredNames := make(map[string]struct{}, len(desiredLinks))
 	for _, link := range desiredLinks {
@@ -134,6 +140,12 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 			return len(pending) == 0, nil
 		})
 	if err == nil {
+		log.Info(
+			"Clabernetes links are resolved",
+			"namespace", namespace,
+			"links", len(desiredLinks),
+		)
+
 		return nil
 	}
 	if !errors.Is(err, context.DeadlineExceeded) {
