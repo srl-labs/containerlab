@@ -317,6 +317,16 @@ topology:
         - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
 ```
 
+In case the TLS material is needed for a node, it can also be mounted with `__clabDir__/.tls`. Containerlab creates the directory and populates it with the CA files during deployment, before starting the nodes. Bind the directory itself and access the TLS files once the node is started:
+
+```yaml
+topology:
+  nodes:
+    testNode:
+      binds:
+        - __clabDir__/.tls/ca:/etc/ca:ro
+```
+
 ///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).

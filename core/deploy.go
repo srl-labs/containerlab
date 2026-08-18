@@ -314,6 +314,11 @@ func (c *CLab) prepareLabDirectory(skipFileACLs bool) {
 }
 
 func (c *CLab) createPlaceholderArtifacts() error {
+	clabutils.CreateDirectory(
+		c.TopoPaths.CABaseDir(),
+		clabconstants.PermissionsOpen,
+	)
+
 	paths := []string{
 		c.TopoPaths.AnsibleInventoryFileAbsPath(),
 		c.TopoPaths.NornirSimpleInventoryFileAbsPath(),
