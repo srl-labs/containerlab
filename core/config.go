@@ -725,13 +725,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		hp := r.Replace(elems[0])
 		hp = clabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
+		caDir := c.TopoPaths.CABaseDir()
 		_, err := os.Stat(hp)
 		if err != nil {
 			// check if the hostpath mount has a reference to ansible-inventory.yml or
-			// topology-data.json if that is the case, we do not emit an error on missing file,
-			// since these files will be created by containerlab upon lab deployment
+			// topology-data.json or the generated CA directory. These paths are created by
+			// containerlab upon lab deployment.
 			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
-				hp != c.TopoPaths.TopoExportFile() {
+				hp != c.TopoPaths.TopoExportFile() &&
+				filepath.Clean(hp) != caDir {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}

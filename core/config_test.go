@@ -129,6 +129,77 @@ func TestBindsInit(t *testing.T) {
 	}
 }
 
+func TestGeneratedCABindDirectory(t *testing.T) {
+	tests := map[string]struct {
+		bind    string
+		wantErr bool
+	}{
+		"generated_ca_directory": {
+			bind: "__clabDir__/.tls/ca:/etc/ca:ro",
+		},
+		"generated_ca_file": {
+			bind:    "__clabDir__/.tls/ca/ca.pem:/etc/ca.pem:ro",
+			wantErr: true,
+		},
+		"missing_bind": {
+			bind:    "__clabDir__/missing:/etc/missing:ro",
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			topoFile := filepath.Join(tempDir, "topology.clab.yml")
+			topo := fmt.Sprintf(`name: %s
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+      binds:
+        - %s
+`, name, tc.bind)
+			if err := os.WriteFile(topoFile, []byte(topo), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			c, err := NewContainerLab(WithTopoPath(topoFile, nil))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected bind path validation to fail")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			caDir := c.TopoPaths.CABaseDir()
+			if _, err := os.Stat(caDir); err == nil {
+				t.Fatalf("CA directory %q was created before deployment", caDir)
+			} else if !os.IsNotExist(err) {
+				t.Fatalf("failed checking CA directory %q: %v", caDir, err)
+			}
+
+			c.prepareLabDirectory(true)
+			if err := c.createPlaceholderArtifacts(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(caDir); err != nil {
+				t.Fatalf("CA directory %q was not created during deployment preparation: %v",
+					caDir, err)
+			}
+
+			wantBind := caDir + ":/etc/ca:ro"
+			if !slices.Contains(c.Nodes["node1"].Config().Binds, wantBind) {
+				t.Fatalf("CA directory bind %q was not found in resulting binds %q",
+					wantBind, c.Nodes["node1"].Config().Binds)
+			}
+		})
+	}
+}
+
 func TestTypeInit(t *testing.T) {
 	tests := map[string]struct {
 		got  string
