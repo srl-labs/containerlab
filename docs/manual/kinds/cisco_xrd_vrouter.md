@@ -18,15 +18,15 @@ XRd vRouter nodes launched with containerlab come up pre-provisioned with SSH, N
     type: warning
 XRd vRouter's DPDK dataplane busy-polls a CPU core and uses hugepages. Per node it needs at least 4 cores, ~5 GiB RAM, and 3 GiB of 1 GiB hugepages; containerlab allocates 4 vCPU / 10 GiB by default and floors vCPU at 4 and RAM at 8 GiB (at 8 GiB an idle node booted and forwarded with ~800 MB to spare). Drop RAM toward the 8 GiB floor only to pack more nodes onto a host. The build and run host must have nested virtualization (`/dev/kvm`) and hugepages available.
 
-Tune the allocated resources with the `VCPU` and `RAM` environment variables:
+Tune the allocated resources with the `QEMU_SMP` and `QEMU_MEMORY` environment variables:
 
 ```yaml
     xrd:
       kind: cisco_xrd_vrouter
       image: vrnetlab/cisco_xrd-vrouter:25.4.2
       env:
-        VCPU: 4
-        RAM: 10240   # 10 GiB (the default); lower toward the 8192 floor to pack more nodes
+        QEMU_SMP: 4
+        QEMU_MEMORY: 10240   # 10 GiB (the default); lower toward the 8192 floor to pack more nodes
 ```
 
 ///
@@ -41,6 +41,7 @@ to connect to a `bash` shell of the node's container (the VM host running the XR
 ```bash
 docker exec -it <container-name/id> bash
 ```
+
 ///
 
 /// tab | CLI via SSH
@@ -49,6 +50,7 @@ to connect to the XR CLI:
 ```bash
 ssh clab@<container-name/id>
 ```
+
 ///
 
 /// tab | NETCONF
@@ -57,6 +59,7 @@ NETCONF server is running over port 830:
 ```bash
 ssh clab@<container-name> -p 830 -s netconf
 ```
+
 ///
 
 /// tab | gNMI
@@ -67,6 +70,7 @@ gnmic -a <container-name/node-mgmt-address>:9339 --insecure \
 -u clab -p clab@123 \
 capabilities
 ```
+
 ///
 
 /// note
