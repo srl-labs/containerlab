@@ -885,11 +885,32 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// processNodeExecs replaces (in place) magic variables in node execs.
+// processNodeExecs replaces magic variables in node and stage execs.
 func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
 	for i, e := range nodeCfg.Exec {
-		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)
+	}
+
+	if nodeCfg.Stages == nil {
+		return
+	}
+
+	stages := []*clabtypes.StageBase{
+		&nodeCfg.Stages.Create.StageBase,
+		&nodeCfg.Stages.CreateLinks.StageBase,
+		&nodeCfg.Stages.Configure.StageBase,
+		&nodeCfg.Stages.Healthy.StageBase,
+		&nodeCfg.Stages.Exit.StageBase,
+	}
+
+	for _, stage := range stages {
+		for i, exec := range stage.Execs {
+			execCopy := *exec
+			execCopy.Command = r.Replace(exec.Command)
+			stage.Execs[i] = &execCopy
+		}
 	}
 }
 

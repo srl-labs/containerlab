@@ -1030,6 +1030,49 @@ func TestExecInit(t *testing.T) {
 	}
 }
 
+func TestStageExecMagicVarsInit(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo17.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rawCommand := "echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__"
+	if got := c.Config.Topology.Defaults.Stages.Create.Execs[0].Command; got != rawCommand {
+		t.Fatalf("default stage exec command was modified: got %q", got)
+	}
+
+	for _, nodeName := range []string{"node1", "node2"} {
+		nodeCfg := c.Nodes[nodeName].Config()
+		wantCommand := fmt.Sprintf(
+			"echo %s %s %s %s",
+			c.TopoPaths.TopologyLabDir(),
+			filepath.Base(c.TopoPaths.TopologyLabDir()),
+			c.TopoPaths.NodeDir(nodeName),
+			nodeName,
+		)
+		stages := map[string]*clabtypes.StageBase{
+			"create":       &nodeCfg.Stages.Create.StageBase,
+			"create-links": &nodeCfg.Stages.CreateLinks.StageBase,
+			"configure":    &nodeCfg.Stages.Configure.StageBase,
+			"healthy":      &nodeCfg.Stages.Healthy.StageBase,
+			"exit":         &nodeCfg.Stages.Exit.StageBase,
+		}
+
+		for stageName, stage := range stages {
+			if len(stage.Execs) != 1 {
+				t.Fatalf("%s %s stage has %d execs, want 1", nodeName, stageName, len(stage.Execs))
+			}
+			if got := stage.Execs[0].Command; got != wantCommand {
+				t.Errorf("%s %s stage command = %q, want %q", nodeName, stageName, got, wantCommand)
+			}
+			if got := stage.Execs[0].Target; got != clabtypes.CommandTargetHost {
+				t.Errorf("%s %s stage target = %q, want %q",
+					nodeName, stageName, got, clabtypes.CommandTargetHost)
+			}
+		}
+	}
+}
+
 func TestExtrasInit(t *testing.T) {
 	tests := map[string]struct {
 		got           string
