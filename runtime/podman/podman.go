@@ -140,11 +140,41 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 		return err
 	}
 	log.Debugf("trying to delete mgmt network %v", r.mgmt.Network)
-	_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+
+	// Removal can fail with "network is being used" right after destroy has
+	// deleted all lab containers, because podman can briefly still consider
+	// them associated with the network. A short retry rides out that window.
+	// Force is deliberately not set: it would also delete any containers
+	// still attached to the network, such as those of another lab sharing
+	// the default mgmt network.
+	const (
+		netInUseRetries      = 3
+		netInUseRetryBackoff = time.Second
+	)
+
+	for attempt := range netInUseRetries {
+		_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+		if err == nil || !isNetworkInUseErr(err) || attempt == netInUseRetries-1 {
+			break
+		}
+		log.Debugf("transient in-use error removing network %q (attempt %d/%d): %v",
+			r.mgmt.Network, attempt+1, netInUseRetries, err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(netInUseRetryBackoff):
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("error while trying to remove a mgmt network %w", err)
 	}
 	return nil
+}
+
+// isNetworkInUseErr reports whether err is podman's "network is being used"
+// error, raised while any container is still associated with the network.
+func isNetworkInUseErr(err error) bool {
+	return strings.Contains(err.Error(), "network is being used")
 }
 
 func (r *PodmanRuntime) PullImage(
