@@ -791,7 +791,11 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 
 Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (`__variable__`) and can be seen in some of the advanced topology examples.
 
-Most variables can be used in startup-config paths, bind paths, and exec commands. The Git variables (`__gitBranch__` and `__gitHash__`) are special and today can only be used in the topology `name` field. All variables are replaced with actual values during lab deployment:
+Most variables can be used in startup-config paths, bind paths, and exec commands, including
+commands in deployment stages. Stage commands are expanded separately for each node before they
+run, regardless of whether their target is the host or the container. The Git variables
+(`__gitBranch__` and `__gitHash__`) are special and today can only be used in the topology `name`
+field. All variables are replaced with actual values during lab deployment:
 
 | Variable | Description | Example Usage | Expands To |
 | ---------- | ------------- | --------------- | ------------ |
