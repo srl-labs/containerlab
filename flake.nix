@@ -62,6 +62,47 @@
         default = containerlab;
       });
 
+      nixosModules.default =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        let
+          cfg = config.programs.containerlab;
+        in
+        {
+          options.programs.containerlab = {
+            enable = lib.mkEnableOption "containerlab";
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = self.packages.${pkgs.system}.containerlab;
+              description = "The containerlab package to install.";
+            };
+          };
+
+          config = lib.mkIf cfg.enable {
+            environment.systemPackages = [ cfg.package ];
+
+            security.wrappers.containerlab = {
+              source = "${cfg.package}/bin/containerlab";
+              owner = "root";
+              group = "root";
+              setuid = true;
+            };
+
+            security.wrappers.clab = {
+              source = "${cfg.package}/bin/containerlab";
+              owner = "root";
+              group = "root";
+              setuid = true;
+            };
+
+            users.groups.clab_admins = { };
+          };
+        };
+
       devShells = forAll (pkgs: {
         default = pkgs.mkShell {
           packages = [
