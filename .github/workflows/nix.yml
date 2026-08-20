@@ -4,20 +4,11 @@
 name: nix
 
 on:
-  push:
-    branches: [main, nix-flake]
-    # releases always bump go.mod/go.sum or touch the release notes in docs/rn
-    paths:
-      [
-        go.mod,
-        go.sum,
-        flake.nix,
-        flake.lock,
-        .github/workflows/nix.yml,
-        docs/rn/**,
-      ]
   pull_request:
     paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+  workflow_run:
+    workflows: ["CICD"]
+    types: [completed]
   schedule:
     - cron: "0 3 * * 0" # weekly on Sundays 03:00 UTC, catches releases that changed nothing above
   workflow_dispatch:
@@ -26,13 +17,26 @@ permissions:
   contents: read
 
 jobs:
-  nix-refresh:
+  nix-validation:
+    # Validate PRs in parallel, and validate main/release commits only after
+    # the main CICD workflow succeeds. Scheduled and manual runs are allowed
+    # independently because they are maintenance builds, not release builds.
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event != 'pull_request'
+      )
     outputs:
       changed: ${{ steps.refresh.outputs.changed }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 1
       - uses: cachix/install-nix-action@v31
 
@@ -90,8 +94,24 @@ jobs:
             flake.lock
 
   update:
-    needs: nix-refresh
-    if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+    needs: nix-validation
+    # Only mutate repository state after a successful Nix validation that
+    # changed metadata. Main/release workflow runs are gated by successful
+    # CICD; scheduled/manual runs are explicit maintenance operations.
+    if: >-
+      needs.nix-validation.result == 'success' &&
+      needs.nix-validation.outputs.changed == 'true' &&
+      (
+        github.event_name == 'schedule' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_type == 'branch'
+        ) ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.head_branch == 'main'
+        )
+      )
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -99,6 +119,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
@@ -112,17 +133,20 @@ jobs:
       # On the upstream repo the refresh lands via a bot PR;
       # on forks (used as nix flake inputs) commit straight to the branch.
       - uses: peter-evans/create-pull-request@v7
-        if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository == 'srl-labs/containerlab'
+        if: github.repository == 'srl-labs/containerlab'
         with:
           branch: update-flake
+          base: main
           title: "chore: update Nix flake"
           commit-message: "chore: update Nix flake"
 
       - name: Commit refreshed flake metadata (forks only)
-        if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository != 'srl-labs/containerlab'
+        if: github.repository != 'srl-labs/containerlab'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add flake.nix flake.lock
           git commit -m "chore: update Nix flake"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${TARGET_BRANCH}"
+        env:
+          TARGET_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
