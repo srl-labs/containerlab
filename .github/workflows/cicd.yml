@@ -106,6 +106,72 @@ jobs:
       runner: ${{ matrix.runner }}
       arch: ${{ matrix.arch }}
 
+  comment-containerlab-binaries:
+    runs-on: ubuntu-24.04
+    needs: build-containerlab
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.build-containerlab.result == 'success'
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Comment containerlab binary URLs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const artifactNames = ['containerlab', 'containerlab-arm64'];
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+
+            const artifacts = Object.fromEntries(
+              artifactNames.map((name) => {
+                const artifact = data.artifacts.find(
+                  (candidate) => candidate.name === name && !candidate.expired,
+                );
+                if (!artifact) {
+                  throw new Error(`Artifact not found: ${name}`);
+                }
+
+                return [
+                  name,
+                  `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`,
+                ];
+              }),
+            );
+
+            const body = [
+              `Containerlab binaries for commit ${context.payload.pull_request.head.sha}:`,
+              '',
+              '<details>',
+              '<summary>Download binaries</summary>',
+              '',
+              '**linux/amd64**',
+              '```bash',
+              `curl -sL ${artifacts.containerlab}`,
+              '```',
+              '',
+              '**linux/arm64**',
+              '```bash',
+              `curl -sL ${artifacts['containerlab-arm64']}`,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+
   golangci-lint:
     uses: ./.github/workflows/golangci-lint.yml
     needs:
