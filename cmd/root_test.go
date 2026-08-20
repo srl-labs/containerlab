@@ -1,0 +1,275 @@
+package cmd
+
+import (
+	"os"
+	"testing"
+	"time"
+
+	"github.com/spf13/cobra"
+)
+
+func TestRootRequirementHelpers(t *testing.T) {
+	tests := []struct {
+		name               string
+		runtime            string
+		wantGlobalRoot     bool
+		wantCommandSkipped bool
+	}{
+		{
+			name:               "default runtime",
+			runtime:            "",
+			wantGlobalRoot:     false,
+			wantCommandSkipped: false,
+		},
+		{
+			name:               "docker runtime",
+			runtime:            "docker",
+			wantGlobalRoot:     false,
+			wantCommandSkipped: false,
+		},
+		{
+			name:               "podman runtime",
+			runtime:            "podman",
+			wantGlobalRoot:     true,
+			wantCommandSkipped: false,
+		},
+		{
+			name:               "clabernetes runtime",
+			runtime:            "clabernetes",
+			wantGlobalRoot:     false,
+			wantCommandSkipped: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := globalRuntimeRequiresRoot(tt.runtime); got != tt.wantGlobalRoot {
+				t.Fatalf("globalRuntimeRequiresRoot(%q) = %v, want %v",
+					tt.runtime, got, tt.wantGlobalRoot)
+			}
+
+			if got := commandSkipsRoot(tt.runtime); got != tt.wantCommandSkipped {
+				t.Fatalf("commandSkipsRoot(%q) = %v, want %v",
+					tt.runtime, got, tt.wantCommandSkipped)
+			}
+		})
+	}
+}
+
+func TestNamespaceFlagHasNoShorthand(t *testing.T) {
+	optionsInstance = nil
+	t.Cleanup(func() { optionsInstance = nil })
+
+	root, err := Entrypoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	flag := root.PersistentFlags().Lookup("namespace")
+	if flag == nil {
+		t.Fatal("--namespace flag was not registered")
+	}
+	if flag.Shorthand != "" {
+		t.Fatalf("--namespace shorthand = %q, want none", flag.Shorthand)
+	}
+	if err := root.PersistentFlags().Set("namespace", "default"); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetOptions().Global.Namespace; got != "default" {
+		t.Fatalf("namespace option = %q, want default", got)
+	}
+}
+
+func TestApplyLabRuntimeDefaultTimeout(t *testing.T) {
+	tests := []struct {
+		name            string
+		runtime         string
+		explicitFlag    string
+		explicitEnv     string
+		initialTimeout  time.Duration
+		expectedTimeout time.Duration
+	}{
+		{
+			name:            "clabernetes default",
+			runtime:         "clabernetes",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: defaultLabRuntimeTimeout,
+		},
+		{
+			name:            "docker default unchanged",
+			runtime:         "docker",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: defaultTimeout,
+		},
+		{
+			name:            "explicit flag wins",
+			runtime:         "clabernetes",
+			explicitFlag:    "45s",
+			initialTimeout:  defaultTimeout,
+			expectedTimeout: 45 * time.Second,
+		},
+		{
+			name:            "explicit environment wins",
+			runtime:         "clabernetes",
+			explicitEnv:     "3m",
+			initialTimeout:  3 * time.Minute,
+			expectedTimeout: 3 * time.Minute,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalTimeout, timeoutWasSet := os.LookupEnv("CLAB_TIMEOUT")
+			if tt.explicitEnv == "" {
+				if err := os.Unsetenv("CLAB_TIMEOUT"); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				t.Setenv("CLAB_TIMEOUT", tt.explicitEnv)
+			}
+			t.Cleanup(func() {
+				if timeoutWasSet {
+					_ = os.Setenv("CLAB_TIMEOUT", originalTimeout)
+				} else {
+					_ = os.Unsetenv("CLAB_TIMEOUT")
+				}
+			})
+
+			root := &cobra.Command{Use: "containerlab"}
+			options := &Options{Global: &GlobalOptions{
+				Runtime: tt.runtime,
+				Timeout: tt.initialTimeout,
+			}}
+			root.PersistentFlags().DurationVar(
+				&options.Global.Timeout,
+				"timeout",
+				options.Global.Timeout,
+				"timeout",
+			)
+			deploy := &cobra.Command{Use: "deploy"}
+			root.AddCommand(deploy)
+			if tt.explicitFlag != "" {
+				if err := root.PersistentFlags().Set("timeout", tt.explicitFlag); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			applyLabRuntimeDefaultTimeout(deploy, options)
+			if options.Global.Timeout != tt.expectedTimeout {
+				t.Fatalf(
+					"timeout = %s, want %s",
+					options.Global.Timeout,
+					tt.expectedTimeout,
+				)
+			}
+		})
+	}
+}
+
+func TestCheckLabRuntimeCommandSupport(t *testing.T) {
+	root := &cobra.Command{Use: "containerlab"}
+	graph := &cobra.Command{Use: "graph"}
+	tools := &cobra.Command{Use: "tools"}
+	sshx := &cobra.Command{Use: "sshx"}
+	deploy := &cobra.Command{Use: "deploy"}
+
+	root.AddCommand(graph, tools, deploy)
+	tools.AddCommand(sshx)
+
+	tests := []struct {
+		name    string
+		runtime string
+		cmd     *cobra.Command
+		wantErr bool
+	}{
+		{
+			name:    "graph with docker runtime",
+			runtime: "docker",
+			cmd:     graph,
+			wantErr: false,
+		},
+		{
+			name:    "deploy with clabernetes runtime",
+			runtime: "clabernetes",
+			cmd:     deploy,
+			wantErr: false,
+		},
+		{
+			name:    "graph with clabernetes runtime",
+			runtime: "clabernetes",
+			cmd:     graph,
+			wantErr: true,
+		},
+		{
+			name:    "tools subcommand with clabernetes runtime",
+			runtime: "clabernetes",
+			cmd:     sshx,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkLabRuntimeCommandSupport(tt.cmd, tt.runtime)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("checkLabRuntimeCommandSupport(%q, %q) error = %v, wantErr %v",
+					tt.cmd.Name(), tt.runtime, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
+	tests := []struct {
+		name      string
+		command   string
+		flag      string
+		flagValue string
+		wantErr   bool
+	}{
+		{name: "deploy dry-run supported", command: "deploy", flag: "dry-run", flagValue: "true"},
+		{name: "deploy worker controls rejected", command: "deploy", flag: "max-workers", flagValue: "4", wantErr: true},
+		{name: "deploy node filter rejected", command: "deploy", flag: "node-filter", flagValue: "n1", wantErr: true},
+		{name: "destroy graceful rejected", command: "destroy", flag: "graceful", flagValue: "true", wantErr: true},
+		{name: "destroy node filter rejected", command: "destroy", flag: "node-filter", flagValue: "n1", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v = nil
+			t.Cleanup(func() { v = nil })
+
+			root := &cobra.Command{Use: "containerlab"}
+			command := &cobra.Command{Use: tt.command}
+			root.AddCommand(command)
+			switch tt.flag {
+			case "dry-run", "graceful":
+				command.Flags().Bool(tt.flag, false, "")
+			case "max-workers":
+				command.Flags().Uint(tt.flag, 0, "")
+			case "node-filter":
+				command.Flags().StringSlice(tt.flag, nil, "")
+			}
+			if err := command.Flags().Set(tt.flag, tt.flagValue); err != nil {
+				t.Fatal(err)
+			}
+
+			err := checkLabRuntimeCommandSupport(command, "clabernetes")
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("checkLabRuntimeCommandSupport() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("inspect interfaces rejected", func(t *testing.T) {
+		root := &cobra.Command{Use: "containerlab"}
+		inspect := &cobra.Command{Use: "inspect"}
+		interfaces := &cobra.Command{Use: "interfaces"}
+		root.AddCommand(inspect)
+		inspect.AddCommand(interfaces)
+
+		if err := checkLabRuntimeCommandSupport(interfaces, "clabernetes"); err == nil {
+			t.Fatal("inspect interfaces was accepted for clabernetes")
+		}
+	})
+}

@@ -10,6 +10,10 @@ This command is similar to `docker exec`, but it allows a user to run the same c
 Like `docker exec`, `exec` runs inside the node's container namespace. For VM-based kinds (vrnetlab integration, e.g. `sonic-vm`), that container is the QEMU launcher wrapping the VM, not the guest VM itself, so guest network-OS commands are not reachable via `exec` and fail with `executable file not found in $PATH`. Use SSH to the node's management address (or its native CLI) to run guest-OS commands. See the [`exec` node property](../manual/nodes.md#exec) for details.
 ///
 
+/// note | Clabernetes runtime
+With `--runtime clabernetes`, containerlab reaches the node through kubernetes pod exec into the launcher pod and then runs the command in the nested node container. The kube identity must be allowed to create `pods/exec`. See [Containerlab runtime](../manual/clabernetes/runtime.md#exec) for details.
+///
+
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
 
 ## Usage

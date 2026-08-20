@@ -39,6 +39,26 @@ func TestApplyIsDeployAlias(t *testing.T) {
 	}
 }
 
+func TestPostDeployVersionDisplaySkipsLabRuntimes(t *testing.T) {
+	tests := []struct {
+		name    string
+		runtime string
+		want    bool
+	}{
+		{name: "default runtime", want: true},
+		{name: "docker runtime", runtime: "docker", want: true},
+		{name: "clabernetes runtime", runtime: "clabernetes", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldDisplayPostDeployVersion(tt.runtime); got != tt.want {
+				t.Fatalf("shouldDisplayPostDeployVersion(%q) = %t, want %t", tt.runtime, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPrintApplyResultUsesInfoAndItemRows(t *testing.T) {
 	output := captureApplyOutput(t, func() {
 		printApplyResult(&clabcore.ApplyResult{

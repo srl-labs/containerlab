@@ -7,6 +7,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 )
@@ -14,6 +15,7 @@ import (
 const (
 	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
 	defaultTimeout             = 120 * time.Second
+	defaultLabRuntimeTimeout   = 10 * time.Minute
 	defaultToolsServerPort     = 8080
 	defaultToolsAPIServerPort  = 8090
 	defaultToolsApiSSHBasePort = 2223
@@ -240,6 +242,7 @@ type GlobalOptions struct {
 	TopologyFile     string
 	VarsFiles        []string
 	TopologyName     string
+	Namespace        string
 	Timeout          time.Duration
 	Runtime          string
 	GracefulShutdown bool
@@ -264,6 +267,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 				Debug:            o.DebugCount > 0,
 				Timeout:          o.Timeout,
 				GracefulShutdown: o.GracefulShutdown,
+				LabNamespace:     o.Namespace,
 			},
 		),
 		clabcore.WithDebug(o.DebugCount > 0),
@@ -279,7 +283,8 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithTopologyName(o.TopologyName))
 	}
 
-	if o.TopologyFile == "" && o.TopologyName != "" {
+	if o.TopologyFile == "" && o.TopologyName != "" &&
+		!clablabruntime.IsLabRuntimeName(o.Runtime) {
 		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 

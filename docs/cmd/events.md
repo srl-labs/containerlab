@@ -71,10 +71,17 @@ Statistics are disabled by default. Enabling them augments the feed with periodi
 
 Containerlab streams events from the runtime selected via the global `--runtime` flag.
 
-> **Currently supported runtime:** `docker`  
-> Runtimes that do not implement the `events` API (or are not yet supported by Containerlab) will exit with an explanatory error.
+Currently supported runtimes:
+
+- `docker`
+- `clabernetes`
+
+With `--runtime clabernetes`, events are backed by kubernetes watches for Clabernetes `Topology` resources and labeled Pods. Interface statistics are sampled through the launcher pods, not through local host netlink.
+
+Runtimes that do not implement the `events` API, or are not yet supported by Containerlab, will exit with an explanatory error.
 
 ## See also
 
 - [`inspect interfaces`](inspect/interfaces.md) – produces a point-in-time view of the same interface details that `events` reports continuously.
+- [Clabernetes containerlab runtime](../manual/clabernetes/runtime.md) - explains how c9s events differ from Docker events.
 - `docker events` – the raw runtime feed that Containerlab builds upon.

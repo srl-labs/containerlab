@@ -4,6 +4,10 @@
 
 The `save` command perform configuration save for all the containers running in a lab.
 
+/// note | Clabernetes runtime
+With `--runtime clabernetes`, `save` runs the inner `containerlab save` command inside each launcher pod. `save --copy` streams the resulting files back to the local destination using the same copy layout as Docker labs. See [Containerlab runtime](../manual/clabernetes/runtime.md#save) for details.
+///
+
 The exact command that performs configuration save depends on a given kind. The below table explains the method used for each kind:
 
 | Kind               | Command                                     | Notes                                                   |

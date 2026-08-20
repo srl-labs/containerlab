@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -33,10 +34,33 @@ func validateFn(o *Options) error {
 	}
 
 	if c.Config.Name == "" || len(c.Nodes) == 0 {
+		if c.LabRuntime != nil && c.Config.Name != "" {
+			// Lab runtimes intentionally do not instantiate native node implementations.
+			if err := c.ValidateLabRuntimeTopology(context.Background()); err != nil {
+				return err
+			}
+
+			log.Info("Topology is valid for lab runtime", "name", c.Config.Name,
+				"runtime", o.Global.Runtime)
+
+			return nil
+		}
+
 		return fmt.Errorf(
 			"topology file %q defines no name or nodes. likely an empty file",
 			c.TopoPaths.TopologyFilenameBase(),
 		)
+	}
+
+	if c.LabRuntime != nil {
+		if err := c.ValidateLabRuntimeTopology(context.Background()); err != nil {
+			return err
+		}
+
+		log.Info("Topology is valid for lab runtime", "name", c.Config.Name,
+			"runtime", o.Global.Runtime)
+
+		return nil
 	}
 
 	if err := c.ResolveLinks(); err != nil {

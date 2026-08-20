@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -81,12 +83,18 @@ func Entrypoint() (*cobra.Command, error) {
 		"",
 		o.Global.TopologyName,
 		"lab/topology name")
+	c.PersistentFlags().StringVar(
+		&o.Global.Namespace,
+		"namespace",
+		o.Global.Namespace,
+		"Kubernetes namespace override for the clabernetes runtime",
+	)
 	c.PersistentFlags().DurationVarP(
 		&o.Global.Timeout,
 		"timeout",
 		"",
 		o.Global.Timeout,
-		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s",
+		"timeout for external API requests (e.g. container runtimes); lab runtimes default to 10m",
 	)
 	c.PersistentFlags().StringVarP(
 		&o.Global.Runtime,
@@ -130,6 +138,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if v != nil {
 		updateOptionsFromViper(cobraCmd, o)
 	}
+	applyLabRuntimeDefaultTimeout(cobraCmd, o)
 
 	// setting log level
 	switch {
@@ -153,12 +162,15 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 
 	log.SetTimeFormat(time.TimeOnly)
 
+	if err := checkLabRuntimeCommandSupport(cobraCmd, o.Global.Runtime); err != nil {
+		return err
+	}
+
 	err := clabutils.DropRootPrivs()
 	if err != nil {
 		return err
 	}
-	// Rootless operations only supported for Docker runtime
-	if o.Global.Runtime != "" && o.Global.Runtime != clabruntimedocker.RuntimeName {
+	if globalRuntimeRequiresRoot(o.Global.Runtime) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -166,6 +178,119 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	return getTopoFilePath(cobraCmd, o)
+}
+
+// applyLabRuntimeDefaultTimeout gives remote, controller-driven lab runtimes enough time to load
+// large node images. An explicit flag or environment value always wins. Local Docker and Podman
+// retain their existing two-minute default.
+func applyLabRuntimeDefaultTimeout(cobraCmd *cobra.Command, o *Options) {
+	if !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return
+	}
+
+	timeoutFlag := cobraCmd.Flag("timeout")
+	if timeoutFlag != nil && timeoutFlag.Changed {
+		return
+	}
+
+	if value, ok := os.LookupEnv(envPrefix + "_TIMEOUT"); ok && strings.TrimSpace(value) != "" {
+		return
+	}
+
+	o.Global.Timeout = defaultLabRuntimeTimeout
+}
+
+func globalRuntimeRequiresRoot(name string) bool {
+	return name != "" &&
+		name != clabruntimedocker.RuntimeName &&
+		!commandSkipsRoot(name)
+}
+
+func commandSkipsRoot(name string) bool {
+	return clablabruntime.IsLabRuntimeName(name)
+}
+
+// labRuntimeUnsupportedCommands operate on local containers or host networking
+// and have no lab runtime equivalent.
+var labRuntimeUnsupportedCommands = map[string]struct{}{
+	"graph": {},
+	"tools": {},
+}
+
+// labRuntimeUnsupportedFlags is the explicit CLI compatibility contract for controller-driven
+// runtimes. A flag listed here must fail before topology parsing or remote mutation instead of
+// being accepted and silently ignored by the adapter.
+var labRuntimeUnsupportedFlags = map[string][]string{ //nolint:gochecknoglobals
+	"deploy": {
+		"graph", "ipv4-subnet", "ipv6-subnet", "max-workers", "network", "node-filter",
+		"restore", "restore-all", "skip-labdir-acl", "skip-post-deploy", "export-template",
+	},
+	"destroy": {
+		"cleanup", "graceful", "keep-mgmt-net", "max-workers", "node-filter",
+	},
+	"redeploy": {
+		"cleanup", "graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
+		"max-workers", "network", "skip-labdir-acl", "skip-post-deploy", "export-template",
+	},
+}
+
+func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) error {
+	if !clablabruntime.IsLabRuntimeName(runtimeName) {
+		return nil
+	}
+
+	for cmd := cobraCmd; cmd != nil; cmd = cmd.Parent() {
+		if _, ok := labRuntimeUnsupportedCommands[cmd.Name()]; ok {
+			return fmt.Errorf("the %q command is not supported with lab runtime %q",
+				cmd.Name(), runtimeName)
+		}
+	}
+
+	if getCommandPath(cobraCmd) == "inspect.interfaces" {
+		return fmt.Errorf("the %q command is not supported with lab runtime %q",
+			"inspect interfaces", runtimeName)
+	}
+
+	var unsupported []string
+	for _, flagName := range labRuntimeUnsupportedFlags[getCommandPath(cobraCmd)] {
+		if labRuntimeFlagWasSet(cobraCmd, flagName) {
+			unsupported = append(unsupported, "--"+flagName)
+		}
+	}
+	if len(unsupported) != 0 {
+		sort.Strings(unsupported)
+
+		return fmt.Errorf(
+			"flag(s) %s are not supported with the %q command and lab runtime %q",
+			strings.Join(unsupported, ", "),
+			cobraCmd.Name(),
+			runtimeName,
+		)
+	}
+
+	return nil
+}
+
+func labRuntimeFlagWasSet(cobraCmd *cobra.Command, flagName string) bool {
+	flag := cobraCmd.Flag(flagName)
+	if flag == nil {
+		return false
+	}
+
+	if flag.Changed {
+		return true
+	}
+
+	if v == nil {
+		return false
+	}
+
+	commandKey := getCommandPath(cobraCmd) + "." + flagName
+	if v.IsSet(commandKey) {
+		return true
+	}
+
+	return v.IsSet(flagName)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
