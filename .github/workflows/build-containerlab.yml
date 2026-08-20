@@ -6,10 +6,16 @@ name: build-clab
       go_ver:
         required: true
         type: string
+      runner:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
 
 jobs:
   build-clab:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -30,11 +36,11 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build containerlab
-        run: make build-with-podman-debug BINARY=containerlab
+        run: GOOS=linux GOARCH=${{ inputs.arch }} make build-with-podman-debug BINARY=containerlab
       # store clab binary as artifact
       - name: Upload containerlab binary
         uses: actions/upload-artifact@v7
         with:
-          name: containerlab
+          name: containerlab${{ inputs.arch == 'arm64' && '-arm64' || '' }}
           path: containerlab
           compression-level: 0
