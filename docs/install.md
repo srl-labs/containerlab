@@ -190,11 +190,48 @@ Containerlab is also set up for sudo-less operation, and the current user (even 
 
 ## Nix
 
-The flake provides packages for `x86_64-linux` and `aarch64-linux`:
+The flake provides packages for `x86_64-linux` and `aarch64-linux`.
+
+### Build and run
+
+From a local containerlab checkout, build the package and run the resulting binary:
+
+```bash
+nix build .#containerlab
+./result/bin/containerlab version
+```
+
+The default package is also available without the attribute name:
+
+```bash
+nix build
+```
+
+To run containerlab without creating a profile installation, use `nix run`:
+
+```bash
+# From a local checkout
+nix run .#containerlab -- version
+
+# Directly from GitHub
+nix run github:srl-labs/containerlab -- version
+```
+
+/// details | Additional Nix instructions
+
+### Install in a Nix profile
+
+Install the latest version from the repository's default branch:
 
 ```bash
 nix profile install github:srl-labs/containerlab
 containerlab version
+```
+
+To install a specific release, reference its tag:
+
+```bash
+nix profile install github:srl-labs/containerlab/v0.78.2
 ```
 
 The package installed in a Nix profile is not SUID, because files in the Nix store cannot safely provide root-owned SUID executables. Run privileged commands with `sudo`:
@@ -203,13 +240,28 @@ The package installed in a Nix profile is not SUID, because files in the Nix sto
 sudo containerlab deploy -t topology.clab.yml
 ```
 
+The profile package provides `containerlab`, but not the `clab` compatibility symlink. The NixOS module below provides both names.
+
+### Development shell
+
+The flake's development shell provides Go, `gopls`, and `golangci-lint`:
+
+```bash
+nix develop github:srl-labs/containerlab
+```
+
+Docker or Podman is not included in the shell. Containerlab's integration tests still require the corresponding runtime and root privileges.
+
 For NixOS, import the module to enable sudo-less operation through NixOS security wrappers:
 
 ```nix
 {
-  inputs.containerlab.url = "github:srl-labs/containerlab";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    containerlab.url = "github:srl-labs/containerlab";
+  };
 
-  outputs = { self, nixpkgs, containerlab, ... }: {
+  outputs = { nixpkgs, containerlab, ... }: {
     nixosConfigurations.example = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
@@ -225,6 +277,7 @@ For NixOS, import the module to enable sudo-less operation through NixOS securit
 ```
 
 The module installs both `containerlab` and `clab`, creates the `clab_admins` group, and provides root-owned SUID wrappers for privileged commands. Users must be members of `clab_admins` to use those commands.
+///
 
 ## Windows
 
