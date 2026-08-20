@@ -21,19 +21,8 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ inputs.go_ver }}
-
-      # - name: Cache go modules
-      #   uses: actions/cache@v6
-      #   with:
-      #     # In order:
-      #     # * Module download cache
-      #     # * Build cache (Linux)
-      #     path: |
-      #       ~/go/pkg/mod
-      #       ~/.cache/go-build
-      #     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-go-
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Build containerlab
         run: GOOS=linux GOARCH=${{ inputs.arch }} make build-with-podman-debug BINARY=containerlab
