@@ -90,7 +90,7 @@ jobs:
             flake.lock
 
   update:
-    needs: refresh
+    needs: nix-refresh
     if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
