@@ -148,7 +148,9 @@ func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 		}
 	}
 
-	c.flush()
+	if err := c.flush(); err != nil {
+		return fmt.Errorf("failed to apply nftables rules: %w", err)
+	}
 	return nil
 }
 
@@ -232,7 +234,9 @@ func (c *NftablesClient) InstallForwardingRulesForAF(
 	// mark and note for installation
 	c.insertRule(r.rule)
 	// flush changes out to nftables
-	c.flush()
+	if err = c.flush(); err != nil {
+		return fmt.Errorf("failed to apply nftables rules: %w", err)
+	}
 
 	return nil
 }

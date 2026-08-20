@@ -19,3 +19,22 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *CLab) skipMgmtNetwork() bool {
+	if c.Config.Mgmt == nil || !c.Config.Mgmt.SkipWhenUnused {
+		return false
+	}
+
+	topo := c.Config.Topology
+	if topo == nil || len(topo.Nodes) == 0 {
+		return false
+	}
+
+	for name := range topo.Nodes {
+		if topo.GetNodeNetworkMode(name) != "none" {
+			return false
+		}
+	}
+
+	return true
+}

@@ -1,3 +1,8 @@
+---
+tags:
+  - Configuration
+---
+
 # Lab Directory and Configuration Artifacts
 
 When containerlab deploys a lab it creates a Lab Directory in the same directory where your topology (`clab.yml`) file is. This directory is used to keep all the necessary files that are needed to run/configure the nodes. We call these files _configuration artifacts_ and/or lab state files.

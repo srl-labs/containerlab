@@ -3,9 +3,12 @@ package sros
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -15,6 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+func TestSrosLinkApplyMode(t *testing.T) {
+	if got := (&sros{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
+	}
+}
 
 func TestComponentSorting(t *testing.T) {
 	tests := []struct {
@@ -73,6 +82,51 @@ func TestComponentSorting(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCheckPortWithRetry(t *testing.T) {
+	seed, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := seed.Addr().(*net.TCPAddr)
+	port := addr.Port
+	require.NoError(t, seed.Close())
+
+	done := make(chan struct{})
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(done)
+
+		time.Sleep(50 * time.Millisecond)
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer ln.Close()
+
+		conn, err := ln.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		conn.Close()
+	}()
+
+	ok, err := CheckPortWithRetry("127.0.0.1", port, time.Second, 10, 25*time.Millisecond)
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	select {
+	case <-done:
+		select {
+		case err := <-errCh:
+			require.NoError(t, err)
+		default:
+		}
+	case <-time.After(time.Second):
+		t.Fatal("listener did not accept a connection")
 	}
 }
 
@@ -172,6 +226,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			StartupConfig: cfgPath,
 		}
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(false) // full config, not partial
 		require.NoError(t, err)
@@ -201,6 +256,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LabDir:      t.TempDir(),
 		}
 		n.WithRuntime(mockRt)
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(true) // no full config; use default + partial
 		require.NoError(t, err)
@@ -208,4 +264,309 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		// Default config should include typical SR OS snippets (banner, system, etc.)
 		assert.Contains(t, cfg, "Welcome to Nokia SR OS")
 	})
+}
+
+func Test_sros_generateComponentConfig(t *testing.T) {
+	integratedDefaults := []struct {
+		name      string
+		nodeType  string
+		cardType  string
+		mdas      clabtypes.MDAS
+		powerType string
+	}{
+		{
+			name:     "integrated_sr1_default",
+			nodeType: "sr-1",
+			cardType: "iom-1",
+			mdas: clabtypes.MDAS{
+				{Slot: 1, Type: "me6-100gb-qsfp28"},
+				{Slot: 2, Type: "me12-100gb-qsfp28"},
+			},
+		},
+		{
+			name:      "integrated_sr1s_default",
+			nodeType:  "sr-1s",
+			cardType:  "xcm-1s",
+			mdas:      clabtypes.MDAS{{Slot: 1, Type: "s36-100gb-qsfp28"}},
+			powerType: "ps-a4-shelf-dc",
+		},
+		{
+			name:     "integrated_ixr_r6_default",
+			nodeType: "ixr-r6",
+			cardType: "iom-ixr-r6",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"}},
+		},
+		{
+			name:     "integrated_ixr_e2_default",
+			nodeType: "ixr-e2",
+			cardType: "imm2-qsfpdd+2-qsfp28+24-sfp28",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"}},
+		},
+		{
+			name:     "integrated_ixr_e2c_default",
+			nodeType: "ixr-e2c",
+			cardType: "imm12-sfp28+2-qsfp28",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m12-sfp28+2-qsfp28"}},
+		},
+		{
+			name:     "integrated_ixr_e2n_default",
+			nodeType: "ixr-e2n",
+			cardType: "imm4-sfp+4-sfp+",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+"}},
+		},
+		{
+			name:     "integrated_ixr_e2n_s_default",
+			nodeType: "ixr-e2n-s",
+			cardType: "imm4-sfp+4-sfp+-s",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+-s"}},
+		},
+		{
+			name:     "integrated_ixr_e3c_default",
+			nodeType: "ixr-e3c",
+			cardType: "imm4-qsfp28+16-sfp28+8-sfp56",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"}},
+		},
+		{
+			name:     "integrated_ixr_e3x_default",
+			nodeType: "ixr-e3x",
+			cardType: "imm16-sfp112+15-sfp56+6-qsfpdd",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"}},
+		},
+		{
+			name:     "integrated_ixr_ec_default",
+			nodeType: "ixr-ec",
+			cardType: "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
+			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"}},
+		},
+	}
+	for _, tc := range integratedDefaults {
+		t.Run(tc.name, func(t *testing.T) {
+			n := newSrosComponentConfigTestNode(tc.nodeType, nil, nil)
+
+			cfg := n.generateComponentConfig()
+
+			assert.Contains(
+				t,
+				cfg,
+				fmt.Sprintf("/configure card 1 card-type %s admin-state enable", tc.cardType),
+			)
+			for _, mda := range tc.mdas {
+				assert.Contains(t, cfg, fmt.Sprintf(
+					"/configure card 1 mda %d mda-type %s admin-state enable",
+					mda.Slot,
+					mda.Type,
+				))
+			}
+			if tc.powerType == "" {
+				assert.NotContains(t, cfg, "power-shelf")
+				assert.NotContains(t, cfg, "power-module")
+			} else {
+				assert.Contains(
+					t,
+					cfg,
+					fmt.Sprintf("power-shelf 1 power-shelf-type %s", tc.powerType),
+				)
+				assert.Equal(t, 4, strings.Count(cfg, "power-module-type ps-a-dc-6000"))
+			}
+		})
+	}
+
+	t.Run("integrated_env_overrides_preserve_default_mda_slots", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{
+				envNokiaSrosCard:       "env-card",
+				envNokiaSrosMDA + "_1": "env-mda",
+			},
+			nil,
+		)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type env-card admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type env-mda admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
+		)
+	})
+
+	t.Run("integrated_env_override_adds_mda_slot", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"ixr-r6",
+			map[string]string{
+				envNokiaSrosMDA + "_3": "m20-1g-csfp",
+			},
+			nil,
+		)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 1 mda-type m6-10g-sfp++1-100g-qsfp28 admin-state enable",
+		)
+		assert.Contains(t, cfg, "/configure card 1 mda 3 mda-type m20-1g-csfp admin-state enable")
+	})
+
+	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{envDisableComponentConfigGen: "true"},
+			nil,
+		)
+
+		assert.Empty(t, n.generateComponentConfig())
+	})
+
+	t.Run("classic_config_returns_empty", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{envSrosConfigMode: string(ConfigModeClassic)},
+			nil,
+		)
+
+		assert.Empty(t, n.generateComponentConfig())
+	})
+
+	t.Run("distributed_components_still_generate", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
+		n.rootCtrName = "clab-test-sr2s-a"
+		n.rootComponents = []*clabtypes.Component{
+			{Slot: slotAName, Type: "cpm-2s", SFM: "sfm-2s"},
+			{
+				Slot: "1",
+				Type: "xcm-2s",
+				SFM:  "sfm-2s",
+				XIOM: clabtypes.XIOMS{
+					{
+						Slot: 1,
+						Type: "iom-s-3.0t",
+						MDA:  clabtypes.MDAS{{Slot: 1, Type: "ms18-100gb-qsfp28"}},
+					},
+				},
+			},
+		}
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type xcm-2s admin-state enable")
+		assert.Contains(t, cfg, "/configure sfm 1 sfm-type sfm-2s admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable",
+		)
+		assert.Contains(t, cfg, "power-shelf 1 power-shelf-type ps-a4-shelf-dc")
+	})
+}
+
+func Test_sros_integratedComponentOverrides(t *testing.T) {
+	t.Run("integrated_component_override_sets_env", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-r6", []*clabtypes.Component{
+			{
+				Slot: slotBName,
+				Type: "cpiom-ixr-r6",
+				MDA:  clabtypes.MDAS{{Slot: 3, Type: "m20-1g-csfp"}},
+			},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.NoError(t, err)
+		assert.True(t, n.isStandaloneNode())
+		assert.Equal(t, slotBName, n.Cfg.Env[envNokiaSrosSlot])
+		assert.Equal(t, "cpiom-ixr-r6", n.Cfg.Env[envNokiaSrosCard])
+		assert.Equal(t, "m20-1g-csfp", n.Cfg.Env[envNokiaSrosMDA+"_3"])
+	})
+
+	t.Run("integrated_rejects_multiple_components", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-r6", []*clabtypes.Component{
+			{Slot: slotAName, Type: "cpiom-ixr-r6"},
+			{Slot: slotBName, Type: "cpiom-ixr-r6"},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "at most one component override")
+	})
+
+	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
+			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not support component card-type override")
+	})
+
+	t.Run("integrated_rejects_invalid_slot", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
+			{Slot: slotBName, Type: "cpm-ixr-e2"},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "expected no slot, or slot A")
+	})
+
+	t.Run("distributed_node_still_uses_components", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-2s", []*clabtypes.Component{
+			{Slot: slotAName, Type: "cpm-2s"},
+			{Slot: "1", Type: "xcm-2s"},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.NoError(t, err)
+		assert.False(t, n.isStandaloneNode())
+		assert.Len(t, n.componentNodes, 2)
+	})
+}
+
+func newSrosComponentConfigTestNode(
+	nodeType string,
+	env map[string]string,
+	components []*clabtypes.Component,
+) *sros {
+	if env == nil {
+		env = map[string]string{}
+	}
+	if _, ok := env[envSrosConfigMode]; !ok {
+		env[envSrosConfigMode] = string(ConfigModeModelDriven)
+	}
+
+	n := &sros{}
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
+	n.Cfg = &clabtypes.NodeConfig{
+		ShortName:  "n1",
+		LongName:   "clab-test-n1",
+		NodeType:   nodeType,
+		Env:        env,
+		Components: components,
+	}
+	return n
+}
+
+func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sros {
+	issueCert := false
+	n := &sros{}
+	n.Cfg = &clabtypes.NodeConfig{
+		ShortName:   "n1",
+		LongName:    "clab-test-n1",
+		Fqdn:        "n1.clab-test.io",
+		NodeType:    nodeType,
+		Env:         map[string]string{},
+		Sysctls:     map[string]string{},
+		Components:  components,
+		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
+	}
+	return n
 }

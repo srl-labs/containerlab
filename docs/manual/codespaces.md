@@ -177,7 +177,7 @@ Another important part of the `devcontainer.json` file is the `hostRequirements`
 Using the machine types displayed above you can tune the `hostRequirements` section by choosing the machine type that fits the requirements of your lab.
 
 /// note
-Codespaces VMs support nested virtualization, so you can run [VM-based kinds](../manual/vrnetlab.md) :partying_face:
+Codespaces VMs **do not support** nested virtualization, so you **can't** run [VM-based kinds](../manual/vrnetlab.md)
 ///
 
 ### Testing the environment

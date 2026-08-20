@@ -11,6 +11,45 @@ const (
 	importEnvsKey = "__IMPORT_ENVS"
 )
 
+// LinkApplyMode describes how apply should handle dataplane link changes for a
+// node that already exists in the running lab.
+type LinkApplyMode string
+
+const (
+	// LinkApplyModeRecreate deletes and creates the node so generated runtime
+	// metadata, container env, binds, and startup files are rebuilt.
+	LinkApplyModeRecreate LinkApplyMode = "recreate"
+	// LinkApplyModeRestart adds/removes links first and then restarts the same
+	// container object.
+	LinkApplyModeRestart LinkApplyMode = "restart"
+	// LinkApplyModeLive applies link changes directly without node lifecycle
+	// actions.
+	LinkApplyModeLive LinkApplyMode = "live"
+)
+
+// IsValid reports whether m is a supported explicit link apply mode. Empty is
+// not a valid explicit mode; it means no override was configured.
+func (m LinkApplyMode) IsValid() bool {
+	switch m {
+	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+		return true
+	default:
+		return false
+	}
+}
+
+// NodeCredentials holds login material for SSH/NETCONF/GNMI/etc. (topology
+// defaults/kinds/groups/nodes).
+type NodeCredentials struct {
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password string `json:"-" yaml:"password,omitempty"`
+	// IdentityFile is the path to the SSH private key used to authenticate against the node.
+	// When set it is rendered as an IdentityFile directive in the generated ssh_config. Relative
+	// paths are resolved against the topology directory and a leading ~ is expanded; the value is
+	// double-quoted on render so spaces are handled.
+	IdentityFile string `json:"identity-file,omitempty" yaml:"identity-file,omitempty"`
+}
+
 // NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
 	Kind                  string            `yaml:"kind,omitempty"`
@@ -27,8 +66,10 @@ type NodeDefinition struct {
 	ImagePullPolicy       string            `yaml:"image-pull-policy,omitempty"`
 	License               string            `yaml:"license,omitempty"`
 	Position              string            `yaml:"position,omitempty"`
-	Entrypoint            string            `yaml:"entrypoint,omitempty"`
-	Cmd                   string            `yaml:"cmd,omitempty"`
+	// Hostname overrides the container hostname. When unset, the topology node name is used.
+	Hostname   string `yaml:"hostname,omitempty"`
+	Entrypoint string `yaml:"entrypoint,omitempty"`
+	Cmd        string `yaml:"cmd,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
@@ -39,6 +80,18 @@ type NodeDefinition struct {
 	Devices []string `yaml:"devices,omitempty"`
 	// List of capabilities to add for the container
 	CapAdd []string `yaml:"cap-add,omitempty"`
+	// Run the container in privileged mode.
+	Privileged *bool `yaml:"privileged,omitempty"`
+	// Cgroup namespace mode for the container.
+	CgroupnsMode string `yaml:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `yaml:"cgroup-parent,omitempty"`
+	// PID namespace mode for the container.
+	PidMode string `yaml:"pid-mode,omitempty"`
+	// Tmpfs mounts to add to the container, keyed by destination path.
+	Tmpfs map[string]string `yaml:"tmpfs,omitempty"`
+	// Security options to apply to the container runtime.
+	SecurityOpts []string `yaml:"security-opts,omitempty"`
 	// Set the shared memory size allocated to the container
 	ShmSize string `yaml:"shm-size,omitempty"`
 	// list of port bindings
@@ -78,9 +131,14 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
+	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
+	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Network aliases
 	Aliases    []string     `yaml:"aliases,omitempty"`
 	Components []*Component `yaml:"components,omitempty"`
+	// how `containerlab apply` handles dataplane link changes for this node:
+	// live, restart or recreate. Overrides the kind's own declaration.
+	LinkApplyMode LinkApplyMode `yaml:"link-apply-mode,omitempty"`
 }
 
 // Interface compliance.
@@ -94,11 +152,10 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 
 	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
 	// but still supported for backward compatibility.
-	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f \
-	// /types/node_definition.go#L96
-	// for how it was used.
 	type NodeDefinitionWithDeprecatedFields struct {
 		NodeDefinitionAlias `yaml:",inline"`
+		LegacyUsername      string `yaml:"username,omitempty"`
+		LegacyPassword      string `yaml:"password,omitempty"`
 	}
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
@@ -109,6 +166,13 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	*n = NodeDefinition(nd.NodeDefinitionAlias)
+
+	if nd.LegacyUsername != "" && n.Credentials.Username == "" {
+		n.Credentials.Username = nd.LegacyUsername
+	}
+	if nd.LegacyPassword != "" && n.Credentials.Password == "" {
+		n.Credentials.Password = nd.LegacyPassword
+	}
 
 	return nil
 }
@@ -134,7 +198,10 @@ func (n *NodeDefinition) ImportEnvs() {
 	}
 
 	for _, e := range os.Environ() {
-		kv := strings.Split(e, "=")
+		kv := strings.SplitN(e, "=", 2)
+		if len(kv) < 2 {
+			continue
+		}
 		if _, exists := n.Env[kv[0]]; exists {
 			continue
 		}

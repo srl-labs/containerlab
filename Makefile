@@ -1,14 +1,48 @@
 BIN_DIR = $(CURDIR)/bin
 BINARY = $(BIN_DIR)/containerlab
-MKDOCS_VER = 9.6.1
-# insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
-# make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
-MKDOCS_INS_VER = 9.6.1-insiders-4.53.15-hellt
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
+PODMAN_GO_TAGS := podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
+
+# uv version downloaded by `install-uv` when uv is not found on the system.
+# Keep in sync with UV_VER in .github/workflows/*.
+UV_VERSION ?= 0.11.23
+
+# Local directory used for downloaded tooling (uv). Already gitignored.
+TOOLS_BIN_DIR ?= $(BIN_DIR)
+
+# OS / arch detection used to download the matching uv release.
+OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH_QUERY := $(shell uname -m)
+ifeq ($(ARCH_QUERY),x86_64)
+ARCH := x86_64
+else ifeq ($(ARCH_QUERY),amd64)
+ARCH := x86_64
+else ifeq ($(ARCH_QUERY),aarch64)
+ARCH := aarch64
+else ifeq ($(ARCH_QUERY),arm64)
+ARCH := aarch64
+else
+ARCH := $(ARCH_QUERY)
+endif
+
+# uv ships its release binaries named after Rust target triples.
+ifeq ($(OS),darwin)
+UV_TARGET := $(ARCH)-apple-darwin
+else
+UV_TARGET := $(ARCH)-unknown-linux-gnu
+endif
+UV_URL := https://github.com/astral-sh/uv/releases/download/$(UV_VERSION)/uv-$(UV_TARGET).tar.gz
+
+# Prefer a uv already on PATH, otherwise fall back to the locally downloaded
+# copy that `install-uv` places in TOOLS_BIN_DIR.
+UV := $(shell command -v uv 2>/dev/null)
+ifeq ($(UV),)
+UV := $(TOOLS_BIN_DIR)/uv
+endif
 
 include .mk/lint.mk
 
@@ -40,7 +74,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
@@ -53,14 +87,14 @@ build-dlv-debug:
 
 build-with-podman:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "$(PODMAN_GO_TAGS)" main.go
 	chmod a+x $(BINARY)
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
 build-with-podman-debug:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover -trimpath -tags "$(PODMAN_GO_TAGS)" main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
@@ -102,39 +136,43 @@ lint:
 
 
 
+# Download uv for the detected OS/arch into TOOLS_BIN_DIR.
+.PHONY: install-uv
+install-uv:
+	@mkdir -p $(TOOLS_BIN_DIR)
+	@echo "--> downloading uv $(UV_VERSION) ($(UV_TARGET)) to $(TOOLS_BIN_DIR)"
+	@curl --location --silent --fail --show-error --output - $(UV_URL) \
+		| tar -xz --strip-components=1 -C $(TOOLS_BIN_DIR) uv-$(UV_TARGET)/uv uv-$(UV_TARGET)/uvx
+	@chmod +x $(TOOLS_BIN_DIR)/uv $(TOOLS_BIN_DIR)/uvx
+
+# Ensure uv is available before running any docs target; download it if missing.
+.PHONY: ensure-uv
+ensure-uv:
+	@command -v uv >/dev/null 2>&1 || test -x $(TOOLS_BIN_DIR)/uv || $(MAKE) install-uv
+
 .PHONY: docs
-docs:
-	docker run -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+docs: ensure-uv
+	$(UV) run --group docs zensical build --clean --strict
 
 .PHONY: site
-site:
-	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+site: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8000
 
-# serve the site locally using mkdocs-material insiders or public container
-# to serve using a public container image run as `make serve-docs-full PUBLIC=yes`
-# this will remove the typeset and glightbox plugins from the mkdocs.yml file since they are not available in the public image
-# when PUBLIC=yes is not set, the mkdocs-material insiders image is used with all the dependencies included.
+# serve the site locally using zensical
 .PHONY: serve-docs-full
-serve-docs-full:
-ifdef PUBLIC
-	@{ 	\
-		sed -i 's/^  - typeset/#- typeset/g' mkdocs.yml; \
-	}
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs --entrypoint "" squidfunk/mkdocs-material:$(MKDOCS_VER) ash -c "pip install mkdocs-macros-plugin==0.7.0 mkdocs-glightbox==0.4.0 && mkdocs serve -a 0.0.0.0:8000"
-else
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
-endif
+serve-docs-full: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8001
 
-# serve the site locally using mkdocs-material insiders container and dirty-reload
-# in this mode navigation might not update properly, but the content will be updated
-# if nav is not updated, re-run the target.
+
+# serve the site locally using zensical
+# zensical performs incremental rebuilds, so content and navigation update automatically.
 .PHONY: serve-docs
-serve-docs:
-	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) serve -a 0.0.0.0:8000 --dirtyreload
+serve-docs: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8001
 
 .PHONY: htmltest
-htmltest:
-	docker run --rm -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) build --clean --strict
+htmltest: ensure-uv
+	$(UV) run --group docs zensical build --clean --strict
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 

@@ -12,9 +12,12 @@ ${runtime}      docker
 Deploy ${lab-name} lab with generate command
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/srl-labs/network-multitool --nodes 2,1,1 --deploy
+    ...    ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/srl-labs/network-multitool --nodes 2,1,1 --deploy --export-rendered ${lab-name}.rendered.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    OperatingSystem.File Should Exist    ${lab-name}.rendered.clab.yml
+    ${rendered} =    OperatingSystem.Get File    ${lab-name}.rendered.clab.yml
+    Should Contain    ${rendered}    ${lab-name}
 
 Verify nodes
     Skip If    '${runtime}' != 'docker'
@@ -53,3 +56,4 @@ Cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     OperatingSystem.Remove File    ${lab-name}.clab.yml
+    Run Keyword And Ignore Error    OperatingSystem.Remove File    ${lab-name}.rendered.clab.yml

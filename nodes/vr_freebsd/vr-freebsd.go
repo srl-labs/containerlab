@@ -65,8 +65,8 @@ func (n *vrFreeBSD) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
-		"USERNAME":           defaultCredentials.GetUsername(),
-		"PASSWORD":           defaultCredentials.GetPassword(),
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
@@ -102,10 +102,10 @@ func (n *vrFreeBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (n *vrFreeBSD) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {

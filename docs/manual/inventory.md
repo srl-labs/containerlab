@@ -215,10 +215,10 @@ node2:
 
 ///
 
-The `platform` field can be influenced to support Napalm/Netmiko or Scrapli compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapi` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
-[scrapli core](https://carlmontanari.github.io/scrapli/reference/driver/core/)  
-[scrapli community](https://github.com/scrapli/scrapli_community)  
-[napalm drivers](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix)
+The `platform` field can be influenced to support Napalm/Netmiko or Scrapli compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapli` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
+
+* [scrapli community](https://github.com/scrapli/scrapli_community)  
+* [napalm drivers](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix)
 
 If there is no matching scrapli platform name, the node's `kind` is used instead.
 

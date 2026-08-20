@@ -61,7 +61,7 @@ func graphCmd(o *Options) (*cobra.Command, error) {
 		&o.Graph.MermaidDirection,
 		"mermaid-direction", "",
 		o.Graph.MermaidDirection,
-		"specify direction of mermaid dirgram",
+		"specify direction of mermaid diagram",
 	)
 	c.Flags().StringSliceVar(
 		&o.Graph.DrawIOArgs,
@@ -166,6 +166,16 @@ func graphFn(ctx context.Context, o *Options) error {
 
 	for _, l := range c.Links {
 		eps := l.GetEndpoints()
+		// Skip links that are not point-to-point (e.g. dummy, host, macvlan,
+		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
+		// links would panic, so they are not rendered as edges.
+		if len(eps) != 2 {
+			log.Debugf(
+				"skipping non point-to-point link with %d endpoint(s) in graph topology",
+				len(eps),
+			)
+			continue
+		}
 
 		ifaceDisplayNameA := eps[0].GetIfaceDisplayName()
 		ifaceDisplayNameB := eps[1].GetIfaceDisplayName()

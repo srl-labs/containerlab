@@ -3,6 +3,7 @@ package links
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -102,7 +103,10 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 	return link, nil
 }
 
-var _mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
+var (
+	_mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
+	_mgmtBrLinkOnce           sync.Once
+)
 
 // mgmtBridgeLinkNode is a special node that represents the mgmt bridge node
 // that is used when mgmt-net link is defined in the topology.
@@ -142,20 +146,20 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(
 }
 
 func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
-	if _mgmtBrLinkMgmtBrInstance == nil {
+	_mgmtBrLinkOnce.Do(func() {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("failed to get current network namespace: %v", err)
+			return
 		}
-		nspath := currns.Path()
 		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: "mgmt-net",
 				endpoints: []Endpoint{},
-				nspath:    nspath,
+				nspath:    currns.Path(),
 			},
 		}
-	}
+	})
 	return _mgmtBrLinkMgmtBrInstance
 }
 

@@ -18,7 +18,7 @@ Suite Teardown      Run Keyword    Cleanup API Server Containers
 ${runtime}              docker
 ${api_server_name}      clab-api-server
 ${api_server_image}     ghcr.io/srl-labs/clab-api-server/clab-api-server:latest
-${default_port}         8080
+${default_port}         8090
 ${custom_port}          8081
 
 *** Test Cases ***
@@ -29,7 +29,7 @@ Start API Server With Default Settings
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    API server container ${api_server_name} started successfully
-    Should Contain    ${output}    API Server available at: http://localhost:8080
+    Should Contain    ${output}    API Server TLS enabled at: https://localhost:${default_port}
 
 Test API Server Health Endpoint
     [Documentation]    Test the API server health endpoint
@@ -37,7 +37,7 @@ Test API Server Health Endpoint
     Sleep    15s
 
     ${rc}    ${output}=    Run And Return Rc And Output
-    ...    curl -s http://localhost:8080/health -H 'accept: application/json'
+    ...    curl -sk https://localhost:${default_port}/health -H 'accept: application/json'
     Log    Health check output:
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
@@ -63,7 +63,7 @@ Check API Server Status
     ${is_running}=    Evaluate    'running' in '''${output}''' or 'exited' in '''${output}'''
     Should Be True    ${is_running}    Status table should show either running or exited state
     Should Contain    ${output}    localhost
-    Should Contain    ${output}    8080
+    Should Contain    ${output}    ${default_port}
 
 Check API Server Status JSON Format
     [Documentation]    Test checking API server status in JSON format
@@ -74,7 +74,7 @@ Check API Server Status JSON Format
     Should Contain    ${output}    "${api_server_name}"
     Should Contain    ${output}    "running"
     Should Contain    ${output}    "host": "localhost"
-    Should Contain    ${output}    "port": 8080
+    Should Contain    ${output}    "port": ${default_port}
 
 Stop API Server
     [Documentation]    Test stopping API server container
@@ -97,7 +97,7 @@ Start API Server With Custom Port
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    API server container ${api_server_name} started successfully
-    Should Contain    ${output}    API Server available at: http://localhost:8081
+    Should Contain    ${output}    API Server TLS enabled at: https://localhost:8081
 
 Test API Server Health Endpoint Custom Port
     [Documentation]    Test the API server health endpoint on custom port
@@ -105,7 +105,7 @@ Test API Server Health Endpoint Custom Port
     Sleep    15s
 
     ${rc}    ${output}=    Run And Return Rc And Output
-    ...    curl -s http://localhost:8081/health -H 'accept: application/json'
+    ...    curl -sk https://localhost:8081/health -H 'accept: application/json'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    "status":"healthy"

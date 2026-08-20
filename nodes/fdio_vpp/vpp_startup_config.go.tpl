@@ -6,10 +6,10 @@ unix {
   log /var/log/vpp/vpp.log
   full-coredump
   cli-listen /run/vpp/cli.sock
-  cli-prompt {{ .ShortName }}#
+  cli-prompt {{ .ShortName }}>
   cli-no-pager
   poll-sleep-usec 100
-  exec /etc/vpp/bootstrap.vpp
+  exec /config/vpp/bootstrap.vpp
 }
 
 api-trace {
@@ -39,12 +39,4 @@ plugins {
   plugin linux_cp_plugin.so { enable }
   plugin linux_nl_plugin.so { enable }
   plugin sflow_plugin.so { enable }
-}
-
-linux-cp {
-  default netns dataplane
-  lcp-sync
-  lcp-auto-subint
-  del-static-on-link-down
-  del-dynamic-on-link-down
 }

@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -37,9 +39,10 @@ const (
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
-	clabDirVar  = "__clabDir__"
-	nodeDirVar  = "__clabNodeDir__"
-	nodeNameVar = "__clabNodeName__"
+	clabDirVar     = "__clabDir__"
+	clabLabNameVar = "__clabLabName__"
+	nodeDirVar     = "__clabNodeDir__"
+	nodeNameVar    = "__clabNodeName__"
 
 	// clab name specific variables.
 	gitBranchVar = "__gitBranch__"
@@ -165,7 +168,7 @@ func (c *CLab) NewNode(
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
-		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
 	}
 
 	// adding default labels to the node config
@@ -193,30 +196,90 @@ func (c *CLab) NewNode(
 	return nil
 }
 
+// AddPlaceholderNode adds a node whose underlying resource already exists outside this lab.
+func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
+	if nodeCfg == nil || nodeCfg.ShortName == "" || nodeCfg.Kind == "" {
+		return errors.New("placeholder node requires a name and kind")
+	}
+	if _, exists := c.Nodes[nodeCfg.ShortName]; exists {
+		return fmt.Errorf("node %q already exists", nodeCfg.ShortName)
+	}
+	rt, exists := c.Runtimes[nodeCfg.Runtime]
+	if !exists {
+		return fmt.Errorf("runtime %q not found for node %q", nodeCfg.Runtime, nodeCfg.ShortName)
+	}
+	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
+	if err != nil {
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
+	}
+	if err := n.Init(
+		nodeCfg,
+		clabnodes.WithRuntime(rt),
+		clabnodes.WithMgmtNet(c.Config.Mgmt),
+	); err != nil {
+		return fmt.Errorf("initializing node %q: %w", nodeCfg.ShortName, err)
+	}
+
+	if c.Nodes == nil {
+		c.Nodes = make(map[string]clabnodes.Node)
+	}
+	c.Nodes[nodeCfg.ShortName] = n
+
+	return nil
+}
+
+func (c *CLab) privilegedByDefault(kind string) bool {
+	if c.Reg != nil {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			return regEntry.PrivilegedByDefault()
+		}
+	}
+
+	return true
+}
+
+func (c *CLab) nodeLongName(nodeName string) string {
+	switch *c.Config.Prefix {
+	case "":
+		return nodeName
+	case "__lab-name":
+		return fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
+	default:
+		return fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	}
+}
+
+func (c *CLab) resolvePidMode(pidMode string) string {
+	target, isContainerMode := strings.CutPrefix(pidMode, "container:")
+	if !isContainerMode || target == "" {
+		return pidMode
+	}
+	if _, isTopologyNode := c.Config.Topology.Nodes[target]; !isTopologyNode {
+		return pidMode
+	}
+
+	return "container:" + c.nodeLongName(target)
+}
+
 func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeName string,
 	nodeDef *clabtypes.NodeDefinition,
 	idx int,
 ) (*clabtypes.NodeConfig, error) {
-	// default longName follows $prefix-$lab-$nodeName pattern
-	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+	privileged := c.Config.Topology.GetNodePrivileged(nodeName, c.privilegedByDefault(kind))
 
-	switch *c.Config.Prefix {
-	// when prefix is an empty string longName will match shortName/nodeName
-	case "":
-		longName = nodeName
-	case "__lab-name":
-		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
-	}
+	longName := c.nodeLongName(nodeName)
 
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
+		Hostname:        c.Config.Topology.GetNodeHostname(nodeName),
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
-		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		Kind:            kind,
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
@@ -231,6 +294,12 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
+		Privileged:      privileged,
+		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		CgroupParent:    c.Config.Topology.GetNodeCgroupParent(nodeName),
+		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
+		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
+		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
@@ -238,12 +307,49 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		RestartPolicy:   c.Config.Topology.GetRestartPolicy(nodeName),
+		LinkApplyMode:   c.Config.Topology.GetNodeLinkApplyMode(nodeName),
 		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
 		Components:      c.Config.Topology.GetComponents(nodeName),
+	}
+
+	if nodeCfg.LinkApplyMode != "" && !nodeCfg.LinkApplyMode.IsValid() {
+		return nil, fmt.Errorf(
+			"node %q has invalid link-apply-mode %q, valid values: %s, %s, %s",
+			nodeName,
+			nodeCfg.LinkApplyMode,
+			clabnodes.LinkApplyModeLive,
+			clabnodes.LinkApplyModeRestart,
+			clabnodes.LinkApplyModeRecreate,
+		)
+	}
+
+	// Resolve credentials: topology settings take priority, falling back to kind's hardcoded
+	// defaults from the node registry.
+	nodeCfg.Credentials.Username = c.Config.Topology.GetNodeUsername(nodeName)
+	nodeCfg.Credentials.Password = c.Config.Topology.GetNodePassword(nodeName)
+	// Resolve the SSH identity-file path against the topology directory (and expand ~) so the
+	// rendered ssh_config works regardless of the cwd ssh is later invoked from.
+	if identityFile := c.Config.Topology.GetNodeIdentityFile(nodeName); identityFile != "" {
+		nodeCfg.Credentials.IdentityFile = clabutils.ResolvePath(
+			identityFile,
+			c.TopoPaths.TopologyFileDir(),
+		)
+	}
+
+	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			creds := regEntry.GetCredentials()
+			if nodeCfg.Credentials.Username == "" {
+				nodeCfg.Credentials.Username = creds.GetUsername()
+			}
+			if nodeCfg.Credentials.Password == "" {
+				nodeCfg.Credentials.Password = creds.GetPassword()
+			}
+		}
 	}
 
 	if nodeDef != nil {
@@ -279,10 +385,10 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		nodeCfg.ShortName,
 	)
 
-	// initialize license field
-	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
-	// resolve the lic path to an abs path
-	nodeCfg.License = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+	err = c.processNodeLicense(nodeCfg)
+	if err != nil {
+		return nil, err
+	}
 
 	// initialize bind mounts
 	binds, err := c.Config.Topology.GetNodeBinds(nodeName)
@@ -319,75 +425,57 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 
 	c.processNodeExecs(nodeCfg)
 
+	c.processNodeExtras(nodeCfg)
+
 	return nodeCfg, nil
 }
 
-// processStartupConfig processes the raw path of the startup-config as it is defined in the .
-// topology file It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
+// processStartupConfig processes the raw path of the startup-config as it is defined in the
+// topology file. It handles remote files, local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
 	p := r.Replace(c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName))
 
-	// embedded config is a config that is defined as a multi-line string in the topology file
-	// it contains at least one newline
-	isEmbeddedConfig := strings.Count(p, "\n") >= 1
-	// downloadable config starts with http(s):// or s3://
-	isDownloadableConfig := clabutils.IsHttpURL(p, false) || clabutils.IsS3URL(p)
-
-	if isEmbeddedConfig || isDownloadableConfig {
-		switch {
-		case isEmbeddedConfig:
-			log.Debugf("Node %q startup-config is an embedded config: %q", nodeCfg.ShortName, p)
-			// for embedded config we create a file with the name embedded.partial.cfg
-			// as embedded configs are meant to be partial configs
-			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(
-				nodeCfg.ShortName, "embedded.partial.cfg")
-
-			err := clabutils.CreateFile(absDestFile, p)
-			if err != nil {
-				return err
-			}
-
-			p = absDestFile
-
-		case isDownloadableConfig:
-			log.Debugf("Node %q startup-config is a downloadable config %q", nodeCfg.ShortName, p)
-			// get file name from an URL
-			fname := clabutils.FilenameForURL(context.Background(), p)
-
-			// Deduce the absolute destination filename for the downloaded content
-			dstFileAbsPath := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
-
-			log.Debugf(
-				"Fetching startup-config %q for node %q storing at %q",
-				p,
-				nodeCfg.ShortName,
-				dstFileAbsPath,
-			)
-
-			// download the file to tmp location
-			out, cleanup, err := clabutils.CreateFileWithPermissions(
-				dstFileAbsPath,
-				clabconstants.PermissionsDirDefault,
-			)
-			if err != nil {
-				return err
-			}
-			defer cleanup()
-
-			err = clabutils.CopyFileContents(context.Background(), p, out)
-			if err != nil {
-				return err
-			}
-
-			// adjust the NodeConfig by pointing startup-config to the local downloaded file
-			p = dstFileAbsPath
-		}
+	var err error
+	p, err = clabutils.ProcessDownloadableAndEmbeddedFile(
+		context.Background(),
+		nodeCfg.ShortName,
+		p,
+		"embedded.partial.cfg",
+		c.TopoPaths,
+	)
+	if err != nil {
+		return err
 	}
+
 	// resolve the startup config path to an abs path
 	nodeCfg.StartupConfig = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+
+	return nil
+}
+
+// processNodeLicense materializes the license file reference from the topology file.
+func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
+	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	if p == "" {
+		return nil
+	}
+
+	var err error
+	p, err = clabutils.ProcessDownloadableAndEmbeddedFile(
+		context.Background(),
+		nodeCfg.ShortName,
+		p,
+		"embedded.lic",
+		c.TopoPaths,
+	)
+	if err != nil {
+		return err
+	}
+
+	nodeCfg.License = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	return nil
 }
@@ -395,7 +483,7 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx, c.globalRuntime().Config().VerifyLinkParams); err != nil {
 		return err
 	}
 
@@ -469,13 +557,16 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks(ctx context.Context) error {
+func (c *CLab) verifyLinks(
+	ctx context.Context,
+	params *clablinks.VerifyLinkParams,
+) error {
 	var err error
 
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
-		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, params)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}
@@ -512,6 +603,16 @@ func (*CLab) loadKernelModules() error {
 		// trying to load the kernel modules.
 		km, err := kmod.New(opts...)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				log.Debugf(
+					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
+					err,
+					m,
+				)
+
+				return nil
+			}
+
 			log.Warnf("Unable to init module loader: %v. Skipping...", err)
 
 			return nil
@@ -519,9 +620,9 @@ func (*CLab) loadKernelModules() error {
 
 		err = km.Load(m, "", 0)
 		if err != nil {
-			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
-
-			return nil
+			return fmt.Errorf(
+				"kernel module %q is not loaded, not built-in and could not be loaded: %w", m, err,
+			)
 		}
 
 		log.Debugf("kernel module %q loaded successfully", m)
@@ -630,13 +731,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		hp := r.Replace(elems[0])
 		hp = clabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
+		caDir := c.TopoPaths.CABaseDir()
 		_, err := os.Stat(hp)
 		if err != nil {
 			// check if the hostpath mount has a reference to ansible-inventory.yml or
-			// topology-data.json if that is the case, we do not emit an error on missing file,
-			// since these files will be created by containerlab upon lab deployment
+			// topology-data.json or the generated CA directory. These paths are created by
+			// containerlab upon lab deployment.
 			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
-				hp != c.TopoPaths.TopoExportFile() {
+				hp != c.TopoPaths.TopoExportFile() &&
+				filepath.Clean(hp) != caDir {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
@@ -814,25 +917,74 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// processNodeExecs replaces (in place) magic variables in node execs.
+// processNodeExecs replaces magic variables in node and stage execs.
 func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
 	for i, e := range nodeCfg.Exec {
-		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)
 	}
+
+	if nodeCfg.Stages == nil {
+		return
+	}
+
+	stages := []*clabtypes.StageBase{
+		&nodeCfg.Stages.Create.StageBase,
+		&nodeCfg.Stages.CreateLinks.StageBase,
+		&nodeCfg.Stages.Configure.StageBase,
+		&nodeCfg.Stages.Healthy.StageBase,
+		&nodeCfg.Stages.Exit.StageBase,
+	}
+
+	for _, stage := range stages {
+		for i, exec := range stage.Execs {
+			execCopy := *exec
+			execCopy.Command = r.Replace(exec.Command)
+			stage.Execs[i] = &execCopy
+		}
+	}
+}
+
+// processNodeExtras replaces magic variables in node extras.
+func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
+	if nodeCfg.Extras == nil {
+		return
+	}
+
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+	extras := *nodeCfg.Extras
+
+	extras.CeosCopyToFlash = slices.Clone(nodeCfg.Extras.CeosCopyToFlash)
+	for i, e := range extras.CeosCopyToFlash {
+		extras.CeosCopyToFlash[i] = r.Replace(e)
+	}
+
+	extras.SRLAgents = slices.Clone(nodeCfg.Extras.SRLAgents)
+	for i, e := range extras.SRLAgents {
+		extras.SRLAgents[i] = r.Replace(e)
+	}
+
+	nodeCfg.Extras = &extras
 }
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.
 func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
-	if nodeName == "" {
-		return &strings.Replacer{}
+	labLongName := filepath.Base(c.TopoPaths.TopologyLabDir())
+
+	replacerPairs := []string{
+		clabDirVar, c.TopoPaths.TopologyLabDir(),
+		clabLabNameVar, labLongName,
 	}
 
-	return strings.NewReplacer(
-		clabDirVar, c.TopoPaths.TopologyLabDir(),
-		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
-		nodeNameVar, nodeName,
-	)
+	if nodeName != "" {
+		replacerPairs = append(replacerPairs,
+			nodeDirVar, c.TopoPaths.NodeDir(nodeName),
+			nodeNameVar, nodeName,
+		)
+	}
+
+	return strings.NewReplacer(replacerPairs...)
 }
 
 // magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the

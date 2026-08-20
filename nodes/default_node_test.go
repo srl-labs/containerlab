@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,8 +11,355 @@ import (
 	"testing"
 
 	clablinks "github.com/srl-labs/containerlab/links"
+	mockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
+
+func TestDefaultNodeEndpointOwnership(t *testing.T) {
+	d := &DefaultNode{
+		Cfg: &clabtypes.NodeConfig{
+			ShortName: "node1",
+		},
+	}
+
+	ep1 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(d, "eth1", nil))
+	ep2 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(d, "eth2", nil))
+
+	if err := d.AdoptEndpoint(ep1); err != nil {
+		t.Fatalf("unexpected adopt error for ep1: %v", err)
+	}
+	if err := d.AdoptEndpoint(ep2); err != nil {
+		t.Fatalf("unexpected adopt error for ep2: %v", err)
+	}
+	if err := d.ReleaseEndpoint(ep1); err != nil {
+		t.Fatalf("unexpected release error for ep1: %v", err)
+	}
+
+	got := d.GetEndpoints()
+	if len(got) != 1 {
+		t.Fatalf("expected 1 endpoint after deregister, got %d", len(got))
+	}
+
+	if got[0] != ep2 {
+		t.Fatalf("expected remaining endpoint to be ep2, got %#v", got[0])
+	}
+}
+
+func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
+	tests := []struct {
+		name string
+		old  *clabtypes.NodeConfig
+		new  *clabtypes.NodeConfig
+	}{
+		{
+			name: "exec",
+			old:  &clabtypes.NodeConfig{Exec: []string{"echo old"}},
+			new:  &clabtypes.NodeConfig{Exec: []string{"echo new"}},
+		},
+		{
+			name: "environment",
+			old:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "old"}},
+			new:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "new"}},
+		},
+		{
+			name: "privileged",
+			old:  &clabtypes.NodeConfig{Privileged: true},
+			new:  &clabtypes.NodeConfig{Privileged: false},
+		},
+		{
+			name: "cgroup namespace mode",
+			old:  &clabtypes.NodeConfig{CgroupnsMode: "private"},
+			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
+		},
+		{
+			name: "cgroup parent",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{CgroupParent: "/xform/my-lab/leaves"},
+		},
+		{
+			name: "PID mode",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{PidMode: "host"},
+		},
+		{
+			name: "tmpfs",
+			old:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw"}},
+			new:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw,nosuid"}},
+		},
+		{
+			name: "security options",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
+		},
+		{
+			name: "components",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := &DefaultNode{Cfg: &clabtypes.NodeConfig{LongName: "clab-lab-n1"}}
+			plan := node.ComputeReconcilePlan(node.ComputeDiff(tt.old, tt.new))
+			if plan.Action != clabtypes.TopologyDiffActionRecreate {
+				t.Fatalf("action = %q, want %q", plan.Action, clabtypes.TopologyDiffActionRecreate)
+			}
+			if len(plan.Recreated) != 1 || plan.Recreated[0] != "clab-lab-n1" {
+				t.Fatalf("recreated nodes = %v, want only clab-lab-n1", plan.Recreated)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeComputeDiffDetectsHostnameChange(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "production-host"},
+	)
+
+	if len(diff.Fields) != 1 || diff.Fields[0] != "Hostname" {
+		t.Fatalf("ComputeDiff fields = %#v, want [Hostname]", diff.Fields)
+	}
+	if got := diff.DefaultAction(); got != clabtypes.TopologyDiffActionRecreate {
+		t.Fatalf("DefaultAction() = %q, want %q", got, clabtypes.TopologyDiffActionRecreate)
+	}
+}
+
+func TestDefaultNodeComputeDiffIgnoresEquivalentDefaultHostname(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "node1"},
+	)
+
+	if diff.HasDiff() {
+		t.Fatalf("ComputeDiff fields = %#v, want no diff", diff.Fields)
+	}
+}
+
+func TestDefaultNodeAdoptEndpointRejectsForeignOwner(t *testing.T) {
+	d := &DefaultNode{
+		Cfg: &clabtypes.NodeConfig{
+			ShortName: "node1",
+		},
+	}
+	other := &DefaultNode{
+		Cfg: &clabtypes.NodeConfig{
+			ShortName: "node2",
+		},
+	}
+
+	ep := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(other, "eth1", nil))
+
+	if err := d.AdoptEndpoint(ep); err == nil {
+		t.Fatalf("expected adopt to reject endpoint owned by another node")
+	}
+}
+
+func TestDefaultNodeShouldSkipLifecycle(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *clabtypes.NodeConfig
+		want bool
+	}{
+		{
+			name: "regular node participates",
+			cfg: &clabtypes.NodeConfig{
+				ShortName: "node1",
+			},
+			want: false,
+		},
+		{
+			name: "root namespace node skips",
+			cfg: &clabtypes.NodeConfig{
+				ShortName:            "node1",
+				IsRootNamespaceBased: true,
+			},
+			want: true,
+		},
+		{
+			name: "auto-remove node skips",
+			cfg: &clabtypes.NodeConfig{
+				ShortName:  "node1",
+				AutoRemove: true,
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &DefaultNode{Cfg: tt.cfg}
+			if got := d.ShouldSkipLifecycle(); got != tt.want {
+				t.Fatalf("ShouldSkipLifecycle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeLinkApplyMode(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *clabtypes.NodeConfig
+		want LinkApplyMode
+	}{
+		{name: "regular", want: LinkApplyModeRecreate},
+		{
+			name: "root namespace",
+			cfg:  &clabtypes.NodeConfig{IsRootNamespaceBased: true},
+			want: LinkApplyModeLive,
+		},
+		{
+			name: "external",
+			cfg:  &clabtypes.NodeConfig{SkipUniquenessCheck: true},
+			want: LinkApplyModeLive,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &DefaultNode{Cfg: tt.cfg}
+			if got := d.LinkApplyMode(context.Background()); got != tt.want {
+				t.Fatalf("LinkApplyMode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeImageLinkApplyMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		labels     map[string]string
+		inspectErr error
+		fallback   LinkApplyMode
+		want       LinkApplyMode
+	}{
+		{
+			name:     "boxen image uses live apply",
+			labels:   map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
+			fallback: LinkApplyModeRecreate,
+			want:     LinkApplyModeLive,
+		},
+		{
+			name:     "missing label keeps restart fallback",
+			labels:   map[string]string{"other": "label"},
+			fallback: LinkApplyModeRestart,
+			want:     LinkApplyModeRestart,
+		},
+		{
+			name:       "inspect error keeps recreate fallback",
+			inspectErr: errors.New("inspect image"),
+			fallback:   LinkApplyModeRecreate,
+			want:       LinkApplyModeRecreate,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			runtime := mockruntime.NewMockContainerRuntime(ctrl)
+			if tt.inspectErr != nil {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(nil, tt.inspectErr)
+			} else {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(&clabruntime.ImageInspect{
+						Config: clabruntime.ImageConfig{Labels: tt.labels},
+					}, nil)
+			}
+
+			d := &DefaultNode{
+				Cfg:     &clabtypes.NodeConfig{Image: "img"},
+				Runtime: runtime,
+			}
+
+			if got := d.ImageLinkApplyMode(context.Background(), tt.fallback); got != tt.want {
+				t.Fatalf("ImageLinkApplyMode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeRuntimeEndpointInventory(t *testing.T) {
+	d := &DefaultNode{
+		Cfg: &clabtypes.NodeConfig{
+			ShortName: "node1",
+		},
+	}
+
+	topologyEp := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(d, "eth1", nil))
+	runtimeEp := clablinks.NewRuntimeEndpoint(d, "eth99")
+
+	if err := d.AdoptEndpoint(topologyEp); err != nil {
+		t.Fatalf("unexpected adopt error for topology endpoint: %v", err)
+	}
+	if err := d.AdoptEndpoint(runtimeEp); err != nil {
+		t.Fatalf("unexpected adopt error for runtime endpoint: %v", err)
+	}
+
+	got := d.GetEndpoints()
+	if len(got) != 2 {
+		t.Fatalf("expected 2 tracked endpoints, got %d", len(got))
+	}
+
+	if got[0] != topologyEp {
+		t.Fatalf("expected first endpoint to be topology-backed, got %#v", got[0])
+	}
+
+	if got[1] != runtimeEp {
+		t.Fatalf("expected second endpoint to be runtime-discovered, got %#v", got[1])
+	}
+
+	if got[0].IsRuntimeDiscovered() {
+		t.Fatalf("topology endpoint should not be marked runtime-discovered")
+	}
+
+	if !got[1].IsRuntimeDiscovered() {
+		t.Fatalf("runtime endpoint should be marked runtime-discovered")
+	}
+
+	if err := d.ReleaseEndpoint(runtimeEp); err != nil {
+		t.Fatalf("unexpected release error for runtime endpoint: %v", err)
+	}
+
+	got = d.GetEndpoints()
+	if len(got) != 1 {
+		t.Fatalf("expected runtime endpoint to be removed, got %d tracked endpoints", len(got))
+	}
+
+	if got[0] != topologyEp {
+		t.Fatalf("unexpected remaining endpoint %#v", got[0])
+	}
+}
+
+func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
+	longName := fmt.Sprintf(
+		"clab-%s-%d",
+		strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-"),
+		os.Getpid(),
+	)
+
+	d := &DefaultNode{
+		Cfg: &clabtypes.NodeConfig{
+			ShortName: "node1",
+			LongName:  longName,
+		},
+	}
+
+	// A node stopped outside of containerlab (or with no dataplane links) has no
+	// parking netns; restoring should be a no-op rather than an error.
+	if err := d.RestoreEndpoints(context.Background()); err != nil {
+		t.Fatalf("expected no error when parking netns is missing, got %v", err)
+	}
+}
 
 func TestGenerateConfigs(t *testing.T) {
 	defCfg := "default config"
@@ -376,5 +724,85 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				}
 			}
 		})
+	}
+}
+
+type defaultNodeContainerNameOverride struct {
+	DefaultNode
+	containerName string
+}
+
+func (n *defaultNodeContainerNameOverride) GetContainerName() string {
+	return n.containerName
+}
+
+func TestDefaultNodeNetnsStatusUsesOverwriteContainerName(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		run func(context.Context, *defaultNodeContainerNameOverride) error
+	}{
+		"add-link": {
+			run: func(ctx context.Context, node *defaultNodeContainerNameOverride) error {
+				return node.AddLinkToContainer(ctx, nil, nil)
+			},
+		},
+		"exec-function": {
+			run: func(ctx context.Context, node *defaultNodeContainerNameOverride) error {
+				return node.ExecFunction(ctx, nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			rt := mockruntime.NewMockContainerRuntime(ctrl)
+			node := &defaultNodeContainerNameOverride{
+				containerName: "clab-srsim-sros-a",
+			}
+			node.DefaultNode = *NewDefaultNode(node)
+			node.Cfg = &clabtypes.NodeConfig{
+				ShortName: "sros",
+				LongName:  "clab-srsim-sros",
+			}
+			node.Runtime = rt
+
+			rt.EXPECT().
+				GetContainerStatus(ctx, "clab-srsim-sros-a").
+				Return(clabruntime.NotFound)
+
+			err := tc.run(ctx, node)
+			if err == nil {
+				t.Fatal("got nil error, want namespace availability error")
+			}
+			if !strings.Contains(err.Error(), "status=NotFound") {
+				t.Fatalf("got error %q, want status=NotFound", err)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeGetContainerStatusUsesOverwriteContainerName(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := mockruntime.NewMockContainerRuntime(ctrl)
+	node := &defaultNodeContainerNameOverride{
+		containerName: "clab-srsim-sros-a",
+	}
+	node.DefaultNode = *NewDefaultNode(node)
+	node.Runtime = rt
+
+	rt.EXPECT().
+		GetContainerStatus(ctx, "clab-srsim-sros-a").
+		Return(clabruntime.Running)
+
+	if got := node.GetContainerStatus(ctx); got != clabruntime.Running {
+		t.Fatalf("got %q, want %q", got, clabruntime.Running)
 	}
 }

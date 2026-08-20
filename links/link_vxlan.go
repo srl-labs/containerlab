@@ -47,11 +47,15 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
+func (lr *LinkVxlanRaw) ResolveStitched(params *ResolveParams) (*VxlanStitched, error) {
+	return lr.resolveStitchedVxlan(params)
+}
+
 // resolveStitchedVEthComponent creates the veth link and returns it, the endpoint that is
 // supposed to be stitched is returned separately for further processing.
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
 	params *ResolveParams,
-) (*LinkVEth, Endpoint, error) {
+) (Link, Endpoint, error) {
 	var err error
 
 	// hostIface is the name of the host interface that will be created
@@ -77,14 +81,40 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
 		return nil, nil, err
 	}
 
-	vethLink := hl.(*LinkVEth)
+	if hl == nil {
+		return nil, nil, fmt.Errorf("failed to resolve host veth component for vxlan-stitch")
+	}
 
-	// host endpoint is always the 2nd element in the Endpoints slice
-	return vethLink, vethLink.Endpoints[1], nil
+	eps := hl.GetEndpoints()
+	if len(eps) != 2 {
+		return nil, nil, fmt.Errorf(
+			"expected host veth component to resolve to 2 endpoints, got %d",
+			len(eps),
+		)
+	}
+
+	stitchEp, ok := endpointByInterfaceName(eps, hostIface)
+	if !ok {
+		return nil, nil, fmt.Errorf(
+			"expected host veth component to include endpoint %q",
+			hostIface,
+		)
+	}
+
+	return hl, stitchEp, nil
+}
+
+func endpointByInterfaceName(endpoints []Endpoint, ifaceName string) (Endpoint, bool) {
+	for _, ep := range endpoints {
+		if ep != nil && ep.GetIfaceName() == ifaceName {
+			return ep, true
+		}
+	}
+	return nil, false
 }
 
 // resolveStitchedVxlan resolves the stitched raw vxlan link.
-func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*VxlanStitched, error) {
 	// prepare the vxlan struct
 	vxlanLink, err := lr.resolveVxlan(params, true)
 	if err != nil {
@@ -127,6 +157,11 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 			return nil, err
 		}
 
+		// always use the first address
+		if len(ips) == 0 {
+			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
+		}
+
 		// prepare log message
 		sb := strings.Builder{}
 		for _, ip := range ips {
@@ -134,11 +169,6 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 			sb.WriteString(ip.String())
 		}
 		log.Debugf("looked up hostname %s, received IP addresses [%s]", lr.Remote, sb.String()[2:])
-
-		// always use the first address
-		if len(ips) == 0 {
-			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
-		}
 		ip = ips[0]
 	}
 
@@ -240,6 +270,10 @@ func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 	return err
 }
 
+func (*LinkVxlan) PostDeploy(context.Context) error {
+	return nil
+}
+
 // deployVxlanInterface internal function to create the vxlan interface in the host namespace.
 func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
@@ -316,6 +350,10 @@ func (l *LinkVxlan) Remove(ctx context.Context) error {
 
 func (l *LinkVxlan) GetEndpoints() []Endpoint {
 	return []Endpoint{l.localEndpoint, l.remoteEndpoint}
+}
+
+func (l *LinkVxlan) GetRuntimeEndpoints() []Endpoint {
+	return []Endpoint{l.localEndpoint}
 }
 
 func (*LinkVxlan) GetType() LinkType {

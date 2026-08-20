@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -118,7 +119,28 @@ func (c *CLab) makeCopyForDestroy(
 ) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
-		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
+	}
+
+	// Try to load topology file if it exists, otherwise use lab name only.
+	// This allows destroying labs even when the topology file has been deleted.
+	// WithTopoPath / WithLabNameOnly must run before WithNodeFilter so filterClabNodes
+	// sees topology nodes (see filterClabNodes in clab.go).
+	varsFiles := opts.varsFiles
+	if len(varsFiles) == 0 {
+		varsFiles = c.TopoPaths.VarsFilenamesAbsPath()
+	}
+
+	if clabutils.FileOrDirExists(topo) {
+		newOpts = append(newOpts, WithTopoPath(topo, varsFiles))
+	} else {
+		// Derive lab name from lab directory (format: clab-<labname>)
+		labName := filepath.Base(labDir)
+		labName = strings.TrimPrefix(labName, "clab-")
+		log.Debugf("topology file %q not found, using lab name %q for destroy", topo, labName)
+		newOpts = append(newOpts, WithLabNameOnly(labName))
+	}
+
+	newOpts = append(newOpts,
 		WithNodeFilter(opts.nodeFilter),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
@@ -131,7 +153,7 @@ func (c *CLab) makeCopyForDestroy(
 				GracefulShutdown: opts.graceful,
 			},
 		),
-	}
+	)
 
 	if opts.keepMgmtNet {
 		newOpts = append(newOpts, WithKeepMgmtNet())
@@ -159,9 +181,11 @@ func (c *CLab) makeCopyForDestroy(
 	// create management network or use existing one
 	// we call this to populate the nc.cfg.mgmt.bridge variable
 	// which is needed for the removal of the iptables rules
-	err = cc.CreateNetwork(ctx)
-	if err != nil {
-		return nil, err
+	if !cc.skipMgmtNetwork() {
+		err = cc.CreateNetwork(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = cc.ResolveLinks()
@@ -217,7 +241,17 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 }
 
 func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
-	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
+	var containers []clabruntime.GenericContainer
+	var err error
+
+	// If we have nodes defined (from topology file), list containers by node.
+	// Otherwise, list containers by lab name label (for destroy-by-name-only case).
+	if len(c.Nodes) > 0 {
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else if c.Config.Name != "" {
+		containers, err = c.ListContainers(ctx, WithListLabName(c.Config.Name))
+	}
+
 	if err != nil {
 		return err
 	}
@@ -227,12 +261,27 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	if maxWorkers == 0 {
-		maxWorkers = uint(len(c.Nodes))
+		maxWorkers = uint(len(containers))
 	}
 
 	log.Info("Destroying lab", "name", c.Config.Name)
 
-	c.deleteNodes(ctx, maxWorkers)
+	// If we have nodes defined, use the normal node-based deletion.
+	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
+	if len(c.Nodes) > 0 {
+		err := clablinks.CleanupFilteredLinks(
+			ctx,
+			c.Config.Topology.Links,
+			c.Config.Name,
+			c.nodeFilter,
+		)
+		if err != nil {
+			return err
+		}
+		c.deleteNodes(ctx, maxWorkers)
+	} else {
+		c.deleteContainersDirect(ctx, containers)
+	}
 
 	c.deleteToolContainers(ctx)
 
@@ -270,6 +319,52 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			default:
 				log.Error(err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
+	nodeNames := make([]string, 0, len(plan.deletedNodeSet)+len(plan.recreatedNodeSet))
+	for nodeName := range plan.deletedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	for nodeName := range plan.recreatedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	sort.Strings(nodeNames)
+
+	for _, nodeName := range nodeNames {
+		runtimeNode := plan.currentNodes[nodeName]
+		if runtimeNode == nil {
+			return fmt.Errorf("runtime node %q not found", nodeName)
+		}
+		if runtimeNode.external || runtimeNode.rootNamespaceBased {
+			continue
+		}
+
+		for i := len(runtimeNode.containers) - 1; i >= 0; i-- {
+			ctr := runtimeNode.containers[i]
+			if len(ctr.Names) == 0 {
+				return fmt.Errorf("runtime container for node %q has no name", nodeName)
+			}
+
+			runtime := ctr.Runtime
+			if runtime == nil {
+				runtime = c.globalRuntime()
+			}
+
+			action := "Deleting node"
+			if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
+				action = "Deleting node for recreate"
+			}
+			log.Info(action, "node", nodeName, "container", ctr.Names[0])
+			if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
+				return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
+			}
+
+			_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
 		}
 	}
 
@@ -328,6 +423,27 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	wg.Wait()
 }
 
+// deleteContainersDirect deletes containers directly via the runtime API.
+// This is used when we don't have node objects (e.g., destroy-by-name-only case).
+func (c *CLab) deleteContainersDirect(
+	ctx context.Context,
+	containers []clabruntime.GenericContainer,
+) {
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			log.Warnf("skipping container %s with no names", cont.ID)
+			continue
+		}
+		name := cont.Names[0]
+		log.Infof("Removing container: %s", name)
+
+		err := c.globalRuntime().DeleteContainer(ctx, name)
+		if err != nil {
+			log.Errorf("could not remove container %q: %v", name, err)
+		}
+	}
+}
+
 func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
 
@@ -350,12 +466,12 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
 		if err != nil {
 			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
-			return
+			continue
 		}
 
 		if len(containers) == 0 {
 			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
-			return
+			continue
 		}
 
 		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",

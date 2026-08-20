@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -139,11 +140,41 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 		return err
 	}
 	log.Debugf("trying to delete mgmt network %v", r.mgmt.Network)
-	_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+
+	// Removal can fail with "network is being used" right after destroy has
+	// deleted all lab containers, because podman can briefly still consider
+	// them associated with the network. A short retry rides out that window.
+	// Force is deliberately not set: it would also delete any containers
+	// still attached to the network, such as those of another lab sharing
+	// the default mgmt network.
+	const (
+		netInUseRetries      = 3
+		netInUseRetryBackoff = time.Second
+	)
+
+	for attempt := range netInUseRetries {
+		_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+		if err == nil || !isNetworkInUseErr(err) || attempt == netInUseRetries-1 {
+			break
+		}
+		log.Debugf("transient in-use error removing network %q (attempt %d/%d): %v",
+			r.mgmt.Network, attempt+1, netInUseRetries, err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(netInUseRetryBackoff):
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("error while trying to remove a mgmt network %w", err)
 	}
 	return nil
+}
+
+// isNetworkInUseErr reports whether err is podman's "network is being used"
+// error, raised while any container is still associated with the network.
+func isNetworkInUseErr(err error) bool {
+	return strings.Contains(err.Error(), "network is being used")
 }
 
 func (r *PodmanRuntime) PullImage(
@@ -172,7 +203,11 @@ func (r *PodmanRuntime) PullImage(
 			return nil
 		} else {
 			// image not found but pull policy = never
-			return fmt.Errorf("image %s not found locally, but image-pull-policy is %s", image, pullPolicy)
+			return fmt.Errorf(
+				"image %s not found locally, but image-pull-policy is %s",
+				image,
+				pullPolicy,
+			)
 		}
 	}
 	if pullPolicy == types.PullPolicyIfNotPresent && ex == true {
@@ -206,13 +241,15 @@ func (r *PodmanRuntime) CreateContainer(
 		)
 	}
 	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to create container %q: %w", cfg.LongName, err)
+	}
 	log.Debugf(
-		"Created a container with ID %v, warnings %v and error %v",
+		"Created a container with ID %v, warnings %v",
 		res.ID,
 		res.Warnings,
-		err,
 	)
-	return res.ID, err
+	return res.ID, nil
 }
 
 // StartContainer starts a previously created container by ID or its name and executes post-start
@@ -255,15 +292,35 @@ func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
 }
 
-func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
+func (r *PodmanRuntime) StopContainer(
+	ctx context.Context,
+	cID string,
+	stopSignal types.Signal,
+) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
 	}
-	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+
+	stopTimeout := uint(r.config.Timeout.Seconds())
+	if stopSignal == "" {
+		return containers.Stop(ctx, cID, &containers.StopOptions{Timeout: &stopTimeout})
+	}
+
+	signal := string(stopSignal)
+	log.Debugf("using custom stop signal %q for container %q", signal, cID)
+	if err := containers.Kill(ctx, cID, &containers.KillOptions{Signal: &signal}); err != nil {
+		return err
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, r.config.Timeout)
+	defer cancel()
+
+	_, err = containers.Wait(waitCtx, cID, &containers.WaitOptions{})
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -294,10 +351,31 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	// Prefer podman's reported sandbox key when it exists, but fall back to /run/netns/<name>
+	// to support stopped containers and containerlab-managed netns links.
 	nspath := inspect.NetworkSettings.SandboxKey
-	log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
-	return nspath, nil
+	if nspath != "" && utils.FileOrDirExists(nspath) {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return nspath, nil
+	}
+
+	runNetns := filepath.Join("/run/netns", cID)
+	if utils.FileOrDirExists(runNetns) {
+		log.Debugf("Method GetNSPath falling back to %q", runNetns)
+		return runNetns, nil
+	}
+
+	// For host network containers sandbox key is typically empty.
+	if nspath == "" {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return "", nil
+	}
+
+	return "", fmt.Errorf("namespace path not available for container %s", cID)
 }
+
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime (no-op for Podman).
+func (*PodmanRuntime) LogNonRunningContainerOutput(context.Context, string) {}
 
 func (r *PodmanRuntime) Exec(
 	ctx context.Context,
@@ -442,10 +520,33 @@ func (r *PodmanRuntime) GetContainerStatus(
 	if err != nil {
 		return runtime.NotFound
 	}
-	if icd.State.Running {
+	if icd.State == nil {
+		return runtime.NotFound
+	}
+	st := icd.State
+	if st.Paused {
+		return runtime.Paused
+	}
+	if st.Running {
 		return runtime.Running
 	}
-	return runtime.Stopped
+	if st.Restarting {
+		return runtime.Restarting
+	}
+	if st.Dead {
+		return runtime.Stopped
+	}
+	switch strings.ToLower(st.Status) {
+	case "configured":
+		return runtime.Created
+	case "removing":
+		return runtime.Removing
+	case "exited", "stopped", "stopping":
+		return runtime.Stopped
+	default:
+		// Unknown non-running state: treat as no joinable netns (align with historical Stopped).
+		return runtime.Stopped
+	}
 }
 
 // IsHealthy returns true is the container is reported as being healthy, false otherwise.

@@ -77,6 +77,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.Container
 		Labels:      labels,
 		NetworkMode: "host", // Use host network namespace
 		PidMode:     "host",
+		Privileged:  true,
 	}
 
 	return &APIServerNode{
@@ -201,16 +202,17 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	// Create environment variables map
 	env := map[string]string{
-		"CLAB_SHARED_LABS_DIR":   o.ToolsAPI.LabsDirectory,
-		"API_PORT":               fmt.Sprintf("%d", o.ToolsAPI.Port),
-		"API_SERVER_HOST":        o.ToolsAPI.Host,
-		"JWT_SECRET":             o.ToolsAPI.JWTSecret,
-		"JWT_EXPIRATION_MINUTES": o.ToolsAPI.JWTExpiration,
-		"API_USER_GROUP":         o.ToolsAPI.UserGroup,
-		"SUPERUSER_GROUP":        o.ToolsAPI.SuperUserGroup,
-		"CLAB_RUNTIME":           o.Global.Runtime,
-		"LOG_LEVEL":              o.ToolsAPI.LogLevel,
-		"GIN_MODE":               o.ToolsAPI.GinMode,
+		"CLAB_SHARED_LABS_DIR": o.ToolsAPI.LabsDirectory,
+		"API_PORT":             fmt.Sprintf("%d", o.ToolsAPI.Port),
+		"API_SERVER_HOST":      o.ToolsAPI.Host,
+		"JWT_SECRET":           o.ToolsAPI.JWTSecret,
+		"JWT_EXPIRATION":       o.ToolsAPI.JWTExpiration,
+		"API_USER_GROUP":       o.ToolsAPI.UserGroup,
+		"SUPERUSER_GROUP":      o.ToolsAPI.SuperUserGroup,
+		"CLAB_RUNTIME":         o.Global.Runtime,
+		"LOG_LEVEL":            o.ToolsAPI.LogLevel,
+		"GIN_MODE":             o.ToolsAPI.GinMode,
+		"TLS_ENABLE":           fmt.Sprintf("%t", o.ToolsAPI.TLSEnable),
 	}
 
 	// Add optional environment variables
@@ -281,10 +283,10 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	}
 
 	log.Infof("API server container %s started successfully.", o.ToolsAPI.Name)
-	log.Infof("API Server available at: http://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
-
 	if o.ToolsAPI.TLSEnable {
 		log.Infof("API Server TLS enabled at: https://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
+	} else {
+		log.Infof("API Server available at: http://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
 	}
 
 	return nil

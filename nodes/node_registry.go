@@ -90,6 +90,14 @@ type NodeRegistryEntry struct {
 	attributes    *NodeRegistryEntryAttributes
 }
 
+func (nre *NodeRegistryEntry) PrivilegedByDefault() bool {
+	if nre == nil || nre.attributes == nil || nre.attributes.privilegedByDefault == nil {
+		return true
+	}
+
+	return *nre.attributes.privilegedByDefault
+}
+
 func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 	if nre.attributes == nil {
 		return nil
@@ -99,9 +107,10 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 }
 
 type NodeRegistryEntryAttributes struct {
-	credentials        *Credentials
-	generateAttributes *GenerateNodeAttributes
-	platformAttrs      *PlatformAttrs
+	credentials         *Credentials
+	generateAttributes  *GenerateNodeAttributes
+	platformAttrs       *PlatformAttrs
+	privilegedByDefault *bool
 }
 
 func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
@@ -170,6 +179,13 @@ func (nrea *NodeRegistryEntryAttributes) GetCredentials() *Credentials {
 
 func (nrea *NodeRegistryEntryAttributes) GetGenerateAttributes() *GenerateNodeAttributes {
 	return nrea.generateAttributes
+}
+
+func (nrea *NodeRegistryEntryAttributes) WithPrivilegedByDefault(
+	privileged bool,
+) *NodeRegistryEntryAttributes {
+	nrea.privilegedByDefault = &privileged
+	return nrea
 }
 
 // PlatformAttrs returns the platform attributes of this node's registry attributes.

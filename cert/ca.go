@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"time"
@@ -32,6 +33,9 @@ func (ca *CA) SetCACert(cert *Certificate) error {
 
 	// PEM to DER
 	pbCert, _ := pem.Decode(cert.Cert)
+	if pbCert == nil {
+		return fmt.Errorf("failed to decode CA certificate PEM block")
+	}
 
 	// parse the Certificate
 	ca.cert, err = x509.ParseCertificate(pbCert.Bytes)
@@ -91,17 +95,21 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 
 	// convert Certificate into PEM format
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+	if err := pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("failed to PEM-encode CA certificate: %w", err)
+	}
 
 	// convert Private Key into PEM format
 	caPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("failed to PEM-encode CA private key: %w", err)
+	}
 
 	// create the clab certificate struct
 	clabCert := &Certificate{
@@ -165,16 +173,20 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 	}
 
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	if err := pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("failed to PEM-encode node certificate: %w", err)
+	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(certPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(newPrivKey),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("failed to PEM-encode node private key: %w", err)
+	}
 
 	// create the clab certificate struct
 	clabCert := &Certificate{

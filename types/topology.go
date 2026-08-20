@@ -1,6 +1,7 @@
 package types
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/docker/go-connections/nat"
@@ -415,6 +416,80 @@ func (t *Topology) GetNodeCapAdd(nodeName string) []string {
 	)
 }
 
+func (t *Topology) GetNodePrivileged(
+	nodeName string,
+	privilegedByDefault bool,
+) bool {
+	return getFieldPtr(
+		t,
+		nodeName,
+		func(node *NodeDefinition) *bool { return node.Privileged },
+		func(group *NodeDefinition) *bool { return group.Privileged },
+		func(kind *NodeDefinition) *bool { return kind.Privileged },
+		func(defaults *NodeDefinition) *bool { return defaults.Privileged },
+		func(v *bool) bool { return v != nil },
+		privilegedByDefault,
+	)
+}
+
+func (t *Topology) GetNodeCgroupnsMode(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.CgroupnsMode },
+		func(group *NodeDefinition) string { return group.CgroupnsMode },
+		func(kind *NodeDefinition) string { return kind.CgroupnsMode },
+		func(defaults *NodeDefinition) string { return defaults.CgroupnsMode },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeCgroupParent(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.CgroupParent },
+		func(group *NodeDefinition) string { return group.CgroupParent },
+		func(kind *NodeDefinition) string { return kind.CgroupParent },
+		func(defaults *NodeDefinition) string { return defaults.CgroupParent },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodePidMode(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.PidMode },
+		func(group *NodeDefinition) string { return group.PidMode },
+		func(kind *NodeDefinition) string { return kind.PidMode },
+		func(defaults *NodeDefinition) string { return defaults.PidMode },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeTmpfs(nodeName string) map[string]string {
+	return mergeStringMapFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Tmpfs },
+		func(group *NodeDefinition) map[string]string { return group.Tmpfs },
+		func(kind *NodeDefinition) map[string]string { return kind.Tmpfs },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Tmpfs },
+	)
+}
+
+func (t *Topology) GetNodeSecurityOpts(nodeName string) []string {
+	return mergeStringSliceFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) []string { return node.SecurityOpts },
+		func(group *NodeDefinition) []string { return group.SecurityOpts },
+		func(kind *NodeDefinition) []string { return kind.SecurityOpts },
+		func(defaults *NodeDefinition) []string { return defaults.SecurityOpts },
+	)
+}
+
 func (t *Topology) GetNodeShmSize(nodeName string) string {
 	return getField(
 		t,
@@ -564,6 +639,18 @@ func (t *Topology) GetNodePosition(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeHostname(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Hostname },
+		func(group *NodeDefinition) string { return group.Hostname },
+		func(kind *NodeDefinition) string { return kind.Hostname },
+		func(defaults *NodeDefinition) string { return defaults.Hostname },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodeEntrypoint(nodeName string) string {
 	return getField(
 		t,
@@ -620,6 +707,18 @@ func (t *Topology) GetNodeNetworkMode(nodeName string) string {
 		func(kind *NodeDefinition) string { return kind.NetworkMode },
 		func(defaults *NodeDefinition) string { return defaults.NetworkMode },
 		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeLinkApplyMode(nodeName string) LinkApplyMode {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) LinkApplyMode { return node.LinkApplyMode },
+		func(group *NodeDefinition) LinkApplyMode { return group.LinkApplyMode },
+		func(kind *NodeDefinition) LinkApplyMode { return kind.LinkApplyMode },
+		func(defaults *NodeDefinition) LinkApplyMode { return defaults.LinkApplyMode },
+		func(v LinkApplyMode) bool { return v != "" },
 	)
 }
 
@@ -758,12 +857,13 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 		return nil, nil
 	}
 
-	// build the result array with all the entries from binds map
 	result := make([]string, 0, len(binds))
 
 	for _, b := range binds {
 		result = append(result, b.String())
 	}
+
+	slices.Sort(result)
 
 	return result, nil
 }
@@ -921,4 +1021,121 @@ func (t *Topology) GetNodeAliases(nodeName string) []string {
 	}
 
 	return nodeDefinition.Aliases
+}
+
+// credentialsPresent reports whether a credentials block supplies a username/password pair. The
+// identity-file is resolved on its own precedence chain (resolveTopologyIdentityFile) and is
+// intentionally excluded here so it does not influence the username/password winning level used by
+// inventory generation.
+func credentialsPresent(c NodeCredentials) bool {
+	return c.Username != "" || c.Password != ""
+}
+
+// resolveTopologyCredentials returns username and password from the most specific topology level
+// where either field is set (node, then group, then kind, then defaults). Values are not merged
+// across levels.
+func (t *Topology) resolveTopologyCredentials(
+	nodeName string,
+) (username, password string, src CredentialTopologySource) {
+	nodeDefinition, ok := t.Nodes[nodeName]
+	if !ok {
+		return "", "", CredentialTopologyUnset
+	}
+
+	if nodeDefinition != nil && credentialsPresent(nodeDefinition.Credentials) {
+		c := nodeDefinition.Credentials
+		return c.Username, c.Password, CredentialTopologyNode
+	}
+
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
+	if group != nil && credentialsPresent(group.Credentials) {
+		c := group.Credentials
+		return c.Username, c.Password, CredentialTopologyGroup
+	}
+
+	kind := t.GetKind(t.GetNodeKind(nodeName))
+	if kind != nil && credentialsPresent(kind.Credentials) {
+		c := kind.Credentials
+		return c.Username, c.Password, CredentialTopologyKind
+	}
+
+	defaults := t.GetDefaults()
+	if defaults != nil && credentialsPresent(defaults.Credentials) {
+		c := defaults.Credentials
+		return c.Username, c.Password, CredentialTopologyDefaults
+	}
+
+	return "", "", CredentialTopologyUnset
+}
+
+// resolveTopologyIdentityFile returns the SSH identity-file path from the most specific topology
+// level where it is set (node, then group, then kind, then defaults). It is resolved independently
+// of username/password so a node may set only identity-file and still have it apply, without
+// affecting the username/password winning level (see resolveTopologyCredentials).
+func (t *Topology) resolveTopologyIdentityFile(nodeName string) string {
+	nodeDefinition, ok := t.Nodes[nodeName]
+	if !ok {
+		return ""
+	}
+
+	if nodeDefinition != nil && nodeDefinition.Credentials.IdentityFile != "" {
+		return nodeDefinition.Credentials.IdentityFile
+	}
+
+	if group := t.GetGroup(t.GetNodeGroup(nodeName)); group != nil &&
+		group.Credentials.IdentityFile != "" {
+		return group.Credentials.IdentityFile
+	}
+
+	if kind := t.GetKind(t.GetNodeKind(nodeName)); kind != nil &&
+		kind.Credentials.IdentityFile != "" {
+		return kind.Credentials.IdentityFile
+	}
+
+	if defaults := t.GetDefaults(); defaults != nil && defaults.Credentials.IdentityFile != "" {
+		return defaults.Credentials.IdentityFile
+	}
+
+	return ""
+}
+
+// GetNodeUsername returns the username from the topology credentials block at the winning
+// precedence level (see resolveTopologyCredentials). Empty if unset at every level.
+func (t *Topology) GetNodeUsername(nodeName string) string {
+	u, _, _ := t.resolveTopologyCredentials(nodeName)
+	return u
+}
+
+// GetNodePassword returns the password from the topology credentials block at the winning
+// precedence level (see resolveTopologyCredentials). Empty if unset at every level.
+func (t *Topology) GetNodePassword(nodeName string) string {
+	_, p, _ := t.resolveTopologyCredentials(nodeName)
+	return p
+}
+
+// GetNodeIdentityFile returns the SSH identity-file path from the topology credentials block at the
+// winning precedence level (see resolveTopologyIdentityFile). Empty if unset at every level.
+func (t *Topology) GetNodeIdentityFile(nodeName string) string {
+	return t.resolveTopologyIdentityFile(nodeName)
+}
+
+// CredentialTopologySource identifies which topology level supplied the credentials block
+// before registry fallback. Precedence: node, then group, then kind, then defaults.
+type CredentialTopologySource int
+
+const (
+	// CredentialTopologyUnset means no topology level set credentials (registry may still fill
+	// NodeConfig).
+	CredentialTopologyUnset CredentialTopologySource = iota
+	CredentialTopologyDefaults
+	CredentialTopologyKind
+	CredentialTopologyGroup
+	CredentialTopologyNode
+)
+
+// GetNodeCredentialsTopologySource reports which topology level supplied the credentials pair
+// (username and/or password) before registry fallback.
+func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialTopologySource {
+	_, _, src := t.resolveTopologyCredentials(nodeName)
+	return src
 }

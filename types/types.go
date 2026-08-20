@@ -14,6 +14,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Signal string
+
+const (
+	SIGTERM   Signal = "SIGTERM"
+	SIGINT    Signal = "SIGINT"
+	SIGKILL   Signal = "SIGKILL"
+	SIGRTMIN3 Signal = "SIGRTMIN+3"
+)
+
 // Link is a struct that contains the information of a link between 2 containers.
 type Link struct {
 	A      *Endpoint
@@ -58,6 +67,7 @@ type MgmtNet struct {
 	MTU        int    `json:"mtu,omitempty"         yaml:"mtu,omitempty"`
 
 	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
+	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
@@ -114,6 +124,8 @@ type NodeConfig struct {
 	ShortName string `json:"shortname,omitempty"`
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
+	// Hostname is the runtime hostname. An empty value falls back to ShortName.
+	Hostname string `json:"hostname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
 	// LabDir is a directory related to the node, it contains config items and/or other persistent
 	// state
@@ -134,6 +146,9 @@ type NodeConfig struct {
 	// when set to true will auto-remove a stopped/failed container
 	AutoRemove    bool   `json:"auto-remove,omitempty"`
 	RestartPolicy string `json:"restart-policy,omitempty"`
+	// user-provided override for how `containerlab apply` handles dataplane link
+	// changes for this node: live, restart or recreate. Empty means the kind decides.
+	LinkApplyMode LinkApplyMode `json:"link-apply-mode,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
@@ -157,6 +172,18 @@ type NodeConfig struct {
 	Devices []string `json:"devices,omitempty"`
 	// Capabilities required by the container (if not run in privileged mode)
 	CapAdd []string `json:"cap-add,omitempty"`
+	// Run the container in privileged mode.
+	Privileged bool `json:"privileged,omitempty"`
+	// Cgroup namespace mode for the container.
+	CgroupnsMode string `json:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `json:"cgroup-parent,omitempty"`
+	// PID namespace mode for the container.
+	PidMode string `json:"pidmode,omitempty"`
+	// Tmpfs mounts to add to the container, keyed by destination path.
+	Tmpfs map[string]string `json:"tmpfs,omitempty"`
+	// Security options to apply to the container runtime.
+	SecurityOpts []string `json:"security-opts,omitempty"`
 	// Size of the shared memory allocated to the container
 	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
@@ -168,7 +195,6 @@ type NodeConfig struct {
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
-	PidMode     string `json:"pidmode,omitempty"`
 	// MgmtNet is the name of the docker network this node is connected to with its first interface
 	MgmtNet string `json:"mgmt-net,omitempty"`
 	// MgmtIntf can be used to be rendered by the default node template
@@ -200,6 +226,9 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
+	// Credentials for SSH/NETCONF/GNMI/etc. Populated from the topology file
+	// (defaults/kinds/nodes), falling back to the kind's hardcoded default when not set.
+	Credentials NodeCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	// Extra node parameters
 	Extras *Extras    `json:"extras,omitempty"`
 	Stages *Stages    `json:"stages,omitempty"`
@@ -215,6 +244,15 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+}
+
+// GetHostname returns the configured runtime hostname or the topology node name.
+func (n *NodeConfig) GetHostname() string {
+	if n.Hostname != "" {
+		return n.Hostname
+	}
+
+	return n.ShortName
 }
 
 type GenericFilter struct {

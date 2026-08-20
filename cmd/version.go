@@ -159,12 +159,11 @@ func printNewVersionInfo(ver string) {
 
 func upgrade(cobraCmd *cobra.Command, _ []string) error {
 	f, err := os.CreateTemp("", "containerlab")
-
-	defer os.Remove(f.Name())
-
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+
+	defer os.Remove(f.Name())
 
 	err = clabutils.CopyFileContents(cobraCmd.Context(), downloadURL, f)
 	if err != nil {

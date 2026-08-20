@@ -1,6 +1,9 @@
 ---
 search:
   boost: 6
+tags:
+  - Configuration
+  - Networking
 ---
 
 # Nodes
@@ -134,9 +137,52 @@ topology:
       restart-policy: "no"
 ```
 
+### link-apply-mode
+
+With `link-apply-mode` a user overrides how the [`deploy`](../cmd/deploy.md#link-apply-modes) command handles dataplane link changes for a node that is already running. By default the node kind declares this behavior; the override exists for kinds that have not (yet) been validated for less disruptive handling.
+
+Valid values are:
+
+- `live` - apply link changes in place, without restarting or recreating the node. Requires the NOS to detect hot-plugged interfaces.
+- `restart` - apply link changes and then restart the existing container.
+- `recreate` - delete and create the node so all generated runtime metadata is rebuilt. This is the default for most kinds.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: juniper_crpd
+      image: crpd:24.4R1.9
+      link-apply-mode: live
+```
+
+See [link apply modes](../cmd/deploy.md#link-apply-modes) for the per-kind defaults and how to validate that a kind supports `live`.
+
 ### license
 
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
+
+The license can be provided as:
+
+1. A path to a file that is available on the host machine.
+2. An embedded license blob that is provided as a multiline string.
+3. A remote URL using `https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`.
+
+```yaml
+topology:
+  nodes:
+    srl1:
+      license: license.key
+    srl2:
+      license: https://licenses.example.com/srl2/license.key
+    srl3:
+      license: sftp://user@sftp.example.com/licenses/srl3/license.key
+    srl4:
+      license: |
+        embedded license content
+```
+
+HTTPS is preferred over HTTP when the remote server supports it. Remote and embedded license files are materialized under containerlab's temp directory using the same download behavior and SSH authentication environment variables described in [remote startup-config](config-mgmt.md#remote).
 
 ### startup-config
 
@@ -144,7 +190,7 @@ It is possible to provide the startup configuration that the node applies on boo
 
 1. A path to a file that is available on the host machine and contains the config blob that the node understands.
 2. An embedded config blob that is provided as a multiline string.
-3. An URL (http(s) or [S3](s3-usage-example.md)) to a file that contains the config blob that the node can apply.
+3. An URL (`https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`) to a file that contains the config blob that the node can apply.
 
 Read more about the usage of the startup configuration (and other ways to perform configuration management with Containerlab) in the [Configuration Management](config-mgmt.md) section.
 
@@ -271,6 +317,16 @@ topology:
         - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
 ```
 
+In case the TLS material is needed for a node, it can also be mounted with `__clabDir__/.tls`. Containerlab creates the directory and populates it with the CA files during deployment, before starting the nodes. Bind the directory itself and access the TLS files once the node is started:
+
+```yaml
+topology:
+  nodes:
+    testNode:
+      binds:
+        - __clabDir__/.tls/ca:/etc/ca:ro
+```
+
 ///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
@@ -375,6 +431,35 @@ topology:
         - /home/user/somefile
 ```
 
+### credentials
+
+To override the default username or password used when accessing a node over SSH, NETCONF, gNMI, and similar interfaces, use the `credentials` mapping with `username` and `password` keys. When not set, the kind's defaults defined in the node implementation are used. You can define `credentials` at `defaults`, `kinds`, `groups`, and per-node levels; more specific levels take precedence.
+
+Containerlab picks **one** `credentials` object from the most specific level where **any** of `username`, `password` or `identity-file` is set. The values on that level are used as-is (the other keys may be empty); values are **not** merged from less specific levels. After the topology is applied, the node implementation may still fill missing username or password from its built-in defaults.
+
+The optional `identity-file` key sets the path to the SSH private key used to authenticate against the node. When present, containerlab renders an `IdentityFile` directive into the generated per-lab SSH client config (`/etc/ssh/ssh_config.d/clab-<lab>.conf`), so `ssh <node>` uses that key without a manual `-i` flag. As with `startup-config`, a relative path is resolved against the topology file's directory and a leading `~` is expanded to the home directory, so the key resolves correctly regardless of where `ssh` is later invoked from. The rendered path is double-quoted so paths containing spaces are handled correctly.
+
+Unlike `username`/`password`, the `identity-file` value is resolved on its own precedence chain (node, then group, then kind, then defaults). It is therefore independent of the credentials object selected above: a node-level `identity-file` combined with a kind-level `username`/`password` uses the kind credentials and the node's identity-file together. This keeps generated Ansible/Nornir inventories from being affected by an identity-file that is only used for the SSH client config.
+
+```yaml
+topology:
+  defaults:
+    credentials:
+      username: admin
+      password: adminpw
+  kinds:
+    nokia_srlinux:
+      credentials:
+        username: srl-admin
+        password: srl-password
+  nodes:
+    node1:
+      credentials:
+        username: node1-user
+        password: node1-password
+        identity-file: ~/.ssh/node1_key
+```
+
 ### user
 
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.
@@ -391,9 +476,28 @@ topology:
       user: clab # clab user will be used for node1
 ```
 
+### hostname
+
+The `hostname` option overrides the hostname configured inside the node's
+container. It can be set at the defaults, kind, group, or node level. When it is
+not set, containerlab uses the topology node name.
+
+```yaml
+topology:
+  nodes:
+    app1:
+      kind: linux
+      hostname: app-production-01001
+```
+
+Podman supports this option for nodes using `network-mode: container:<node>`.
+Docker does not permit setting a hostname while joining another container's
+network namespace, so Docker ignores the override for that network mode.
+
 ### entrypoint
 
 Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default entrypoint is preserved.
 
 ```yaml
 topology:
@@ -410,6 +514,7 @@ topology:
 ### cmd
 
 It is possible to set/override the command of the container image with `cmd` configuration option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default command is preserved.
 
 ```yaml
 topology:
@@ -604,6 +709,12 @@ When you want the `exec` command to have access to the env variables defined in 
 
 ///
 
+/// note | exec and VM-based (vrnetlab) kinds
+For VM-based kinds (vrnetlab integration, e.g. `sonic-vm` and other [VM-based routers](vrnetlab.md)), `exec` runs the command inside the launcher container that wraps the VM, not inside the guest VM itself. The container is only the QEMU wrapper, so guest network-OS commands (e.g. SONiC `show version`) are not on the container's `PATH` and fail with `executable file not found in $PATH`.
+
+To run commands against the guest network OS, connect to the node over SSH at its management address (or use the node's native CLI), as described on the node's kind documentation page.
+///
+
 ### memory
 
 By default, container runtimes do not impose any memory resource constraints[^1].
@@ -687,8 +798,7 @@ my-node:
 ### cap-add
 
 The `cap-add` parameter can be used to add capabilities to the container.
-Docker containers are currently executed in privileged mode, so this should not be needed.
-If this becomes configurable, specifying the capabilities required for a container will be useful.
+By default, containers are executed in privileged mode, so this should not be needed unless [`privileged`](#privileged) is set to `false`.
 
 ```yaml
 # my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
@@ -698,6 +808,93 @@ my-node:
   cap-add:
     - NET_ADMIN
     - SYS_ADMIN
+```
+
+### privileged
+
+The `privileged` parameter controls whether the container runs in privileged mode.
+It defaults to `true` when unset, to preserve containerlab's historical behavior.
+
+```yaml
+# my-node will run as an *unprivileged* container.
+my-node:
+  image: alpine:3
+  kind: linux
+  privileged: false
+```
+
+### cgroupns-mode
+
+The `cgroupns-mode` parameter controls the cgroup namespace mode used by the container runtime.
+Supported values are `host` and `private`.
+
+```yaml
+# my-node will use the host cgroup namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  cgroupns-mode: host
+```
+
+### cgroup-parent
+
+The `cgroup-parent` parameter places a node's container under the specified parent cgroup. It has the same semantics as Docker's [`--cgroup-parent`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) option and is supported by the Docker and Podman runtimes. The value is passed to the runtime unchanged; its syntax and availability depend on the runtime's configured cgroup manager. For example, cgroupfs managers use a cgroup path, while systemd managers expect a slice name such as `my-lab.slice`.
+
+This setting is inherited using the standard node, group, kind, then defaults precedence. An empty value is treated as unset and therefore does not clear a parent inherited from a group, kind, or defaults entry; the runtime default is used only when no value is configured at any level. It is independent of [`cgroupns-mode`](#cgroupns-mode), which selects the cgroup namespace visible inside the container rather than its placement in the host cgroup hierarchy.
+
+```yaml
+topology:
+  groups:
+    leaves:
+      # cgroupfs-style path; systemd managers expect a .slice name instead.
+      cgroup-parent: /xform/my-lab/leaves
+  nodes:
+    leaf1:
+      group: leaves
+    leaf2:
+      group: leaves
+```
+
+### pid-mode
+
+The `pid-mode` parameter controls the PID namespace mode used by the container runtime.
+For Docker, this accepts the same values as Docker's PID mode setting, such as `host` or `container:<name>`.
+
+```yaml
+# my-node will use the host PID namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  pid-mode: host
+```
+
+### tmpfs
+
+The `tmpfs` parameter adds tmpfs mounts to the container.
+It is a map keyed by container path, with mount options as the value.
+
+```yaml
+# my-node will have tmpfs mounts commonly used by init-style containers.
+my-node:
+  image: alpine:3
+  kind: linux
+  tmpfs:
+    /run: rw,nosuid,nodev
+    /run/lock: rw,nosuid,nodev,noexec
+    /tmp: rw,nosuid,nodev
+```
+
+### security-opts
+
+The `security-opts` parameter passes security options to the container runtime.
+
+```yaml
+# my-node will disable the default seccomp profile.
+my-node:
+  image: alpine:3
+  kind: linux
+  security-opts:
+    - seccomp=unconfined
 ```
 
 ### sysctls

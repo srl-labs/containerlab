@@ -145,7 +145,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return n.CreateIOLFiles(ctx)
@@ -153,6 +153,22 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 
 func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
+
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for IOL mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+		return nil
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
 
 	n.GenBootConfig(ctx)
 
@@ -443,8 +459,8 @@ func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error)
 		"cisco_iosxe",
 		n.Cfg.LongName,
 		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(defaultCredentials.GetUsername()),
-		options.WithAuthPassword(defaultCredentials.GetPassword()),
+		options.WithAuthUsername(n.Cfg.Credentials.Username),
+		options.WithAuthPassword(n.Cfg.Credentials.Password),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create platform; error: %+v", err)

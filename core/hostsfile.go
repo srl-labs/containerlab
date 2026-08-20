@@ -8,7 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+
+	"golang.org/x/sys/unix"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -18,12 +22,49 @@ import (
 const (
 	clabHostEntryPrefix  = "###### CLAB-%s-START ######"
 	clabHostEntryPostfix = "###### CLAB-%s-END ######"
-	clabHostsFilename    = "/etc/hosts"
 
 	hostEntriesPerNode = 2
 )
 
+// Overridable from tests; never mutated in production.
+var (
+	clabHostsFilename = "/etc/hosts"
+	clabHostsLockPath = "/run/lock/clab-hosts.lock"
+)
+
+var hostsFileMu sync.Mutex
+
+// withHostsFileLock serializes /etc/hosts edits across goroutines and
+// across concurrent clab processes on the same host.
+func withHostsFileLock(fn func() error) error {
+	hostsFileMu.Lock()
+	defer hostsFileMu.Unlock()
+
+	if dir := filepath.Dir(clabHostsLockPath); dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("creating hosts lock directory %q: %w", dir, err)
+		}
+	}
+
+	// 0o644 so a non-root caller can co-acquire the lock with a prior root caller.
+	f, err := os.OpenFile(clabHostsLockPath, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return fmt.Errorf("opening hosts file lock %q: %w", clabHostsLockPath, err)
+	}
+	defer f.Close()
+
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
+		return fmt.Errorf("acquiring hosts file lock: %w", err)
+	}
+
+	return fn()
+}
+
 func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
+	return withHostsFileLock(func() error { return c.appendHostsFileEntriesLocked(ctx) })
+}
+
+func (c *CLab) appendHostsFileEntriesLocked(ctx context.Context) error {
 	filename := clabHostsFilename
 
 	if c.Config.Name == "" {
@@ -38,7 +79,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 	}
 
 	// lets make sure to remove the entries of a non-properly destroyed lab in the hosts file
-	err := c.DeleteEntriesFromHostsFile()
+	err := c.deleteEntriesFromHostsFileLocked()
 	if err != nil {
 		return err
 	}
@@ -79,6 +120,10 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 }
 
 func (c *CLab) DeleteEntriesFromHostsFile() error {
+	return withHostsFileLock(c.deleteEntriesFromHostsFileLocked)
+}
+
+func (c *CLab) deleteEntriesFromHostsFileLocked() error {
 	if c.Config.Name == "" {
 		return errors.New("missing containerlab name")
 	}

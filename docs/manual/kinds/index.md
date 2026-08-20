@@ -3,6 +3,8 @@ search:
   boost: 4
 kind_code_name: kinds_overview
 kind_display_name: Kinds
+tags:
+  - Kind
 ---
 # -{{ kind_display_name }}-
 
@@ -44,6 +46,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Arista cEOS**            | [`arista_ceos`](ceos.md)                            | supported | container |
 | **Arista vEOS**            | [`arista_veos`](vr-veos.md)                         | supported |    VM     |
 | **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |
+| **Juniper cSRX**           | [`juniper_csrx`](csrx.md)                           | supported | container |
 | **Juniper vMX**            | [`juniper_vmx`](vr-vmx.md)                          | supported |    VM     |
 | **Juniper vQFX**           | [`juniper_vqfx`](vr-vqfx.md)                        | supported |    VM     |
 | **Juniper vSRX**           | [`juniper_vsrx`](vr-vsrx.md)                        | supported |    VM     |
@@ -52,6 +55,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Juniper vJunosEvolved**  | [`juniper_vjunosevolved`](vr-vjunosevolved.md)      | supported |    VM     |
 | **Juniper cJunosEvolved**  | [`juniper_cjunosevolved`](cjunosevolved.md)         | supported |    VM     |
 | **Cisco XRd**              | [`cisco_xrd`](xrd.md)                               | supported | container |
+| **Cisco XRd vRouter**      | [`cisco_xrd_vrouter`](cisco_xrd_vrouter.md)         | supported |    VM     |
 | **Cisco XRv**              | [`cisco_xrv`](vr-xrv.md)                            | supported |    VM     |
 | **Cisco XRv9k**            | [`cisco_xrv9k`](vr-xrv9k.md)                        | supported |    VM     |
 | **Cisco CSR1000v**         | [`cisco_csr1000v`](vr-csr.md)                       | supported |    VM     |
@@ -61,7 +65,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco Catalyst 9000v**   | [`cisco_cat9kv`](vr-cat9kv.md)                      | supported |    VM     |
 | **Cisco IOL**              | [`cisco_iol`](cisco_iol.md)                         | supported | container |
 | **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
-| **Cumulus VX**             | [`cumulus_cvx`](cvx.md)                             | supported | container |
+| **Nvidia Cumulus VX**      | [`nvidia_cumulusvx`](nvidia_cumulusvx.md)           | supported |    VM     |
 | **Aruba ArubaOS-CX**       | [`aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
 | **SONiC (VS)**             | [`sonic-vs`](sonic-vs.md)                           | supported | container |
 | **SONiC VM**               | [`sonic-vm`](sonic-vm.md)                           | supported |    VM     |
@@ -73,12 +77,15 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Palo Alto PAN-OS**       | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)       | supported |    VM     |
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
+| **Ciena SAOS 10**          | [`ciena_saos`](ciena_saos.md)                   | supported |    VM     |
 | **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
 | **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)     | supported | container |
+| **Spirent TestCenter**     | [`spirent_stc`](spirent_stc.md)                     | supported | container |
 | **Arrcus ArcOS**           | [`arrcus_arcos`](arrcus_arcos.md)                   | supported | container |
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
 | **VyOS Networks VyOS**     | [`vyosnetworks_vyos`](vyosnetworks_vyos.md)         | supported |    VM     |
+| **PLVision SONiC**         | [`plvision_sonic`](plvision_sonic.md)               | supported |    VM     |
 | **Generic VM**             | [`generic_vm`](generic_vm.md)                       | supported |    VM     |
 | **Linux container**        | [`linux`](linux.md)                                 | supported | container |
 | **Ostinato**               | [`linux`](ostinato.md)                              | supported | container |
@@ -87,9 +94,9 @@ Within each predefined kind, we store the necessary information that is used to 
 | **OpenBSD**                | [`openbsd`](openbsd.md)                             | supported |    VM     |
 | **Kubernetes in Docker**   | [`k8s-kind`](k8s-kind.md)                           | supported | service   |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
+| **v::n osvbng**            | [`veesix_osvbng`](veesix_osvbng.md)                 | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |
 
 Refer to a specific kind documentation article for kind-specific details.
-

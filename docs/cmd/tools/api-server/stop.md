@@ -6,6 +6,8 @@ The `stop` sub-command under the `tools api-server` command removes an API serve
 
 Use this command when you want to shut down the API server and remove its container from the system.
 
+For a higher-level operational guide, see the [Containerlab API Server manual](../../../manual/api-server.md).
+
 ## Usage
 
 ```

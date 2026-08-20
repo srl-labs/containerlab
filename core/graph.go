@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -74,7 +75,8 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	log.Info("Generating lab graph...")
 
 	g = gographviz.NewGraph()
-	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
+	graphName := dotIdentifier(c.TopoPaths.TopologyFilenameWithoutExt())
+	if err := g.SetName(graphName); err != nil {
 		return err
 	}
 
@@ -106,7 +108,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 			}
 		}
 
-		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(),
+		if err := g.AddNode(graphName,
 			node.Config().ShortName, attr); err != nil {
 			return err
 		}
@@ -118,6 +120,16 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 		attr["color"] = black
 
 		eps := link.GetEndpoints()
+		// Skip links that are not point-to-point (e.g. dummy, host, macvlan,
+		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
+		// links would panic, so they are not rendered as edges.
+		if len(eps) != 2 {
+			log.Debugf(
+				"skipping non point-to-point link with %d endpoint(s) in dot graph",
+				len(eps),
+			)
+			continue
+		}
 		ANodeName := eps[0].GetNode().GetShortName()
 		BNodeName := eps[1].GetNode().GetShortName()
 
@@ -137,7 +149,9 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
-	clabutils.CreateFile(dotfile, g.String())
+	if err := clabutils.CreateFile(dotfile, g.String()); err != nil {
+		return fmt.Errorf("failed to write dot graph file: %w", err)
+	}
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
@@ -153,6 +167,10 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func dotIdentifier(id string) string {
+	return strconv.Quote(id)
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
@@ -268,6 +286,16 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Process the links between Nodes
 	for _, link := range c.Links {
 		eps := link.GetEndpoints()
+		// Skip links that are not point-to-point (e.g. dummy, host, macvlan,
+		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
+		// links would panic, so they are not rendered as edges.
+		if len(eps) != 2 {
+			log.Debugf(
+				"skipping non point-to-point link with %d endpoint(s) in mermaid graph",
+				len(eps),
+			)
+			continue
+		}
 		fc.AddEdge(eps[0].GetNode().GetShortName(), eps[1].GetNode().GetShortName())
 	}
 
@@ -281,7 +309,9 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Generate graph
 	var w strings.Builder
 	fc.Generate(&w)
-	clabutils.CreateFile(fname, w.String())
+	if err := clabutils.CreateFile(fname, w.String()); err != nil {
+		return fmt.Errorf("failed to write mermaid graph file: %w", err)
+	}
 
 	log.Infof("Created mermaid diagram file: %s", fname)
 

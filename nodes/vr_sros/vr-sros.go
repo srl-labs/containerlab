@@ -24,7 +24,6 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -45,11 +44,17 @@ const (
 	generateable     = true
 	generateIfFormat = "1/1/%d"
 
-	vrsrosDefaultType   = "sr-1"
-	scrapliPlatformName = "nokia_sros"
-	configDirName       = "tftpboot"
-	startupCfgFName     = "config.txt"
-	licenseFName        = "license.txt"
+	vrsrosDefaultType          = "sr-1"
+	scrapliPlatformName        = "nokia_sros"
+	scrapliPlatformNameClassic = "nokia_sros_classic"
+	readyTimeout               = 15 * time.Minute // max wait for node health and SSH readiness
+	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
+	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
+	// Default (unset or "model-driven") uses the MD-CLI platform.
+	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
+	configDirName     = "tftpboot"
+	startupCfgFName   = "config.txt"
+	licenseFName      = "license.txt"
 
 	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
 	ociImageTitleLabel = "org.opencontainers.image.title"
@@ -104,6 +109,17 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	if s.Cfg.NodeType == "" {
 		s.Cfg.NodeType = vrsrosDefaultType
 	}
+
+	// if user defined components: are used, parse them.
+	variant := s.Cfg.NodeType
+	if len(s.Cfg.Components) > 0 {
+		var err error
+		variant, err = buildSrosVariant(s.Cfg.NodeType, s.Cfg.Components, s.Cfg.Env)
+		if err != nil {
+			return err
+		}
+	}
+
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
@@ -123,19 +139,12 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 		"--trace --connection-mode %s --hostname %s --variant %q",
 		s.Cfg.Env["CONNECTION_MODE"],
 		s.Cfg.ShortName,
-		s.Cfg.NodeType,
+		variant,
 	)
 
-	s.InterfaceRegexp = InterfaceRegexp
+	s.InterfaceRegexp = componentIfaceRegexp
 	s.InterfaceOffset = InterfaceOffset
-	s.InterfaceHelp = InterfaceHelp
-
-	if len(s.Cfg.Components) > 0 {
-		log.Warnf(
-			"node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components",
-			s.Cfg.ShortName,
-		)
-	}
+	s.InterfaceHelp = componentInterfaceHelp
 
 	return nil
 }
@@ -144,7 +153,7 @@ func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParam
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// store public keys extracted from clab host
@@ -231,8 +240,8 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 
 	// apply the aggregated config snippets
 	if b.Len() > 0 {
-		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, s.scrapliPlatform(),
+			s.Cfg.Credentials.Username, s.Cfg.Credentials.Password,
 			b,
 		)
 		if err != nil {
@@ -243,11 +252,22 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	return nil
 }
 
+// scrapliPlatform returns the scrapligo platform name based on the configured CLI mode.
+// When CLAB_SROS_CONFIG_MODE is "classic" or "mixed", the classic CLI platform is used.
+// The default (unset or "model-driven") uses the MD-CLI platform.
+func (s *vrSROS) scrapliPlatform() string {
+	cfgMode := strings.ToLower(s.Cfg.Env[envSrosConfigMode])
+	if cfgMode == "classic" || cfgMode == "mixed" {
+		return scrapliPlatformNameClassic
+	}
+	return scrapliPlatformName
+}
+
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
+		s.Cfg.Credentials.Username,
+		s.Cfg.Credentials.Password,
+		s.scrapliPlatform(),
 	)
 	if err != nil {
 		return nil, err
@@ -291,20 +311,6 @@ func nodeConfigExists(labDir string) bool {
 	return err == nil
 }
 
-// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
-func (s *vrSROS) isHealthy(ctx context.Context) bool {
-	ex := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
-
-	res, err := s.RunExec(ctx, ex)
-	if err != nil {
-		return false
-	}
-
-	log.Debugf("Node %q health status: %v", s.Cfg.ShortName, res.ReturnCode == 0)
-
-	return res.ReturnCode == 0
-}
-
 // applyPartialConfig applies partial configuration to the SR OS.
 func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	username, password string, config io.Reader,
@@ -324,59 +330,78 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		return nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
+
 	log.Info("Waiting for node to be ready. This may take a while",
 		"node", s.Cfg.LongName,
 		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
 	)
 
-	for loop := true; loop; {
-		if !s.isHealthy(ctx) {
-			time.Sleep(5 * time.Second) // cool-off period
+	for {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, err)
+		}
+
+		healthy, err := s.IsHealthy(ctx)
+		if err != nil {
+			log.Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
+		}
+
+		if !healthy {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
+			case <-time.After(5 * time.Second): // cool-off period
+			}
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
 		}
 
+		sl := log.StandardLog(log.StandardLogOptions{
+			ForceLevel: log.DebugLevel,
+		})
+		li, err := scraplilogging.NewInstance(
+			scraplilogging.WithLevel("debug"),
+			scraplilogging.WithLogger(sl.Print))
+		if err != nil {
+			return err
+		}
+
+		opts := []util.Option{
+			options.WithAuthNoStrictKey(),
+			options.WithAuthUsername(username),
+			options.WithAuthPassword(password),
+			options.WithTransportType(transport.StandardTransport),
+			options.WithTimeoutOps(5 * time.Second),
+			options.WithLogger(li),
+		}
+
+		p, err := platform.NewPlatform(platformName, addr, opts...)
+		if err != nil {
+			return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
+		}
+
+		d, err = p.GetNetworkDriver()
+		if err != nil {
+			return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+		}
+
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, err)
+		}
+
+		err = d.Open()
+		if err == nil {
+			// driver successfully opened, exit the loop
+			break
+		}
+
+		log.Debugf("%s: not yet ready - %v", addr, err)
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
-		default:
-			sl := log.StandardLog(log.StandardLogOptions{
-				ForceLevel: log.DebugLevel,
-			})
-			li, err := scraplilogging.NewInstance(
-				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(sl.Print))
-			if err != nil {
-				return err
-			}
-
-			opts := []util.Option{
-				options.WithAuthNoStrictKey(),
-				options.WithAuthUsername(username),
-				options.WithAuthPassword(password),
-				options.WithTransportType(transport.StandardTransport),
-				options.WithTimeoutOps(5 * time.Second),
-				options.WithLogger(li),
-			}
-
-			p, err := platform.NewPlatform(platformName, addr, opts...)
-			if err != nil {
-				return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
-			}
-
-			d, err = p.GetNetworkDriver()
-			if err != nil {
-				return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
-			}
-
-			err = d.Open()
-			if err == nil {
-				// driver successfully opened, exit the loop
-				loop = false
-			} else {
-				log.Debugf("%s: not yet ready - %v", addr, err)
-				time.Sleep(5 * time.Second) // cool-off period
-			}
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
+		case <-time.After(5 * time.Second): // cool-off period
 		}
 	}
 

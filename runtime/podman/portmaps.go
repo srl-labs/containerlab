@@ -80,7 +80,10 @@ func (*PodmanRuntime) convertExpose(
 			if !ok {
 				toReturn[portNum] = proto
 			} else {
-				newProto := strings.Join(append(strings.Split(protocols, ","), strings.Split(proto, ",")...), ",")
+				newProto := strings.Join(
+					append(strings.Split(protocols, ","), strings.Split(proto, ",")...),
+					",",
+				)
 				toReturn[portNum] = newProto
 			}
 		}
@@ -132,7 +135,11 @@ func parseSplitPort(
 				return newPort, fmt.Errorf("error parsing host port: %w", err)
 			}
 			if hostLen != ctrLen {
-				return newPort, fmt.Errorf("host and container port ranges have different lengths: %d vs %d", hostLen, ctrLen)
+				return newPort, fmt.Errorf(
+					"host and container port ranges have different lengths: %d vs %d",
+					hostLen,
+					ctrLen,
+				)
 			}
 			newPort.HostPort = hostStart
 		}

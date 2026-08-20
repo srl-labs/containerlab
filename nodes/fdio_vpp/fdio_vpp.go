@@ -29,9 +29,9 @@ const (
 	targetAuthzKeysPath = "/root/.ssh/authorized_keys"
 
 	ifWaitScriptDstPath  = "/usr/sbin/if-wait.sh"
-	vppStartupCfgDstPath = "/etc/vpp/startup.conf"
-
-	vppCfgDstPath = "/etc/vpp/vppcfg.yaml"
+	vppCfgDirDstPath     = "/config"
+	vppStartupCfgDstPath = "/config/vpp/startup.conf"
+	vppCfgDstPath        = "/config/vpp/vppcfg.yaml"
 )
 
 var (
@@ -65,6 +65,8 @@ type fdio_vpp struct {
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
 	ifWaitSrcPath string
+	// Path to the config directory bind-mounted to /config
+	vppCfgDirSrcPath string
 	// Path to the vpp startup config file
 	vppStartupCfgSrcPath string
 	// Path to vpp config file
@@ -97,14 +99,14 @@ func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	n.ifWaitSrcPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitSrcPath, ":", ifWaitScriptDstPath))
 
-	// Path to the VPP startup config file, used to start the dataplane
-	n.vppStartupCfgSrcPath = path.Join(n.Cfg.LabDir, "vpp-startup.conf")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppStartupCfgSrcPath, ":", vppStartupCfgDstPath))
+	// Bind-mount the config directory to /config to persist all VPP state
+	n.vppCfgDirSrcPath = path.Join(n.Cfg.LabDir, "config")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppCfgDirSrcPath, ":", vppCfgDirDstPath))
 
-	// Path to the VPP config file that configures the vpp interfaces/etc
-	n.vppCfgSrcPath = path.Join(n.Cfg.LabDir, "vppcfg.yaml")
+	// Paths to config files inside the bind-mounted config directory
+	n.vppStartupCfgSrcPath = path.Join(n.vppCfgDirSrcPath, "vpp", "startup.conf")
+	n.vppCfgSrcPath = path.Join(n.vppCfgDirSrcPath, "vpp", "vppcfg.yaml")
 	n.Cfg.ResStartupConfig = n.vppCfgSrcPath
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":", vppCfgDstPath))
 
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
@@ -122,6 +124,7 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 	nodeCfg := n.Config()
 
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.vppCfgDirSrcPath, "vpp"), clabconstants.PermissionsOpen)
 	clabutils.CreateFile(n.ifWaitSrcPath, clabutils.IfWaitScript)
 	os.Chmod(n.ifWaitSrcPath, clabconstants.PermissionsOpen)
 

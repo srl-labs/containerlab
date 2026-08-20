@@ -59,6 +59,9 @@ type CLab struct {
 	checkBindsPaths bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
+	// managementNetworkOverridden reports whether a management network setting was
+	// explicitly overridden through a ClabOption rather than read from the topology.
+	managementNetworkOverridden bool
 	// gitBranch and gitHash cache Git repository information
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string
@@ -339,6 +342,8 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 	wg *sync.WaitGroup,
 	skipPostDeploy bool,
 	execCollection *clabexec.ExecCollection,
+	nodeFailCh chan<- error,
+	cancelSchedule context.CancelFunc,
 ) {
 	defer wg.Done()
 
@@ -355,62 +360,51 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			delay := node.Config().StartupDelay
 			if delay > 0 {
 				log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
-				time.Sleep(time.Duration(delay) * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(delay) * time.Second):
+				}
 			}
 
-			err := node.PreDeploy(
-				ctx,
-				&clabnodes.PreDeployParams{
-					Cert:         c.Cert,
-					TopologyName: c.Config.Name,
-					TopoPaths:    c.TopoPaths,
-					SSHPubKeys:   c.SSHPubKeys,
-				},
-			)
-			if err != nil {
-				log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
-				continue
-			}
-
-			err = node.Deploy(ctx, &clabnodes.DeployParams{Nodes: c.Nodes})
-			if err != nil {
-				log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
-				continue
-			}
-
-			// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
-			// before continuing with the post-deploy stage (for e.g. certificate creation)
-			err = node.UpdateConfigWithRuntimeInfo(ctx)
-			if err != nil {
-				log.Errorf(
-					"failed to update node runtime information for node %s: %v",
-					node.Config().ShortName,
-					err,
-				)
+			if err := c.deployNode(ctx, node); err != nil {
+				log.Error(err)
+				nodeFailCh <- err
+				cancelSchedule()
+				return
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreate)
 
 			node.EnterStage(ctx, clabtypes.WaitForCreateLinks)
+			if ctx.Err() != nil {
+				return
+			}
 
 			// Deploy the Nodes link endpoints
-			err = node.DeployEndpoints(ctx)
+			err := node.DeployEndpoints(ctx)
 			if err != nil {
-				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
-				continue
+				err = fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)
+				log.Error(err)
+				nodeFailCh <- err
+				cancelSchedule()
+				return
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreateLinks)
 			node.EnterStage(ctx, clabtypes.WaitForConfigure)
+			if ctx.Err() != nil {
+				return
+			}
 
 			if !skipPostDeploy {
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
-					log.Errorf(
-						"failed to run postdeploy task for node %s: %v",
-						node.Config().ShortName,
-						err,
-					)
+					err = fmt.Errorf("node %q post-deploy: %w", node.Config().ShortName, err)
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
 				}
 			}
 
@@ -423,6 +417,9 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			if node.MustWait(clabtypes.WaitForHealthy) {
 				node.EnterStage(ctx, clabtypes.WaitForHealthy)
+				if ctx.Err() != nil {
+					return
+				}
 				// if there is a dependecy on the healthy state of this node, enter the
 				// checking procedure
 				for {
@@ -443,12 +440,19 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 						break
 					}
 
-					time.Sleep(time.Second)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(time.Second):
+					}
 				}
 			}
 
 			if node.MustWait(clabtypes.WaitForExit) {
 				node.EnterStage(ctx, clabtypes.WaitForExit)
+				if ctx.Err() != nil {
+					return
+				}
 				// if there is a dependency on the healthy state of this node, enter the
 				// checking procedure
 				for {
@@ -460,7 +464,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 						break
 					}
 
-					time.Sleep(time.Second)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(time.Second):
+					}
 				}
 			}
 
@@ -475,7 +483,9 @@ func (c *CLab) scheduleNodes(
 	ctx context.Context,
 	maxWorkers int,
 	skipPostDeploy bool,
+	nodeFailCh chan<- error,
 ) (*sync.WaitGroup, *clabexec.ExecCollection) {
+	scheduleCtx, cancelSchedule := context.WithCancel(ctx)
 	concurrentChan := make(chan *clabcoredependency_manager.DependencyNode)
 
 	execCollection := clabexec.NewExecCollection()
@@ -492,7 +502,16 @@ func (c *CLab) scheduleNodes(
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := range maxWorkers {
-		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection)
+		go c.scheduleNodeWorkerF(
+			scheduleCtx,
+			i,
+			concurrentChan,
+			wg,
+			skipPostDeploy,
+			execCollection,
+			nodeFailCh,
+			cancelSchedule,
+		)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early
@@ -516,15 +535,36 @@ func (c *CLab) scheduleNodes(
 				// the nodes stuck in waiting.
 				// Entering the Create stage here would not consume a worker and let other nodes
 				// to be scheduled.
-				node.EnterStage(ctx, clabtypes.WaitForCreate)
-
-				// wait for possible external dependencies
-				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
-				// when all nodes that this node depends on are created, push it into the channel
-				workerChan <- node
 				// indicate we are done, such that only when all of these functions are done,
 				// the workerChan is being closed
-				wfcwg.Done()
+				defer wfcwg.Done()
+
+				node.EnterStage(scheduleCtx, clabtypes.WaitForCreate)
+				// if the deploy was cancelled while waiting for the create stage, stop
+				// here instead of enqueueing a node whose dependencies were never met
+				// (and whose worker may already have exited).
+				if scheduleCtx.Err() != nil {
+					return
+				}
+
+				// wait for possible external dependencies
+				err := c.waitForExternalNodeDependencies(scheduleCtx, node.Config().ShortName)
+				if err != nil {
+					if scheduleCtx.Err() != nil {
+						return
+					}
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
+				}
+				// when all nodes that this node depends on are created, push it into the
+				// channel; honor cancellation so the send cannot block forever once the
+				// workers have unwound on Ctrl-C.
+				select {
+				case workerChan <- node:
+				case <-scheduleCtx.Done():
+				}
 			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
 
@@ -535,16 +575,20 @@ func (c *CLab) scheduleNodes(
 		close(concurrentChan)
 	}()
 
+	go func() {
+		wg.Wait()
+		cancelSchedule()
+	}()
+
 	return wg, execCollection
 }
 
 // waitForExternalNodeDependencies makes nodes that have a reference to an external container
 // network-namespace (network-mode: container:<NAME>) to wait until the referenced container is
 // in started status. The wait time is 15 minutes by default.
-func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) {
+func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) error {
 	if _, exists := c.Nodes[nodeName]; !exists {
-		log.Errorf("unable to find referenced node %q", nodeName)
-		return
+		return fmt.Errorf("unable to find referenced node %q", nodeName)
 	}
 
 	nodeConfig := c.Nodes[nodeName].Config()
@@ -552,7 +596,7 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 	if netModeArr[0] != "container" {
 		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
-		return
+		return nil
 	}
 
 	// the referenced container might be an external pre-existing or a container created also by
@@ -562,10 +606,15 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 	// if the container does not exist in the list of container, it must be an external dependency
 	// it can be ignored for internal processing so -> continue
 	if _, exists := c.Nodes[contName]; exists {
-		return
+		return nil
 	}
 
-	clabruntime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
+	return clabruntime.WaitForContainerRunning(
+		ctx,
+		c.Runtimes[c.globalRuntimeName],
+		contName,
+		nodeName,
+	)
 }
 
 // GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes -
@@ -605,10 +654,13 @@ func (*CLab) getSpecialLinkNodes() map[string]clablinks.Node {
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
 func (c *CLab) ResolveLinks() error {
+	c.resetResolvedLinks()
+
 	resolveParams := &clablinks.ResolveParams{
 		Nodes:          c.getLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
+		LabName:        c.Config.Name,
 	}
 
 	for i, l := range c.Config.Topology.Links {
@@ -627,6 +679,18 @@ func (c *CLab) ResolveLinks() error {
 	}
 
 	return nil
+}
+
+func (c *CLab) resetResolvedLinks() {
+	for _, ep := range c.Endpoints {
+		if ep == nil || ep.GetNode() == nil {
+			continue
+		}
+		_ = ep.GetNode().ReleaseEndpoint(ep)
+	}
+
+	c.Endpoints = nil
+	c.Links = make(map[int]clablinks.Link)
 }
 
 // extractDNSServers extracts DNS servers from the resolv.conf files

@@ -17,6 +17,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -35,6 +36,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -47,7 +49,8 @@ import (
 const (
 	SrosDefaultType = "SR-1" // default sros node type
 
-	readyTimeout = time.Minute * 1 // max wait time for node to boot
+	readyTimeout   = time.Minute * 1 // max wait time for node to boot
+	tcpDialTimeout = time.Second * 1
 
 	generateable     = true
 	generateIfFormat = "%d/%d/%d"
@@ -208,8 +211,16 @@ type sros struct {
 	// for component nodes, store base nodes
 	baseShortName string
 	baseLongName  string
+	// rootCtrName is the container that owns the netns.
+	//  - for components based: the 0th sorted component.
+	//  - for network mode based: parsed from network-mode.
+	rootCtrName string
 
 	preDeployParams *clabnodes.PreDeployParams
+}
+
+func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeLive
 }
 
 // Init Function for SR-SIM kind.
@@ -290,6 +301,12 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	if len(n.Cfg.Components) == 0 {
 		return nil, nil
 	}
+	if len(n.Cfg.Components) > 1 {
+		return nil, fmt.Errorf(
+			"expected at most one component override for standalone SR-SIM node %q",
+			n.Cfg.ShortName,
+		)
+	}
 
 	slotA := n.Cfg.Components[0]
 
@@ -299,15 +316,23 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		slotName = standaloneSlotName
 	}
 
-	if slotName != standaloneSlotName {
+	if !integratedSrosSlotAllowed(n.Cfg.NodeType, slotName) {
 		return nil, fmt.Errorf(
-			"expected no slot, or slot %q for components of standalone SR-SIM node: %q",
-			standaloneSlotName,
+			"expected no slot, or slot %s for components of standalone SR-SIM node %q",
+			strings.Join(integratedSrosAllowedSlots(n.Cfg.NodeType), "/"),
 			n.Cfg.ShortName,
 		)
 	}
+	vars[envNokiaSrosSlot] = slotName
 
 	if slotA.Type != "" {
+		if isSingleSlotIntegratedSrosNodeType(n.Cfg.NodeType) {
+			return nil, fmt.Errorf(
+				"node %q type %q is integrated and does not support component card-type override",
+				n.Cfg.ShortName,
+				n.Cfg.NodeType,
+			)
+		}
 		vars[envNokiaSrosCard] = slotA.Type
 	}
 
@@ -377,7 +402,7 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
 
-		return n.createSROSFiles()
+		return n.createSROSFiles(ctx)
 	}
 	return nil
 }
@@ -387,6 +412,11 @@ func (n *sros) DeployEndpoints(ctx context.Context) error {
 		return err
 	}
 
+	return n.PostDeployEndpoints(ctx)
+}
+
+// PostDeployEndpoints runs SR-SIM endpoint fixups after dataplane links exist.
+func (n *sros) PostDeployEndpoints(ctx context.Context) error {
 	// Disable TX checksum offload on the host NS veth for the mgmt interface.
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
@@ -446,6 +476,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	deadline := time.Now().Add(readyTimeout)
+	var lastHealthErr error
 	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
@@ -454,6 +485,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
+			lastHealthErr = err
 			log.Debug(
 				fmt.Errorf(
 					"health check failed, check 'docker logs -f %s': %w",
@@ -509,14 +541,20 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			// continue to next iteration
 		}
 	}
-	return nil
+
+	if lastHealthErr != nil {
+		return fmt.Errorf("node %q did not become healthy before timeout: %w",
+			n.Cfg.LongName, lastHealthErr)
+	}
+
+	return fmt.Errorf("node %q did not become healthy before timeout", n.Cfg.LongName)
 }
 
 // Delete func for SR-SIM kind.
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
+		return n.DefaultNode.Delete(ctx)
 	}
 
 	// Delete all the component containers
@@ -526,7 +564,8 @@ func (n *sros) Delete(ctx context.Context) error {
 			log.Warn(err)
 		}
 	}
-	return nil
+
+	return n.DefaultNode.Delete(ctx)
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
@@ -579,17 +618,13 @@ func (n *sros) setupComponentNodes() error {
 
 	n.sortComponents()
 
-	// Registry, because it is not a package Var
-	nr := clabnodes.NewNodeRegistry()
-	Register(nr)
+	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
 
 	// loop through the components, creating them
 	for idx, c := range n.Cfg.Components {
 		// instantiate a new nokia_srsim instance
-		componentNode, err := nr.NewNodeOfKind("nokia_srsim")
-		if err != nil {
-			return err
-		}
+		srosNode := new(sros)
+		componentNode := clabnodes.Node(srosNode)
 
 		// copy the original node's NodeConfig to the component
 		componentConfig, err := deep.Copy(n.Cfg)
@@ -648,12 +683,11 @@ func (n *sros) setupComponentNodes() error {
 		componentNode.WithRuntime(n.GetRuntime())
 
 		// store root components for cpms, for config gen
-		if srosNode, ok := componentNode.(*sros); ok {
-			srosNode.rootComponents = n.Cfg.Components
-			// store base node name
-			srosNode.baseShortName = n.Cfg.ShortName
-			srosNode.baseLongName = n.Cfg.LongName
-		}
+		srosNode.rootComponents = n.Cfg.Components
+		// store base node name
+		srosNode.baseShortName = n.Cfg.ShortName
+		srosNode.baseLongName = n.Cfg.LongName
+		srosNode.rootCtrName = rootCtrName
 
 		// store the node in the componentNodes
 		n.componentNodes = append(n.componentNodes, componentNode)
@@ -691,7 +725,9 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
-		c.PreDeploy(ctx, n.preDeployParams)
+		if err := c.PreDeploy(ctx, n.preDeployParams); err != nil {
+			return fmt.Errorf("pre-deploy for component node %q: %w", c.GetShortName(), err)
+		}
 		// deploy the component
 		err := c.Deploy(ctx, deployParams)
 		if err != nil {
@@ -732,6 +768,9 @@ func (n *sros) isDistributedCardNode() bool {
 // isDistributedBaseNode returns true if this is the base node of a distributed
 // SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
+	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
+		return false
+	}
 	return len(n.Cfg.Components) > 1
 }
 
@@ -742,21 +781,13 @@ func (n *sros) isStandaloneNode() bool {
 
 // GetNSPath retrieves the Namespace Path.
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
-	if n.isStandaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.rootCtrName == "") {
 		return n.DefaultNode.GetNSPath(ctx)
+	} else if n.isDistributedCardNode() {
+		return n.Runtime.GetNSPath(ctx, n.rootCtrName)
 	}
-	// calculate cpm container name
-	cpmSlot, err := n.cpmSlot()
-	if err != nil {
-		return "", err
-	}
-	cpmContainerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
-	nsp, err := n.Runtime.GetNSPath(ctx, cpmContainerName)
-	if err != nil {
-		log.Errorf("Unable to determine NetNS Path for node %s: %v", n.Cfg.ShortName, err)
-		return "", err
-	}
-	return nsp, err
+	// delegate to the 0th component node which owns the netns
+	return n.componentNodes[0].GetNSPath(ctx)
 }
 
 // calcComponentName appends the line card suffix to the given node name.
@@ -773,6 +804,9 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
+	if fqdnDotIndex < 0 {
+		return fmt.Sprintf("%s-%s", n.Cfg.Fqdn, strings.ToLower(slot))
+	}
 	result := fmt.Sprintf(
 		"%s-%s%s",
 		n.Cfg.Fqdn[:fqdnDotIndex],
@@ -947,7 +981,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 }
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
-func (n *sros) createSROSFiles() error {
+func (n *sros) createSROSFiles(ctx context.Context) error {
 	log.Debug("Creating directory structure for SR OS container", "node", n.Cfg.ShortName)
 
 	var err error
@@ -976,6 +1010,10 @@ func (n *sros) createSROSFiles() error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
+		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
+			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -989,6 +1027,27 @@ func (n *sros) createSROSFiles() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
+// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
+// with the same filename (chassis_info.json).
+func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return fmt.Errorf("inspect image: %w", err)
+	}
+	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
+	if err != nil {
+		return err
+	}
+	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
+	licensed := append([]byte(chassisInfoFileLicense), content...)
+	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
 	return nil
 }
 
@@ -1019,8 +1078,9 @@ func (n *sros) createSROSConfigFiles() error {
 		ctx := context.Background()
 		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
+			n.swVersion = n.parseVersionString(srosDefaultVersion)
 			log.Warn("Failed to get SR OS version from image",
-				"node", n.Cfg.ShortName, "error", err)
+				"node", n.Cfg.ShortName, "version", n.swVersion, "error", err)
 		} else {
 			n.swVersion = version
 			log.Info("Retrieved SR OS version from image",
@@ -1131,7 +1191,10 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	if !isFullConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
-		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
+		log.Debugf(
+			"SR-SIM node %q has non-partial startup-config defined, skipping component config gen",
+			n.Cfg.LongName,
+		)
 	}
 
 	v := n.resolveConfigVariant()
@@ -1181,6 +1244,9 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	}
 
 	n.prepareSSHPubKeys(tplData)
+
+	n.setVersionSpecificParams(tplData)
+
 	return tplData, nil
 }
 
@@ -1314,7 +1380,11 @@ func (n *sros) addPartialConfig() error {
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn("Passed startup-config option, but it will not have any effect", "node", n.Cfg.ShortName)
+			log.Warn(
+				"Passed startup-config option, but it will not have any effect",
+				"node",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil
@@ -1566,8 +1636,8 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
 	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {
@@ -1680,8 +1750,8 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 
 	err := clabnetconf.MultiExec(
 		fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		operations,
 	)
 	if len(cmd) > 0 && n.isConfigClassic() {
@@ -1734,7 +1804,7 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 		"addr",
 		fmt.Sprintf("%q:830", addr),
 	)
-	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
+	return CheckPortWithRetry(addr, 830, readyTimeout, int(readyTimeout/retryTimer), retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic.
@@ -1746,19 +1816,40 @@ func CheckPortWithRetry(
 	retryDelay time.Duration,
 ) (bool, error) {
 	var lastErr error
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	deadline := time.Now().Add(timeout)
 
 	for i := range maxRetries {
 		if i > 0 {
-			time.Sleep(retryDelay)
+			if remaining := time.Until(deadline); remaining <= 0 {
+				break
+			} else if retryDelay < remaining {
+				time.Sleep(retryDelay)
+			} else {
+				time.Sleep(remaining)
+			}
 		}
 
-		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-		conn, err := net.DialTimeout("tcp", address, timeout)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+
+		dialTimeout := tcpDialTimeout
+		if remaining < dialTimeout {
+			dialTimeout = remaining
+		}
+
+		conn, err := net.DialTimeout("tcp", address, dialTimeout)
 		if err == nil {
 			conn.Close()
 			return true, nil
 		}
 		lastErr = err
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("timed out checking tcp port %s", address)
 	}
 
 	return false, lastErr
@@ -1889,8 +1980,8 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	)
 }
 
-// generateComponentConfig generates SR OS configuration for explicitly defined
-// components (cards, SFMs, XIOMs, MDAs) using a struct + loop; power config is appended.
+// generateComponentConfig generates SR OS configuration for explicitly defined distributed
+// components or known integrated SR-SIM defaults. Power config is appended when supported.
 func (n *sros) generateComponentConfig() string {
 	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
 		return ""
@@ -1898,12 +1989,18 @@ func (n *sros) generateComponentConfig() string {
 	if n.isConfigClassic() {
 		return ""
 	}
-	if n.isStandaloneNode() {
-		return ""
-	}
+
 	components := n.rootComponents
 	if len(components) == 0 {
-		return ""
+		if len(n.Cfg.Components) > 1 || n.rootCtrName != "" {
+			return ""
+		}
+
+		lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.Cfg.Env)
+		if len(lines) == 0 {
+			return ""
+		}
+		return n.componentConfigFromLines(lines)
 	}
 
 	for _, c := range components {
@@ -1923,11 +2020,20 @@ func (n *sros) generateComponentConfig() string {
 	}
 
 	lines := buildComponentCfgLines(components)
+	return n.componentConfigFromLines(lines)
+}
+
+func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
+	powerConfig := n.generatePowerConfig()
+	if len(lines) == 0 && powerConfig == "" {
+		return ""
+	}
+
 	var config strings.Builder
 	for _, l := range lines {
 		config.WriteString(l.String())
 	}
-	config.WriteString(n.generatePowerConfig())
+	config.WriteString(powerConfig)
 	return config.String()
 }
 
@@ -2014,4 +2120,137 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 		n.Cfg.ShortName,
 	)
 	return nil
+}
+
+func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.GetContainerStatus(ctx)
+	}
+
+	var (
+		hasRunning    bool
+		hasPaused     bool
+		hasRestarting bool
+		hasCreated    bool
+		hasStopped    bool
+		hasRemoving   bool
+	)
+
+	for _, componentNode := range n.componentNodes {
+		switch componentNode.GetContainerStatus(ctx) {
+		case clabruntime.Running:
+			hasRunning = true
+		case clabruntime.Paused:
+			hasPaused = true
+		case clabruntime.Restarting:
+			hasRestarting = true
+		case clabruntime.Created:
+			hasCreated = true
+		case clabruntime.Stopped:
+			hasStopped = true
+		case clabruntime.Removing:
+			hasRemoving = true
+		}
+	}
+
+	switch {
+	case hasRunning:
+		return clabruntime.Running
+	case hasPaused:
+		return clabruntime.Paused
+	case hasRestarting:
+		return clabruntime.Restarting
+	case hasCreated:
+		return clabruntime.Created
+	case hasStopped:
+		return clabruntime.Stopped
+	case hasRemoving:
+		return clabruntime.Removing
+	default:
+		return clabruntime.NotFound
+	}
+}
+
+func (n *sros) Start(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		if err := n.DefaultNode.Start(ctx); err != nil {
+			return err
+		}
+		return n.PostDeployEndpoints(ctx)
+	}
+
+	for _, c := range n.componentNodes {
+		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
+			return fmt.Errorf("node %q component %q start error: %w",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
+	if err := n.RestoreEndpoints(ctx); err != nil {
+		return err
+	}
+
+	return n.PostDeployEndpoints(ctx)
+}
+
+func (n *sros) Stop(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.Stop(ctx)
+	}
+
+	if err := n.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	// stop components in reverse order as 0th ctr is netns owner.
+	// and we don't want to orphan anything.
+	for i := len(n.componentNodes) - 1; i >= 0; i-- {
+		c := n.componentNodes[i]
+		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
+			log.Warnf("node %q component %q stop error: %v",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
+	return nil
+}
+
+func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
+	diff := n.DefaultNode.ComputeDiff(oldCfg, newCfg)
+
+	if oldCfg == nil || newCfg == nil {
+		return diff
+	}
+
+	if !componentSetsEqual(oldCfg.Components, newCfg.Components) {
+		diff.Fields = append(diff.Fields, "Components")
+	}
+
+	return diff
+}
+
+func componentSetsEqual(a, b []*clabtypes.Component) bool {
+	return reflect.DeepEqual(componentsBySlot(a), componentsBySlot(b))
+}
+
+func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Component {
+	m := make(map[string]clabtypes.Component)
+	for _, c := range components {
+		if c == nil || strings.TrimSpace(c.Slot) == "" {
+			continue
+		}
+		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
+		norm := *c
+		norm.Slot = slot
+		m[slot] = norm
+	}
+	return m
+}
+
+// DefaultLinkType returns the default link type for an SR-SIM node
+// when the brief notation of a link definition is used.
+// It returns veth-stitch for SR-SIM nodes to support pcap and netem features,
+// see https://github.com/srl-labs/containerlab/pull/3270.
+func (*sros) DefaultLinkType() clablinks.LinkType {
+	return clablinks.LinkTypeVethStitch
 }

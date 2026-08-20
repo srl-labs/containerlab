@@ -17,8 +17,10 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -50,7 +52,7 @@ func TestLicenseInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -99,7 +101,7 @@ func TestBindsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -122,6 +124,77 @@ func TestBindsInit(t *testing.T) {
 				if !slices.Contains(binds, b) {
 					t.Errorf("bind %q is not found in resulting binds %q", b, binds)
 				}
+			}
+		})
+	}
+}
+
+func TestGeneratedCABindDirectory(t *testing.T) {
+	tests := map[string]struct {
+		bind    string
+		wantErr bool
+	}{
+		"generated_ca_directory": {
+			bind: "__clabDir__/.tls/ca:/etc/ca:ro",
+		},
+		"generated_ca_file": {
+			bind:    "__clabDir__/.tls/ca/ca.pem:/etc/ca.pem:ro",
+			wantErr: true,
+		},
+		"missing_bind": {
+			bind:    "__clabDir__/missing:/etc/missing:ro",
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			topoFile := filepath.Join(tempDir, "topology.clab.yml")
+			topo := fmt.Sprintf(`name: %s
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+      binds:
+        - %s
+`, name, tc.bind)
+			if err := os.WriteFile(topoFile, []byte(topo), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			c, err := NewContainerLab(WithTopoPath(topoFile, nil))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected bind path validation to fail")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			caDir := c.TopoPaths.CABaseDir()
+			if _, err := os.Stat(caDir); err == nil {
+				t.Fatalf("CA directory %q was created before deployment", caDir)
+			} else if !os.IsNotExist(err) {
+				t.Fatalf("failed checking CA directory %q: %v", caDir, err)
+			}
+
+			c.prepareLabDirectory(true)
+			if err := c.createPlaceholderArtifacts(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(caDir); err != nil {
+				t.Fatalf("CA directory %q was not created during deployment preparation: %v",
+					caDir, err)
+			}
+
+			wantBind := caDir + ":/etc/ca:ro"
+			if !slices.Contains(c.Nodes["node1"].Config().Binds, wantBind) {
+				t.Fatalf("CA directory bind %q was not found in resulting binds %q",
+					wantBind, c.Nodes["node1"].Config().Binds)
 			}
 		})
 	}
@@ -158,7 +231,7 @@ func TestTypeInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -168,6 +241,118 @@ func TestTypeInit(t *testing.T) {
 
 			if !reflect.DeepEqual(c.Nodes[tc.node].Config().NodeType, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].Config().NodeType)
+			}
+		})
+	}
+}
+
+func TestCreateNodeCfgPrivilegedByDefault(t *testing.T) {
+	topoFile := filepath.Join(t.TempDir(), "test.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+
+	registry := clabnodes.NewNodeRegistry()
+	attributes := clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).
+		WithPrivilegedByDefault(false)
+	if err := registry.Register([]string{"test"}, nil, attributes); err != nil {
+		t.Fatal(err)
+	}
+
+	explicitlyPrivileged := true
+	tests := []struct {
+		name       string
+		privileged *bool
+		want       bool
+	}{
+		{name: "kind default"},
+		{name: "topology override", privileged: &explicitlyPrivileged, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topology := clabtypes.NewTopology()
+			topology.Nodes["node1"] = &clabtypes.NodeDefinition{
+				Kind:       "test",
+				Privileged: tt.privileged,
+			}
+			prefix := "clab"
+			c := &CLab{
+				Config: &Config{
+					Name:     "test",
+					Prefix:   &prefix,
+					Mgmt:     &clabtypes.MgmtNet{},
+					Topology: topology,
+				},
+				Reg:       registry,
+				TopoPaths: topoPaths,
+			}
+
+			cfg, err := c.createNodeCfg("node1", topology.Nodes["node1"], 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Privileged != tt.want {
+				t.Fatalf("Privileged = %v, want %v", cfg.Privileged, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolvePidMode(t *testing.T) {
+	tests := []struct {
+		name    string
+		prefix  string
+		pidMode string
+		want    string
+	}{
+		{
+			name:    "topology node",
+			prefix:  "clab",
+			pidMode: "container:parent",
+			want:    "container:clab-test-parent",
+		},
+		{
+			name:    "topology node without prefix",
+			pidMode: "container:parent",
+			want:    "container:parent",
+		},
+		{
+			name:    "topology node with lab name prefix",
+			prefix:  "__lab-name",
+			pidMode: "container:parent",
+			want:    "container:test-parent",
+		},
+		{
+			name:    "external container",
+			prefix:  "clab",
+			pidMode: "container:external",
+			want:    "container:external",
+		},
+		{name: "host mode", prefix: "clab", pidMode: "host", want: "host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topology := clabtypes.NewTopology()
+			topology.Nodes["parent"] = &clabtypes.NodeDefinition{}
+			c := &CLab{
+				Config: &Config{
+					Name:     "test",
+					Prefix:   &tt.prefix,
+					Topology: topology,
+				},
+			}
+
+			if got := c.resolvePidMode(tt.pidMode); got != tt.want {
+				t.Fatalf("resolvePidMode() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -237,7 +422,7 @@ func TestEnvInit(t *testing.T) {
 			}
 
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -284,7 +469,7 @@ func TestUserInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -320,7 +505,7 @@ func TestVerifyLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 				WithRuntime(clabruntimedocker.RuntimeName,
 					&clabruntime.RuntimeConfig{
 						VerifyLinkParams: clablinks.NewVerifyLinkParams(),
@@ -338,7 +523,7 @@ func TestVerifyLinks(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = c.verifyLinks(ctx)
+			err = c.verifyLinks(ctx, clablinks.NewVerifyLinkParams())
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
@@ -347,6 +532,48 @@ func TestVerifyLinks(t *testing.T) {
 				t.Fatalf("wanted %q got nil", tc.want)
 			}
 		})
+	}
+}
+
+func TestResolveLinksIsIdempotent(t *testing.T) {
+	topoContent := []byte(`
+name: resolve-links
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:latest
+    n2:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["n1:eth1", "n2:eth1"]
+`)
+
+	topoFile := filepath.Join(t.TempDir(), "resolve-links.clab.yml")
+	if err := os.WriteFile(topoFile, topoContent, 0o644); err != nil {
+		t.Fatalf("failed to write topology file: %v", err)
+	}
+
+	c, err := NewContainerLab(WithTopoPath(topoFile, nil))
+	if err != nil {
+		t.Fatalf("failed to create lab: %v", err)
+	}
+
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatalf("first ResolveLinks() failed: %v", err)
+	}
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatalf("second ResolveLinks() failed: %v", err)
+	}
+
+	if got := len(c.Endpoints); got != 2 {
+		t.Fatalf("endpoint count after repeated ResolveLinks() = %d, want 2", got)
+	}
+	for _, nodeName := range []string{"n1", "n2"} {
+		if got := len(c.Nodes[nodeName].GetEndpoints()); got != 1 {
+			t.Fatalf("%s endpoint count after repeated ResolveLinks() = %d, want 1", nodeName, got)
+		}
 	}
 }
 
@@ -431,7 +658,7 @@ func TestLabelsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -498,7 +725,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -599,7 +826,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			rtName := "mock"
 
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -659,7 +886,7 @@ func TestEnvFileInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -710,7 +937,7 @@ func TestSuppressConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -752,7 +979,7 @@ func TestStartupConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -780,7 +1007,7 @@ func TestExecInit(t *testing.T) {
 			node: "node1",
 			want: []string{
 				"echo \"Hello world\"",
-				"echo \"Hello node node1\"",
+				"echo \"Hello node node1 in clab-topo14\"",
 			},
 		},
 	}
@@ -788,7 +1015,7 @@ func TestExecInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -800,5 +1027,156 @@ func TestExecInit(t *testing.T) {
 				t.Errorf("execs do not match %s", d)
 			}
 		})
+	}
+}
+
+func TestStageExecMagicVarsInit(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo17.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rawCommand := "echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__"
+	if got := c.Config.Topology.Defaults.Stages.Create.Execs[0].Command; got != rawCommand {
+		t.Fatalf("default stage exec command was modified: got %q", got)
+	}
+
+	for _, nodeName := range []string{"node1", "node2"} {
+		nodeCfg := c.Nodes[nodeName].Config()
+		wantCommand := fmt.Sprintf(
+			"echo %s %s %s %s",
+			c.TopoPaths.TopologyLabDir(),
+			filepath.Base(c.TopoPaths.TopologyLabDir()),
+			c.TopoPaths.NodeDir(nodeName),
+			nodeName,
+		)
+		stages := map[string]*clabtypes.StageBase{
+			"create":       &nodeCfg.Stages.Create.StageBase,
+			"create-links": &nodeCfg.Stages.CreateLinks.StageBase,
+			"configure":    &nodeCfg.Stages.Configure.StageBase,
+			"healthy":      &nodeCfg.Stages.Healthy.StageBase,
+			"exit":         &nodeCfg.Stages.Exit.StageBase,
+		}
+
+		for stageName, stage := range stages {
+			if len(stage.Execs) != 1 {
+				t.Fatalf("%s %s stage has %d execs, want 1", nodeName, stageName, len(stage.Execs))
+			}
+			if got := stage.Execs[0].Command; got != wantCommand {
+				t.Errorf("%s %s stage command = %q, want %q", nodeName, stageName, got, wantCommand)
+			}
+			if got := stage.Execs[0].Target; got != clabtypes.CommandTargetHost {
+				t.Errorf("%s %s stage target = %q, want %q",
+					nodeName, stageName, got, clabtypes.CommandTargetHost)
+			}
+		}
+	}
+}
+
+func TestExtrasInit(t *testing.T) {
+	tests := map[string]struct {
+		got           string
+		node          string
+		wantCeosCopy  []string
+		wantSRLAgents []string
+	}{
+		"extras_with_magic_vars": {
+			got:  "test_data/topo14.yml",
+			node: "node1",
+			wantCeosCopy: []string{
+				"ceos-configs/node1/ceos-config",
+			},
+			wantSRLAgents: []string{
+				"agents/node1/agent.yml",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoPath(tc.got, nil),
+			}
+
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			extras := c.Nodes[tc.node].Config().Extras
+			if extras == nil {
+				t.Fatal("extras is nil")
+			}
+
+			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
+			}
+
+			if d := cmp.Diff(extras.SRLAgents, tc.wantSRLAgents); d != "" {
+				t.Errorf("srl-agents mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}
+
+func TestKindExtrasMagicVarsAreNodeScoped(t *testing.T) {
+	opts := []ClabOption{
+		WithTopoPath("test_data/topo16.yml", nil),
+	}
+
+	c, err := NewContainerLab(opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := map[string]struct {
+		node         string
+		wantCeosCopy []string
+	}{
+		"node1": {
+			node: "node1",
+			wantCeosCopy: []string{
+				"ceos-configs/node1/ceos-config",
+			},
+		},
+		"node2": {
+			node: "node2",
+			wantCeosCopy: []string{
+				"ceos-configs/node2/ceos-config",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			extras := c.Nodes[tc.node].Config().Extras
+			if extras == nil {
+				t.Fatal("extras is nil")
+			}
+
+			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}
+
+func TestMagicVarReplacerWithoutNodeName(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := c.magicVarReplacer("").Replace(
+		"lab=__clabLabName__,dir=__clabDir__,node=__clabNodeName__,nodedir=__clabNodeDir__",
+	)
+
+	want := fmt.Sprintf(
+		"lab=clab-topo14,dir=%s,node=__clabNodeName__,nodedir=__clabNodeDir__",
+		c.TopoPaths.TopologyLabDir(),
+	)
+
+	if got != want {
+		t.Fatalf("unexpected magic var replacement, want %q got %q", want, got)
 	}
 }
