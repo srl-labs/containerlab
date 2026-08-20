@@ -102,6 +102,12 @@ func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 		n.Cfg.Env["CONNECTION_MODE"],
 	)
 
+	hwa, err := clabutils.GenMac(clabconstants.ClabOUI)
+	if err != nil {
+		return err
+	}
+	n.Cfg.MacAddress = hwa.String()
+
 	return nil
 }
 
