@@ -480,6 +480,7 @@ network namespace, so Docker ignores the override for that network mode.
 ### entrypoint
 
 Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default entrypoint is preserved.
 
 ```yaml
 topology:
@@ -496,6 +497,7 @@ topology:
 ### cmd
 
 It is possible to set/override the command of the container image with `cmd` configuration option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default command is preserved.
 
 ```yaml
 topology:
