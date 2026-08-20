@@ -868,32 +868,32 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 	return result, nil
 }
 
-// GetNodeVolumes merges volume entries from defaults, kind, and node levels.
+func getNodeVolumeSources(node *NodeDefinition) []string {
+	return node.Volumes
+}
+
+// GetNodeVolumes merges volume entries from defaults, kind, group, and node levels.
 // Lower-level entries override higher-level ones for the same destination path.
 func (t *Topology) GetNodeVolumes(name string) ([]string, error) {
-	if _, ok := t.Nodes[name]; !ok {
-		return nil, nil
-	}
+	volumeSources := mergeStringSliceFields(
+		t,
+		name,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+	)
 
 	volumes := map[string]string{}
 
-	// group the default, kind and node volumes
-	volumeSources := [][]string{
-		t.GetDefaults().Volumes,
-		t.GetKind(t.GetNodeKind(name)).Volumes,
-		t.Nodes[name].Volumes,
-	}
-
 	// add the volumes from less to more specific levels, indexed by the destination path.
 	// thereby more specific volumes will overwrite less specific ones
-	for _, vs := range volumeSources {
-		for _, volume := range vs {
-			v, err := NewVolumeFromString(volume)
-			if err != nil {
-				return nil, err
-			}
-			volumes[v.Dst()] = volume
+	for _, volume := range volumeSources {
+		v, err := NewVolumeFromString(volume)
+		if err != nil {
+			return nil, err
 		}
+		volumes[v.Dst()] = volume
 	}
 
 	// in order to return nil instead of empty array when no volumes are defined
@@ -907,6 +907,8 @@ func (t *Topology) GetNodeVolumes(name string) ([]string, error) {
 	for _, v := range volumes {
 		result = append(result, v)
 	}
+
+	slices.Sort(result)
 
 	return result, nil
 }

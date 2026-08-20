@@ -665,8 +665,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 
 	volumeMounts, err := d.convertVolumeMounts(node.Volumes)
 	if err != nil {
-		log.Errorf("Cannot convert volume mounts %v: %v", node.Volumes, err)
-		volumeMounts = nil
+		return "", fmt.Errorf("failed to convert volume mounts: %w", err)
 	}
 
 	containerHostConfig := &container.HostConfig{
@@ -1817,8 +1816,8 @@ func (d *DockerRuntime) convertVolumeMounts(mounts []string) ([]mount.Mount, err
 		}
 
 		opts := clabtypes.ParseVolumeOptions(spec.Options())
-		for _, opt := range opts.Unknown {
-			log.Debugf("ignoring unsupported volume option %q in %q", opt, vol)
+		if len(opts.Unknown) > 0 {
+			return nil, fmt.Errorf("unsupported volume option(s) %q in %q", opts.Unknown, vol)
 		}
 
 		m := mount.Mount{

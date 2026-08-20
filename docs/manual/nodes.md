@@ -335,7 +335,9 @@ When a bind with the same destination is defined on multiple levels, the lowest 
 
 ### volumes
 
-Volumes (named or anonymous) are configured via the `volumes` stanza. Entries use the same short syntax as docker's `--volume` flag.
+Volumes (named or anonymous) are configured via the `volumes` stanza. Entries support Docker's
+short volume syntax with the `ro`, `rw`, `nocopy`, and `volume-nocopy` options. Unsupported
+options are rejected.
 
 ```yaml
 name: mylab
@@ -345,10 +347,32 @@ topology:
       kind: linux
       volumes:
         - shared-data:/srv/shared:ro   # named volume, may be shared between nodes
-        - /var/log/app                 # anonymousvolume
+        - /var/log/app                 # anonymous volume
 ```
 
-Volumes can be provided at `defaults`, `kinds`, or per-node level; lower levels override higher ones for the same destination path.
+Volumes can be provided at `defaults`, `kinds`, `groups`, or per-node level. Lower levels
+override higher ones for the same destination path.
+
+```yaml
+topology:
+  defaults:
+    volumes:
+      - default-data:/data
+  kinds:
+    linux:
+      volumes:
+        - kind-data:/kind-data
+  groups:
+    app:
+      volumes:
+        - group-data:/group-data
+  nodes:
+    srv:
+      kind: linux
+      group: app
+      volumes:
+        - node-data:/node-data
+```
 
 ### ports
 

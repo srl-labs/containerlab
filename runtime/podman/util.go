@@ -6,7 +6,6 @@ package podman
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -27,8 +26,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
-
-var errInvalidBind = errors.New("invalid bind mount provided")
 
 type podmanWriterCloser struct {
 	bytes.Buffer
@@ -81,10 +78,9 @@ func (r *PodmanRuntime) createContainerSpec(
 		Remove:     utils.Pointer(false),
 	}
 	// Storage, image and mounts
-	mounts, err := r.convertMounts(ctx, cfg.Binds, cfg.Volumes)
+	mounts, volumes, err := r.convertMounts(ctx, cfg.Binds, cfg.Volumes)
 	if err != nil {
-		log.Errorf("Cannot convert mounts %v: %v", cfg.Binds, err)
-		mounts = nil
+		return sg, fmt.Errorf("failed to convert mounts: %w", err)
 	}
 	mounts = append(mounts, convertTmpfsMounts(cfg.Tmpfs)...)
 	devices := make([]specs.LinuxDevice, 0, len(cfg.Devices))
@@ -99,8 +95,8 @@ func (r *PodmanRuntime) createContainerSpec(
 		// VolumesFrom:       nil,
 		// Init:              false,
 		// InitPath:          "",
-		Mounts: mounts,
-		// Volumes:           nil,
+		Mounts:  mounts,
+		Volumes: volumes,
 		// OverlayVolumes:    nil,
 		// ImageVolumes:      nil,
 		// DeviceCGroupRule:  nil,
@@ -330,18 +326,22 @@ func (r *PodmanRuntime) createContainerSpec(
 	return sg, nil
 }
 
-// convertMounts takes a list of host bind mounts and volumes in docker/clab format (src:dest:options)
-// and converts them into an opencontainers spec format.
-func (*PodmanRuntime) convertMounts(_ context.Context, binds []string, volumes []string) ([]specs.Mount, error) {
+// convertMounts separates host binds and managed volumes into Podman's corresponding storage
+// configuration fields.
+func (*PodmanRuntime) convertMounts(
+	_ context.Context,
+	binds []string,
+	volumes []string,
+) ([]specs.Mount, []*specgen.NamedVolume, error) {
 	if len(binds) == 0 && len(volumes) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
-	mntSpec := make([]specs.Mount, 0, len(binds)+len(volumes))
-	// Note: we don't do any options input validation here
+	mntSpec := make([]specs.Mount, 0, len(binds))
+	volumeSpec := make([]*specgen.NamedVolume, 0, len(volumes))
 	for _, mnt := range binds {
 		bind, err := types.NewBindFromString(mnt)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		mntSpec = append(mntSpec, specs.Mount{
@@ -359,29 +359,41 @@ func (*PodmanRuntime) convertMounts(_ context.Context, binds []string, volumes [
 	for _, vol := range volumes {
 		v, err := types.NewVolumeFromString(vol)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		m := specs.Mount{
-			Type:        "volume",
-			Destination: v.Dst(),
-			Source:      v.Src(),
+		opts := types.ParseVolumeOptions(v.Options())
+		if len(opts.Unknown) > 0 {
+			return nil, nil, fmt.Errorf("unsupported volume option(s) %q in %q", opts.Unknown, vol)
 		}
 
-		if opts := v.Options(); len(opts) > 0 {
-			m.Options = opts
+		namedVolume := &specgen.NamedVolume{
+			Name:        v.Src(),
+			Dest:        v.Dst(),
+			IsAnonymous: v.Src() == "",
 		}
-
-		mntSpec = append(mntSpec, m)
+		if opts.ReadOnly {
+			namedVolume.Options = append(namedVolume.Options, "ro")
+		}
+		if opts.NoCopy {
+			namedVolume.Options = append(namedVolume.Options, "nocopy")
+		}
+		volumeSpec = append(volumeSpec, namedVolume)
 	}
 
 	log.Debugf(
 		"convertMounts method received mounts %v (volumes %v) and produced %+v as a result",
 		binds,
 		volumes,
-		mntSpec,
+		struct {
+			Mounts  []specs.Mount
+			Volumes []*specgen.NamedVolume
+		}{
+			Mounts:  mntSpec,
+			Volumes: volumeSpec,
+		},
 	)
-	return mntSpec, nil
+	return mntSpec, volumeSpec, nil
 }
 
 func convertTmpfsMounts(tmpfs map[string]string) []specs.Mount {
