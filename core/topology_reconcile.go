@@ -621,6 +621,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 
 	return &clabtypes.NodeConfig{
 		ShortName:    nodeName,
+		Hostname:     topo.GetNodeHostname(nodeName),
 		Kind:         kind,
 		NodeType:     topo.GetNodeType(nodeName),
 		Image:        topo.GetNodeImage(nodeName),

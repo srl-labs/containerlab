@@ -777,6 +777,7 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	topo := clabtypes.NewTopology()
 	topo.Nodes["n1"] = &clabtypes.NodeDefinition{
 		Kind:         "test",
+		Hostname:     "custom-host",
 		CgroupnsMode: "host",
 		CgroupParent: "/xform/my-lab/leaves",
 		PidMode:      "host",
@@ -787,6 +788,9 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	cfg := (&CLab{Reg: registry}).resolveNodeConfigFromTopology(topo, "n1")
 	if cfg.Privileged {
 		t.Fatal("expected kind default to resolve to unprivileged")
+	}
+	if cfg.Hostname != "custom-host" {
+		t.Fatalf("Hostname = %q, want custom-host", cfg.Hostname)
 	}
 	if cfg.CgroupnsMode != "host" {
 		t.Fatalf("CgroupnsMode = %q, want host", cfg.CgroupnsMode)
