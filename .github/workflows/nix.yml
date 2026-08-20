@@ -1,0 +1,152 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+name: nix
+
+on:
+  pull_request:
+    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
+  workflow_run:
+    workflows: ["CICD"]
+    types: [completed]
+  schedule:
+    - cron: "0 3 * * 0" # weekly on Sundays 03:00 UTC, catches releases that changed nothing above
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nix-validation:
+    # Validate PRs in parallel, and validate main/release commits only after
+    # the main CICD workflow succeeds. Scheduled and manual runs are allowed
+    # independently because they are maintenance builds, not release builds.
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event != 'pull_request'
+      )
+    outputs:
+      changed: ${{ steps.refresh.outputs.changed }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+      - uses: cachix/install-nix-action@v31
+
+      # Query upstream directly instead of importing tags into the checkout.
+      # This prevents fork-only tags from affecting the selected version.
+      - name: Detect latest upstream stable release
+        id: release
+        run: |
+          stable_tags=$(
+            git ls-remote --refs --tags https://github.com/srl-labs/containerlab.git 'refs/tags/v[0-9]*' |
+              awk -F/ '$3 !~ /-/ { print $3 }' |
+              sort -V -r
+          )
+          version=${stable_tags%%$'\n'*}
+          version=${version#v}
+          if [ -z "$version" ]; then
+            echo "::error::no v* release tags found on upstream"
+            exit 1
+          fi
+          echo "latest stable release: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Update Nixpkgs lock
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: nix flake lock --update-input nixpkgs
+
+      # version + vendorHash + the Nixpkgs lock are maintained here.
+      - name: Refresh flake metadata
+        id: refresh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          version="$VERSION"
+          sed -i "s|version = \".*\";|version = \"$version\";|" flake.nix
+          # a mismatching vendorHash is expected whenever go.mod/go.sum changed;
+          # `|| true` keeps the step alive so the reported got: hash can be used
+          got=$(nix build .#containerlab --no-link 2>&1 | awk '/got:/{print $2}' || true)
+          if [ -n "$got" ]; then
+            sed -i "s|vendorHash = \".*\";|vendorHash = \"$got\";|" flake.nix
+          fi
+          nix build .#containerlab --no-link
+          git diff --quiet -- flake.nix flake.lock || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Fail PRs with stale flake metadata
+        if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
+        run: git diff -- flake.nix flake.lock && exit 1
+
+      - name: Upload refreshed flake metadata
+        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: refreshed-flake-metadata
+          path: |
+            flake.nix
+            flake.lock
+
+  update:
+    needs: nix-validation
+    # Only mutate repository state after a successful Nix validation that
+    # changed metadata. Main/release workflow runs are gated by successful
+    # CICD; scheduled/manual runs are explicit maintenance operations.
+    if: >-
+      needs.nix-validation.result == 'success' &&
+      needs.nix-validation.outputs.changed == 'true' &&
+      (
+        github.event_name == 'schedule' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_type == 'branch'
+        ) ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.head_branch == 'main'
+        )
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          name: refreshed-flake-metadata
+          path: refreshed-flake-metadata
+      - name: Apply refreshed flake metadata
+        run: |
+          cp refreshed-flake-metadata/flake.nix flake.nix
+          cp refreshed-flake-metadata/flake.lock flake.lock
+
+      # On the upstream repo the refresh lands via a bot PR;
+      # on forks (used as nix flake inputs) commit straight to the branch.
+      - uses: peter-evans/create-pull-request@v7
+        if: github.repository == 'srl-labs/containerlab'
+        with:
+          branch: update-flake
+          base: main
+          title: "chore: update Nix flake"
+          commit-message: "chore: update Nix flake"
+
+      - name: Commit refreshed flake metadata (forks only)
+        if: github.repository != 'srl-labs/containerlab'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.nix flake.lock
+          git commit -m "chore: update Nix flake"
+          git push origin "HEAD:${TARGET_BRANCH}"
+        env:
+          TARGET_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}

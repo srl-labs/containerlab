@@ -188,6 +188,97 @@ yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/co
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 Containerlab is also set up for sudo-less operation, and the current user (even if the package manager was called through `sudo`) is automatically granted access to privileged Containerlab commands. For further information, see [Sudo-less operation](#sudo-less-operation).
 
+## Nix
+
+The flake provides packages for `x86_64-linux` and `aarch64-linux`.
+
+### Build and run
+
+From a local containerlab checkout, build the package and run the resulting binary:
+
+```bash
+nix build .#containerlab
+./result/bin/containerlab version
+```
+
+The default package is also available without the attribute name:
+
+```bash
+nix build
+```
+
+To run containerlab without creating a profile installation, use `nix run`:
+
+```bash
+# From a local checkout
+nix run .#containerlab -- version
+
+# Directly from GitHub
+nix run github:srl-labs/containerlab -- version
+```
+
+/// details | Additional Nix instructions
+
+### Install in a Nix profile
+
+Install the latest version from the repository's default branch:
+
+```bash
+nix profile install github:srl-labs/containerlab
+containerlab version
+```
+
+To install a specific release, reference its tag:
+
+```bash
+nix profile install github:srl-labs/containerlab/v0.78.2
+```
+
+The package installed in a Nix profile is not SUID, because files in the Nix store cannot safely provide root-owned SUID executables. Run privileged commands with `sudo`:
+
+```bash
+sudo containerlab deploy -t topology.clab.yml
+```
+
+The profile package provides `containerlab`, but not the `clab` compatibility symlink. The NixOS module below provides both names.
+
+### Development shell
+
+The flake's development shell provides Go, `gopls`, and `golangci-lint`:
+
+```bash
+nix develop github:srl-labs/containerlab
+```
+
+Docker or Podman is not included in the shell. Containerlab's integration tests still require the corresponding runtime and root privileges.
+
+For NixOS, import the module to enable sudo-less operation through NixOS security wrappers:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    containerlab.url = "github:srl-labs/containerlab";
+  };
+
+  outputs = { nixpkgs, containerlab, ... }: {
+    nixosConfigurations.example = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        containerlab.nixosModules.default
+        {
+          programs.containerlab.enable = true;
+          users.users.alice.extraGroups = [ "clab_admins" ];
+        }
+      ];
+    };
+  };
+}
+```
+
+The module installs both `containerlab` and `clab`, creates the `clab_admins` group, and provides root-owned SUID wrappers for privileged commands. Users must be members of `clab_admins` to use those commands.
+///
+
 ## Windows
 
 Containerlab runs on Windows powered by Windows Subsystem Linux (aka WSL), where you can run Containerlab directly or in a Devcontainer. Open up [**Containerlab on Windows**](windows.md) documentation for more details.
