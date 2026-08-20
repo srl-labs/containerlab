@@ -172,10 +172,16 @@ func (e *ExecResult) SetStdErr(data []byte) {
 // execEntries is a map indexed by container IDs storing lists of ExecResult.
 type execEntries map[string][]*ExecResult
 
+type execEntry struct {
+	cId    string
+	result *ExecResult
+}
+
 // ExecCollection represents a datastore for exec commands execution results.
 type ExecCollection struct {
 	execEntries
-	m sync.RWMutex
+	orderedEntries []execEntry
+	m              sync.RWMutex
 }
 
 // NewExecCollection initializes the collection of exec command results.
@@ -190,12 +196,16 @@ func (ec *ExecCollection) Add(cId string, e *ExecResult) {
 	ec.m.Lock()
 	defer ec.m.Unlock()
 	ec.execEntries[cId] = append(ec.execEntries[cId], e)
+	ec.orderedEntries = append(ec.orderedEntries, execEntry{cId: cId, result: e})
 }
 
 func (ec *ExecCollection) AddAll(cId string, e []*ExecResult) {
 	ec.m.Lock()
 	defer ec.m.Unlock()
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
+	for _, result := range e {
+		ec.orderedEntries = append(ec.orderedEntries, execEntry{cId: cId, result: result})
+	}
 }
 
 // Dump dumps the contents of ExecCollection as a string in one of the provided formats.
@@ -243,26 +253,24 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 func (ec *ExecCollection) Log() {
 	ec.m.RLock()
 	defer ec.m.RUnlock()
-	for k, execResults := range ec.execEntries {
-		for _, er := range execResults {
-			switch {
-			case er.GetReturnCode() != 0:
-				log.Error(
-					"Failed to execute command",
-					"command", er.GetCmdString(),
-					"node", k,
-					"rc", er.GetReturnCode(),
-					"stdout", er.GetStdOutString(),
-					"stderr", er.GetStdErrString(),
-				)
-			default:
-				log.Info(
-					"Executed command",
-					"node", k,
-					"command", er.GetCmdString(),
-					"stdout", er.GetStdOutString(),
-				)
-			}
+	for _, entry := range ec.orderedEntries {
+		switch {
+		case entry.result.GetReturnCode() != 0:
+			log.Error(
+				"Failed to execute command",
+				"command", entry.result.GetCmdString(),
+				"node", entry.cId,
+				"rc", entry.result.GetReturnCode(),
+				"stdout", entry.result.GetStdOutString(),
+				"stderr", entry.result.GetStdErrString(),
+			)
+		default:
+			log.Info(
+				"Executed command",
+				"node", entry.cId,
+				"command", entry.result.GetCmdString(),
+				"stdout", entry.result.GetStdOutString(),
+			)
 		}
 	}
 }
