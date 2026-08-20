@@ -15,11 +15,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  build:
+  refresh:
+    outputs:
+      changed: ${{ steps.refresh.outputs.changed }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -58,17 +59,42 @@ jobs:
         if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
         run: git diff flake.nix && exit 1
 
+      - name: Upload refreshed flake.nix
+        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: refreshed-flake
+          path: flake.nix
+
+  update:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          name: refreshed-flake
+          path: refreshed-flake
+      - name: Apply refreshed flake.nix
+        run: cp refreshed-flake/flake.nix flake.nix
+
       # On the upstream repo the refresh lands via a bot PR;
       # on forks (used as nix flake inputs) commit straight to the branch.
       - uses: peter-evans/create-pull-request@v7
-        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository == 'srl-labs/containerlab'
+        if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository == 'srl-labs/containerlab'
         with:
           branch: update-flake
           title: "chore: update flake.nix"
           commit-message: "chore: update flake.nix"
 
       - name: Commit refreshed flake.nix (forks only)
-        if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository != 'srl-labs/containerlab'
+        if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository != 'srl-labs/containerlab'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
