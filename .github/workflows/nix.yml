@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  refresh:
+  nix-refresh:
     outputs:
       changed: ${{ steps.refresh.outputs.changed }}
     runs-on: ubuntu-24.04
