@@ -24,9 +24,21 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Build containerlab
+      - name: Build containerlab for tests
+        if: inputs.arch == 'amd64'
         run: GOOS=linux GOARCH=${{ inputs.arch }} make build-with-podman-debug BINARY=containerlab
-      # store clab binary as artifact
+
+      - name: Upload test containerlab binary
+        if: inputs.arch == 'amd64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: containerlab-tests
+          path: containerlab
+          compression-level: 0
+
+      - name: Build portable containerlab
+        run: GOOS=linux GOARCH=${{ inputs.arch }} make build-with-podman BINARY=containerlab
+
       - name: Upload containerlab binary
         uses: actions/upload-artifact@v7
         with:
