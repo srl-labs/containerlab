@@ -167,6 +167,10 @@ var topologyTestSet = map[string]struct {
 					"x:z",
 					"m:n", // overridden by node
 				},
+				Volumes: []string{
+					"default-vol:/app/default",
+					"shared-vol:/app/shared", // overriden by node
+				},
 			},
 			Kinds: map[string]*NodeDefinition{
 				"nokia_srlinux": {
@@ -184,6 +188,10 @@ var topologyTestSet = map[string]struct {
 					Binds: []string{
 						"a:b",
 						"c:d",
+					},
+					Volumes: []string{
+						"kind-vol:/app/kind",
+						"db-vol:/app/data",
 					},
 					Ports: []string{
 						"80:8080",
@@ -211,6 +219,10 @@ var topologyTestSet = map[string]struct {
 						"e:f",
 						"newm:n",
 					},
+					Volumes: []string{
+						"node-vol:/app/node",
+						"override-vol:/app/shared", // overrides defaults
+					},
 				},
 			},
 		},
@@ -235,6 +247,13 @@ var topologyTestSet = map[string]struct {
 					"c:d",
 					"x:z",
 					"newm:n",
+				},
+				Volumes: []string{
+					"node-vol:/app/node",
+					"kind-vol:/app/kind",
+					"db-vol:/app/data",
+					"default-vol:/app/default",
+					"override-vol:/app/shared",
 				},
 				Ports: []string{
 					"80:8080",
@@ -931,6 +950,95 @@ func TestGetNodeBinds(t *testing.T) {
 				diff,
 			)
 		}
+	}
+}
+
+func TestGetNodeVolumes(t *testing.T) {
+	for _, item := range topologyTestSet {
+		volumes, _ := item.input.GetNodeVolumes("node1")
+
+		// sort the slices so we can compare them
+		slices.Sort(volumes)
+		slices.Sort(item.want["node1"].Volumes)
+
+		if d := cmp.Diff(volumes, item.want["node1"].Volumes); d != "" {
+			t.Fatalf("Volumes resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", volumes, item.want["node1"].Volumes, d)
+		}
+	}
+}
+
+func TestGetNodeVolumesInheritance(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{
+			Volumes: []string{"default:/default"},
+		},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {
+				Volumes: []string{"kind:/kind"},
+			},
+		},
+		Groups: map[string]*NodeDefinition{
+			"app": {
+				Volumes: []string{"group:/group"},
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Kind:  "linux",
+				Group: "app",
+				Volumes: []string{
+					"node:/node",
+				},
+			},
+		},
+	}
+
+	volumes, err := topology.GetNodeVolumes("node1")
+	if err != nil {
+		t.Fatalf("GetNodeVolumes() unexpected error: %v", err)
+	}
+	wantVolumes := []string{
+		"default:/default",
+		"kind:/kind",
+		"group:/group",
+		"node:/node",
+	}
+	slices.Sort(wantVolumes)
+	if diff := cmp.Diff(wantVolumes, volumes); diff != "" {
+		t.Fatalf("GetNodeVolumes() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGetNodeBindsRejectsAnonymousVolumeSyntax(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Binds: []string{"/data"},
+			},
+		},
+	}
+
+	_, err := topology.GetNodeBinds("node1")
+	if err == nil {
+		t.Fatal("GetNodeBinds() accepted anonymous volume syntax in binds")
+	}
+}
+
+func TestGetNodeVolumesHandlesNilNodeDefinition(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": nil,
+		},
+	}
+
+	volumes, err := topology.GetNodeVolumes("node1")
+	if err != nil {
+		t.Fatalf("GetNodeVolumes() unexpected error: %v", err)
+	}
+	if volumes != nil {
+		t.Fatalf("GetNodeVolumes() = %v, want nil", volumes)
 	}
 }
 

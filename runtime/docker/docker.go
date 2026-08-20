@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
@@ -661,8 +662,15 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Soft: int64(rlimit.Max),
 	}
 	resources.Ulimits = []*units.Ulimit{&ulimit}
+
+	volumeMounts, err := d.convertVolumeMounts(node.Volumes)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert volume mounts: %w", err)
+	}
+
 	containerHostConfig := &container.HostConfig{
 		Binds:        node.Binds,
+		Mounts:       volumeMounts,
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   node.Privileged,
@@ -1790,4 +1798,47 @@ func (d *DockerRuntime) CopyToContainer(
 	}
 
 	return nil
+}
+
+// convertVolumeMount takes a list of volumes in docker/clab format (src:dest:options)
+// and converts them into Docker API mount.Mount structures.
+func (d *DockerRuntime) convertVolumeMounts(mounts []string) ([]mount.Mount, error) {
+	if len(mounts) == 0 {
+		return nil, nil
+	}
+
+	docker_mounts := make([]mount.Mount, 0, len(mounts))
+
+	for _, vol := range mounts {
+		spec, err := clabtypes.NewVolumeFromString(vol)
+		if err != nil {
+			return nil, err
+		}
+
+		opts := clabtypes.ParseVolumeOptions(spec.Options())
+		if len(opts.Unknown) > 0 {
+			return nil, fmt.Errorf("unsupported volume option(s) %q in %q", opts.Unknown, vol)
+		}
+
+		m := mount.Mount{
+			Type:     mount.TypeVolume,
+			Target:   spec.Dst(),
+			ReadOnly: opts.ReadOnly,
+		}
+
+		if opts.NoCopy {
+			m.VolumeOptions = &mount.VolumeOptions{
+				NoCopy: true,
+			}
+		}
+
+		if spec.Src() != "" {
+			m.Source = spec.Src()
+		}
+
+		log.Debugf("parsed volume %q into mount %+v", vol, m)
+		docker_mounts = append(docker_mounts, m)
+	}
+
+	return docker_mounts, nil
 }
