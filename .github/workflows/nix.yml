@@ -35,8 +35,12 @@ jobs:
       - name: Fetch upstream tags
         run: git fetch --tags --force https://github.com/srl-labs/containerlab.git '+refs/tags/v*:refs/tags/v*'
 
-      # version + vendorHash are the only things in flake.nix that go stale.
-      - name: Refresh flake.nix
+      - name: Update Nixpkgs lock
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: nix flake lock --update-input nixpkgs
+
+      # version + vendorHash + the Nixpkgs lock are maintained here.
+      - name: Refresh flake metadata
         id: refresh
         run: |
           version=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v -- '-' | head -1 | tr -d v)
@@ -53,18 +57,20 @@ jobs:
             sed -i "s|vendorHash = \".*\";|vendorHash = \"$got\";|" flake.nix
           fi
           nix build .#containerlab --no-link
-          git diff --quiet flake.nix || echo "changed=true" >> "$GITHUB_OUTPUT"
+          git diff --quiet -- flake.nix flake.lock || echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Fail PRs with a stale flake.nix
+      - name: Fail PRs with stale flake metadata
         if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
-        run: git diff flake.nix && exit 1
+        run: git diff -- flake.nix flake.lock && exit 1
 
-      - name: Upload refreshed flake.nix
+      - name: Upload refreshed flake metadata
         if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: refreshed-flake
-          path: flake.nix
+          name: refreshed-flake-metadata
+          path: |
+            flake.nix
+            flake.lock
 
   update:
     needs: refresh
@@ -79,10 +85,12 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          name: refreshed-flake
-          path: refreshed-flake
-      - name: Apply refreshed flake.nix
-        run: cp refreshed-flake/flake.nix flake.nix
+          name: refreshed-flake-metadata
+          path: refreshed-flake-metadata
+      - name: Apply refreshed flake metadata
+        run: |
+          cp refreshed-flake-metadata/flake.nix flake.nix
+          cp refreshed-flake-metadata/flake.lock flake.lock
 
       # On the upstream repo the refresh lands via a bot PR;
       # on forks (used as nix flake inputs) commit straight to the branch.
@@ -90,14 +98,14 @@ jobs:
         if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository == 'srl-labs/containerlab'
         with:
           branch: update-flake
-          title: "chore: update flake.nix"
-          commit-message: "chore: update flake.nix"
+          title: "chore: update Nix flake"
+          commit-message: "chore: update Nix flake"
 
-      - name: Commit refreshed flake.nix (forks only)
+      - name: Commit refreshed flake metadata (forks only)
         if: needs.refresh.outputs.changed == 'true' && github.event_name != 'pull_request' && github.repository != 'srl-labs/containerlab'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add flake.nix
-          git commit -m "chore: update flake.nix"
+          git add flake.nix flake.lock
+          git commit -m "chore: update Nix flake"
           git push origin "HEAD:${GITHUB_REF_NAME}"
