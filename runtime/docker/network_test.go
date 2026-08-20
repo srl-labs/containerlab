@@ -104,7 +104,10 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-func newFakeDockerRuntime(t *testing.T, netName string) (*DockerRuntime, *fakeDockerNetworkServer, func()) {
+func newFakeDockerRuntime(
+	t *testing.T,
+	netName string,
+) (*DockerRuntime, *fakeDockerNetworkServer, func()) {
 	t.Helper()
 
 	fake := &fakeDockerNetworkServer{t: t, netName: netName}

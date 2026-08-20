@@ -416,7 +416,8 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 	return bridgeName, nil
 }
 
-// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect response.
+// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect
+// response.
 func bridgeNameFromInspect(netResource *networkapi.Inspect, mgmtNetwork string) (string, error) {
 	if len(netResource.ID) < 12 {
 		return "", fmt.Errorf("could not get bridge ID")
@@ -664,9 +665,10 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Binds:        node.Binds,
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
-		Privileged:   true,
+		Privileged:   node.Privileged,
 		Tmpfs:        node.Tmpfs,
 		PidMode:      "",
+		SecurityOpt:  node.SecurityOpts,
 		// Network mode will be defined below via switch
 		NetworkMode: "",
 		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
@@ -694,13 +696,24 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		containerHostConfig.CapAdd = append(containerHostConfig.CapAdd, node.CapAdd...)
 	}
 
-	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
+	if err := d.processNetworkMode(
+		ctx,
+		containerNetworkingConfig,
+		containerHostConfig,
+		containerConfig,
+		node,
+	); err != nil {
 		return "", err
 	}
 
 	if err := d.processPidMode(node, containerHostConfig); err != nil {
 		return "", err
 	}
+
+	if err := d.processCgroupnsMode(node, containerHostConfig); err != nil {
+		return "", err
+	}
+	d.processCgroupParent(node, containerHostConfig)
 
 	// regular linux containers may benefit from automatic restart on failure
 	// note, that veth pairs added to this container (outside of eth0) will be lost on restart
@@ -1479,6 +1492,27 @@ func (*DockerRuntime) processPidMode(
 	containerHostConfig.PidMode = pidMode
 
 	return nil
+}
+
+func (*DockerRuntime) processCgroupnsMode(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) error {
+	cgroupnsMode := container.CgroupnsMode(node.CgroupnsMode)
+	if !cgroupnsMode.Valid() {
+		return fmt.Errorf("cgroupns mode %q invalid", node.CgroupnsMode)
+	}
+
+	containerHostConfig.CgroupnsMode = cgroupnsMode
+
+	return nil
+}
+
+func (*DockerRuntime) processCgroupParent(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) {
+	containerHostConfig.CgroupParent = node.CgroupParent
 }
 
 func (d *DockerRuntime) processNetworkMode(

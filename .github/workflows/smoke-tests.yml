@@ -53,6 +53,7 @@ jobs:
           - "27*.robot"
           - "28*.robot"
           - "29*.robot"
+          - "30*.robot"
 
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
@@ -64,7 +65,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: containerlab
+          name: containerlab-tests
 
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab

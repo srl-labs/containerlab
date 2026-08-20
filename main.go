@@ -7,7 +7,7 @@ package main
 import (
 	"os"
 
-	"github.com/charmbracelet/fang"
+	"charm.land/fang/v2"
 	clabcmd "github.com/srl-labs/containerlab/cmd"
 )
 

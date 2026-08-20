@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -124,6 +125,10 @@ func (c *CLab) apply(
 		return result, nil
 	}
 
+	if err := c.checkUnsupportedApplyNodes(); err != nil {
+		return nil, err
+	}
+
 	if err := c.setMgmtBridgeFromRuntime(currentNodes); err != nil {
 		return nil, err
 	}
@@ -226,7 +231,19 @@ func (c *CLab) apply(
 }
 
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	params := *clablinks.NewVerifyLinkParams()
+	if len(c.Endpoints) > 0 {
+		runtime := c.globalRuntime()
+		if runtime == nil {
+			return fmt.Errorf("container runtime is not initialized")
+		}
+		config := runtime.Config()
+		if config.VerifyLinkParams != nil {
+			params = *config.VerifyLinkParams
+		}
+	}
+	params.AllowExistingEndpoint = true
+	if err := c.verifyLinks(ctx, &params); err != nil {
 		return err
 	}
 
@@ -241,6 +258,21 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 	}
 
 	return c.verifyDuplicateAddresses()
+}
+
+func (c *CLab) checkUnsupportedApplyNodes() error {
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		cfg := c.Nodes[nodeName].Config()
+		if cfg != nil && strings.HasPrefix(cfg.NetworkMode, "container:") {
+			return fmt.Errorf(
+				"apply does not support nodes with %q; use redeploy or "+
+					"deploy --reconfigure",
+				cfg.NetworkMode,
+			)
+		}
+	}
+
+	return nil
 }
 
 func (c *CLab) prepareApply(
@@ -268,7 +300,11 @@ func (c *CLab) prepareApply(
 func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Link) error {
 	for _, link := range links {
 		for _, ep := range clablinks.RuntimeEndpoints(link) {
-			if err := clablinks.RemoveOwnedInterface(ctx, ep.GetNode(), ep.GetIfaceName()); err != nil {
+			if err := clablinks.RemoveOwnedInterface(
+				ctx,
+				ep.GetNode(),
+				ep.GetIfaceName(),
+			); err != nil {
 				return err
 			}
 		}

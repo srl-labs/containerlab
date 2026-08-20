@@ -88,7 +88,11 @@ func TestBuildSrosVariant(t *testing.T) {
 					SFM:  "sfm-2s",
 					Type: "xcm-2s",
 					XIOM: clabtypes.XIOMS{
-						{Slot: 1, Type: "iom-s-3.0t", MDA: clabtypes.MDAS{{Slot: 1, Type: "ms8-100gb-sfpdd+2-100gb-qsfp28"}}},
+						{
+							Slot: 1,
+							Type: "iom-s-3.0t",
+							MDA:  clabtypes.MDAS{{Slot: 1, Type: "ms8-100gb-sfpdd+2-100gb-qsfp28"}},
+						},
 					},
 				},
 			},

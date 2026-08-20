@@ -4,7 +4,31 @@
 
 package runtime
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+)
+
+func TestWaitForContainerRunningHonorsContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+
+	go func() {
+		done <- WaitForContainerRunning(ctx, nil, "external", "node")
+	}()
+	cancel()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("WaitForContainerRunning() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("WaitForContainerRunning did not return after context cancellation")
+	}
+}
 
 func TestContainerHasJoinableNetns(t *testing.T) {
 	t.Parallel()

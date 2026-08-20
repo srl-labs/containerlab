@@ -134,7 +134,11 @@ func TestDeployLinksUsesEndpointOwnership(t *testing.T) {
 		t.Fatal(err)
 	}
 	if link.deployCalls != 1 || link.postDeployCalls != 1 {
-		t.Fatalf("deploy calls = %d, post-deploy calls = %d", link.deployCalls, link.postDeployCalls)
+		t.Fatalf(
+			"deploy calls = %d, post-deploy calls = %d",
+			link.deployCalls,
+			link.postDeployCalls,
+		)
 	}
 }
 
@@ -379,6 +383,38 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	}
 }
 
+func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
+	t.Parallel()
+
+	n1 := &applyFakeLinkNode{name: "n1"}
+	n2 := &applyFakeLinkNode{name: "n2"}
+	link := clablinks.NewLinkVEth()
+	ep1 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth1", link))
+	ep2 := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n2, "eth1", link))
+	link.Endpoints = []clablinks.Endpoint{ep1, ep2}
+
+	plan := newApplyPlan(nil, nil)
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "n1", iface: "eth1"}: {},
+		{node: "n2", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "n1", iface: "eth1"}: {Name: "eth1", Index: 11, PeerIndex: 21},
+		{node: "n2", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+
+	if !plan.linkNeedsDeploy(link) {
+		t.Fatal("expected link with mismatched live peers to be redeployed")
+	}
+
+	plan.liveEndpointInfo[applyEndpointKey{node: "n1", iface: "eth1"}] = clablinks.OwnedInterface{
+		Name: "eth1", Index: 11, PeerIndex: 22,
+	}
+	if plan.linkNeedsDeploy(link) {
+		t.Fatal("expected link with matching live peers to be preserved")
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 
@@ -447,7 +483,14 @@ func TestPlanStoppedNodesSkipsExternallyManagedNodes(t *testing.T) {
 
 	c.planStoppedNodes(ctx, plan)
 
-	if got, want := sortedStringSet(plan.startNodeSet), []string{"managed"}; !slices.Equal(got, want) {
+	if got, want := sortedStringSet(
+		plan.startNodeSet,
+	), []string{
+		"managed",
+	}; !slices.Equal(
+		got,
+		want,
+	) {
 		t.Fatalf("nodes planned for start = %v, want %v", got, want)
 	}
 }
@@ -492,7 +535,10 @@ func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 		t.Fatalf("stale endpoints = %d, want 1", len(plan.staleEndpoints))
 	}
 	if plan.staleEndpoints[0].node != parkingNode {
-		t.Fatalf("stale endpoint delete node = %v, want discovered endpoint node", plan.staleEndpoints[0].node)
+		t.Fatalf(
+			"stale endpoint delete node = %v, want discovered endpoint node",
+			plan.staleEndpoints[0].node,
+		)
 	}
 }
 
@@ -564,7 +610,10 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 			}).AnyTimes()
 			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 
-			if got := clabnodes.LinkApplyModeForNode(context.Background(), mockNode); got != tt.want {
+			if got := clabnodes.LinkApplyModeForNode(
+				context.Background(),
+				mockNode,
+			); got != tt.want {
 				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -717,6 +766,45 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 	}
 }
 
+func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
+	registry := clabnodes.NewNodeRegistry()
+	attributes := clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).
+		WithPrivilegedByDefault(false)
+	if err := registry.Register([]string{"test"}, nil, attributes); err != nil {
+		t.Fatal(err)
+	}
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{
+		Kind:         "test",
+		CgroupnsMode: "host",
+		CgroupParent: "/xform/my-lab/leaves",
+		PidMode:      "host",
+		Tmpfs:        map[string]string{"/run": "rw,nosuid"},
+		SecurityOpts: []string{"seccomp=unconfined"},
+	}
+
+	cfg := (&CLab{Reg: registry}).resolveNodeConfigFromTopology(topo, "n1")
+	if cfg.Privileged {
+		t.Fatal("expected kind default to resolve to unprivileged")
+	}
+	if cfg.CgroupnsMode != "host" {
+		t.Fatalf("CgroupnsMode = %q, want host", cfg.CgroupnsMode)
+	}
+	if cfg.CgroupParent != "/xform/my-lab/leaves" {
+		t.Fatalf("CgroupParent = %q, want /xform/my-lab/leaves", cfg.CgroupParent)
+	}
+	if cfg.PidMode != "host" {
+		t.Fatalf("PidMode = %q, want host", cfg.PidMode)
+	}
+	if got := cfg.Tmpfs["/run"]; got != "rw,nosuid" {
+		t.Fatalf("Tmpfs[/run] = %q, want rw,nosuid", got)
+	}
+	if !slices.Equal(cfg.SecurityOpts, []string{"seccomp=unconfined"}) {
+		t.Fatalf("SecurityOpts = %v, want seccomp=unconfined", cfg.SecurityOpts)
+	}
+}
+
 func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
 	t.Parallel()
 
@@ -849,6 +937,38 @@ func TestRuntimeNodeGroupsIncludesPreExistingNodes(t *testing.T) {
 	}
 }
 
+func TestRuntimeNodeGroupsClassifiesRootNamespaceResourcesSeparately(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+
+	node.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		IsRootNamespaceBased: true,
+	})
+	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"bridge": node},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: rt,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	groups, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	group := groups["bridge"]
+	if group == nil || group.external || !group.rootNamespaceBased {
+		t.Fatalf("unexpected root namespace runtime group: %#v", group)
+	}
+}
+
 func TestNeedsInitialDeploy(t *testing.T) {
 	t.Parallel()
 
@@ -883,6 +1003,33 @@ func TestNeedsInitialDeploy(t *testing.T) {
 	})
 	if err != nil || initial {
 		t.Fatalf("external nodes with state: initial = %v, error = %v", initial, err)
+	}
+}
+
+func TestNeedsInitialDeployIgnoresRootNamespaceResources(t *testing.T) {
+	t.Parallel()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: lab\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDirByPrefix("lab"); err != nil {
+		t.Fatal(err)
+	}
+	c := &CLab{TopoPaths: topoPaths}
+
+	initial, err := c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"bridge": {rootNamespaceBased: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !initial {
+		t.Fatal("expected root-namespace-only state without a state file to deploy initially")
 	}
 }
 

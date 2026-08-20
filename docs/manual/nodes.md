@@ -317,6 +317,16 @@ topology:
         - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
 ```
 
+In case the TLS material is needed for a node, it can also be mounted with `__clabDir__/.tls`. Containerlab creates the directory and populates it with the CA files during deployment, before starting the nodes. Bind the directory itself and access the TLS files once the node is started:
+
+```yaml
+topology:
+  nodes:
+    testNode:
+      binds:
+        - __clabDir__/.tls/ca:/etc/ca:ro
+```
+
 ///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
@@ -769,8 +779,7 @@ my-node:
 ### cap-add
 
 The `cap-add` parameter can be used to add capabilities to the container.
-Docker containers are currently executed in privileged mode, so this should not be needed.
-If this becomes configurable, specifying the capabilities required for a container will be useful.
+By default, containers are executed in privileged mode, so this should not be needed unless [`privileged`](#privileged) is set to `false`.
 
 ```yaml
 # my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
@@ -780,6 +789,93 @@ my-node:
   cap-add:
     - NET_ADMIN
     - SYS_ADMIN
+```
+
+### privileged
+
+The `privileged` parameter controls whether the container runs in privileged mode.
+It defaults to `true` when unset, to preserve containerlab's historical behavior.
+
+```yaml
+# my-node will run as an *unprivileged* container.
+my-node:
+  image: alpine:3
+  kind: linux
+  privileged: false
+```
+
+### cgroupns-mode
+
+The `cgroupns-mode` parameter controls the cgroup namespace mode used by the container runtime.
+Supported values are `host` and `private`.
+
+```yaml
+# my-node will use the host cgroup namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  cgroupns-mode: host
+```
+
+### cgroup-parent
+
+The `cgroup-parent` parameter places a node's container under the specified parent cgroup. It has the same semantics as Docker's [`--cgroup-parent`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) option and is supported by the Docker and Podman runtimes. The value is passed to the runtime unchanged; its syntax and availability depend on the runtime's configured cgroup manager. For example, cgroupfs managers use a cgroup path, while systemd managers expect a slice name such as `my-lab.slice`.
+
+This setting is inherited using the standard node, group, kind, then defaults precedence. An empty value is treated as unset and therefore does not clear a parent inherited from a group, kind, or defaults entry; the runtime default is used only when no value is configured at any level. It is independent of [`cgroupns-mode`](#cgroupns-mode), which selects the cgroup namespace visible inside the container rather than its placement in the host cgroup hierarchy.
+
+```yaml
+topology:
+  groups:
+    leaves:
+      # cgroupfs-style path; systemd managers expect a .slice name instead.
+      cgroup-parent: /xform/my-lab/leaves
+  nodes:
+    leaf1:
+      group: leaves
+    leaf2:
+      group: leaves
+```
+
+### pid-mode
+
+The `pid-mode` parameter controls the PID namespace mode used by the container runtime.
+For Docker, this accepts the same values as Docker's PID mode setting, such as `host` or `container:<name>`.
+
+```yaml
+# my-node will use the host PID namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  pid-mode: host
+```
+
+### tmpfs
+
+The `tmpfs` parameter adds tmpfs mounts to the container.
+It is a map keyed by container path, with mount options as the value.
+
+```yaml
+# my-node will have tmpfs mounts commonly used by init-style containers.
+my-node:
+  image: alpine:3
+  kind: linux
+  tmpfs:
+    /run: rw,nosuid,nodev
+    /run/lock: rw,nosuid,nodev,noexec
+    /tmp: rw,nosuid,nodev
+```
+
+### security-opts
+
+The `security-opts` parameter passes security options to the container runtime.
+
+```yaml
+# my-node will disable the default seccomp profile.
+my-node:
+  image: alpine:3
+  kind: linux
+  security-opts:
+    - seccomp=unconfined
 ```
 
 ### sysctls

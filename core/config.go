@@ -228,21 +228,48 @@ func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
+func (c *CLab) privilegedByDefault(kind string) bool {
+	if c.Reg != nil {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			return regEntry.PrivilegedByDefault()
+		}
+	}
+
+	return true
+}
+
+func (c *CLab) nodeLongName(nodeName string) string {
+	switch *c.Config.Prefix {
+	case "":
+		return nodeName
+	case "__lab-name":
+		return fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
+	default:
+		return fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	}
+}
+
+func (c *CLab) resolvePidMode(pidMode string) string {
+	target, isContainerMode := strings.CutPrefix(pidMode, "container:")
+	if !isContainerMode || target == "" {
+		return pidMode
+	}
+	if _, isTopologyNode := c.Config.Topology.Nodes[target]; !isTopologyNode {
+		return pidMode
+	}
+
+	return "container:" + c.nodeLongName(target)
+}
+
 func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeName string,
 	nodeDef *clabtypes.NodeDefinition,
 	idx int,
 ) (*clabtypes.NodeConfig, error) {
-	// default longName follows $prefix-$lab-$nodeName pattern
-	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+	privileged := c.Config.Topology.GetNodePrivileged(nodeName, c.privilegedByDefault(kind))
 
-	switch *c.Config.Prefix {
-	// when prefix is an empty string longName will match shortName/nodeName
-	case "":
-		longName = nodeName
-	case "__lab-name":
-		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
-	}
+	longName := c.nodeLongName(nodeName)
 
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
@@ -252,7 +279,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
-		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		Kind:            kind,
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
@@ -267,6 +294,12 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
+		Privileged:      privileged,
+		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		CgroupParent:    c.Config.Topology.GetNodeCgroupParent(nodeName),
+		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
+		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
+		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
@@ -308,7 +341,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 
 	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
-		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 		if regEntry := c.Reg.Kind(kind); regEntry != nil {
 			creds := regEntry.GetCredentials()
 			if nodeCfg.Credentials.Username == "" {
@@ -440,7 +472,7 @@ func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx, c.globalRuntime().Config().VerifyLinkParams); err != nil {
 		return err
 	}
 
@@ -514,13 +546,16 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks(ctx context.Context) error {
+func (c *CLab) verifyLinks(
+	ctx context.Context,
+	params *clablinks.VerifyLinkParams,
+) error {
 	var err error
 
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
-		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, params)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}
@@ -560,7 +595,8 @@ func (*CLab) loadKernelModules() error {
 			if errors.Is(err, os.ErrNotExist) {
 				log.Debugf(
 					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
-					err, m,
+					err,
+					m,
 				)
 
 				return nil
@@ -690,13 +726,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		hp := r.Replace(elems[0])
 		hp = clabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
+		caDir := c.TopoPaths.CABaseDir()
 		_, err := os.Stat(hp)
 		if err != nil {
 			// check if the hostpath mount has a reference to ansible-inventory.yml or
-			// topology-data.json if that is the case, we do not emit an error on missing file,
-			// since these files will be created by containerlab upon lab deployment
+			// topology-data.json or the generated CA directory. These paths are created by
+			// containerlab upon lab deployment.
 			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
-				hp != c.TopoPaths.TopoExportFile() {
+				hp != c.TopoPaths.TopoExportFile() &&
+				filepath.Clean(hp) != caDir {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
@@ -848,11 +886,32 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// processNodeExecs replaces (in place) magic variables in node execs.
+// processNodeExecs replaces magic variables in node and stage execs.
 func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
 	for i, e := range nodeCfg.Exec {
-		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)
+	}
+
+	if nodeCfg.Stages == nil {
+		return
+	}
+
+	stages := []*clabtypes.StageBase{
+		&nodeCfg.Stages.Create.StageBase,
+		&nodeCfg.Stages.CreateLinks.StageBase,
+		&nodeCfg.Stages.Configure.StageBase,
+		&nodeCfg.Stages.Healthy.StageBase,
+		&nodeCfg.Stages.Exit.StageBase,
+	}
+
+	for _, stage := range stages {
+		for i, exec := range stage.Execs {
+			execCopy := *exec
+			execCopy.Command = r.Replace(exec.Command)
+			stage.Execs[i] = &execCopy
+		}
 	}
 }
 

@@ -2,6 +2,10 @@ package links
 
 import (
 	"context"
+	"errors"
+	"net"
+	"os"
+	"syscall"
 	"testing"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -9,6 +13,38 @@ import (
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
+
+func TestRetryTransientNetlink(t *testing.T) {
+	// A transient error is retried until the operation succeeds.
+	calls := 0
+	err := retryTransientNetlink(context.Background(), "test", func() error {
+		calls++
+		if calls < linkDeployRetries {
+			return syscall.ENODEV
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("retryTransientNetlink() error = %v, want nil", err)
+	}
+	if calls != linkDeployRetries {
+		t.Fatalf("retryTransientNetlink() calls = %d, want %d", calls, linkDeployRetries)
+	}
+
+	// A non-transient error is returned immediately without retrying.
+	sentinel := errors.New("boom")
+	calls = 0
+	err = retryTransientNetlink(context.Background(), "test", func() error {
+		calls++
+		return sentinel
+	})
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("retryTransientNetlink() error = %v, want %v", err, sentinel)
+	}
+	if calls != 1 {
+		t.Fatalf("retryTransientNetlink() calls = %d, want 1 (no retry on permanent error)", calls)
+	}
+}
 
 func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 	type fields struct {
@@ -254,12 +290,158 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 	})
 }
 
+func TestLinkVEthRaw_BriefDefaultLinkType(t *testing.T) {
+	t.Run("nodes without provider use veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "node2"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"node2": newFakeNode("node2"),
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVEth {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVEth)
+		}
+	})
+
+	t.Run("optional provider overrides veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "srsim"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"srsim": &fakeDefaultLinkTypeNode{
+					fakeNode: newFakeNode("srsim"),
+					linkType: LinkTypeVethStitch,
+				},
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVethStitch {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVethStitch)
+		}
+	})
+
+	t.Run("addressed brief link is promoted", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{
+				IPv4: []string{"10.0.0.1/31", "10.0.0.0/31"},
+				IPv6: []string{"2001:db8::1/127", "2001:db8::/127"},
+			},
+			Endpoints: []*EndpointRaw{
+				{
+					Node: "node1", Iface: "eth1",
+					IPv4: "10.0.0.1/31", IPv6: "2001:db8::1/127",
+				},
+				{
+					Node: "srsim", Iface: "eth2",
+					IPv4: "10.0.0.0/31", IPv6: "2001:db8::/127",
+				},
+			},
+			fromBrief: true,
+		}
+		params := &ResolveParams{
+			LabName: "lab",
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"srsim": &fakeDefaultLinkTypeNode{
+					fakeNode: newFakeNode("srsim"),
+					linkType: LinkTypeVethStitch,
+				},
+			},
+		}
+
+		got, err := r.Resolve(params)
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+
+		stitched, ok := got.(*LinkVEthStitched)
+		if !ok {
+			t.Fatalf("Resolve() type = %T, want *LinkVEthStitched", got)
+		}
+		if got := stitched.GetEndpoints()[0].GetIPv4Addr().String(); got != "10.0.0.1/31" {
+			t.Fatalf("node endpoint IPv4 = %q, want 10.0.0.1/31", got)
+		}
+		if got := stitched.GetEndpoints()[0].GetIPv6Addr().String(); got != "2001:db8::1/127" {
+			t.Fatalf("node endpoint IPv6 = %q, want 2001:db8::1/127", got)
+		}
+	})
+}
+
+// TestLinkVEthDeployBEndNodelessInPlace checks that a nodeless endpoint is renamed
+// and brought up in the current namespace without a namespace move.
+func TestLinkVEthDeployBEndNodelessInPlace(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires root to create veth interfaces")
+	}
+
+	l := &LinkVEth{LinkCommonParams: LinkCommonParams{MTU: 1500}}
+	// Final name is <= 15 chars so it is applied via rename rather than an altname.
+	farEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), "clab-s-abcd0001", l))
+	peer := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), "clab-s-abcd0002", l))
+	l.Endpoints = []Endpoint{peer, farEp}
+
+	// deployBEnd looks the far end up by its random name before renaming it.
+	randName := farEp.GetRandIfaceName()
+	if err := netlink.LinkAdd(&netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: randName, MTU: 1500},
+		PeerName:  "clabtst-peer0",
+	}); err != nil {
+		t.Fatalf("failed to create test veth: %v", err)
+	}
+	defer func() {
+		for _, n := range []string{farEp.GetIfaceName(), randName} {
+			if lk, err := netlink.LinkByName(n); err == nil {
+				_ = netlink.LinkDel(lk)
+			}
+		}
+	}()
+
+	if err := l.deployBEnd(context.Background(), 1); err != nil {
+		t.Fatalf("deployBEnd() error = %v", err)
+	}
+
+	lk, err := netlink.LinkByName(farEp.GetIfaceName())
+	if err != nil {
+		t.Fatalf("far end %q not found after in-place setup: %v", farEp.GetIfaceName(), err)
+	}
+	if lk.Attrs().Flags&net.FlagUp == 0 {
+		t.Fatalf("far end %q was not brought up", farEp.GetIfaceName())
+	}
+	if _, err := netlink.LinkByName(randName); err == nil {
+		t.Fatalf("random name %q still present; in-place rename did not happen", randName)
+	}
+	if l.DeploymentState != LinkDeploymentStateFullDeployed {
+		t.Fatalf("DeploymentState = %d, want full-deployed", l.DeploymentState)
+	}
+}
+
 // fakeNode is a fake implementation of Node for testing.
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
 	State     clabnodesstate.NodeState
 	Links     []Link
+}
+
+type fakeDefaultLinkTypeNode struct {
+	*fakeNode
+	linkType LinkType
+}
+
+func (n *fakeDefaultLinkTypeNode) DefaultLinkType() LinkType {
+	return n.linkType
 }
 
 func newFakeNode(name string) *fakeNode {

@@ -2,12 +2,9 @@ package links
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -15,15 +12,11 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const (
-	linkDeployRetries      = 3
-	linkDeployRetryBackoff = 100 * time.Millisecond
-)
-
 // LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
 type LinkVEthRaw struct {
 	LinkCommonParams `               yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
+	fromBrief        bool
 }
 
 // ToLinkBriefRaw converts the raw link into a LinkBriefRaw.
@@ -52,6 +45,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	filtered := isInFilter(params, r.Endpoints)
 	if !filtered {
 		return nil, nil
+	}
+
+	if r.fromBrief && r.briefDefaultLinkType(params) == LinkTypeVethStitch {
+		return NewVEthStitchedRawFromVEth(r).Resolve(params)
 	}
 
 	// create LinkVEth struct
@@ -106,6 +103,47 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	}
 
 	return link, nil
+}
+
+func (r *LinkVEthRaw) cleanupFilteredLink(
+	ctx context.Context,
+	labName string,
+	nodesFilter []string,
+) error {
+	if !r.fromBrief {
+		return nil
+	}
+
+	// probe every brief veth because its node-selected default is
+	// unavailable after filtering; non-stitched probes are harmless no-ops.
+	return cleanupFilteredVethStitch(ctx, labName, nodesFilter, r.Endpoints)
+}
+
+// defaultLinkTypeProvider is a type that can provide the default link type for a node. Currently
+// only needed for SR-SIM nodes that use veth-stitch for a regular veth link.
+type defaultLinkTypeProvider interface {
+	DefaultLinkType() LinkType
+}
+
+func (r *LinkVEthRaw) briefDefaultLinkType(params *ResolveParams) LinkType {
+	for _, ep := range r.Endpoints {
+		n, ok := params.Nodes[ep.Node]
+		if !ok {
+			continue
+		}
+
+		provider, ok := n.(defaultLinkTypeProvider)
+		if !ok {
+			continue
+		}
+
+		lt := provider.DefaultLinkType()
+		if lt != "" && lt != LinkTypeVEth {
+			return lt
+		}
+	}
+
+	return LinkTypeVEth
 }
 
 type LinkVEth struct {
@@ -210,15 +248,15 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 		return err
 	}
 
-	// the link needs to be moved to the relevant network namespace
-	// and enabled (up). This is done via linkSetupFunc.
-	// based on the endpoint type the link setup function is different.
-	// linkSetupFunc is executed in a netns of a node.
-	// if the node is a regular namespace node
-	// add link to node, rename, set mac and Up
-	err = ep.GetNode().AddLinkToContainer(ctx, link,
-		SetNameMACAndUpInterface(link, ep))
-	if err != nil {
+	// Host endpoints already live in the current namespace; set them up in place.
+	// Other nodeless endpoints, such as the management bridge, still need their
+	// node-specific setup.
+	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == LinkEndpointTypeHost {
+		if err := SetNameMACAndUpInterface(link, ep)(nil); err != nil {
+			return err
+		}
+	} else if err = ep.GetNode().AddLinkToContainer(ctx, link,
+		SetNameMACAndUpInterface(link, ep)); err != nil {
 		return err
 	}
 
@@ -254,21 +292,6 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 	)
 }
 
-// isTransientNetlinkErr returns true for errors caused by transient kernel-level
-// race conditions during concurrent netlink operations (e.g. EFAULT, ENODEV).
-func isTransientNetlinkErr(err error) bool {
-	for _, errno := range []syscall.Errno{
-		syscall.EFAULT, // "bad address" - concurrent namespace operations
-		syscall.ENODEV, // "no such device" - interface not yet visible
-		syscall.ENOENT, // "no such file or directory" - namespace path race
-	} {
-		if errors.Is(err, errno) {
-			return true
-		}
-	}
-	return false
-}
-
 // Deploy deploys the veth link by creating the A and B sides of the veth pair independently
 // based on the calling endpoint.
 func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
@@ -285,39 +308,16 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 
 	// Retry transient netlink errors that can occur during concurrent link operations.
 	// deployAEnd cleans up partial state on failure, making each retry idempotent.
-	var lastErr error
-
-	for attempt := range linkDeployRetries {
-		// The first node to trigger the link creation will call deployAEnd,
-		// subsequent (the second) call will end up in deployBEnd.
+	return retryTransientNetlink(ctx, fmt.Sprintf("deploy link %s", ep), func() error {
 		switch l.DeploymentState {
 		case LinkDeploymentStateHalfDeployed:
-			lastErr = l.deployBEnd(ctx, idx)
+			return l.deployBEnd(ctx, idx)
 		case LinkDeploymentStateFullDeployed:
 			return nil
 		default:
-			lastErr = l.deployAEnd(ctx, idx)
+			return l.deployAEnd(ctx, idx)
 		}
-
-		if lastErr == nil {
-			return nil
-		}
-
-		if !isTransientNetlinkErr(lastErr) {
-			return lastErr
-		}
-
-		log.Debugf("transient netlink error deploying link %s (attempt %d/%d): %v",
-			ep, attempt+1, linkDeployRetries, lastErr)
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(linkDeployRetryBackoff << attempt):
-		}
-	}
-
-	return lastErr
+	})
 }
 
 func (*LinkVEth) PostDeploy(context.Context) error {

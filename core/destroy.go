@@ -269,6 +269,15 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
 	if len(c.Nodes) > 0 {
+		err := clablinks.CleanupFilteredLinks(
+			ctx,
+			c.Config.Topology.Links,
+			c.Config.Name,
+			c.nodeFilter,
+		)
+		if err != nil {
+			return err
+		}
 		c.deleteNodes(ctx, maxWorkers)
 	} else {
 		c.deleteContainersDirect(ctx, containers)
@@ -331,7 +340,7 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 		if runtimeNode == nil {
 			return fmt.Errorf("runtime node %q not found", nodeName)
 		}
-		if runtimeNode.external {
+		if runtimeNode.external || runtimeNode.rootNamespaceBased {
 			continue
 		}
 

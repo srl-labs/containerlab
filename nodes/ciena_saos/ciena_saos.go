@@ -57,7 +57,11 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(cienaSaos)

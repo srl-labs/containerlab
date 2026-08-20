@@ -217,3 +217,21 @@ func GetNamedNetNS(name string) (string, error) {
 
 	return nsPath, nil
 }
+
+// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
+// Making it suitable to write as AltName for the interface.
+func SanitizeInterfaceName(ifaceName string) string {
+	var sb strings.Builder
+	sb.Grow(len(ifaceName))
+
+	for _, char := range ifaceName {
+		switch char {
+		case '/', ' ':
+			sb.WriteRune('-')
+		default:
+			sb.WriteRune(char)
+		}
+	}
+
+	return sb.String()
+}

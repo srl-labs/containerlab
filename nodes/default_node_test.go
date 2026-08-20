@@ -64,6 +64,36 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "new"}},
 		},
 		{
+			name: "privileged",
+			old:  &clabtypes.NodeConfig{Privileged: true},
+			new:  &clabtypes.NodeConfig{Privileged: false},
+		},
+		{
+			name: "cgroup namespace mode",
+			old:  &clabtypes.NodeConfig{CgroupnsMode: "private"},
+			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
+		},
+		{
+			name: "cgroup parent",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{CgroupParent: "/xform/my-lab/leaves"},
+		},
+		{
+			name: "PID mode",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{PidMode: "host"},
+		},
+		{
+			name: "tmpfs",
+			old:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw"}},
+			new:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw,nosuid"}},
+		},
+		{
+			name: "security options",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
+		},
+		{
 			name: "components",
 			old:  &clabtypes.NodeConfig{},
 			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
@@ -178,8 +208,16 @@ func TestDefaultNodeLinkApplyMode(t *testing.T) {
 		want LinkApplyMode
 	}{
 		{name: "regular", want: LinkApplyModeRecreate},
-		{name: "root namespace", cfg: &clabtypes.NodeConfig{IsRootNamespaceBased: true}, want: LinkApplyModeLive},
-		{name: "external", cfg: &clabtypes.NodeConfig{SkipUniquenessCheck: true}, want: LinkApplyModeLive},
+		{
+			name: "root namespace",
+			cfg:  &clabtypes.NodeConfig{IsRootNamespaceBased: true},
+			want: LinkApplyModeLive,
+		},
+		{
+			name: "external",
+			cfg:  &clabtypes.NodeConfig{SkipUniquenessCheck: true},
+			want: LinkApplyModeLive,
+		},
 	}
 
 	for _, tt := range tests {

@@ -38,7 +38,9 @@ func WithLabOwner(owner string) ClabOption {
 			"clab_admins"); err == nil && isClabAdmin {
 			c.customOwner = owner
 		} else if owner != "" {
-			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
+			log.Warn(
+				"Only users in clab_admins group can set custom owner. Using current user as owner.",
+			)
 		}
 
 		return nil

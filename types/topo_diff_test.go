@@ -10,8 +10,16 @@ func TestTopologyDiffDefaultAction(t *testing.T) {
 	}{
 		{name: "nil", want: TopologyDiffActionNone},
 		{name: "empty", diff: &TopologyDiff{}, want: TopologyDiffActionNone},
-		{name: "exec", diff: &TopologyDiff{Fields: []string{"Exec"}}, want: TopologyDiffActionRecreate},
-		{name: "unknown", diff: &TopologyDiff{Fields: []string{"FutureField"}}, want: TopologyDiffActionRecreate},
+		{
+			name: "exec",
+			diff: &TopologyDiff{Fields: []string{"Exec"}},
+			want: TopologyDiffActionRecreate,
+		},
+		{
+			name: "unknown",
+			diff: &TopologyDiff{Fields: []string{"FutureField"}},
+			want: TopologyDiffActionRecreate,
+		},
 	}
 
 	for _, tt := range tests {

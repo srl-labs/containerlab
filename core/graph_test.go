@@ -221,7 +221,12 @@ func TestGenerateMermaidGraphSkipsNonPointToPointLinks(t *testing.T) {
 			out := readGraphFile(t, c, ".mermaid")
 			got := len(mermaidEdgeRe.FindAllString(out, -1))
 			if got != tt.wantEdges {
-				t.Fatalf("mermaid graph edge count = %d, want %d\noutput:\n%s", got, tt.wantEdges, out)
+				t.Fatalf(
+					"mermaid graph edge count = %d, want %d\noutput:\n%s",
+					got,
+					tt.wantEdges,
+					out,
+				)
 			}
 		})
 	}

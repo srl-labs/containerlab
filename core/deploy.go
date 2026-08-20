@@ -18,6 +18,7 @@ import (
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 // DeployResult holds the outcome of a Deploy call.
@@ -197,20 +198,8 @@ func (c *CLab) deploy( //nolint: funlen
 		return nil, err
 	}
 
-	if nodesWg != nil {
-		nodesWg.Wait()
-	}
-
-	close(nodeFailCh)
-	var nodeFailErrs []error
-	for nodeErr := range nodeFailCh {
-		nodeFailErrs = append(nodeFailErrs, nodeErr)
-	}
-	if len(nodeFailErrs) > 0 {
-		return nil, fmt.Errorf(
-			"deployment failed for one or more nodes: %w",
-			errors.Join(nodeFailErrs...),
-		)
+	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
+		return nil, err
 	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
@@ -228,15 +217,52 @@ func (c *CLab) deploy( //nolint: funlen
 	// Stitch links after node workers and host endpoints have finished.
 	// The veth pair is already created by node workers and the VxLAN interface is created
 	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
+	var linkPostDeployWorkers errgroup.Group
+	linkPostDeployWorkers.SetLimit(int(options.maxWorkers))
 	for _, link := range c.Links {
-		if err = link.PostDeploy(ctx); err != nil {
-			log.Warnf("failed post-deploying link: %v", err)
-		}
+		linkPostDeployWorkers.Go(func() error {
+			if err := link.PostDeploy(ctx); err != nil {
+				log.Warnf("failed post-deploying link: %v", err)
+			}
+			return nil
+		})
 	}
+	_ = linkPostDeployWorkers.Wait()
 
 	execCollection.Log()
 
 	return c.finalize(ctx, options.exportTemplate, options.graph)
+}
+
+func waitForNodeDeploy(
+	ctx context.Context,
+	nodesWg *sync.WaitGroup,
+	nodeFailCh chan error,
+) error {
+	if nodesWg != nil {
+		nodesWg.Wait()
+	}
+
+	close(nodeFailCh)
+
+	// Cancellation takes precedence over errors caused by workers unwinding, and
+	// prevents post-deploy work from running against a partial lab.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	var nodeFailErrs []error
+	for nodeErr := range nodeFailCh {
+		nodeFailErrs = append(nodeFailErrs, nodeErr)
+	}
+	if len(nodeFailErrs) > 0 {
+		return fmt.Errorf(
+			"deployment failed for one or more nodes: %w",
+			errors.Join(nodeFailErrs...),
+		)
+	}
+
+	return nil
 }
 
 func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
@@ -288,6 +314,11 @@ func (c *CLab) prepareLabDirectory(skipFileACLs bool) {
 }
 
 func (c *CLab) createPlaceholderArtifacts() error {
+	clabutils.CreateDirectory(
+		c.TopoPaths.CABaseDir(),
+		clabconstants.PermissionsOpen,
+	)
+
 	paths := []string{
 		c.TopoPaths.AnsibleInventoryFileAbsPath(),
 		c.TopoPaths.NornirSimpleInventoryFileAbsPath(),
@@ -362,6 +393,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	// Set defaults for the CA parameters
 	keySize := 2048
 	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
+	var extCACert, extCAKey string
 
 	// check that Settings.CertificateAuthority exists.
 	if s != nil && s.CertificateAuthority != nil {
@@ -376,23 +408,23 @@ func (c *CLab) certificateAuthoritySetup() error {
 		}
 
 		// if external CA cert and key are set, propagate to topopaths
-		extCACert := s.CertificateAuthority.Cert
-		extCAKey := s.CertificateAuthority.Key
+		extCACert = s.CertificateAuthority.Cert
+		extCAKey = s.CertificateAuthority.Key
+	}
 
-		// override external ca and key from env vars
-		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
-			extCAKey = v
-		}
+	// override external ca and key from env vars
+	if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
+		extCAKey = v
+	}
 
-		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
-			extCACert = v
-		}
+	if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
+		extCACert = v
+	}
 
-		if extCACert != "" && extCAKey != "" {
-			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
-			if err != nil {
-				return err
-			}
+	if extCACert != "" && extCAKey != "" {
+		err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -580,7 +612,10 @@ func (c *CLab) postDeployApplyNodes(
 		node := c.Nodes[nodeName]
 
 		if !skipPostDeploy {
-			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
+			if err := node.PostDeploy(
+				ctx,
+				&clabnodes.PostDeployParams{Nodes: c.Nodes},
+			); err != nil {
 				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
 			}
 		}

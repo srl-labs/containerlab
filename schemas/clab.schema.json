@@ -127,7 +127,8 @@
                         "openwrt",
                         "spirent_stc",
                         "veesix_osvbng",
-                        "ostinato"
+                        "ostinato",
+                        "plvision_sonic"
                     ]
                 },
                 "license": {
@@ -488,6 +489,49 @@
                     "type": "array",
                     "description": "list of capabilities to add to the container",
                     "markdownDescription": "list of [capabilities](https://containerlab.dev/manual/nodes/#cap-add) to add to the container",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "privileged": {
+                    "type": "boolean",
+                    "description": "run the container in privileged mode",
+                    "markdownDescription": "run the container in [privileged](https://containerlab.dev/manual/nodes/#privileged) mode"
+                },
+                "cgroupns-mode": {
+                    "type": "string",
+                    "description": "cgroup namespace mode for the container",
+                    "markdownDescription": "[cgroup namespace mode](https://containerlab.dev/manual/nodes/#cgroupns-mode) for the container",
+                    "enum": [
+                        "host",
+                        "private"
+                    ]
+                },
+                "cgroup-parent": {
+                    "type": "string",
+                    "markdownDescription": "[parent cgroup](https://containerlab.dev/manual/nodes/#cgroup-parent) for the container"
+                },
+                "pid-mode": {
+                    "type": "string",
+                    "description": "PID namespace mode for the container",
+                    "markdownDescription": "[PID namespace mode](https://containerlab.dev/manual/nodes/#pid-mode) for the container"
+                },
+                "tmpfs": {
+                    "type": "object",
+                    "description": "tmpfs mounts to add to the container",
+                    "markdownDescription": "[tmpfs mounts](https://containerlab.dev/manual/nodes/#tmpfs) to add to the container",
+                    "patternProperties": {
+                        "^/.*": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "security-opts": {
+                    "type": "array",
+                    "description": "security options to apply to the container runtime",
+                    "markdownDescription": "[security options](https://containerlab.dev/manual/nodes/#security-opts) to apply to the container runtime",
                     "items": {
                         "type": "string"
                     },
@@ -859,6 +903,40 @@
                 "endpoints"
             ],
             "additionalItems": false
+        },
+        "link-type-veth-stitched": {
+            "type": "object",
+            "description": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect",
+            "markdownDescription": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect, so traffic can be captured (tcpdump) and impaired (tc netem) on plain Linux netdevs even when the node cannot be impaired directly (e.g. SR-SIM). Passes all traffic incl. STP/LLDP/LACP.",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "veth-stitch"
+                },
+                "endpoints": {
+                    "type": "array",
+                    "description": "Endpoints for the link as extended objects",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "$ref": "#/definitions/link-endpoint"
+                    }
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
+            },
+            "required": [
+                "type",
+                "endpoints"
+            ],
+            "additionalProperties": false
         },
         "link-type-mgmt-net": {
             "type": "object",
@@ -2047,6 +2125,9 @@
                         "dell_sonic": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "plvision_sonic": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "juniper_vmx": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -2203,6 +2284,9 @@
                             },
                             {
                                 "$ref": "#/definitions/link-type-veth"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-veth-stitched"
                             },
                             {
                                 "$ref": "#/definitions/link-type-mgmt-net"

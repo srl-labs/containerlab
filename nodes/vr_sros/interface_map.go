@@ -45,7 +45,9 @@ func parseSrosPortAlias(ifName string) (srosPortAlias, error) {
 		if port != 1 {
 			return p, fmt.Errorf(
 				"interface %q uses a breakout sub-port (c%d/%d); breakout ports are not auto-mapped, use the ethX name instead",
-				ifName, conn, port,
+				ifName,
+				conn,
+				port,
 			)
 		}
 		p.portIndex = conn
@@ -94,7 +96,11 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 	var target *clabtypes.Component
 	if len(lcs) == 0 {
 		if slot != 1 {
-			return 0, fmt.Errorf("interface %q references slot %d, but integrated node only has data ports on slot 1", ifName, slot)
+			return 0, fmt.Errorf(
+				"interface %q references slot %d, but integrated node only has data ports on slot 1",
+				ifName,
+				slot,
+			)
 		}
 		target = components[0]
 	} else {
@@ -112,7 +118,11 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 			base += componentMaxNics(c)
 		}
 		if target == nil {
-			return 0, fmt.Errorf("interface %q references slot %d which has no line card component", ifName, slot)
+			return 0, fmt.Errorf(
+				"interface %q references slot %d which has no line card component",
+				ifName,
+				slot,
+			)
 		}
 	}
 
