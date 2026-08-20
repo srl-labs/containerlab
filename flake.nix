@@ -21,6 +21,9 @@
           inherit version;
           src = ./.;
           vendorHash = "sha256-kRBYjxirApj91hNBz3a+NyRm8SqRTVeQQCz+JFsKY0U=";
+          env = {
+            CGO_ENABLED = 0;
+          };
 
           tags = [
             "podman"
