@@ -11,7 +11,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-<<<<<<< HEAD
 func TestCreateContainerSpecAppliesConfiguredHostname(t *testing.T) {
 	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
 	cfg := &types.NodeConfig{
@@ -27,7 +26,6 @@ func TestCreateContainerSpecAppliesConfiguredHostname(t *testing.T) {
 		t.Fatalf("createContainerSpec returned error: %v", err)
 	}
 
-<<<<<<< HEAD
 	if sg.Hostname != cfg.Hostname {
 		t.Fatalf("Hostname = %q, want %q", sg.Hostname, cfg.Hostname)
 	}
