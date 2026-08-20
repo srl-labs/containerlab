@@ -7,7 +7,15 @@ on:
   push:
     branches: [main, nix-flake]
     # releases always bump go.mod/go.sum or touch the release notes in docs/rn
-    paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml, docs/rn/**]
+    paths:
+      [
+        go.mod,
+        go.sum,
+        flake.nix,
+        flake.lock,
+        .github/workflows/nix.yml,
+        docs/rn/**,
+      ]
   pull_request:
     paths: [go.mod, go.sum, flake.nix, flake.lock, .github/workflows/nix.yml]
   schedule:
