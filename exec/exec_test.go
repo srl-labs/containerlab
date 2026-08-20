@@ -1,8 +1,12 @@
 package exec
 
 import (
+	"bytes"
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 )
 
@@ -68,5 +72,27 @@ func TestParseExecOutputFormat(t *testing.T) {
 				t.Errorf("ParseExecOutputFormat() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestExecCollectionLogPreservesAddOrder(t *testing.T) {
+	collection := NewExecCollection()
+	collection.Add("h1", NewExecResult(NewExecCmdFromSlice([]string{"echo", "h1"})))
+	collection.Add("h2", NewExecResult(NewExecCmdFromSlice([]string{"echo", "h2"})))
+
+	var output bytes.Buffer
+	log.SetOutput(&output)
+	defer log.SetOutput(os.Stderr)
+
+	collection.Log()
+
+	logOutput := output.String()
+	h1Index := strings.Index(logOutput, "node=h1")
+	h2Index := strings.Index(logOutput, "node=h2")
+	if h1Index == -1 || h2Index == -1 {
+		t.Fatalf("expected both command results in log output, got:\n%s", logOutput)
+	}
+	if h1Index > h2Index {
+		t.Fatalf("log output did not preserve add order:\n%s", logOutput)
 	}
 }
