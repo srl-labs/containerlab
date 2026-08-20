@@ -25,15 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # full history, tag handling below needs it
+          fetch-depth: 1
       - uses: cachix/install-nix-action@v31
 
-      # Forks do not inherit tags created after the fork point, and the
-      # checkout action does not fetch tags from upstream either. Fetch the
-      # upstream tags explicitly so the "latest stable release" detection
-      # below is reliable both here and on forks.
-      - name: Fetch upstream tags
-        run: git fetch --tags --force https://github.com/srl-labs/containerlab.git '+refs/tags/v*:refs/tags/v*'
+      # Query upstream directly instead of importing tags into the checkout.
+      # This prevents fork-only tags from affecting the selected version.
+      - name: Detect latest upstream stable release
+        id: release
+        run: |
+          stable_tags=$(
+            git ls-remote --refs --tags https://github.com/srl-labs/containerlab.git 'refs/tags/v[0-9]*' |
+              awk -F/ '$3 !~ /-/ { print $3 }' |
+              sort -V -r
+          )
+          version=${stable_tags%%$'\n'*}
+          version=${version#v}
+          if [ -z "$version" ]; then
+            echo "::error::no v* release tags found on upstream"
+            exit 1
+          fi
+          echo "latest stable release: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Update Nixpkgs lock
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -42,13 +54,10 @@ jobs:
       # version + vendorHash + the Nixpkgs lock are maintained here.
       - name: Refresh flake metadata
         id: refresh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
-          version=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v -- '-' | head -1 | tr -d v)
-          if [ -z "$version" ]; then
-            echo "::error::no v* release tags found after upstream tag fetch"
-            exit 1
-          fi
-          echo "latest stable release: $version"
+          version="$VERSION"
           sed -i "s|version = \".*\";|version = \"$version\";|" flake.nix
           # a mismatching vendorHash is expected whenever go.mod/go.sum changed;
           # `|| true` keeps the step alive so the reported got: hash can be used
