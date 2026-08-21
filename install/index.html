@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../rn/0.78/" class="md-tabs__link">
+        <a href="../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -1060,6 +1062,56 @@
       </span>
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Nix
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-and-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Build and run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install-in-a-nix-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install in a Nix profile
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#development-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Development shell
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1777,6 +1829,8 @@
       
         
       
+        
+      
     
     
     
@@ -1795,7 +1849,7 @@
   
   
   
-    <a href="../rn/0.78/" class="md-nav__link">
+    <a href="../rn/0.79/" class="md-nav__link">
       
   
   
@@ -1929,6 +1983,56 @@
       </span>
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Nix
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-and-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Build and run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install-in-a-nix-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install in a Nix profile
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#development-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Development shell
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2202,6 +2306,65 @@ Other systems can follow the <a href="#manual-installation">manual installation<
 </details>
 <p>The package installer will put the <code>containerlab</code> binary in the <code>/usr/bin</code> directory as well as create the <code>/usr/bin/clab -&gt; /usr/bin/containerlab</code> symlink. The symlink allows the users to save on typing when they use containerlab: <code>clab &lt;command&gt;</code>.
 Containerlab is also set up for sudo-less operation, and the current user (even if the package manager was called through <code>sudo</code>) is automatically granted access to privileged Containerlab commands. For further information, see <a href="#sudo-less-operation">Sudo-less operation</a>.</p>
+<h2 id="nix">Nix<a class="headerlink" href="#nix" title="Permanent link">#</a></h2>
+<p>The flake provides packages for <code>x86_64-linux</code> and <code>aarch64-linux</code>.</p>
+<h3 id="build-and-run">Build and run<a class="headerlink" href="#build-and-run" title="Permanent link">#</a></h3>
+<p>From a local containerlab checkout, build the package and run the resulting binary:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>nix<span class="w"> </span>build<span class="w"> </span>.#containerlab
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>./result/bin/containerlab<span class="w"> </span>version
+</span></code></pre></div>
+<p>The default package is also available without the attribute name:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>nix<span class="w"> </span>build
+</span></code></pre></div>
+<p>To run containerlab without creating a profile installation, use <code>nix run</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># From a local checkout</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>nix<span class="w"> </span>run<span class="w"> </span>.#containerlab<span class="w"> </span>--<span class="w"> </span>version
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Directly from GitHub</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>nix<span class="w"> </span>run<span class="w"> </span>github:srl-labs/containerlab<span class="w"> </span>--<span class="w"> </span>version
+</span></code></pre></div>
+<details>
+<summary>Additional Nix instructions</summary>
+<h3 id="install-in-a-nix-profile">Install in a Nix profile<a class="headerlink" href="#install-in-a-nix-profile" title="Permanent link">#</a></h3>
+<p>Install the latest version from the repository's default branch:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>nix<span class="w"> </span>profile<span class="w"> </span>install<span class="w"> </span>github:srl-labs/containerlab
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>containerlab<span class="w"> </span>version
+</span></code></pre></div>
+<p>To install a specific release, reference its tag:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>nix<span class="w"> </span>profile<span class="w"> </span>install<span class="w"> </span>github:srl-labs/containerlab/v0.78.2
+</span></code></pre></div>
+<p>The package installed in a Nix profile is not SUID, because files in the Nix store cannot safely provide root-owned SUID executables. Run privileged commands with <code>sudo</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topology.clab.yml
+</span></code></pre></div>
+<p>The profile package provides <code>containerlab</code>, but not the <code>clab</code> compatibility symlink. The NixOS module below provides both names.</p>
+<h3 id="development-shell">Development shell<a class="headerlink" href="#development-shell" title="Permanent link">#</a></h3>
+<p>The flake's development shell provides Go, <code>gopls</code>, and <code>golangci-lint</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>nix<span class="w"> </span>develop<span class="w"> </span>github:srl-labs/containerlab
+</span></code></pre></div>
+<p>Docker or Podman is not included in the shell. Containerlab's integration tests still require the corresponding runtime and root privileges.</p>
+<p>For NixOS, import the module to enable sudo-less operation through NixOS security wrappers:</p>
+<div class="language-nix highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  <span class="ss">inputs</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    nixpkgs<span class="o">.</span><span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:NixOS/nixpkgs/nixos-unstable&quot;</span><span class="p">;</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    containerlab<span class="o">.</span><span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:srl-labs/containerlab&quot;</span><span class="p">;</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>  <span class="p">};</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>  <span class="ss">outputs</span> <span class="o">=</span> <span class="p">{</span> nixpkgs<span class="p">,</span> containerlab<span class="p">,</span> <span class="o">...</span> <span class="p">}:</span> <span class="p">{</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    nixosConfigurations<span class="o">.</span><span class="ss">example</span> <span class="o">=</span> nixpkgs<span class="o">.</span>lib<span class="o">.</span>nixosSystem <span class="p">{</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>      <span class="ss">system</span> <span class="o">=</span> <span class="s2">&quot;x86_64-linux&quot;</span><span class="p">;</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>      <span class="ss">modules</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>        containerlab<span class="o">.</span>nixosModules<span class="o">.</span>default
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>        <span class="p">{</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>          programs<span class="o">.</span>containerlab<span class="o">.</span><span class="ss">enable</span> <span class="o">=</span> <span class="no">true</span><span class="p">;</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>          users<span class="o">.</span>users<span class="o">.</span>alice<span class="o">.</span><span class="ss">extraGroups</span> <span class="o">=</span> <span class="p">[</span> <span class="s2">&quot;clab_admins&quot;</span> <span class="p">];</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>        <span class="p">}</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>      <span class="p">];</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>    <span class="p">};</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>  <span class="p">};</span>
+</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The module installs both <code>containerlab</code> and <code>clab</code>, creates the <code>clab_admins</code> group, and provides root-owned SUID wrappers for privileged commands. Users must be members of <code>clab_admins</code> to use those commands.</p>
+</details>
 <h2 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">#</a></h2>
 <p>Containerlab runs on Windows powered by Windows Subsystem Linux (aka WSL), where you can run Containerlab directly or in a Devcontainer. Open up <a href="../windows/"><strong>Containerlab on Windows</strong></a> documentation for more details.</p>
 <h2 id="apple-macos">Apple macOS<a class="headerlink" href="#apple-macos" title="Permanent link">#</a></h2>
@@ -2209,53 +2372,53 @@ Containerlab is also set up for sudo-less operation, and the current user (even 
 <p>Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - <a href="../macos/"><strong>Containerlab on macOS</strong></a> - guide.</p>
 <h2 id="container">Container<a class="headerlink" href="#container" title="Permanent link">#</a></h2>
 <p>Containerlab is also available in a container packaging. The latest containerlab release can be pulled with:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>docker pull ghcr.io/srl-labs/clab
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>docker pull ghcr.io/srl-labs/clab
 </span></code></pre></div>
 <p>To pick any of the released versions starting from release 0.19.0, use the version number as a tag, for example, <code>docker pull ghcr.io/srl-labs/clab:0.19.0</code></p>
 <p>Since containerlab itself deploys containers and creates veth pairs, its run instructions are a bit more complex, but still, it is a copy-paste-able command.</p>
 <p>For example, if your lab files are contained within the current working directory - <code>$(pwd)</code> - then you can launch containerlab container as follows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--privileged<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span>--network<span class="w"> </span>host<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span>-v<span class="w"> </span>/var/run/docker.sock:/var/run/docker.sock<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span>-v<span class="w"> </span>/var/run/netns:/var/run/netns<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span>-v<span class="w"> </span>/etc/hosts:/etc/hosts<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span>-v<span class="w"> </span>/var/lib/docker/containers:/var/lib/docker/containers<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span>--pid<span class="o">=</span><span class="s2">&quot;host&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:<span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span>-w<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span>ghcr.io/srl-labs/clab<span class="w"> </span>bash
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--privileged<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span>--network<span class="w"> </span>host<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span>-v<span class="w"> </span>/var/run/docker.sock:/var/run/docker.sock<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span>-v<span class="w"> </span>/var/run/netns:/var/run/netns<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span>-v<span class="w"> </span>/etc/hosts:/etc/hosts<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span>-v<span class="w"> </span>/var/lib/docker/containers:/var/lib/docker/containers<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">    </span>--pid<span class="o">=</span><span class="s2">&quot;host&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:<span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">    </span>-w<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">    </span>ghcr.io/srl-labs/clab<span class="w"> </span>bash
 </span></code></pre></div>
 <p>Within the started container you can use the same <code>containerlab deploy/destroy/inspect</code> commands to manage your labs.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Containerlab' container command is itself <code>containerlab</code>, so you can deploy a lab without invoking a shell, for example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--privileged<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># &lt;run options omitted&gt;</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>-w<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>ghcr.io/srl-labs/clab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>somelab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--privileged<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># &lt;run options omitted&gt;</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>-w<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>ghcr.io/srl-labs/clab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>somelab.clab.yml
 </span></code></pre></div>
 </div>
 <h2 id="manual-installation">Manual installation<a class="headerlink" href="#manual-installation" title="Permanent link">#</a></h2>
 <p>If the Linux distribution can't install deb/rpm packages, containerlab can be installed from the archive:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># get the latest available tag</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nv">LATEST</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-sLo<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s1">&#39;%{url_effective}&#39;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">       </span>https://github.com/srl-labs/containerlab/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span><span class="s1">&#39;s|.*/v||&#39;</span><span class="k">)</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># download tar.gz archive</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/tmp/clab.tar.gz<span class="w"> </span><span class="s2">&quot;https://github.com/srl-labs/containerlab/releases/download/v</span><span class="si">${</span><span class="nv">LATEST</span><span class="si">}</span><span class="s2">/containerlab_</span><span class="si">${</span><span class="nv">LATEST</span><span class="si">}</span><span class="s2">_Linux_amd64.tar.gz&quot;</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="c1"># create containerlab directory</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>/etc/containerlab
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>
-</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="c1"># extract downloaded archive into the containerlab directory</span>
-</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>tar<span class="w"> </span>-zxvf<span class="w"> </span>/tmp/clab.tar.gz<span class="w"> </span>-C<span class="w"> </span>/etc/containerlab
-</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>
-</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="c1"># (optional) move containerlab binary somewhere in the $PATH</span>
-</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>mv<span class="w"> </span>/etc/containerlab/containerlab<span class="w"> </span>/usr/bin<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span>a+x<span class="w"> </span>/usr/bin/containerlab
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># get the latest available tag</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nv">LATEST</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-sLo<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s1">&#39;%{url_effective}&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">       </span>https://github.com/srl-labs/containerlab/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span><span class="s1">&#39;s|.*/v||&#39;</span><span class="k">)</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># download tar.gz archive</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/tmp/clab.tar.gz<span class="w"> </span><span class="s2">&quot;https://github.com/srl-labs/containerlab/releases/download/v</span><span class="si">${</span><span class="nv">LATEST</span><span class="si">}</span><span class="s2">/containerlab_</span><span class="si">${</span><span class="nv">LATEST</span><span class="si">}</span><span class="s2">_Linux_amd64.tar.gz&quot;</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="c1"># create containerlab directory</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>/etc/containerlab
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="c1"># extract downloaded archive into the containerlab directory</span>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>tar<span class="w"> </span>-zxvf<span class="w"> </span>/tmp/clab.tar.gz<span class="w"> </span>-C<span class="w"> </span>/etc/containerlab
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a>
+</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="c1"># (optional) move containerlab binary somewhere in the $PATH</span>
+</span><span id="__span-24-15"><a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>mv<span class="w"> </span>/etc/containerlab/containerlab<span class="w"> </span>/usr/bin<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span>a+x<span class="w"> </span>/usr/bin/containerlab
 </span></code></pre></div>
 <h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">#</a></h2>
 <p>To upgrade <code>containerlab</code> to the latest available version issue the following command<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>sudo -E containerlab version upgrade
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>sudo -E containerlab version upgrade
 </span></code></pre></div>
 <p>This command will fetch the installation script and will upgrade the tool to its most recent version. In case of GitHub rate limit, provide <code>GITHUB_TOKEN</code> env var with your personal GitHub token to the upgrade command.</p>
 <p>Or leverage <code>apt</code>/<code>yum</code> utilities if containerlab repo was added as explained in the <a href="#package-managers">Package managers</a> section.</p>
@@ -2269,7 +2432,7 @@ Containerlab is also set up for sudo-less operation, and the current user (even 
 <div class="tabbed-block">
 <p>When we release containerlab we use <a href="https://goreleaser.com/">goreleaser</a> project to build binaries for all supported platforms as well as the deb/rpm packages.<br />
 Users can install <code>goreleaser</code> and do the same locally by issuing the following command:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>goreleaser --snapshot --skip-publish --rm-dist
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>goreleaser --snapshot --skip-publish --rm-dist
 </span></code></pre></div>
 </div>
 </div>
@@ -2279,11 +2442,11 @@ Users can install <code>goreleaser</code> and do the same locally by issuing the
 <div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Debian-based system</label><label for="__tabbed_4_2">RPM-based systems</label><label for="__tabbed_4_3">Manual removal</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>apt remove containerlab
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>apt remove containerlab
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>yum remove containerlab
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>yum remove containerlab
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -2294,11 +2457,11 @@ Users can install <code>goreleaser</code> and do the same locally by issuing the
 <h2 id="selinux">SELinux<a class="headerlink" href="#selinux" title="Permanent link">#</a></h2>
 <p>When SELinux set to enforced mode containerlab binary might fail to execute with <code>Segmentation fault (core dumped)</code> error. This might be because containerlab binary is compressed with <a href="https://upx.github.io/">upx</a> and selinux prevents it from being decompressed by default.</p>
 <p>To fix this:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>sudo semanage fcontext -a -t textrel_shlib_t $(which containerlab)
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>sudo restorecon $(which containerlab)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>sudo semanage fcontext -a -t textrel_shlib_t $(which containerlab)
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>sudo restorecon $(which containerlab)
 </span></code></pre></div>
 <p>or more globally:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>sudo setsebool -P selinuxuser_execmod 1
+<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>sudo setsebool -P selinuxuser_execmod 1
 </span></code></pre></div>
 <h2 id="sudo-less-operation">Sudo-less operation<a class="headerlink" href="#sudo-less-operation" title="Permanent link">#</a></h2>
 <p>Containerlab requires root privileges to perform certain operations.</p>
@@ -2306,27 +2469,27 @@ Users can install <code>goreleaser</code> and do the same locally by issuing the
 <details class="subtle-note">
 <summary>Enabling sudo-less operations for manually built/installed Containerlab</summary>
 <p>To enable sudo-less operation for users who who manually built and installed Containerlab, or did not use a package manager to install it, the following commands need to be run:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Set SUID bit on Containerlab binary</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>sudo<span class="w"> </span>chmod<span class="w"> </span>u+s<span class="w"> </span><span class="sb">`</span>which<span class="w"> </span>containerlab<span class="sb">`</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="c1"># Create clab_admins Unix group</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>sudo<span class="w"> </span>groupadd<span class="w"> </span>-r<span class="w"> </span>clab_admins
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1"># Add current user to clab_admins group</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>clab_admins<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$USER</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Set SUID bit on Containerlab binary</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>sudo<span class="w"> </span>chmod<span class="w"> </span>u+s<span class="w"> </span><span class="sb">`</span>which<span class="w"> </span>containerlab<span class="sb">`</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="c1"># Create clab_admins Unix group</span>
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>sudo<span class="w"> </span>groupadd<span class="w"> </span>-r<span class="w"> </span>clab_admins
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="c1"># Add current user to clab_admins group</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>clab_admins<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$USER</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <p>Users who manage their Containerlab installation via <code>deb/yum/dnf</code> package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-<code>0.63.0</code> versions.</p>
 <p>To check whether Containerlab is enabled for sudo-less operations, run the following commands:</p>
-<div class="language-bash no-select highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>ls<span class="w"> </span>-hal<span class="w"> </span><span class="sb">`</span>which<span class="w"> </span>containerlab<span class="sb">`</span>
+<div class="language-bash no-select highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>ls<span class="w"> </span>-hal<span class="w"> </span><span class="sb">`</span>which<span class="w"> </span>containerlab<span class="sb">`</span>
 </span></code></pre></div>
 <div class="embed-result">
-<div class="language-bash no-select no-copy highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>-rwsr-xr-x<span class="w"> </span><span class="m">1</span><span class="w"> </span>root<span class="w"> </span>root<span class="w"> </span>131M<span class="w"> </span>Jan<span class="w"> </span><span class="m">17</span><span class="w"> </span><span class="m">17</span>:56<span class="w"> </span>/usr/bin/containerlab
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="c1">#  ^ SUID bit set, owned by root</span>
+<div class="language-bash no-select no-copy highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>-rwsr-xr-x<span class="w"> </span><span class="m">1</span><span class="w"> </span>root<span class="w"> </span>root<span class="w"> </span>131M<span class="w"> </span>Jan<span class="w"> </span><span class="m">17</span><span class="w"> </span><span class="m">17</span>:56<span class="w"> </span>/usr/bin/containerlab
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="c1">#  ^ SUID bit set, owned by root</span>
 </span></code></pre></div>
 </div>
-<div class="language-bash no-select highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>groups
+<div class="language-bash no-select highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>groups
 </span></code></pre></div>
 <div class="embed-result">
-<div class="language-bash no-select no-copy highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>...<span class="w"> </span>clab_admins<span class="w"> </span>...
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="c1">#   ^ user is member of clab_admins group</span>
+<div class="language-bash no-select no-copy highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>...<span class="w"> </span>clab_admins<span class="w"> </span>...
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="c1">#   ^ user is member of clab_admins group</span>
 </span></code></pre></div>
 </div>
 
@@ -2351,7 +2514,7 @@ Non-privileged command execution is only supported when the default container ru
 <p><strong>If this group does not exist and the binary still has the SUID bit set, any user who can run Containerlab should be treated as having root privileges.</strong></p>
 </div>
 <p>To <strong>disable sudo-less operation</strong>, simply unset the SUID flag on the Containerlab binary:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>sudo chmod u-s `which containerlab`
+<div class="language-text highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>sudo chmod u-s `which containerlab`
 </span></code></pre></div>
 <p>Containerlab installers will <strong>not</strong> attempt to set the SUID flag or create the <code>clab_admins</code> group as long as the empty file <code>/etc/containerlab/suid_setup_done</code> exists.<br />
 This file is automatically created during the first installation of Containerlab <code>0.63.0</code> or newer.</p>

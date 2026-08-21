@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.78/" class="md-tabs__link">
+        <a href="../../../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -2997,6 +2999,8 @@
       
         
       
+        
+      
     
     
     
@@ -3015,7 +3019,7 @@
   
   
   
-    <a href="../../../rn/0.78/" class="md-nav__link">
+    <a href="../../../rn/0.79/" class="md-nav__link">
       
   
   
@@ -3461,6 +3465,19 @@ A kind defines a supported feature set and a startup procedure of a <code>sonic-
 <h2 id="features-and-options">Features and Options<a class="headerlink" href="#features-and-options" title="Permanent link">#</a></h2>
 <h3 id="startup-configuration">Startup configuration<a class="headerlink" href="#startup-configuration" title="Permanent link">#</a></h3>
 <p>VM-based SONiC supports the <a href="../../nodes/#startup-config"><code>startup-config</code></a> feature. The startup configuration file is a JSON file that is available in the VM's filesystem by the <code>/etc/sonic/config_db.json</code> path.</p>
+<p>To keep SONiC's system MAC aligned with the container management interface, use the
+<code>{{ .MacAddress }}</code> template in the <code>DEVICE_METADATA</code> section of the startup configuration:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;DEVICE_METADATA&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;localhost&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{{ .MacAddress }}&quot;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Containerlab generates the management MAC before rendering the startup configuration and uses the
+same value for the container's <code>eth0</code> interface. Literal MAC values remain unchanged; data-plane
+interface MACs are independent.</p>
 <p>Extracting the config from a running node is possible with <code>containerlab save</code> command. The config will be available in the lab directory.</p>
   
 

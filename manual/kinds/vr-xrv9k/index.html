@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.78/" class="md-tabs__link">
+        <a href="../../../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -3338,6 +3340,8 @@
       
         
       
+        
+      
     
     
     
@@ -3356,7 +3360,7 @@
   
   
   
-    <a href="../../../rn/0.78/" class="md-nav__link">
+    <a href="../../../rn/0.79/" class="md-nav__link">
       
   
   
@@ -3748,13 +3752,13 @@
 <p class="admonition-title">Resource requirements</p>
 <p>XRv9k node is a resource hungry image. As of XRv9k 7.2.1 version the minimum resources should be set to 2vcpu/14GB. To be safe the defaults used in containerlab are 2vCPU/16G RAM.<br />
 Image may take 25 minutes to fully boot, be patient. You can monitor the loading status with <code>docker logs -f &lt;container-name&gt;</code>.</p>
-<p>If you need to tune the allocated resources, you can do so with setting <code>VCPU</code> and <code>RAM</code> environment variables for the node. For example, to set 4vcpu/16GB for the node:</p>
+<p>If you need to tune the allocated resources, you can do so by setting <code>QEMU_SMP</code> and <code>QEMU_MEMORY</code> environment variables for the node. For example, to set 4 vCPU/16 GB for the node:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w">    </span><span class="nt">iosxr</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco_xrv9k</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vr-xrv9k:7.10.1</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">env</span><span class="p">:</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">VCPU</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">RAM</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">QEMU_SMP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">QEMU_MEMORY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span>
 </span></code></pre></div>
 </div>
 <h2 id="managing-cisco-xrv9k-nodes">Managing Cisco XRv9k nodes<a class="headerlink" href="#managing-cisco-xrv9k-nodes" title="Permanent link">#</a></h2>

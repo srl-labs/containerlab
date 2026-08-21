@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.78/" class="md-tabs__link">
+        <a href="../../../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -3293,6 +3295,8 @@
       
         
       
+        
+      
     
     
     
@@ -3311,7 +3315,7 @@
   
   
   
-    <a href="../../../rn/0.78/" class="md-nav__link">
+    <a href="../../../rn/0.79/" class="md-nav__link">
       
   
   
@@ -3659,13 +3663,13 @@
 <div class="admonition warning">
 <p class="admonition-title">Resource requirements</p>
 <p>XRd vRouter's DPDK dataplane busy-polls a CPU core and uses hugepages. Per node it needs at least 4 cores, ~5 GiB RAM, and 3 GiB of 1 GiB hugepages; containerlab allocates 4 vCPU / 10 GiB by default and floors vCPU at 4 and RAM at 8 GiB (at 8 GiB an idle node booted and forwarded with ~800 MB to spare). Drop RAM toward the 8 GiB floor only to pack more nodes onto a host. The build and run host must have nested virtualization (<code>/dev/kvm</code>) and hugepages available.</p>
-<p>Tune the allocated resources with the <code>VCPU</code> and <code>RAM</code> environment variables:</p>
+<p>Tune the allocated resources with the <code>QEMU_SMP</code> and <code>QEMU_MEMORY</code> environment variables:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w">    </span><span class="nt">xrd</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco_xrd_vrouter</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vrnetlab/cisco_xrd-vrouter:25.4.2</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">env</span><span class="p">:</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">VCPU</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">RAM</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10240</span><span class="w">   </span><span class="c1"># 10 GiB (the default); lower toward the 8192 floor to pack more nodes</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">QEMU_SMP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">QEMU_MEMORY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10240</span><span class="w">   </span><span class="c1"># 10 GiB (the default); lower toward the 8192 floor to pack more nodes</span>
 </span></code></pre></div>
 </div>
 <h2 id="managing-cisco-xrd-vrouter-nodes">Managing Cisco XRd vRouter nodes<a class="headerlink" href="#managing-cisco-xrd-vrouter-nodes" title="Permanent link">#</a></h2>

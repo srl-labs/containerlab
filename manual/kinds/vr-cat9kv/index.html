@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.78/" class="md-tabs__link">
+        <a href="../../../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -3332,6 +3334,8 @@
       
         
       
+        
+      
     
     
     
@@ -3350,7 +3354,7 @@
   
   
   
-    <a href="../../../rn/0.78/" class="md-nav__link">
+    <a href="../../../rn/0.79/" class="md-nav__link">
       
   
   
@@ -3867,7 +3871,7 @@
 <p>You can obtain a <code>vswitch.xml</code> file from the relevant Cisco CML node definitions.</p>
 </div>
 <h3 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">#</a></h3>
-<p>There are <code>VCPU</code> and <code>RAM</code> environment variables defined. It is not recommended reduce the resources below the required amount. The node will be unable to boot in this case.</p>
+<p>There are <code>QEMU_SMP</code> and <code>QEMU_MEMORY</code> environment variables defined. It is not recommended to reduce the resources below the required amount. The node will be unable to boot in this case.</p>
 <p>The example below assigns 6vCPUs and 20 gigabytes of RAM to the node.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-cat9kv-lab</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">topology</span><span class="p">:</span>
@@ -3876,8 +3880,8 @@
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco_cat9kv</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vrnetlab/vr-cat9kv:17.12.01p</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="nt">env</span><span class="p">:</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">VCPU</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">RAM</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20480</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">QEMU_SMP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">QEMU_MEMORY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20480</span>
 </span></code></pre></div>
   
 

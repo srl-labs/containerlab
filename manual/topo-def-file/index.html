@@ -836,12 +836,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.78/" class="md-tabs__link">
+        <a href="../../rn/0.79/" class="md-tabs__link">
           
   
   Release notes
@@ -2636,6 +2638,8 @@
       
         
       
+        
+      
     
     
     
@@ -2654,7 +2658,7 @@
   
   
   
-    <a href="../../rn/0.78/" class="md-nav__link">
+    <a href="../../rn/0.79/" class="md-nav__link">
       
   
   
@@ -3909,7 +3913,11 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
 </table>
 <h2 id="magic-variables">Magic Variables<a class="headerlink" href="#magic-variables" title="Permanent link">#</a></h2>
 <p>Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (<code>__variable__</code>) and can be seen in some of the advanced topology examples.</p>
-<p>Most variables can be used in startup-config paths, bind paths, and exec commands. The Git variables (<code>__gitBranch__</code> and <code>__gitHash__</code>) are special and today can only be used in the topology <code>name</code> field. All variables are replaced with actual values during lab deployment:</p>
+<p>Most variables can be used in startup-config paths, bind paths, and exec commands, including
+commands in deployment stages. Stage commands are expanded separately for each node before they
+run, regardless of whether their target is the host or the container. The Git variables
+(<code>__gitBranch__</code> and <code>__gitHash__</code>) are special and today can only be used in the topology <code>name</code>
+field. All variables are replaced with actual values during lab deployment:</p>
 <table>
 <thead>
 <tr>
