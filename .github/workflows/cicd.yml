@@ -16,7 +16,7 @@ on:
         default: "docker"
 
 env:
-  GO_VER: "1.25.10"
+  GO_VER: "1.26.7"
   CGO_ENABLED: 0
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
