@@ -210,7 +210,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default
 	// config
-	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
+	n.Cfg.Certificate.Issue = new(true)
 
 	for _, o := range opts {
 		o(n)

@@ -993,7 +993,7 @@ func (t *Topology) ImportEnvs() {
 func (t *Topology) GetCertificateConfig(nodeName string) *CertificateConfig {
 	// default for issuing node certificates is false
 	cc := &CertificateConfig{
-		Issue: clabutils.Pointer(false),
+		Issue: new(false),
 	}
 
 	cc.Merge(t.GetDefaults().Certificate)

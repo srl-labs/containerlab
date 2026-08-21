@@ -331,7 +331,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 	opts := networkapi.CreateOptions{
 		Driver:     "bridge",
-		EnableIPv6: clabutils.Pointer(enableIPv6),
+		EnableIPv6: new(enableIPv6),
 		IPAM:       ipam,
 		Internal:   false,
 		Attachable: false,

@@ -16,7 +16,7 @@ type Volume struct {
 // NewVolumeFromString parses a volume specification in the short syntax:
 // - "/container/path"
 // - "name:/container/path"
-// - "name:/container/path:options"
+// - "name:/container/path:options".
 func NewVolumeFromString(volume string) (*Volume, error) {
 	v := &Volume{}
 
@@ -29,7 +29,10 @@ func NewVolumeFromString(volume string) (*Volume, error) {
 	}
 
 	if strings.HasPrefix(split[0], "/") {
-		return nil, fmt.Errorf("volume %q references a host path; please use the binds stanza instead", volume)
+		return nil, fmt.Errorf(
+			"volume %q references a host path; please use the binds stanza instead",
+			volume,
+		)
 	} else if len(split) < 2 || len(split) > 3 {
 		return nil, fmt.Errorf("unable to parse volume %q", volume)
 	}
