@@ -67,15 +67,15 @@ func (r *PodmanRuntime) createContainerSpec(
 		Name:       cfg.LongName,
 		Entrypoint: entrypoint,
 		Command:    cmd,
-		EnvHost:    utils.Pointer(false),
-		HTTPProxy:  utils.Pointer(false),
+		EnvHost:    new(false),
+		HTTPProxy:  new(false),
 		Env:        cfg.Env,
-		Terminal:   utils.Pointer(true),
-		Stdin:      utils.Pointer(true),
+		Terminal:   new(true),
+		Stdin:      new(true),
 		Labels:     cfg.Labels,
 		Hostname:   cfg.GetHostname(),
 		Sysctl:     cfg.Sysctls,
-		Remove:     utils.Pointer(false),
+		Remove:     new(false),
 	}
 	// Storage, image and mounts
 	mounts, volumes, err := r.convertMounts(ctx, cfg.Binds, cfg.Volumes)
@@ -122,7 +122,7 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
-		Privileged: utils.Pointer(cfg.Privileged),
+		Privileged: new(cfg.Privileged),
 		User:       cfg.User,
 		CapAdd:     cfg.CapAdd,
 	}
@@ -231,14 +231,14 @@ func (r *PodmanRuntime) createContainerSpec(
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: specgen.Host},
 			// UseImageResolvConf:  false,
-			UseImageHosts: utils.Pointer(false),
+			UseImageHosts: new(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
 	case "none":
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS:         specgen.Namespace{NSMode: specgen.NoNetwork},
-			UseImageHosts: utils.Pointer(false),
+			UseImageHosts: new(false),
 			HostAdd:       cfg.ExtraHosts,
 		}
 	// Bridge will be used if none provided
@@ -279,11 +279,11 @@ func (r *PodmanRuntime) createContainerSpec(
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
 			PortMappings:        portmap,
-			PublishExposedPorts: utils.Pointer(false),
+			PublishExposedPorts: new(false),
 			Expose:              expose,
 			Networks:            nets,
 			// UseImageResolvConf:  false,
-			UseImageHosts: utils.Pointer(false),
+			UseImageHosts: new(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
