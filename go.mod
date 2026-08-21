@@ -20,7 +20,7 @@ require (
 	github.com/docker/go-connections v0.8.1
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/florianl/go-tc v0.4.7
+	github.com/florianl/go-tc v0.4.8
 	github.com/go-xmlfmt/xmlfmt v1.1.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/nftables v0.3.0
