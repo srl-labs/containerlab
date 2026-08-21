@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/srl-labs/containerlab/types"
+	"go.podman.io/podman/v6/pkg/specgen"
 )
 
 func TestCreateContainerSpecAppliesConfiguredHostname(t *testing.T) {

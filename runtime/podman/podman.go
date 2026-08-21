@@ -14,16 +14,15 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/containers/podman/v5/pkg/api/handlers"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/bindings/network"
-	dockerContainer "github.com/docker/docker/api/types/container"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"go.podman.io/podman/v6/pkg/api/handlers"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/bindings/network"
 )
 
 const (
@@ -386,14 +385,11 @@ func (r *PodmanRuntime) Exec(
 	if err != nil {
 		return nil, err
 	}
-	execCreateConf := handlers.ExecCreateConfig{
-		ExecOptions: dockerContainer.ExecOptions{
-			User:         "root",
-			AttachStderr: true,
-			AttachStdout: true,
-			Cmd:          execCmd.GetCmd(),
-		},
-	}
+	execCreateConf := handlers.ExecCreateConfig{}
+	execCreateConf.User = "root"
+	execCreateConf.AttachStderr = true
+	execCreateConf.AttachStdout = true
+	execCreateConf.Cmd = execCmd.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
@@ -439,14 +435,11 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec *exec.
 	if err != nil {
 		return err
 	}
-	execCreateConf := handlers.ExecCreateConfig{
-		ExecOptions: dockerContainer.ExecOptions{
-			Tty:          false,
-			AttachStderr: false,
-			AttachStdout: false,
-			Cmd:          exec.GetCmd(),
-		},
-	}
+	execCreateConf := handlers.ExecCreateConfig{}
+	execCreateConf.Tty = false
+	execCreateConf.AttachStderr = false
+	execCreateConf.AttachStdout = false
+	execCreateConf.Cmd = exec.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)

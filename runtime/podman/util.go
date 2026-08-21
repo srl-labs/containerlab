@@ -11,20 +11,20 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/domain/entities"
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	netTypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/image/v5/manifest"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/domain/entities"
+	"go.podman.io/podman/v6/pkg/specgen"
 
 	"github.com/charmbracelet/log"
-	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/google/shlex"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"go.podman.io/podman/v6/pkg/bindings"
 )
 
 type podmanWriterCloser struct {
