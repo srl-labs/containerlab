@@ -16,6 +16,7 @@ import (
 
 	networkapi "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -32,6 +33,7 @@ type fakeDockerNetworkServer struct {
 	created bool
 	info    networkapi.Inspect
 	creates atomic.Int32
+	removes atomic.Int32
 }
 
 func (f *fakeDockerNetworkServer) handler() http.Handler {
@@ -91,6 +93,10 @@ func (f *fakeDockerNetworkServer) handler() http.Handler {
 
 			writeJSON(w, http.StatusOK, info)
 
+		case r.Method == http.MethodDelete && strings.HasPrefix(path, "/networks/"):
+			f.removes.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+
 		default:
 			f.t.Logf("unexpected request: %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
@@ -125,15 +131,199 @@ func newFakeDockerRuntime(
 	rt := &DockerRuntime{
 		Client: cli,
 		mgmt: &clabtypes.MgmtNet{
-			Network:    netName,
-			IPv4Subnet: "172.45.99.0/24",
-			MTU:        1500,
+			Network:        netName,
+			IPv4Subnet:     "172.45.99.0/24",
+			MTU:            1500,
+			ExternalAccess: new(bool),
 		},
 		config:  clabruntime.RuntimeConfig{Timeout: defaultTimeout},
 		version: "v27.0.0",
 	}
 
 	return rt, fake, func() { _ = cli.Close(); srv.Close() }
+}
+
+func TestBridgeNameFromInspect(t *testing.T) {
+	t.Parallel()
+
+	const networkID = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+
+	tests := []struct {
+		name    string
+		inspect networkapi.Inspect
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "bridge option",
+			inspect: networkapi.Inspect{
+				ID:     networkID,
+				Driver: "bridge",
+				Options: map[string]string{
+					bridgeNameOption: "custom-bridge",
+				},
+			},
+			want: "custom-bridge",
+		},
+		{
+			name: "default bridge name",
+			inspect: networkapi.Inspect{
+				ID:     networkID,
+				Driver: "bridge",
+			},
+			want: "br-" + networkID[:12],
+		},
+		{
+			name: "non-bridge driver",
+			inspect: networkapi.Inspect{
+				ID:     "short-id",
+				Driver: "macvlan",
+				Options: map[string]string{
+					bridgeNameOption: "not-a-bridge",
+				},
+			},
+			want: "",
+		},
+		{
+			name: "bridge with short ID",
+			inspect: networkapi.Inspect{
+				ID:     "short-id",
+				Driver: "bridge",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := bridgeNameFromInspect(&tc.inspect, "custom")
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("bridgeNameFromInspect() error = nil, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("bridgeNameFromInspect() error = %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("bridgeNameFromInspect() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCreateNetReusesNonBridgeNetwork(t *testing.T) {
+	t.Parallel()
+
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-net")
+	defer cleanup()
+
+	fake.mu.Lock()
+	fake.created = true
+	fake.info = networkapi.Inspect{
+		ID:     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+		Name:   "macvlan-net",
+		Driver: "macvlan",
+		IPAM: networkapi.IPAM{
+			Config: []networkapi.IPAMConfig{{Gateway: "10.40.40.1"}},
+		},
+	}
+	fake.mu.Unlock()
+
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatalf("CreateNet() error = %v", err)
+	}
+	if rt.mgmt.Bridge != "" {
+		t.Errorf("CreateNet() set bridge %q for a non-bridge network", rt.mgmt.Bridge)
+	}
+	if rt.mgmt.IPv4Gw != "10.40.40.1" {
+		t.Errorf("CreateNet() IPv4 gateway = %q, want %q", rt.mgmt.IPv4Gw, "10.40.40.1")
+	}
+}
+
+func TestWithMgmtNetDoesNotInferBridgeForNonBridgeNetwork(t *testing.T) {
+	t.Parallel()
+
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-net")
+	defer cleanup()
+
+	fake.mu.Lock()
+	fake.created = true
+	fake.info = networkapi.Inspect{
+		ID:     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+		Name:   "macvlan-net",
+		Driver: "macvlan",
+	}
+	fake.mu.Unlock()
+
+	rt.mgmt.MTU = 0
+	rt.WithMgmtNet(rt.mgmt)
+
+	if rt.mgmt.Bridge != "" {
+		t.Errorf("WithMgmtNet() inferred bridge %q for a non-bridge network", rt.mgmt.Bridge)
+	}
+}
+
+func TestDeleteNetOnlyRemovesContainerlabNetworks(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		labels     map[string]string
+		wantRemove int32
+	}{
+		{
+			name:       "external network",
+			wantRemove: 0,
+		},
+		{
+			name: "containerlab network",
+			labels: map[string]string{
+				clabconstants.Containerlab: "",
+			},
+			wantRemove: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rt, fake, cleanup := newFakeDockerRuntime(t, tc.name)
+			defer cleanup()
+
+			fake.mu.Lock()
+			fake.created = true
+			fake.info = networkapi.Inspect{
+				ID:     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+				Name:   tc.name,
+				Driver: "bridge",
+				Labels: tc.labels,
+			}
+			fake.mu.Unlock()
+
+			if err := rt.DeleteNet(context.Background()); err != nil {
+				t.Fatalf("DeleteNet() error = %v", err)
+			}
+			if got := fake.removes.Load(); got != tc.wantRemove {
+				t.Errorf("NetworkRemove calls = %d, want %d", got, tc.wantRemove)
+			}
+		})
+	}
+}
+
+func TestDeleteMgmtNetworkFwdRuleSkipsNonBridge(t *testing.T) {
+	t.Parallel()
+
+	externalAccess := true
+	rt := &DockerRuntime{
+		mgmt: &clabtypes.MgmtNet{
+			ExternalAccess: &externalAccess,
+		},
+	}
+
+	if err := rt.deleteMgmtNetworkFwdRule(); err != nil {
+		t.Fatalf("deleteMgmtNetworkFwdRule() error = %v", err)
+	}
 }
 
 // TestCreateMgmtBridge_ConcurrentSafe is the regression test for the race

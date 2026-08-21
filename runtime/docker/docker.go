@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-units"
@@ -34,6 +35,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -173,13 +175,12 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 		)
 		// if the network is successfully found, set the bridge used by it
 		if err == nil {
-			if name, exists := netRes.Options[bridgeNameOption]; exists {
-				d.mgmt.Bridge = name
-			} else {
-				d.mgmt.Bridge = "br-" + netRes.ID[:12]
+			bridge, bridgeErr := bridgeNameFromInspect(&netRes, d.mgmt.Network)
+			if bridgeErr == nil {
+				d.mgmt.Bridge = bridge
 			}
 			log.Debugf(
-				"detected network name in use: %s, backed by a bridge %s",
+				"detected network name in use: %s, backed by bridge %s",
 				d.mgmt.Network,
 				d.mgmt.Bridge,
 			)
@@ -198,7 +199,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
 	switch {
-	case dockerC.IsErrNotFound(err):
+	case cerrdefs.IsNotFound(err):
 		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
 		if err != nil {
 			return err
@@ -214,7 +215,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	if d.mgmt.Bridge == "" {
+	if bridgeName == "" || d.mgmt.Bridge == "" {
 		d.mgmt.Bridge = bridgeName
 	}
 
@@ -336,7 +337,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 		Internal:   false,
 		Attachable: false,
 		Labels: map[string]string{
-			"containerlab": "",
+			clabconstants.Containerlab: "",
 		},
 		Options: netwOpts,
 	}
@@ -420,6 +421,10 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 // bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect
 // response.
 func bridgeNameFromInspect(netResource *networkapi.Inspect, mgmtNetwork string) (string, error) {
+	if netResource.Driver != "bridge" {
+		return "", nil
+	}
+
 	if len(netResource.ID) < 12 {
 		return "", fmt.Errorf("could not get bridge ID")
 	}
@@ -440,12 +445,18 @@ func getMgmtBridgeIPs(
 	bridgeName string,
 	netResource *networkapi.Inspect,
 ) (v4, v6 string, err error) {
-	if v4, v6, err = clabutils.FirstLinkIPs(bridgeName); err != nil {
+	if bridgeName != "" {
+		v4, v6, err = clabutils.FirstLinkIPs(bridgeName)
+	}
+
+	if bridgeName != "" && err != nil {
 		log.Warn(
 			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +
 				" falling back to docker network inspect data",
 		)
+	}
 
+	if bridgeName == "" || err != nil {
 		for _, ipamEntry := range netResource.IPAM.Config {
 			addr := ipamEntry.Gateway
 
@@ -465,6 +476,9 @@ func getMgmtBridgeIPs(
 
 	// didnt find any gateways, fallthrough to returning the error
 	if v4 == "" && v6 == "" {
+		if bridgeName == "" {
+			return "", "", nil
+		}
 		return "", "", err
 	}
 
@@ -473,6 +487,11 @@ func getMgmtBridgeIPs(
 
 // postCreateNetActions performs additional actions after the network has been created.
 func (d *DockerRuntime) postCreateNetActions() (err error) {
+	if d.mgmt.Bridge == "" {
+		log.Debug("skipping post-create actions for non-bridged management network")
+		return nil
+	}
+
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
 	if err != nil {
@@ -534,10 +553,15 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	nres, err := d.Client.NetworkInspect(ctx, network, networkapi.InspectOptions{})
+	nres, err := d.Client.NetworkInspect(nctx, network, networkapi.InspectOptions{})
 	if err != nil {
 		return err
 	}
+	if _, ok := nres.Labels[clabconstants.Containerlab]; !ok {
+		log.Debugf("network %q was not created by containerlab, deletion skipped", network)
+		return nil
+	}
+
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if d.config.Debug {
