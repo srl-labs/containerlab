@@ -211,7 +211,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 
 	// check that the function was called "counterMax" times
 	if counter != counterMax {
-		t.Errorf("expected %q calls to runtime for status. Seen just %q", counterMax, counter)
+		t.Errorf("expected %d calls to runtime for status. Seen just %d", counterMax, counter)
 	}
 }
 

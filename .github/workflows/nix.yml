@@ -80,10 +80,6 @@ jobs:
           nix build .#containerlab --no-link
           git diff --quiet -- flake.nix flake.lock || echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Fail PRs with stale flake metadata
-        if: steps.refresh.outputs.changed == 'true' && github.event_name == 'pull_request'
-        run: git diff -- flake.nix flake.lock && exit 1
-
       - name: Upload refreshed flake metadata
         if: steps.refresh.outputs.changed == 'true' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7

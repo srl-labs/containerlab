@@ -7,7 +7,7 @@ on:
 
 # make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GO_VER: "1.25.10"
+  GO_VER: "1.26.7"
   CGO_ENABLED: 0
   GORELEASER_VER: v2.0.1
   PY_VER: "3.10"
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GOVER }}
+          go-version: ${{ env.GO_VER }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4

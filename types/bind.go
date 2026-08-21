@@ -41,7 +41,10 @@ func NewBindFromString(bind string) (*Bind, error) {
 	split := strings.Split(bind, ":")
 
 	if len(split) == 1 && split[0] != "" {
-		return nil, fmt.Errorf("bind %q looks like an anonymous volume target, please use the volumes stanza instead", bind)
+		return nil, fmt.Errorf(
+			"bind %q looks like an anonymous volume target, please use the volumes stanza instead",
+			bind,
+		)
 	} else if len(split) < 2 || len(split) > 3 {
 		return nil, fmt.Errorf("unable to parse bind %q", bind)
 	}

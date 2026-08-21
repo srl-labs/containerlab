@@ -616,7 +616,7 @@ func (p *PodmanRuntime) CopyToContainer(
 	}
 
 	opts := &containers.CopyOptions{
-		NoOverwriteDirNonDir: utils.Pointer(true),
+		NoOverwriteDirNonDir: new(true),
 	}
 
 	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
