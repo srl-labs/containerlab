@@ -132,7 +132,7 @@ jobs:
 
       # On the upstream repo the refresh lands via a bot PR;
       # on forks (used as nix flake inputs) commit straight to the branch.
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         if: github.repository == 'srl-labs/containerlab'
         with:
           branch: update-flake
