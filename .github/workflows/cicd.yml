@@ -119,7 +119,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment containerlab binary URLs
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const artifactNames = ['containerlab', 'containerlab-arm64'];
