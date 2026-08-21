@@ -440,7 +440,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 		},
 		&container.HostConfig{
 			Binds: []string{
-				fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
+				drawioBindMount(c.TopoPaths.TopologyFileDir(), c.globalRuntimeName),
 			},
 		},
 		nil,
@@ -630,6 +630,15 @@ func resizeDockerTTY(ctx context.Context, client *dockerC.Client, containerID st
 	}); resizeErr != nil {
 		log.Debugf("Failed to resize container TTY: %v", resizeErr)
 	}
+}
+
+func drawioBindMount(topologyDir, runtimeName string) string {
+	bind := fmt.Sprintf("%s:/data", topologyDir)
+	if runtimeName == "podman" {
+		bind += ":z"
+	}
+
+	return bind
 }
 
 func parseDrawioArgs(argList []string) []string {
