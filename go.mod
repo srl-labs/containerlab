@@ -44,7 +44,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/steiler/acls v0.1.5
 	github.com/stretchr/testify v1.11.1
-	github.com/tklauser/numcpus v0.11.0
+	github.com/tklauser/numcpus v0.12.0
 	github.com/vishvananda/netlink v1.3.1
 	go.podman.io/common v0.69.1
 	go.podman.io/image/v5 v5.41.1
