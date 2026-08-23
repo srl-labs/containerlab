@@ -231,3 +231,21 @@ func TestGenerateMermaidGraphSkipsNonPointToPointLinks(t *testing.T) {
 		})
 	}
 }
+
+func TestDrawioBindMount(t *testing.T) {
+	tests := []struct {
+		runtimeName string
+		want        string
+	}{
+		{runtimeName: "docker", want: "/tmp/topology:/data"},
+		{runtimeName: "podman", want: "/tmp/topology:/data:z"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.runtimeName, func(t *testing.T) {
+			if got := drawioBindMount("/tmp/topology", tt.runtimeName); got != tt.want {
+				t.Fatalf("drawioBindMount() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
