@@ -3,7 +3,6 @@ package iptables
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -101,7 +100,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(
 
 	log.Debugf("Installing iptables (%s) rules for bridge %q", af, iface)
 
-	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
+	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to install iptables rule using '%s' command: %w", cmd, err)
@@ -137,7 +136,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	iface := rule.Interface
 
 	// first check if a rule exists before trying to delete it
-	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).Output()
+	res, err := newIptablesCmd(iptCmd, strings.Split(iptCheckArgs, " ")...).Output()
 	if err != nil {
 		// non nil error typically means that DOCKER-USER chain doesn't exist
 		// this happens with old docker installations (centos7 hello) from default repos
@@ -170,7 +169,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	log.Debugf("removing clab iptables rules for bridge %q", iface)
 	log.Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
 
-	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
+	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to delete iptables rules: %w", err)
@@ -183,7 +182,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) bool {
 	iptCmd := iptablesCmd[af]
 
-	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
+	res, err := newIptablesCmd(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
 	if err != nil {
 		log.Warnf("iptables check error: %s. Output: %s", err, string(res))
 		// if we errored on check we don't want to try setting up the rule
