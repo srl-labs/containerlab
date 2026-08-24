@@ -1,30 +1,8 @@
 package iptables
 
 import (
-	"slices"
 	"testing"
 )
-
-func TestSanitizeIptablesEnv(t *testing.T) {
-	in := []string{
-		"PATH=/usr/bin",
-		"HOME=/home/user",
-		"LD_PRELOAD=/tmp/evil.so",
-		"LD_LIBRARY_PATH=/tmp/bad",
-		"LD_AUDIT=x",
-		"FOO=bar",
-		"LD_=shouldstrip",
-	}
-	got := sanitizeIptablesEnv(in)
-	want := []string{
-		"PATH=/usr/bin",
-		"HOME=/home/user",
-		"FOO=bar",
-	}
-	if !slices.Equal(got, want) {
-		t.Fatalf("sanitizeIptablesEnv() = %#v, want %#v", got, want)
-	}
-}
 
 func TestIptablesSysProcAttr(t *testing.T) {
 	t.Run("setuid parent needs matching root uids in child", func(t *testing.T) {
@@ -54,4 +32,14 @@ func TestIptablesSysProcAttr(t *testing.T) {
 			t.Fatalf("expected nil SysProcAttr, got %#v", attr)
 		}
 	})
+}
+
+func TestNewIptablesCmdClearsEnv(t *testing.T) {
+	cmd := newIptablesCmd("iptables", "-V")
+	if cmd.Env == nil {
+		t.Fatal("Env is nil (would inherit parent); want empty slice")
+	}
+	if len(cmd.Env) != 0 {
+		t.Fatalf("Env = %#v, want empty", cmd.Env)
+	}
 }
