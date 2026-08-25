@@ -292,7 +292,7 @@ func (c *CLab) applyStateNodeConfig(
 	}
 
 	applied := *runtimeConfig
-	desired := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
+	desired := c.resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
 	if desired == nil {
 		return &applied
 	}
