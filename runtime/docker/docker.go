@@ -272,19 +272,11 @@ func mgmtBridgeNameFromInspect(
 		return podmanNetworkInterface
 	}
 
-	if networkName == "bridge" {
-		return "docker0"
+	name, err := bridgeNameFromInspect(&netResource, networkName)
+	if err != nil {
+		return ""
 	}
-
-	if name := netResource.Options["com.docker.network.bridge.name"]; name != "" {
-		return name
-	}
-
-	if len(netResource.ID) >= 12 {
-		return "br-" + netResource.ID[:12]
-	}
-
-	return ""
+	return name
 }
 
 func netavarkNetworkInterface(raw []byte) string {

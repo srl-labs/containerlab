@@ -18,6 +18,7 @@ func TestMgmtBridgeNameFromInspect(t *testing.T) {
 			name:        "podman netavark network_interface wins",
 			networkName: "clab-mgmt",
 			inspect: networkapi.Inspect{
+				Driver:  "bridge",
 				ID:      "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
 				Options: map[string]string{"com.docker.network.bridge.name": "br-cd38716161df"},
 			},
@@ -28,6 +29,7 @@ func TestMgmtBridgeNameFromInspect(t *testing.T) {
 			name:        "docker explicit bridge option",
 			networkName: "clab-mgmt",
 			inspect: networkapi.Inspect{
+				Driver:  "bridge",
 				ID:      "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
 				Options: map[string]string{"com.docker.network.bridge.name": "clab0"},
 			},
@@ -37,7 +39,8 @@ func TestMgmtBridgeNameFromInspect(t *testing.T) {
 			name:        "docker default bridge",
 			networkName: "bridge",
 			inspect: networkapi.Inspect{
-				ID: "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
+				Driver: "bridge",
+				ID:     "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
 			},
 			want: "docker0",
 		},
@@ -45,7 +48,8 @@ func TestMgmtBridgeNameFromInspect(t *testing.T) {
 			name:        "docker generated bridge name",
 			networkName: "clab-mgmt",
 			inspect: networkapi.Inspect{
-				ID: "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
+				Driver: "bridge",
+				ID:     "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
 			},
 			want: "br-cd38716161df",
 		},
@@ -53,7 +57,17 @@ func TestMgmtBridgeNameFromInspect(t *testing.T) {
 			name:        "short id has no generated bridge",
 			networkName: "clab-mgmt",
 			inspect: networkapi.Inspect{
-				ID: "short",
+				Driver: "bridge",
+				ID:     "short",
+			},
+			want: "",
+		},
+		{
+			name:        "non-bridge network has no bridge",
+			networkName: "macvlan-net",
+			inspect: networkapi.Inspect{
+				Driver: "macvlan",
+				ID:     "cd38716161df05aff76bae83d9fc31415f843e2c2f939597307d4be0c1551fe6",
 			},
 			want: "",
 		},
