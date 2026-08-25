@@ -7,6 +7,7 @@ package vr_ftosv
 import (
 	"fmt"
 	"path"
+	"regexp"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -16,6 +17,10 @@ import (
 var (
 	kindnames          = []string{"dell_ftosv", "vr-ftosv", "vr-dell_ftosv"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`(?:ethernet\s?)?1/1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "ethernet1/1/X or 1/1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -80,6 +85,10 @@ func (n *vrFtosv) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) 
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
 	)
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
