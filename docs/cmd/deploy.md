@@ -300,6 +300,10 @@ automatically includes nodes required through `wait-for` or
 and endpoints outside that closure remain immutable: they are not deleted, restarted, recreated,
 or reconciled.
 
+A typical use case is a large running lab where one device under test or traffic-generator node
+must be added or recreated without disturbing the control-plane state, container IDs, or runtime
+state of unrelated nodes.
+
 ```bash
 containerlab deploy -t mylab.clab.yml --node-filter app1,app2
 ```
