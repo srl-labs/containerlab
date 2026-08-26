@@ -64,10 +64,22 @@ var (
 	) (*clabexec.ExecResult, error) {
 		return n.RunExec(ctx, execCmd)
 	}
-	ceosPostDeploySleep = time.Sleep
+	ceosPostDeployWait = waitForCeosPostDeployRetry
 
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 )
+
+func waitForCeosPostDeployRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -422,7 +434,11 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	readyCmd := clabexec.NewExecCmdFromSlice([]string{"Cli", "-p", "15", "-c", "show version"})
 	ready := false
 
-	for range 60 {
+	for attempt := range 60 {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("cEOS CLI readiness canceled: %w", err)
+		}
+
 		lastResp, lastErr = ceosPostDeployExec(n, ctx, readyCmd)
 		if lastErr == nil && lastResp != nil && lastResp.GetReturnCode() == 0 {
 			ready = true
@@ -435,7 +451,12 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 			lastErr,
 			lastResp,
 		)
-		ceosPostDeploySleep(2 * time.Second)
+		if attempt == 59 {
+			break
+		}
+		if err := ceosPostDeployWait(ctx, 2*time.Second); err != nil {
+			return fmt.Errorf("cEOS CLI readiness canceled: %w", err)
+		}
 	}
 
 	if !ready {

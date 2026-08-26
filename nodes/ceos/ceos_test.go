@@ -40,7 +40,7 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 			gotCmd = execCmd.GetCmd()
 			return execResult(execCmd, 0, "", ""), nil
 		},
-		func(time.Duration) {},
+		func(context.Context, time.Duration) error { return nil },
 	)
 	defer restore()
 
@@ -82,7 +82,7 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 func TestCeosPostDeployWaitsForCLIThenConfiguresOnce(t *testing.T) {
 	node := newTestCEOSNode()
 
-	var calls, configCalls, sleeps int
+	var calls, configCalls, waits int
 	restore := stubCeosPostDeploy(
 		func(_ *ceos, _ context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 			calls++
@@ -94,7 +94,10 @@ func TestCeosPostDeployWaitsForCLIThenConfiguresOnce(t *testing.T) {
 			}
 			return execResult(execCmd, 0, "", ""), nil
 		},
-		func(time.Duration) { sleeps++ },
+		func(context.Context, time.Duration) error {
+			waits++
+			return nil
+		},
 	)
 	defer restore()
 
@@ -108,8 +111,8 @@ func TestCeosPostDeployWaitsForCLIThenConfiguresOnce(t *testing.T) {
 	if configCalls != 1 {
 		t.Fatalf("configuration calls = %d, want 1", configCalls)
 	}
-	if sleeps != 1 {
-		t.Fatalf("sleep calls = %d, want 1", sleeps)
+	if waits != 1 {
+		t.Fatalf("wait calls = %d, want 1", waits)
 	}
 }
 
@@ -117,13 +120,16 @@ func TestCeosPostDeployReturnsExecErrorAfterRetries(t *testing.T) {
 	node := newTestCEOSNode()
 	wantErr := errors.New("runtime unavailable")
 
-	var calls, sleeps int
+	var calls, waits int
 	restore := stubCeosPostDeploy(
 		func(_ *ceos, _ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 			calls++
 			return nil, wantErr
 		},
-		func(time.Duration) { sleeps++ },
+		func(context.Context, time.Duration) error {
+			waits++
+			return nil
+		},
 	)
 	defer restore()
 
@@ -134,8 +140,39 @@ func TestCeosPostDeployReturnsExecErrorAfterRetries(t *testing.T) {
 	if calls != 60 {
 		t.Fatalf("exec calls = %d, want 60", calls)
 	}
-	if sleeps != 60 {
-		t.Fatalf("sleep calls = %d, want 60", sleeps)
+	if waits != 59 {
+		t.Fatalf("wait calls = %d, want 59", waits)
+	}
+}
+
+func TestCeosPostDeployStopsReadinessRetriesWhenCanceled(t *testing.T) {
+	node := newTestCEOSNode()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var calls, waits int
+	restore := stubCeosPostDeploy(
+		func(_ *ceos, _ context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			calls++
+			cancel()
+			return execResult(execCmd, 1, "", "Cli not ready"), nil
+		},
+		func(ctx context.Context, delay time.Duration) error {
+			waits++
+			return waitForCeosPostDeployRetry(ctx, delay)
+		},
+	)
+	defer restore()
+
+	err := node.ceosPostDeploy(ctx)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("ceosPostDeploy() error = %v, want context.Canceled", err)
+	}
+	if calls != 1 {
+		t.Fatalf("exec calls = %d, want 1", calls)
+	}
+	if waits != 1 {
+		t.Fatalf("wait calls = %d, want 1", waits)
 	}
 }
 
@@ -151,7 +188,7 @@ func TestCeosPostDeployReturnsConfigurationErrorImmediately(t *testing.T) {
 			}
 			return execResult(execCmd, 1, "partial output", "syntax error"), nil
 		},
-		func(time.Duration) {},
+		func(context.Context, time.Duration) error { return nil },
 	)
 	defer restore()
 
@@ -211,16 +248,16 @@ func execResult(execCmd *clabexec.ExecCmd, rc int, stdout, stderr string) *clabe
 
 func stubCeosPostDeploy(
 	execFn func(*ceos, context.Context, *clabexec.ExecCmd) (*clabexec.ExecResult, error),
-	sleepFn func(time.Duration),
+	waitFn func(context.Context, time.Duration) error,
 ) func() {
 	origExec := ceosPostDeployExec
-	origSleep := ceosPostDeploySleep
+	origWait := ceosPostDeployWait
 
 	ceosPostDeployExec = execFn
-	ceosPostDeploySleep = sleepFn
+	ceosPostDeployWait = waitFn
 
 	return func() {
 		ceosPostDeployExec = origExec
-		ceosPostDeploySleep = origSleep
+		ceosPostDeployWait = origWait
 	}
 }
