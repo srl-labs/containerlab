@@ -79,15 +79,18 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 	}
 }
 
-func TestCeosPostDeployRetriesUntilSuccess(t *testing.T) {
+func TestCeosPostDeployWaitsForCLIThenConfiguresOnce(t *testing.T) {
 	node := newTestCEOSNode()
 
-	var calls, sleeps int
+	var calls, configCalls, sleeps int
 	restore := stubCeosPostDeploy(
 		func(_ *ceos, _ context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 			calls++
-			if calls == 1 {
+			if isCeosReadinessCommand(execCmd) && calls == 1 {
 				return execResult(execCmd, 1, "", "Cli not ready"), nil
+			}
+			if !isCeosReadinessCommand(execCmd) {
+				configCalls++
 			}
 			return execResult(execCmd, 0, "", ""), nil
 		},
@@ -99,8 +102,11 @@ func TestCeosPostDeployRetriesUntilSuccess(t *testing.T) {
 		t.Fatalf("ceosPostDeploy() unexpected error: %v", err)
 	}
 
-	if calls != 2 {
-		t.Fatalf("exec calls = %d, want 2", calls)
+	if calls != 3 {
+		t.Fatalf("exec calls = %d, want 3", calls)
+	}
+	if configCalls != 1 {
+		t.Fatalf("configuration calls = %d, want 1", configCalls)
 	}
 	if sleeps != 1 {
 		t.Fatalf("sleep calls = %d, want 1", sleeps)
@@ -133,11 +139,16 @@ func TestCeosPostDeployReturnsExecErrorAfterRetries(t *testing.T) {
 	}
 }
 
-func TestCeosPostDeployReturnsCLIErrorAfterRetries(t *testing.T) {
+func TestCeosPostDeployReturnsConfigurationErrorImmediately(t *testing.T) {
 	node := newTestCEOSNode()
 
+	var calls int
 	restore := stubCeosPostDeploy(
 		func(_ *ceos, _ context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			calls++
+			if isCeosReadinessCommand(execCmd) {
+				return execResult(execCmd, 0, "", ""), nil
+			}
 			return execResult(execCmd, 1, "partial output", "syntax error"), nil
 		},
 		func(time.Duration) {},
@@ -147,6 +158,9 @@ func TestCeosPostDeployReturnsCLIErrorAfterRetries(t *testing.T) {
 	err := node.ceosPostDeploy(context.Background())
 	if err == nil {
 		t.Fatal("ceosPostDeploy() error = nil, want non-nil")
+	}
+	if calls != 2 {
+		t.Fatalf("exec calls = %d, want one readiness check and one configuration attempt", calls)
 	}
 
 	for _, want := range []string{
@@ -159,6 +173,16 @@ func TestCeosPostDeployReturnsCLIErrorAfterRetries(t *testing.T) {
 			t.Fatalf("error %q missing %q", err, want)
 		}
 	}
+}
+
+func isCeosReadinessCommand(execCmd *clabexec.ExecCmd) bool {
+	cmd := execCmd.GetCmd()
+	return len(cmd) == 5 &&
+		cmd[0] == "Cli" &&
+		cmd[1] == "-p" &&
+		cmd[2] == "15" &&
+		cmd[3] == "-c" &&
+		cmd[4] == "show version"
 }
 
 func newTestCEOSNode() *ceos {

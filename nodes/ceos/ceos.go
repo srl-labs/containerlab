@@ -419,39 +419,65 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 
 	var lastErr error
 	var lastResp *clabexec.ExecResult
+	readyCmd := clabexec.NewExecCmdFromSlice([]string{"Cli", "-p", "15", "-c", "show version"})
+	ready := false
+
+	for range 60 {
+		lastResp, lastErr = ceosPostDeployExec(n, ctx, readyCmd)
+		if lastErr == nil && lastResp != nil && lastResp.GetReturnCode() == 0 {
+			ready = true
+			break
+		}
+
+		log.Debugf(
+			"%s - Cli not ready (%v, %v) - waiting.",
+			nodeCfg.LongName,
+			lastErr,
+			lastResp,
+		)
+		ceosPostDeploySleep(2 * time.Second)
+	}
+
+	if !ready {
+		if lastErr != nil {
+			return fmt.Errorf("failed waiting for cEOS CLI readiness: %w", lastErr)
+		}
+		if lastResp != nil {
+			return fmt.Errorf(
+				"cEOS CLI did not become ready: rc=%d stdout=%q stderr=%q",
+				lastResp.GetReturnCode(),
+				lastResp.GetStdOutString(),
+				lastResp.GetStdErrString(),
+			)
+		}
+
+		return fmt.Errorf("cEOS CLI did not become ready")
+	}
+
 	cliCmd := []string{
 		"Cli",
 		"-p", "15",
 		"--abort-on-error",
 		"-c", strings.Join(cfgs, "\n"),
 	}
-
-	for range 60 {
-		execCmd := clabexec.NewExecCmdFromSlice(cliCmd)
-		resp, err := ceosPostDeployExec(n, ctx, execCmd)
-		if err == nil && resp.GetReturnCode() == 0 {
-			return nil
-		}
-
-		lastErr = err
-		lastResp = resp
-		log.Debugf("%s - Cli not ready (%v, %v) - waiting.", nodeCfg.LongName, err, resp)
-		ceosPostDeploySleep(2 * time.Second)
+	execCmd := clabexec.NewExecCmdFromSlice(cliCmd)
+	resp, err := ceosPostDeployExec(n, ctx, execCmd)
+	if err != nil {
+		return fmt.Errorf("failed CLI configuration: %w", err)
 	}
-
-	if lastErr != nil {
-		return lastErr
+	if resp == nil {
+		return fmt.Errorf("failed CLI configuration: empty runtime response")
 	}
-	if lastResp != nil {
+	if resp.GetReturnCode() != 0 {
 		return fmt.Errorf(
 			"failed CLI configuration: rc=%d stdout=%q stderr=%q",
-			lastResp.GetReturnCode(),
-			lastResp.GetStdOutString(),
-			lastResp.GetStdErrString(),
+			resp.GetReturnCode(),
+			resp.GetStdOutString(),
+			resp.GetStdErrString(),
 		)
 	}
 
-	return fmt.Errorf("failed CLI configuration")
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
