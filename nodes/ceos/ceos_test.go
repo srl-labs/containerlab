@@ -34,10 +34,10 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 		}),
 	}
 
-	var gotCmd string
+	var gotCmd []string
 	restore := stubCeosPostDeploy(
 		func(_ *ceos, _ context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
-			gotCmd = execCmd.GetCmdString()
+			gotCmd = execCmd.GetCmd()
 			return execResult(execCmd, 0, "", ""), nil
 		},
 		func(time.Duration) {},
@@ -48,9 +48,17 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 		t.Fatalf("ceosPostDeploy() unexpected error: %v", err)
 	}
 
-	wantSnippets := []string{
-		"/bin/bash -lc",
-		"Cli -p 15 --abort-on-error -c",
+	wantArgs := []string{"Cli", "-p", "15", "--abort-on-error", "-c"}
+	if len(gotCmd) != len(wantArgs)+1 {
+		t.Fatalf("exec command has %d arguments, want %d: %q", len(gotCmd), len(wantArgs)+1, gotCmd)
+	}
+	for i, want := range wantArgs {
+		if gotCmd[i] != want {
+			t.Fatalf("exec command argument %d = %q, want %q", i, gotCmd[i], want)
+		}
+	}
+
+	wantConfigSnippets := []string{
 		"configure terminal",
 		"interface Management0",
 		"ip address 172.20.20.2/24",
@@ -63,9 +71,10 @@ func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 		"write memory",
 	}
 
-	for _, want := range wantSnippets {
-		if !strings.Contains(gotCmd, want) {
-			t.Fatalf("exec command missing %q\ncommand: %s", want, gotCmd)
+	config := gotCmd[len(wantArgs)]
+	for _, want := range wantConfigSnippets {
+		if !strings.Contains(config, want) {
+			t.Fatalf("CLI configuration missing %q\nconfiguration: %s", want, config)
 		}
 	}
 }

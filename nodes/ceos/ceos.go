@@ -419,10 +419,15 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 
 	var lastErr error
 	var lastResp *clabexec.ExecResult
-	cliCmd := "Cli -p 15 --abort-on-error -c $'" + strings.Join(cfgs, "\n") + "'"
+	cliCmd := []string{
+		"Cli",
+		"-p", "15",
+		"--abort-on-error",
+		"-c", strings.Join(cfgs, "\n"),
+	}
 
 	for range 60 {
-		execCmd := clabexec.NewExecCmdFromSlice([]string{"/bin/bash", "-lc", cliCmd})
+		execCmd := clabexec.NewExecCmdFromSlice(cliCmd)
 		resp, err := ceosPostDeployExec(n, ctx, execCmd)
 		if err == nil && resp.GetReturnCode() == 0 {
 			return nil
