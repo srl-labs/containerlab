@@ -14,16 +14,15 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/containers/podman/v5/pkg/api/handlers"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/bindings/network"
-	dockerContainer "github.com/docker/docker/api/types/container"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"go.podman.io/podman/v6/pkg/api/handlers"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/bindings/network"
 )
 
 const (
@@ -140,11 +139,41 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 		return err
 	}
 	log.Debugf("trying to delete mgmt network %v", r.mgmt.Network)
-	_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+
+	// Removal can fail with "network is being used" right after destroy has
+	// deleted all lab containers, because podman can briefly still consider
+	// them associated with the network. A short retry rides out that window.
+	// Force is deliberately not set: it would also delete any containers
+	// still attached to the network, such as those of another lab sharing
+	// the default mgmt network.
+	const (
+		netInUseRetries      = 3
+		netInUseRetryBackoff = time.Second
+	)
+
+	for attempt := range netInUseRetries {
+		_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
+		if err == nil || !isNetworkInUseErr(err) || attempt == netInUseRetries-1 {
+			break
+		}
+		log.Debugf("transient in-use error removing network %q (attempt %d/%d): %v",
+			r.mgmt.Network, attempt+1, netInUseRetries, err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(netInUseRetryBackoff):
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("error while trying to remove a mgmt network %w", err)
 	}
 	return nil
+}
+
+// isNetworkInUseErr reports whether err is podman's "network is being used"
+// error, raised while any container is still associated with the network.
+func isNetworkInUseErr(err error) bool {
+	return strings.Contains(err.Error(), "network is being used")
 }
 
 func (r *PodmanRuntime) PullImage(
@@ -356,14 +385,11 @@ func (r *PodmanRuntime) Exec(
 	if err != nil {
 		return nil, err
 	}
-	execCreateConf := handlers.ExecCreateConfig{
-		ExecOptions: dockerContainer.ExecOptions{
-			User:         "root",
-			AttachStderr: true,
-			AttachStdout: true,
-			Cmd:          execCmd.GetCmd(),
-		},
-	}
+	execCreateConf := handlers.ExecCreateConfig{}
+	execCreateConf.User = "root"
+	execCreateConf.AttachStderr = true
+	execCreateConf.AttachStdout = true
+	execCreateConf.Cmd = execCmd.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
@@ -409,14 +435,11 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec *exec.
 	if err != nil {
 		return err
 	}
-	execCreateConf := handlers.ExecCreateConfig{
-		ExecOptions: dockerContainer.ExecOptions{
-			Tty:          false,
-			AttachStderr: false,
-			AttachStdout: false,
-			Cmd:          exec.GetCmd(),
-		},
-	}
+	execCreateConf := handlers.ExecCreateConfig{}
+	execCreateConf.Tty = false
+	execCreateConf.AttachStderr = false
+	execCreateConf.AttachStdout = false
+	execCreateConf.Cmd = exec.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
@@ -593,7 +616,7 @@ func (p *PodmanRuntime) CopyToContainer(
 	}
 
 	opts := &containers.CopyOptions{
-		NoOverwriteDirNonDir: utils.Pointer(true),
+		NoOverwriteDirNonDir: new(true),
 	}
 
 	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)

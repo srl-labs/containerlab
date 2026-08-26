@@ -6,7 +6,6 @@ vr_rns:
 ---
 # VM-based routers integration
 
-
 Containerlab focuses on containers, but many routing products ship only in virtual machine packaging. Leaving containerlab users without the ability to create topologies with both containerized and VM-based routing systems would have been a shame.
 
 Keeping this requirement in mind from the very beginning, we added [`bridge`](../lab-examples/ext-bridge.md)/[`ovs-bridge`](kinds/ovs-bridge.md) kind that allows bridging your containerized topology with other resources available via a bridged network. For example, a VM based router:
@@ -135,7 +134,7 @@ When vrnetlab starts a VM inside the container it uses `qemu` command to define 
 The following env vars are supported:
 
 * `QEMU_SMP` - sets the number of vCPU cores and their configuration. Use this when the default number of vCPUs is not enough or excessive.
-* `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM. Note, that some kinds have a different way to set CPU/MEM parameters, which is explained in the kind's documentation.
+* `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM.
 * `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
 * `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
 

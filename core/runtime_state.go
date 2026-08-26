@@ -12,10 +12,11 @@ import (
 )
 
 type runtimeNodeGroup struct {
-	name        string
-	containers  []clabruntime.GenericContainer
-	distributed bool
-	external    bool
+	name               string
+	containers         []clabruntime.GenericContainer
+	distributed        bool
+	external           bool
+	rootNamespaceBased bool
 }
 
 func (c *CLab) runtimeNodeGroups(
@@ -71,8 +72,14 @@ func (c *CLab) runtimeNodeGroups(
 		if _, exists := result[nodeName]; exists {
 			continue
 		}
-		if !cfg.IsRootNamespaceBased &&
-			(!cfg.SkipUniquenessCheck || node.GetContainerStatus(ctx) == clabruntime.NotFound) {
+		if cfg.IsRootNamespaceBased {
+			result[nodeName] = &runtimeNodeGroup{
+				name:               nodeName,
+				rootNamespaceBased: true,
+			}
+			continue
+		}
+		if !cfg.SkipUniquenessCheck || node.GetContainerStatus(ctx) == clabruntime.NotFound {
 			continue
 		}
 		result[nodeName] = &runtimeNodeGroup{name: nodeName, external: true}
@@ -124,7 +131,7 @@ func (c *CLab) needsInitialDeploy(currentNodes map[string]*runtimeNodeGroup) (bo
 		return true, nil
 	}
 	for _, node := range currentNodes {
-		if !node.external {
+		if !node.external && !node.rootNamespaceBased {
 			return false, nil
 		}
 	}

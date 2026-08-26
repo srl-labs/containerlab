@@ -66,12 +66,16 @@ type NodeDefinition struct {
 	ImagePullPolicy       string            `yaml:"image-pull-policy,omitempty"`
 	License               string            `yaml:"license,omitempty"`
 	Position              string            `yaml:"position,omitempty"`
-	Entrypoint            string            `yaml:"entrypoint,omitempty"`
-	Cmd                   string            `yaml:"cmd,omitempty"`
+	// Hostname overrides the container hostname. When unset, the topology node name is used.
+	Hostname   string `yaml:"hostname,omitempty"`
+	Entrypoint string `yaml:"entrypoint,omitempty"`
+	Cmd        string `yaml:"cmd,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
+	// list of volume mount compatible strings
+	Volumes []string `yaml:"volumes,omitempty"`
 	// list of devices to map in the container
 	Devices []string `yaml:"devices,omitempty"`
 	// List of capabilities to add for the container
@@ -80,6 +84,8 @@ type NodeDefinition struct {
 	Privileged *bool `yaml:"privileged,omitempty"`
 	// Cgroup namespace mode for the container.
 	CgroupnsMode string `yaml:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `yaml:"cgroup-parent,omitempty"`
 	// PID namespace mode for the container.
 	PidMode string `yaml:"pid-mode,omitempty"`
 	// Tmpfs mounts to add to the container, keyed by destination path.

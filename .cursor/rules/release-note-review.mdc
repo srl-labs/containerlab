@@ -1,0 +1,12 @@
+---
+description: Verify release-note mutability when reviewing PR documentation
+alwaysApply: true
+---
+
+# Release-note review
+
+When reviewing a PR, inspect any changes under `docs/rn/`:
+
+- Verify the target release is still unreleased before treating the change as valid.
+- Treat release notes for published releases as immutable; flag edits or additions there.
+- Recommend moving new content to the next unreleased release note or the appropriate evergreen documentation.

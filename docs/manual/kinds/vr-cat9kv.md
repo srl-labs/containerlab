@@ -153,7 +153,7 @@ You can obtain a `vswitch.xml` file from the relevant Cisco CML node definitions
 
 ### Environment variables
 
-There are `VCPU` and `RAM` environment variables defined. It is not recommended reduce the resources below the required amount. The node will be unable to boot in this case.
+There are `QEMU_SMP` and `QEMU_MEMORY` environment variables defined. It is not recommended to reduce the resources below the required amount. The node will be unable to boot in this case.
 
 The example below assigns 6vCPUs and 20 gigabytes of RAM to the node.
 
@@ -165,6 +165,6 @@ topology:
       kind: cisco_cat9kv
       image: vrnetlab/vr-cat9kv:17.12.01p
       env:
-        VCPU: 6
-        RAM: 20480
+        QEMU_SMP: 6
+        QEMU_MEMORY: 20480
 ```

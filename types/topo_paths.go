@@ -163,9 +163,14 @@ func (t *TopoPaths) TLSBaseDir() string {
 	return filepath.Join(t.labDir, tlsDir)
 }
 
-// NodeTLSDir returns the directory that contains the certificat data for the given node.
-func (t *TopoPaths) NodeTLSDir(nodename string) string {
-	return filepath.Join(t.TLSBaseDir(), nodename)
+// CABaseDir returns the path of the CA directory within the TLS directory.
+func (t *TopoPaths) CABaseDir() string {
+	return filepath.Join(t.TLSBaseDir(), caDir)
+}
+
+// NodeTLSDir returns the directory that contains the certificate data for the given node.
+func (t *TopoPaths) NodeTLSDir(nodeName string) string {
+	return filepath.Join(t.TLSBaseDir(), nodeName)
 }
 
 // AuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
@@ -303,7 +308,7 @@ func (t *TopoPaths) NodeCertKeyAbsFilename(nodeName string) string {
 	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
 }
 
-// NodeCertAbsFilename returns the path to a cert file for the given identifier.
+// NodeCertAbsFilename returns the path to a cert file for the given node.
 func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }

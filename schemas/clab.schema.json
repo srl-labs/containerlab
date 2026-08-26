@@ -190,6 +190,16 @@
                     },
                     "uniqueItems": true
                 },
+                "volumes": {
+                    "type": "array",
+                    "description": "list of volumes to attach",
+                    "markdownDescription": "list of [volumes](https://containerlab.dev/manual/nodes/#volumes) to attach",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
                 "ports": {
                     "type": "array",
                     "description": "list of port mappings",
@@ -250,6 +260,12 @@
                             "minimum": 0
                         }
                     ]
+                },
+                "hostname": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "hostname configured inside the container",
+                    "markdownDescription": "container [hostname](https://containerlab.dev/manual/nodes/#hostname); defaults to the topology node name"
                 },
                 "entrypoint": {
                     "type": "string",
@@ -501,6 +517,10 @@
                         "host",
                         "private"
                     ]
+                },
+                "cgroup-parent": {
+                    "type": "string",
+                    "markdownDescription": "[parent cgroup](https://containerlab.dev/manual/nodes/#cgroup-parent) for the container"
                 },
                 "pid-mode": {
                     "type": "string",

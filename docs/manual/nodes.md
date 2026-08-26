@@ -231,14 +231,14 @@ topology:
         - /root/files:/root/files:ro # (2)!
         - somefile:/somefile # (3)!
         - ~/.ssh/id_rsa:/root/.ssh/id_rsa # (4)!
-        - /var/run/somedir # (5)!
 ```
 
 1. mount a host file found by the path `/usr/local/bin/gobgp` to a container under `/root/gobgp` (implicit RW mode)
 2. mount a `/root/files` directory from a host to a container in RO mode
 3. when a host path is given in a relative format, the path is considered relative to the topology file and not a current working directory.
 4. The `~` char will be expanded to a user's home directory.
-5. mount an anonymous volume to a container under `/var/run/somedir` (implicit RW mode)
+
+> Binds are for host bind mounts only. Anonymous or named volumes should be configured via the [`volumes`](#volumes) stanza instead.
 
 /// details | Bind variables
 By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
@@ -317,11 +317,62 @@ topology:
         - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
 ```
 
+In case the TLS material is needed for a node, it can also be mounted with `__clabDir__/.tls`. Containerlab creates the directory and populates it with the CA files during deployment, before starting the nodes. Bind the directory itself and access the TLS files once the node is started:
+
+```yaml
+topology:
+  nodes:
+    testNode:
+      binds:
+        - __clabDir__/.tls/ca:/etc/ca:ro
+```
+
 ///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
 When a bind with the same destination is defined on multiple levels, the lowest level takes precedence. This allows to override the binds defined on the higher levels.
+
+### volumes
+
+Volumes (named or anonymous) are configured via the `volumes` stanza. Entries support Docker's
+short volume syntax with the `ro`, `rw`, `nocopy`, and `volume-nocopy` options. Unsupported
+options are rejected.
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    srv:
+      kind: linux
+      volumes:
+        - shared-data:/srv/shared:ro   # named volume, may be shared between nodes
+        - /var/log/app                 # anonymous volume
+```
+
+Volumes can be provided at `defaults`, `kinds`, `groups`, or per-node level. Lower levels
+override higher ones for the same destination path.
+
+```yaml
+topology:
+  defaults:
+    volumes:
+      - default-data:/data
+  kinds:
+    linux:
+      volumes:
+        - kind-data:/kind-data
+  groups:
+    app:
+      volumes:
+        - group-data:/group-data
+  nodes:
+    srv:
+      kind: linux
+      group: app
+      volumes:
+        - node-data:/node-data
+```
 
 ### ports
 
@@ -449,9 +500,28 @@ topology:
       user: clab # clab user will be used for node1
 ```
 
+### hostname
+
+The `hostname` option overrides the hostname configured inside the node's
+container. It can be set at the defaults, kind, group, or node level. When it is
+not set, containerlab uses the topology node name.
+
+```yaml
+topology:
+  nodes:
+    app1:
+      kind: linux
+      hostname: app-production-01001
+```
+
+Podman supports this option for nodes using `network-mode: container:<node>`.
+Docker does not permit setting a hostname while joining another container's
+network namespace, so Docker ignores the override for that network mode.
+
 ### entrypoint
 
 Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default entrypoint is preserved.
 
 ```yaml
 topology:
@@ -468,6 +538,7 @@ topology:
 ### cmd
 
 It is possible to set/override the command of the container image with `cmd` configuration option. It accepts the "shell" form and can be set on all levels.
+When it is not set, the image's default command is preserved.
 
 ```yaml
 topology:
@@ -793,6 +864,25 @@ my-node:
   image: alpine:3
   kind: linux
   cgroupns-mode: host
+```
+
+### cgroup-parent
+
+The `cgroup-parent` parameter places a node's container under the specified parent cgroup. It has the same semantics as Docker's [`--cgroup-parent`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) option and is supported by the Docker and Podman runtimes. The value is passed to the runtime unchanged; its syntax and availability depend on the runtime's configured cgroup manager. For example, cgroupfs managers use a cgroup path, while systemd managers expect a slice name such as `my-lab.slice`.
+
+This setting is inherited using the standard node, group, kind, then defaults precedence. An empty value is treated as unset and therefore does not clear a parent inherited from a group, kind, or defaults entry; the runtime default is used only when no value is configured at any level. It is independent of [`cgroupns-mode`](#cgroupns-mode), which selects the cgroup namespace visible inside the container rather than its placement in the host cgroup hierarchy.
+
+```yaml
+topology:
+  groups:
+    leaves:
+      # cgroupfs-style path; systemd managers expect a .slice name instead.
+      cgroup-parent: /xform/my-lab/leaves
+  nodes:
+    leaf1:
+      group: leaves
+    leaf2:
+      group: leaves
 ```
 
 ### pid-mode

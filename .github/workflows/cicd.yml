@@ -16,7 +16,7 @@ on:
         default: "docker"
 
 env:
-  GO_VER: "1.25.10"
+  GO_VER: "1.26.7"
   CGO_ENABLED: 0
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
@@ -93,9 +93,93 @@ jobs:
       - file-changes
       - process-gitref
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
     uses: ./.github/workflows/build-containerlab.yml
     with:
       go_ver: ${{ needs.process-gitref.outputs.go_ver }}
+      runner: ${{ matrix.runner }}
+      arch: ${{ matrix.arch }}
+
+  comment-containerlab-binaries:
+    runs-on: ubuntu-24.04
+    needs: build-containerlab
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.build-containerlab.result == 'success'
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Comment containerlab binary URLs
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const artifactNames = ['containerlab', 'containerlab-arm64'];
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+
+            const artifacts = Object.fromEntries(
+              artifactNames.map((name) => {
+                const artifact = data.artifacts.find(
+                  (candidate) => candidate.name === name && !candidate.expired,
+                );
+                if (!artifact) {
+                  throw new Error(`Artifact not found: ${name}`);
+                }
+
+                return [
+                  name,
+                  {
+                    pageUrl: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`,
+                    apiUrl: `https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/actions/artifacts/${artifact.id}/zip`,
+                  },
+                ];
+              }),
+            );
+
+            const body = [
+              '<details>',
+              `<summary>Download Containerlab binaries for commit ${context.payload.pull_request.head.sha}:</summary>`,
+              '',
+              `<a href="${artifacts.containerlab.pageUrl}">containerlab (linux/amd64)</a>`,
+              '```bash',
+              'curl -sL \\',
+              '  -H "Authorization: Bearer $(gh auth token)" \\',
+              `  "${artifacts.containerlab.apiUrl}" \\`,
+              '  -o containerlab.zip && unzip -p containerlab.zip containerlab > containerlab.tmp && \\',
+              '  mv containerlab.tmp containerlab && rm containerlab.zip && chmod +x containerlab',
+              '```',
+              '',
+              `<a href="${artifacts['containerlab-arm64'].pageUrl}">containerlab-arm64 (linux/arm64)</a>`,
+              '```bash',
+              'curl -sL \\',
+              '  -H "Authorization: Bearer $(gh auth token)" \\',
+              `  "${artifacts['containerlab-arm64'].apiUrl}" \\`,
+              '  -o containerlab-arm.zip && unzip -p containerlab-arm.zip containerlab > containerlab-arm.tmp && \\',
+              '  mv containerlab-arm.tmp containerlab && rm containerlab-arm.zip && chmod +x containerlab',
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
 
   golangci-lint:
     uses: ./.github/workflows/golangci-lint.yml
@@ -164,7 +248,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          name: containerlab
+          name: containerlab-tests
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
@@ -230,7 +314,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          name: containerlab
+          name: containerlab-tests
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
@@ -308,7 +392,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          name: containerlab
+          name: containerlab-tests
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - name: Install uv

@@ -6,29 +6,26 @@ package podman
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/domain/entities"
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	netTypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/image/v5/manifest"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/domain/entities"
+	"go.podman.io/podman/v6/pkg/specgen"
 
 	"github.com/charmbracelet/log"
-	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/google/shlex"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"go.podman.io/podman/v6/pkg/bindings"
 )
-
-var errInvalidBind = errors.New("invalid bind mount provided")
 
 type podmanWriterCloser struct {
 	bytes.Buffer
@@ -47,13 +44,20 @@ func (r *PodmanRuntime) createContainerSpec(
 	cfg *types.NodeConfig,
 ) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
-	cmd, err := shlex.Split(cfg.Cmd)
-	if err != nil {
-		return sg, err
+	var err error
+	var cmd []string
+	if strings.TrimSpace(cfg.Cmd) != "" {
+		cmd, err = shlex.Split(cfg.Cmd)
+		if err != nil {
+			return sg, err
+		}
 	}
-	entrypoint, err := shlex.Split(cfg.Entrypoint)
-	if err != nil {
-		return sg, err
+	var entrypoint []string
+	if strings.TrimSpace(cfg.Entrypoint) != "" {
+		entrypoint, err = shlex.Split(cfg.Entrypoint)
+		if err != nil {
+			return sg, err
+		}
 	}
 	// Main container specs
 	labels := cfg.Labels
@@ -63,21 +67,20 @@ func (r *PodmanRuntime) createContainerSpec(
 		Name:       cfg.LongName,
 		Entrypoint: entrypoint,
 		Command:    cmd,
-		EnvHost:    utils.Pointer(false),
-		HTTPProxy:  utils.Pointer(false),
+		EnvHost:    new(false),
+		HTTPProxy:  new(false),
 		Env:        cfg.Env,
-		Terminal:   utils.Pointer(true),
-		Stdin:      utils.Pointer(true),
+		Terminal:   new(true),
+		Stdin:      new(true),
 		Labels:     cfg.Labels,
-		Hostname:   cfg.ShortName,
+		Hostname:   cfg.GetHostname(),
 		Sysctl:     cfg.Sysctls,
-		Remove:     utils.Pointer(false),
+		Remove:     new(false),
 	}
 	// Storage, image and mounts
-	mounts, err := r.convertMounts(ctx, cfg.Binds)
+	mounts, volumes, err := r.convertMounts(ctx, cfg.Binds, cfg.Volumes)
 	if err != nil {
-		log.Errorf("Cannot convert mounts %v: %v", cfg.Binds, err)
-		mounts = nil
+		return sg, fmt.Errorf("failed to convert mounts: %w", err)
 	}
 	mounts = append(mounts, convertTmpfsMounts(cfg.Tmpfs)...)
 	devices := make([]specs.LinuxDevice, 0, len(cfg.Devices))
@@ -92,8 +95,8 @@ func (r *PodmanRuntime) createContainerSpec(
 		// VolumesFrom:       nil,
 		// Init:              false,
 		// InitPath:          "",
-		Mounts: mounts,
-		// Volumes:           nil,
+		Mounts:  mounts,
+		Volumes: volumes,
 		// OverlayVolumes:    nil,
 		// ImageVolumes:      nil,
 		// DeviceCGroupRule:  nil,
@@ -119,7 +122,7 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
-		Privileged: utils.Pointer(cfg.Privileged),
+		Privileged: new(cfg.Privileged),
 		User:       cfg.User,
 		CapAdd:     cfg.CapAdd,
 	}
@@ -128,7 +131,8 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 
 	specCgroupConfig := specgen.ContainerCgroupConfig{
-		CgroupNS: specgen.Namespace{},
+		CgroupNS:     specgen.Namespace{},
+		CgroupParent: cfg.CgroupParent,
 	}
 	if cfg.CgroupnsMode != "" {
 		specCgroupConfig.CgroupNS, err = specgen.ParseCgroupNamespace(cfg.CgroupnsMode)
@@ -227,9 +231,15 @@ func (r *PodmanRuntime) createContainerSpec(
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: specgen.Host},
 			// UseImageResolvConf:  false,
-			UseImageHosts: utils.Pointer(false),
+			UseImageHosts: new(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
+		}
+	case "none":
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS:         specgen.Namespace{NSMode: specgen.NoNetwork},
+			UseImageHosts: new(false),
+			HostAdd:       cfg.ExtraHosts,
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
@@ -269,11 +279,11 @@ func (r *PodmanRuntime) createContainerSpec(
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
 			PortMappings:        portmap,
-			PublishExposedPorts: utils.Pointer(false),
+			PublishExposedPorts: new(false),
 			Expose:              expose,
 			Networks:            nets,
 			// UseImageResolvConf:  false,
-			UseImageHosts: utils.Pointer(false),
+			UseImageHosts: new(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
@@ -316,38 +326,74 @@ func (r *PodmanRuntime) createContainerSpec(
 	return sg, nil
 }
 
-// convertMounts takes a list of filesystem mount binds in docker/clab format (src:dest:options)
-// and converts it into an opencontainers spec format.
-func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs.Mount, error) {
-	if len(mounts) == 0 {
-		return nil, nil
+// convertMounts separates host binds and managed volumes into Podman's corresponding storage
+// configuration fields.
+func (*PodmanRuntime) convertMounts(
+	_ context.Context,
+	binds []string,
+	volumes []string,
+) ([]specs.Mount, []*specgen.NamedVolume, error) {
+	if len(binds) == 0 && len(volumes) == 0 {
+		return nil, nil, nil
 	}
-	mntSpec := make([]specs.Mount, len(mounts))
-	// Note: we don't do any input validation here
-	for i, mnt := range mounts {
-		mntSplit := strings.SplitN(mnt, ":", 3)
-
-		if len(mntSplit) == 1 {
-			return nil, fmt.Errorf("%w: %s", errInvalidBind, mnt)
+	mntSpec := make([]specs.Mount, 0, len(binds))
+	volumeSpec := make([]*specgen.NamedVolume, 0, len(volumes))
+	for _, mnt := range binds {
+		bind, err := types.NewBindFromString(mnt)
+		if err != nil {
+			return nil, nil, err
 		}
 
-		mntSpec[i] = specs.Mount{
-			Destination: mntSplit[1],
+		mntSpec = append(mntSpec, specs.Mount{
+			Destination: bind.Dst(),
 			Type:        "bind",
-			Source:      mntSplit[0],
-		}
+			Source:      bind.Src(),
+		})
 
 		// when options are provided in the bind mount spec
-		if len(mntSplit) == 3 {
-			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
+		if bind.Mode() != "" {
+			mntSpec[len(mntSpec)-1].Options = strings.Split(bind.Mode(), ",")
 		}
 	}
+
+	for _, vol := range volumes {
+		v, err := types.NewVolumeFromString(vol)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		opts := types.ParseVolumeOptions(v.Options())
+		if len(opts.Unknown) > 0 {
+			return nil, nil, fmt.Errorf("unsupported volume option(s) %q in %q", opts.Unknown, vol)
+		}
+
+		namedVolume := &specgen.NamedVolume{
+			Name:        v.Src(),
+			Dest:        v.Dst(),
+			IsAnonymous: v.Src() == "",
+		}
+		if opts.ReadOnly {
+			namedVolume.Options = append(namedVolume.Options, "ro")
+		}
+		if opts.NoCopy {
+			namedVolume.Options = append(namedVolume.Options, "nocopy")
+		}
+		volumeSpec = append(volumeSpec, namedVolume)
+	}
+
 	log.Debugf(
-		"convertMounts method received mounts %v and produced %+v as a result",
-		mounts,
-		mntSpec,
+		"convertMounts method received mounts %v (volumes %v) and produced %+v as a result",
+		binds,
+		volumes,
+		struct {
+			Mounts  []specs.Mount
+			Volumes []*specgen.NamedVolume
+		}{
+			Mounts:  mntSpec,
+			Volumes: volumeSpec,
+		},
 	)
-	return mntSpec, nil
+	return mntSpec, volumeSpec, nil
 }
 
 func convertTmpfsMounts(tmpfs map[string]string) []specs.Mount {

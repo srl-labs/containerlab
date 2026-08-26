@@ -5,6 +5,7 @@ DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
+PODMAN_GO_TAGS := podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
 
 # uv version downloaded by `install-uv` when uv is not found on the system.
 # Keep in sync with UV_VER in .github/workflows/*.
@@ -86,14 +87,14 @@ build-dlv-debug:
 
 build-with-podman:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "$(PODMAN_GO_TAGS)" main.go
 	chmod a+x $(BINARY)
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
 build-with-podman-debug:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover -trimpath -tags "$(PODMAN_GO_TAGS)" main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 

@@ -64,8 +64,8 @@ func (n *huawei_vrp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 		"PASSWORD":           n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
-		"VCPU":               "2",
-		"RAM":                "2048",
+		"QEMU_SMP":           "2",
+		"QEMU_MEMORY":        "2048",
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 

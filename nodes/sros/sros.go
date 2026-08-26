@@ -266,7 +266,7 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
 	// Ensure n.Cfg.Certificate.Issue is not nil
 	if n.Cfg.Certificate.Issue == nil {
-		n.Cfg.Certificate.Issue = clabutils.Pointer(false)
+		n.Cfg.Certificate.Issue = new(false)
 	}
 	if n.isStandaloneNode() {
 		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))

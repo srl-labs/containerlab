@@ -74,6 +74,11 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
 		},
 		{
+			name: "cgroup parent",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{CgroupParent: "/xform/my-lab/leaves"},
+		},
+		{
 			name: "PID mode",
 			old:  &clabtypes.NodeConfig{},
 			new:  &clabtypes.NodeConfig{PidMode: "host"},
@@ -106,6 +111,33 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 				t.Fatalf("recreated nodes = %v, want only clab-lab-n1", plan.Recreated)
 			}
 		})
+	}
+}
+
+func TestDefaultNodeComputeDiffDetectsHostnameChange(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "production-host"},
+	)
+
+	if len(diff.Fields) != 1 || diff.Fields[0] != "Hostname" {
+		t.Fatalf("ComputeDiff fields = %#v, want [Hostname]", diff.Fields)
+	}
+	if got := diff.DefaultAction(); got != clabtypes.TopologyDiffActionRecreate {
+		t.Fatalf("DefaultAction() = %q, want %q", got, clabtypes.TopologyDiffActionRecreate)
+	}
+}
+
+func TestDefaultNodeComputeDiffIgnoresEquivalentDefaultHostname(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "node1"},
+	)
+
+	if diff.HasDiff() {
+		t.Fatalf("ComputeDiff fields = %#v, want no diff", diff.Fields)
 	}
 }
 

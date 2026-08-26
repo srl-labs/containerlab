@@ -444,6 +444,18 @@ func (t *Topology) GetNodeCgroupnsMode(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeCgroupParent(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.CgroupParent },
+		func(group *NodeDefinition) string { return group.CgroupParent },
+		func(kind *NodeDefinition) string { return kind.CgroupParent },
+		func(defaults *NodeDefinition) string { return defaults.CgroupParent },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodePidMode(nodeName string) string {
 	return getField(
 		t,
@@ -623,6 +635,18 @@ func (t *Topology) GetNodePosition(nodeName string) string {
 		func(group *NodeDefinition) string { return group.Position },
 		func(kind *NodeDefinition) string { return kind.Position },
 		func(defaults *NodeDefinition) string { return defaults.Position },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeHostname(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Hostname },
+		func(group *NodeDefinition) string { return group.Hostname },
+		func(kind *NodeDefinition) string { return kind.Hostname },
+		func(defaults *NodeDefinition) string { return defaults.Hostname },
 		func(v string) bool { return v != "" },
 	)
 }
@@ -844,6 +868,51 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 	return result, nil
 }
 
+func getNodeVolumeSources(node *NodeDefinition) []string {
+	return node.Volumes
+}
+
+// GetNodeVolumes merges volume entries from defaults, kind, group, and node levels.
+// Lower-level entries override higher-level ones for the same destination path.
+func (t *Topology) GetNodeVolumes(name string) ([]string, error) {
+	volumeSources := mergeStringSliceFields(
+		t,
+		name,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+		getNodeVolumeSources,
+	)
+
+	volumes := map[string]string{}
+
+	// add the volumes from less to more specific levels, indexed by the destination path.
+	// thereby more specific volumes will overwrite less specific ones
+	for _, volume := range volumeSources {
+		v, err := NewVolumeFromString(volume)
+		if err != nil {
+			return nil, err
+		}
+		volumes[v.Dst()] = volume
+	}
+
+	// in order to return nil instead of empty array when no volumes are defined
+	if len(volumes) == 0 {
+		return nil, nil
+	}
+
+	// build the result array with all the entries from volumes map
+	result := make([]string, 0, len(volumes))
+
+	for _, v := range volumes {
+		result = append(result, v)
+	}
+
+	slices.Sort(result)
+
+	return result, nil
+}
+
 func (t *Topology) GetNodeConfigDispatcher(nodeName string) *ConfigDispatcher {
 	nodeDefintion, ok := t.Nodes[nodeName]
 	if nodeDefintion == nil || !ok {
@@ -924,7 +993,7 @@ func (t *Topology) ImportEnvs() {
 func (t *Topology) GetCertificateConfig(nodeName string) *CertificateConfig {
 	// default for issuing node certificates is false
 	cc := &CertificateConfig{
-		Issue: clabutils.Pointer(false),
+		Issue: new(false),
 	}
 
 	cc.Merge(t.GetDefaults().Certificate)

@@ -211,7 +211,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 
 	// check that the function was called "counterMax" times
 	if counter != counterMax {
-		t.Errorf("expected %q calls to runtime for status. Seen just %q", counterMax, counter)
+		t.Errorf("expected %d calls to runtime for status. Seen just %d", counterMax, counter)
 	}
 }
 
@@ -338,6 +338,112 @@ func Test_scheduleNodes_PostDeployFailureCancelsWorkers(t *testing.T) {
 		}
 	default:
 		t.Fatal("PostDeploy failure was not reported")
+	}
+}
+
+func Test_scheduleNodes_WaitForHealthyRunsExecBeforeDepender(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	events := make(chan string, 3)
+	h1Config := &clabtypes.NodeConfig{
+		ShortName: "h1",
+		Exec:      []string{"echo h1"},
+		Stages:    clabtypes.NewStages(),
+	}
+	h2Stages := clabtypes.NewStages()
+	h2Stages.Create.WaitFor = clabtypes.WaitForList{
+		&clabtypes.WaitFor{
+			Node:  "h1",
+			Stage: clabtypes.WaitForHealthy,
+		},
+	}
+	h2Config := &clabtypes.NodeConfig{
+		ShortName: "h2",
+		Exec:      []string{"echo h2"},
+		Stages:    h2Stages,
+	}
+
+	h1 := clabmocksmocknodes.NewMockNode(mockCtrl)
+	h1.EXPECT().Config().Return(h1Config).AnyTimes()
+	h1.EXPECT().GetShortName().Return("h1").AnyTimes()
+	h1.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	h1.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+	h1.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+	h1.EXPECT().DeployEndpoints(gomock.Any()).Return(nil)
+	h1.EXPECT().PostDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	h1.EXPECT().RunExecFromConfig(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *clabexec.ExecCollection) error {
+			events <- "h1 exec"
+			return nil
+		},
+	)
+	h1.EXPECT().IsHealthy(gomock.Any()).DoAndReturn(
+		func(context.Context) (bool, error) {
+			events <- "h1 healthy"
+			return true, nil
+		},
+	)
+
+	h2 := clabmocksmocknodes.NewMockNode(mockCtrl)
+	h2.EXPECT().Config().Return(h2Config).AnyTimes()
+	h2.EXPECT().GetShortName().Return("h2").AnyTimes()
+	h2.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	h2.EXPECT().Deploy(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *clabnodes.DeployParams) error {
+			events <- "h2 deploy"
+			return nil
+		},
+	)
+	h2.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+	h2.EXPECT().DeployEndpoints(gomock.Any()).Return(nil)
+	h2.EXPECT().PostDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	h2.EXPECT().RunExecFromConfig(gomock.Any(), gomock.Any()).Return(nil)
+
+	dependencyManager := clabcoredependency_manager.NewDependencyManager()
+	dependencyManager.AddNode(h1)
+	dependencyManager.AddNode(h2)
+
+	c := &CLab{
+		Config:            &Config{},
+		Nodes:             map[string]clabnodes.Node{"h1": h1, "h2": h2},
+		dependencyManager: dependencyManager,
+	}
+	if err := c.createWaitForDependency(); err != nil {
+		t.Fatalf("createWaitForDependency failed: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	nodeFailCh := make(chan error, 2)
+	wg, _ := c.scheduleNodes(ctx, 2, false, nodeFailCh)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("workers did not finish")
+	}
+
+	got := make([]string, 0, 3)
+	for range 3 {
+		select {
+		case event := <-events:
+			got = append(got, event)
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for scheduler event")
+		}
+	}
+
+	want := []string{"h1 exec", "h1 healthy", "h2 deploy"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Fatalf("unexpected event order (-want +got):\n%s", diff)
 	}
 }
 

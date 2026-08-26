@@ -3,6 +3,7 @@ Library             OperatingSystem
 Resource            ../common.robot
 Resource            ../ssh.robot
 
+Suite Setup         Run Keyword    Cleanup
 Suite Teardown      Run Keyword    Cleanup
 
 
@@ -124,4 +125,4 @@ SR-SIM Cards Up
     Should Match Regexp    ${output}    (?m)^1\\s+\\S+\\s+up\\s+up
 
 Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --vars ${CURDIR}/${linked-with-node-vars} --cleanup

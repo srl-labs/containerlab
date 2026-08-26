@@ -133,6 +133,9 @@ func TestResolveVethStitched(t *testing.T) {
 	if got := stitched.GetEndpoints()[0].GetMac().String(); got != "02:00:00:00:00:01" {
 		t.Fatalf("node endpoint MAC = %q, want 02:00:00:00:00:01", got)
 	}
+	if got := stitched.epA.GetMac().String(); got != "02:00:00:00:00:01" {
+		t.Fatalf("far-end MAC = %q, want node-side 02:00:00:00:00:01", got)
+	}
 }
 
 func TestVethStitchedRemoveConcurrent(t *testing.T) {
@@ -169,6 +172,20 @@ func TestVethStitchedRemoveConcurrent(t *testing.T) {
 	}
 	if stitched.DeploymentState != LinkDeploymentStateRemoved {
 		t.Fatalf("DeploymentState = %d, want removed", stitched.DeploymentState)
+	}
+}
+
+func TestToolsInterfaceGuardsEmptyIdentity(t *testing.T) {
+	for name, args := range map[string][3]string{
+		"empty lab":   {"", "n1", "e1"},
+		"empty node":  {"lab", "", "e1"},
+		"empty iface": {"lab", "n1", ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if link, ok := ToolsInterface(args[0], args[1], args[2]); ok || link != nil {
+				t.Fatalf("expected no tools interface for %v, got (%v, %v)", args, link, ok)
+			}
+		})
 	}
 }
 

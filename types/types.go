@@ -124,6 +124,8 @@ type NodeConfig struct {
 	ShortName string `json:"shortname,omitempty"`
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
+	// Hostname is the runtime hostname. An empty value falls back to ShortName.
+	Hostname string `json:"hostname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
 	// LabDir is a directory related to the node, it contains config items and/or other persistent
 	// state
@@ -164,6 +166,8 @@ type NodeConfig struct {
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Volume mounts strings (name:dest:options).
+	Volumes []string `json:"volumes,omitempty"`
 	// Devices to map in the container
 	Devices []string `json:"devices,omitempty"`
 	// Capabilities required by the container (if not run in privileged mode)
@@ -172,6 +176,8 @@ type NodeConfig struct {
 	Privileged bool `json:"privileged,omitempty"`
 	// Cgroup namespace mode for the container.
 	CgroupnsMode string `json:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `json:"cgroup-parent,omitempty"`
 	// PID namespace mode for the container.
 	PidMode string `json:"pidmode,omitempty"`
 	// Tmpfs mounts to add to the container, keyed by destination path.
@@ -238,6 +244,15 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+}
+
+// GetHostname returns the configured runtime hostname or the topology node name.
+func (n *NodeConfig) GetHostname() string {
+	if n.Hostname != "" {
+		return n.Hostname
+	}
+
+	return n.ShortName
 }
 
 type GenericFilter struct {

@@ -274,6 +274,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
+		Hostname:        c.Config.Topology.GetNodeHostname(nodeName),
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
@@ -295,6 +296,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
 		Privileged:      privileged,
 		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		CgroupParent:    c.Config.Topology.GetNodeCgroupParent(nodeName),
 		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
@@ -401,6 +403,17 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 
 	nodeCfg.Binds = binds
 
+	// initialize volumes
+	volumes, err := c.Config.Topology.GetNodeVolumes(nodeName)
+	if err != nil {
+		return nil, err
+	}
+	err = c.resolveVolumePaths(volumes, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	nodeCfg.Volumes = volumes
+
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return nil, err
@@ -470,7 +483,7 @@ func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx, c.globalRuntime().Config().VerifyLinkParams); err != nil {
 		return err
 	}
 
@@ -544,13 +557,16 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks(ctx context.Context) error {
+func (c *CLab) verifyLinks(
+	ctx context.Context,
+	params *clablinks.VerifyLinkParams,
+) error {
 	var err error
 
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
-		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, params)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}
@@ -710,30 +726,52 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
-		if len(elems) == 1 {
-			// if there is only one element, it means that we have an anonymous
-			// volume, in this case we don't need to resolve the path
-			continue
-		}
-
 		// replace special variables
 		r := c.magicVarReplacer(nodeName)
 		hp := r.Replace(elems[0])
 		hp = clabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
+		caDir := c.TopoPaths.CABaseDir()
 		_, err := os.Stat(hp)
 		if err != nil {
 			// check if the hostpath mount has a reference to ansible-inventory.yml or
-			// topology-data.json if that is the case, we do not emit an error on missing file,
-			// since these files will be created by containerlab upon lab deployment
+			// topology-data.json or the generated CA directory. These paths are created by
+			// containerlab upon lab deployment.
 			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
-				hp != c.TopoPaths.TopoExportFile() {
+				hp != c.TopoPaths.TopoExportFile() &&
+				filepath.Clean(hp) != caDir {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
 
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
+	}
+
+	return nil
+}
+
+func (c *CLab) resolveVolumePaths(volumes []string, nodeName string) error {
+	// checks are skipped when, for example, the destroy operation is run
+	if !c.checkBindsPaths {
+		return nil
+	}
+
+	for i := range volumes {
+		elems := strings.Split(volumes[i], ":")
+
+		if len(elems) == 1 {
+			// anonymous volume target only
+			continue
+		}
+
+		if len(elems) > 1 {
+			// replace special variables in the volume source
+			r := c.magicVarReplacer(nodeName)
+			new_vol := r.Replace(elems[0])
+			elems[0] = new_vol
+			volumes[i] = strings.Join(elems, ":")
+		}
 	}
 
 	return nil
@@ -879,11 +917,32 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// processNodeExecs replaces (in place) magic variables in node execs.
+// processNodeExecs replaces magic variables in node and stage execs.
 func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
 	for i, e := range nodeCfg.Exec {
-		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)
+	}
+
+	if nodeCfg.Stages == nil {
+		return
+	}
+
+	stages := []*clabtypes.StageBase{
+		&nodeCfg.Stages.Create.StageBase,
+		&nodeCfg.Stages.CreateLinks.StageBase,
+		&nodeCfg.Stages.Configure.StageBase,
+		&nodeCfg.Stages.Healthy.StageBase,
+		&nodeCfg.Stages.Exit.StageBase,
+	}
+
+	for _, stage := range stages {
+		for i, exec := range stage.Execs {
+			execCopy := *exec
+			execCopy.Command = r.Replace(exec.Command)
+			stage.Execs[i] = &execCopy
+		}
 	}
 }
 

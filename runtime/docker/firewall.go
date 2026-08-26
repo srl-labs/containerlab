@@ -9,6 +9,11 @@ import (
 // deleteMgmtNetworkFwdRule deletes `allow` rule installed with installFwdRule
 // when the containerlab management network (bridge) interface doesn't exist anymore.
 func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
+	if d.mgmt.Bridge == "" {
+		log.Debug("skipping forwarding rule removal for non-bridged management network")
+		return nil
+	}
+
 	if !*d.mgmt.ExternalAccess {
 		return nil
 	}

@@ -71,8 +71,8 @@ func (n *cisco_xrd_vrouter) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.No
 		"USERNAME":           n.Cfg.Credentials.Username,
 		"PASSWORD":           n.Cfg.Credentials.Password,
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
-		"VCPU":               "4",
-		"RAM":                "10240",
+		"QEMU_SMP":           "4",
+		"QEMU_MEMORY":        "10240",
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
@@ -90,13 +90,11 @@ func (n *cisco_xrd_vrouter) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.No
 	}
 
 	n.Cfg.Cmd = fmt.Sprintf(
-		"--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"],
 		n.Cfg.Env["PASSWORD"],
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
-		n.Cfg.Env["VCPU"],
-		n.Cfg.Env["RAM"],
 	)
 
 	n.InterfaceRegexp = InterfaceRegexp

@@ -125,4 +125,21 @@ When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `
 
 VM-based SONiC supports the [`startup-config`](../nodes.md#startup-config) feature. The startup configuration file is a JSON file that is available in the VM's filesystem by the `/etc/sonic/config_db.json` path.
 
+To keep SONiC's system MAC aligned with the container management interface, use the
+`{{ .MacAddress }}` template in the `DEVICE_METADATA` section of the startup configuration:
+
+```json
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "mac": "{{ .MacAddress }}"
+    }
+  }
+}
+```
+
+Containerlab generates the management MAC before rendering the startup configuration and uses the
+same value for the container's `eth0` interface. Literal MAC values remain unchanged; data-plane
+interface MACs are independent.
+
 Extracting the config from a running node is possible with `containerlab save` command. The config will be available in the lab directory.
