@@ -16,6 +16,8 @@ jobs:
       pull-requests: read
     outputs:
       authorized: ${{ steps.authorize.outputs.authorized }}
+      head_sha: ${{ steps.authorize.outputs.head_sha }}
+      test_ref: ${{ steps.authorize.outputs.test_ref }}
     steps:
       - name: Verify command and permissions
         id: authorize
@@ -52,7 +54,47 @@ jobs:
                 issue_number: context.issue.number,
                 body: 'Only repository maintainers can run `/test srsim`.',
               });
+              return;
             }
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('head_sha', pullRequest.head.sha);
+            core.setOutput('test_ref', pullRequest.merge_commit_sha || pullRequest.head.sha);
+
+  create-check:
+    needs: authorize
+    if: needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      checks: write
+    outputs:
+      check_run_id: ${{ steps.create.outputs.check_run_id }}
+    steps:
+      - name: Create PR check
+        id: create
+        uses: actions/github-script@v9
+        env:
+          HEAD_SHA: ${{ needs.authorize.outputs.head_sha }}
+        with:
+          script: |
+            const { data: checkRun } = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'srsim-tests (manual)',
+              head_sha: process.env.HEAD_SHA,
+              status: 'in_progress',
+              details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              external_id: String(context.runId),
+              output: {
+                title: 'srsim tests are running',
+                summary: 'Triggered by `/test srsim`.',
+              },
+            });
+            core.setOutput('check_run_id', String(checkRun.id));
 
   load-vars:
     needs: authorize
@@ -79,6 +121,7 @@ jobs:
   build-containerlab:
     needs:
       - authorize
+      - create-check
       - load-vars
     if: needs.authorize.outputs.authorized == 'true'
     strategy:
@@ -97,11 +140,12 @@ jobs:
       go_ver: ${{ needs.load-vars.outputs.go_ver }}
       runner: ${{ matrix.runner }}
       arch: ${{ matrix.arch }}
-      ref: refs/pull/${{ github.event.issue.number }}/merge
+      ref: ${{ needs.authorize.outputs.test_ref }}
 
   srsim-tests:
     needs:
       - authorize
+      - create-check
       - load-vars
       - build-containerlab
     if: needs.authorize.outputs.authorized == 'true'
@@ -115,4 +159,45 @@ jobs:
     with:
       py_ver: ${{ needs.load-vars.outputs.py_ver }}
       uv_ver: ${{ needs.load-vars.outputs.uv_ver }}
-      ref: refs/pull/${{ github.event.issue.number }}/merge
+      ref: ${{ needs.authorize.outputs.test_ref }}
+
+  report:
+    needs:
+      - create-check
+      - build-containerlab
+      - srsim-tests
+    if: always() && needs.create-check.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      checks: write
+    steps:
+      - name: Update PR check
+        uses: actions/github-script@v9
+        env:
+          CHECK_RUN_ID: ${{ needs.create-check.outputs.check_run_id }}
+          BUILD_RESULT: ${{ needs.build-containerlab.result }}
+          TEST_RESULT: ${{ needs.srsim-tests.result }}
+        with:
+          script: |
+            const conclusions = {
+              success: 'success',
+              failure: 'failure',
+              cancelled: 'cancelled',
+              skipped: 'neutral',
+            };
+            const result =
+              ['failure', 'cancelled'].includes(process.env.BUILD_RESULT)
+                ? process.env.BUILD_RESULT
+                : process.env.TEST_RESULT;
+            const conclusion = conclusions[result] || 'failure';
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: Number(process.env.CHECK_RUN_ID),
+              status: 'completed',
+              conclusion,
+              output: {
+                title: `srsim tests ${result}`,
+                summary: `The manual srsim test workflow finished with result: ${result}.`,
+              },
+            });
