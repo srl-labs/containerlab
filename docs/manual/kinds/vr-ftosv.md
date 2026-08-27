@@ -33,13 +33,24 @@ Dell FTOS10v node launched with containerlab can be managed via the following in
 !!!info
     Default user credentials: `admin:admin`
 
-## Interfaces mapping
+## Interface naming
 
-Dell FTOSv container can have different number of available interfaces which depends on platform used under FTOS10 virtualization .qcow2 disk and container image built using [vrnetlab](../vrnetlab.md) project. Interfaces uses the following mapping rules (in topology file):
+You can use [interface names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
+
+The interface naming convention is: `ethernet1/1/X` (or `1/1/X`), where `X` is the port number.
+
+With that naming convention in mind:
+
+* `ethernet1/1/1` - first data port available
+* `ethernet1/1/2` - second data port, and so on...
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of FTOS10v line card
-* `eth2+` - second and subsequent data interface
+* `eth1` - first data interface, mapped to the first data port of the VM (rendered as `ethernet1/1/1`)
+* `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `ethernet1/1/2` and so on)
+
+The number of available data interfaces depends on the platform used under the FTOS10 virtualization .qcow2 disk and the container image built using the [vrnetlab](../vrnetlab.md) project.
 
 When containerlab launches Dell FTOSv node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
 

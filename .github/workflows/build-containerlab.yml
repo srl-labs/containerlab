@@ -12,12 +12,18 @@ name: build-clab
       arch:
         required: true
         type: string
+      ref:
+        type: string
+        default: ""
 
 jobs:
   build-clab:
     runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ inputs.go_ver }}

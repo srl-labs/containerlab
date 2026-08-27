@@ -1,0 +1,118 @@
+name: test-srsim
+
+"on":
+  issue_comment:
+    types: [created]
+
+jobs:
+  authorize:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/test srsim')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    outputs:
+      authorized: ${{ steps.authorize.outputs.authorized }}
+    steps:
+      - name: Verify command and permissions
+        id: authorize
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const command = context.payload.comment.body.trim();
+            if (command !== '/test srsim') {
+              core.setOutput('authorized', 'false');
+              return;
+            }
+
+            let authorized = false;
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.payload.comment.user.login,
+              });
+              authorized =
+                ['admin', 'maintain'].includes(data.role_name) ||
+                data.permissions?.admin === true ||
+                data.permissions?.maintain === true;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            core.setOutput('authorized', String(authorized));
+
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: 'Only repository maintainers can run `/test srsim`.',
+              });
+            }
+
+  load-vars:
+    needs: authorize
+    if: needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      go_ver: ${{ steps.vars.outputs.go_ver }}
+      py_ver: ${{ steps.vars.outputs.py_ver }}
+      uv_ver: ${{ steps.vars.outputs.uv_ver }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/vars.env
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: vars
+        run: |
+          source .github/vars.env
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
+          echo "py_ver=$PY_VER" >> "$GITHUB_OUTPUT"
+          echo "uv_ver=$UV_VER" >> "$GITHUB_OUTPUT"
+
+  build-containerlab:
+    needs:
+      - authorize
+      - load-vars
+    if: needs.authorize.outputs.authorized == 'true'
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    uses: ./.github/workflows/build-containerlab.yml
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    with:
+      go_ver: ${{ needs.load-vars.outputs.go_ver }}
+      runner: ${{ matrix.runner }}
+      arch: ${{ matrix.arch }}
+      ref: refs/pull/${{ github.event.issue.number }}/merge
+
+  srsim-tests:
+    needs:
+      - authorize
+      - load-vars
+      - build-containerlab
+    if: needs.authorize.outputs.authorized == 'true'
+    uses: ./.github/workflows/srsim-tests.yml
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    secrets:
+      SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+    with:
+      py_ver: ${{ needs.load-vars.outputs.py_ver }}
+      uv_ver: ${{ needs.load-vars.outputs.uv_ver }}
+      ref: refs/pull/${{ github.event.issue.number }}/merge

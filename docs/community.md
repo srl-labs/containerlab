@@ -194,6 +194,12 @@ This section logs the most notable blogs, streams, and and demos delivered by co
 Do you have a blog around containerlab that you want to share with the community? Please let us know by mentioning it in the [Comments](#__comments) section at the bottom of this page.
 ///
 
+### Multi-vendor lessons from running 11 NOSes
+
+<small>:material-text: [Blog](https://www.netpilot.io/blog/containerlab-multi-vendor-lessons) by [NetPilot Team](https://www.netpilot.io) · :material-calendar: 2026-08-24</small>
+
+The team at NetPilot runs containerlab as the sandbox layer behind their AI lab agent and collected the lessons from bringing 11 NOSes onto it: vrnetlab image-naming contracts, "running is not ready" readiness probing, interface-alias mapping (with an upstream fix), pagination and first-boot dialog handling, and per-kind resource budgeting.
+
 ### Creating custom Containerlab node kinds
 
 <small>:material-text: [Blog](https://torbjorn.dev/blog/creating-clab-node-kinds/) by [Torbjørn Bang](https://www.linkedin.com/in/torbjornbang/) · :material-calendar: 2025-10-26</small>

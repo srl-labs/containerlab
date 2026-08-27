@@ -610,6 +610,11 @@ func (p *PodmanRuntime) CopyToContainer(
 	dstPath string,
 	srcPath string,
 ) error {
+	ctx, err := p.connect(ctx)
+	if err != nil {
+		return err
+	}
+
 	tarBuf, err := utils.FileToTarStream(dstPath, srcPath)
 	if err != nil {
 		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)

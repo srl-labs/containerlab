@@ -16,11 +16,8 @@ on:
         default: "docker"
 
 env:
-  GO_VER: "1.26.7"
   CGO_ENABLED: 0
   GORELEASER_VER: v2.6.1
-  PY_VER: "3.10"
-  UV_VER: "0.11.23"
   RUNTIME: ${{ inputs.runtime || 'docker' }}
 
 jobs:
@@ -32,17 +29,26 @@ jobs:
       source_tag: ${{ steps.set-outputs.outputs.SOURCE_TAG }}
       source_tag_no_prefix: ${{ steps.set-outputs.outputs.SOURCE_TAG_NO_PREFIX }}
       # exporting env vars to be used in invoked workflows
-      py_ver: ${{ env.PY_VER }}
-      go_ver: ${{ env.GO_VER }}
-      uv_ver: ${{ env.UV_VER }}
+      py_ver: ${{ steps.set-outputs.outputs.py_ver }}
+      go_ver: ${{ steps.set-outputs.outputs.go_ver }}
+      uv_ver: ${{ steps.set-outputs.outputs.uv_ver }}
       runtime: ${{ env.RUNTIME }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/vars.env
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - id: set-outputs
         run: |
+          source .github/vars.env
           echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          echo "py_ver=$PY_VER" >> "$GITHUB_OUTPUT"
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
+          echo "uv_ver=$UV_VER" >> "$GITHUB_OUTPUT"
           echo "Repository owner: ${{ github.repository_owner }}"
           echo "Repository: ${{ github.repository }}"
           echo "Event name: ${{ github.event_name }}"
@@ -192,13 +198,15 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-24.04
-    needs: file-changes
+    needs:
+      - file-changes
+      - process-gitref
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version: ${{ needs.process-gitref.outputs.go_ver }}
 
       - name: Cache go modules
         uses: actions/cache@v6
@@ -241,6 +249,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - build-containerlab
+      - process-gitref
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -256,7 +265,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
@@ -307,6 +316,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - build-containerlab
+      - process-gitref
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -322,7 +332,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
@@ -385,6 +395,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - build-containerlab
+      - process-gitref
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -399,7 +410,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
@@ -472,7 +483,8 @@ jobs:
 
   srsim-tests:
     uses: ./.github/workflows/srsim-tests.yml
-    secrets: inherit
+    secrets:
+      SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     needs:
       - file-changes
       - build-containerlab
@@ -553,6 +565,7 @@ jobs:
       - cisco_iol-tests
       - fdio_vpp-tests
       - download-tests
+      - process-gitref
 
     steps:
       - name: Checkout
@@ -562,7 +575,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version: ${{ needs.process-gitref.outputs.go_ver }}
 
       - uses: actions/download-artifact@v8
         with:
@@ -581,7 +594,9 @@ jobs:
 
   docs-test:
     runs-on: ubuntu-24.04
-    needs: file-changes
+    needs:
+      - file-changes
+      - process-gitref
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
       - uses: actions/checkout@v7
@@ -591,7 +606,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
@@ -651,6 +666,7 @@ jobs:
       - fortigate-tests
       - fdio_vpp-tests
       - download-tests
+      - process-gitref
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -660,7 +676,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version: ${{ needs.process-gitref.outputs.go_ver }}
 
       - name: Cache go modules
         uses: actions/cache@v6
@@ -697,7 +713,9 @@ jobs:
   publish-docs:
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
-    needs: build-and-release
+    needs:
+      - build-and-release
+      - process-gitref
     permissions:
       contents: write
     steps:
@@ -710,7 +728,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
@@ -744,6 +762,7 @@ jobs:
   update-docs:
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
+    needs: process-gitref
     # docs tests are often flaky with 429 errors,
     # so don't require them to pass for the docs update to happen
     # needs: docs-test
@@ -759,7 +778,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.process-gitref.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
