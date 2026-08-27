@@ -3,13 +3,14 @@ package labruntime
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 const (
-	ClabernetesRuntimeName = "clabernetes"
+	ClabernetesRuntimeName = "c9s"
 )
 
 type Config struct {
@@ -183,11 +184,12 @@ func Register(name string, init Initializer) {
 }
 
 func IsLabRuntimeName(name string) bool {
-	_, ok := LabRuntimes[name]
+	_, ok := LabRuntimes[strings.ToLower(name)]
 	return ok
 }
 
 func Init(name string, cfg Config) (LabRuntime, error) {
+	name = strings.ToLower(name)
 	init, ok := LabRuntimes[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown lab runtime %q", name)

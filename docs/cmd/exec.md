@@ -11,7 +11,7 @@ Like `docker exec`, `exec` runs inside the node's container namespace. For VM-ba
 ///
 
 /// note | Clabernetes runtime
-With `--runtime clabernetes`, containerlab reaches the node through kubernetes pod exec into the launcher pod and then runs the command in the nested node container. The kube identity must be allowed to create `pods/exec`. See [Containerlab runtime](../manual/clabernetes/runtime.md#exec) for details.
+With `--runtime c9s`, containerlab reaches the node through kubernetes pod exec into the launcher pod and then runs the command in the nested node container. The kube identity must be allowed to create `pods/exec`. See [Containerlab runtime](../manual/clabernetes/runtime.md#exec) for details.
 ///
 
 --8<-- "docs/cmd/deploy.md:env-vars-flags"

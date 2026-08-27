@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # arguments
-# $1 - runtime: [docker, podman, clabernetes]
+# $1 - runtime: [docker, podman, c9s]
 # $2 - test suite to execute
 # $3... - optional arguments passed to robot
 

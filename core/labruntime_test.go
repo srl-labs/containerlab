@@ -58,6 +58,17 @@ func TestExecWithLabRuntimeReturnsNestedFailureAndPreservesResult(t *testing.T) 
 	}
 }
 
+func TestResolveRuntimeNameLowercasesValue(t *testing.T) {
+	t.Setenv("CLAB_RUNTIME", "C9S")
+
+	if got := resolveRuntimeName(""); got != "c9s" {
+		t.Fatalf("resolveRuntimeName() = %q, want c9s", got)
+	}
+	if got := resolveRuntimeName("c9S"); got != "c9s" {
+		t.Fatalf("resolveRuntimeName(c9S) = %q, want c9s", got)
+	}
+}
+
 func TestDestroyWithLabRuntimeRejectsNodeFilterBeforeDeletion(t *testing.T) {
 	t.Parallel()
 

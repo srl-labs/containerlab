@@ -251,20 +251,21 @@ Containerlab nodes can be started by different local container runtimes, with `d
 
 A global runtime can be selected with the `--runtime | -r` flag. The possible values are:
 
-* `docker` - default local container runtime
-* `podman` - experimental local container runtime
-* `clabernetes` - Clabernetes lab runtime that deploys the whole topology to a kubernetes cluster
+- `docker` - default local container runtime
+- `podman` - experimental local container runtime
+- `c9s` - Clabernetes lab runtime that deploys the whole topology to a kubernetes cluster
 
 /// note
-`clabernetes` is a lab runtime, not a per-node container runtime. When it is selected, containerlab renders the topology and creates a Clabernetes `Topology` custom resource. See [Containerlab runtime](../manual/clabernetes/runtime.md) for details.
+`c9s` is a lab runtime, not a per-node container runtime. When it is selected, containerlab renders the topology and creates a Clabernetes `Topology` custom resource. See [Containerlab runtime](../manual/clabernetes/runtime.md) for details.
 
 By default, the Clabernetes runtime deploys each lab into a managed
 `c9s-<lab-name>` namespace. Use the global `--namespace` option, which has no
 short form, to target an existing namespace instead:
 
 ```bash
-containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
+containerlab --runtime c9s --namespace default deploy -t topo.clab.yml
 ```
+
 ///
 
 #### timeout
@@ -311,7 +312,7 @@ Node filtering applies to fresh deployments (including `--reconfigure`) only. Wh
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 
 /// warning | Clabernetes runtime
-`deploy --node-filter` is not supported with `--runtime clabernetes`. Clabernetes reconciles the complete topology stored in a `Topology` custom resource. After the topology exists, use node filtering with commands such as `start`, `stop`, `restart`, `exec`, or `save`.
+`deploy --node-filter` is not supported with `--runtime c9s`. Clabernetes reconciles the complete topology stored in a `Topology` custom resource. After the topology exists, use node filtering with commands such as `start`, `stop`, `restart`, `exec`, or `save`.
 ///
 
 #### skip-post-deploy
@@ -320,12 +321,12 @@ The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment,
 
 The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
 
-* Readiness and health checks
-* TLS certificate provisioning
-* Saving startup configuration
-* Applying overlay CLI configuration
-* Populating `/etc/hosts` with peer node entries
-* Disabling TX checksum offload
+- Readiness and health checks
+- TLS certificate provisioning
+- Saving startup configuration
+- Applying overlay CLI configuration
+- Populating `/etc/hosts` with peer node entries
+- Disabling TX checksum offload
 
 Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
 
@@ -344,7 +345,7 @@ While this is useful in most cases, sometimes extended File ACLs might prevent y
 The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy persists the rendered topology as a c9s `Topology` resource and the Clabernetes manager compiles it into the `Node`, `Link`, and `NodeProfile` resources. With this flag, containerlab skips the `Topology` resource and compiles the topology client-side, creating and reconciling those resources directly.
 
 ```bash
-containerlab --runtime clabernetes deploy -t mylab.clab.yml --no-topology-cr
+containerlab --runtime c9s deploy -t mylab.clab.yml --no-topology-cr
 ```
 
 #### owner
@@ -408,9 +409,9 @@ containerlab deploy -t mylab.clab.yml \
 
 In this example:
 
-* Nodes with snapshots in `./snapshots/` will restore from there
-* Node `r3` will restore from `./backups/r3-old.tar` (override)
-* Nodes without snapshots will deploy fresh
+- Nodes with snapshots in `./snapshots/` will restore from there
+- Node `r3` will restore from `./backups/r3-old.tar` (override)
+- Nodes without snapshots will deploy fresh
 
 > See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
 
@@ -420,13 +421,13 @@ In this example:
 
 Default value for the global `--runtime | -r` flag described above. It affects all containerlab commands in the same way, not just `deploy`.
 
-For `docker` or `podman`, it selects the default local container runtime. For `clabernetes`, it selects the whole-lab Clabernetes runtime.
+For `docker` or `podman`, it selects the default local container runtime. For `c9s`, it selects the whole-lab Clabernetes runtime.
 
 Example command-line usage:
 
 ```bash
 CLAB_RUNTIME=podman containerlab deploy
-CLAB_RUNTIME=clabernetes containerlab deploy -t topo.clab.yml
+CLAB_RUNTIME=c9s containerlab deploy -t topo.clab.yml
 ```
 
 #### `CLAB_VERSION_CHECK`

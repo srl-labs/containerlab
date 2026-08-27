@@ -8,7 +8,7 @@ Clabernetes project consists of two main components:
 - Clabverter - a CLI tool that converts containerlab topology files into Clabernetes resources.
 
 /// note | Using the containerlab runtime
-When you use [`containerlab --runtime clabernetes`](runtime.md), containerlab
+When you use [`containerlab --runtime c9s`](runtime.md), containerlab
 creates the `Topology` custom resource for you (or, with `--no-topology-cr`,
 the primary `Node`, `Link`, and `NodeProfile` resources directly). In that
 workflow you still need the Clabernetes manager and CRDs installed in the

@@ -1,22 +1,23 @@
 # Containerlab runtime
 
-Containerlab can use Clabernetes as a lab runtime. With the c9s runtime selected,
+Containerlab can use Clabernetes as a lab runtime. Use `c9s` to select it.
+With the c9s runtime selected,
 containerlab keeps the familiar CLI workflow, but the actual lab runs in a
 kubernetes cluster.
 
 ```bash
-containerlab --runtime clabernetes deploy -t topo.clab.yml
+containerlab --runtime c9s deploy -t topo.clab.yml
 ```
 
 or, if you prefer environment variables:
 
 ```bash
-export CLAB_RUNTIME=clabernetes
+export CLAB_RUNTIME=c9s
 containerlab deploy -t topo.clab.yml
 ```
 
 /// note | Runtime, not converter
-This page describes the native `containerlab --runtime clabernetes` workflow.
+This page describes the native `containerlab --runtime c9s` workflow.
 The [Quickstart](quickstart.md) still shows the manifest-driven `clabverter`
 workflow, which remains useful when you want to generate and apply kubernetes
 manifests yourself.
@@ -122,7 +123,7 @@ To deploy into an existing namespace instead of a per-lab namespace, use the
 global `--namespace` option:
 
 ```bash
-containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
+containerlab --runtime c9s --namespace default deploy -t topo.clab.yml
 ```
 
 For a persistent shell or automation setting, use:
@@ -136,7 +137,7 @@ resources there but does not create, label, or delete the namespace itself.
 `--namespace` takes precedence over `CLAB_KUBE_NAMESPACE`.
 
 /// tip
-`CLAB_RUNTIME=clabernetes` is worth exporting in shell profiles, CI jobs, or
+`CLAB_RUNTIME=c9s` is worth exporting in shell profiles, CI jobs, or
 automation environments that always target c9s.
 ///
 
@@ -146,7 +147,7 @@ When `CLAB_KUBE_NAMESPACE` is unset, every lab deployed through the c9s runtime
 gets a dedicated namespace named `c9s-<lab-name>`. For example, this command:
 
 ```bash
-containerlab --runtime clabernetes deploy -t clos.clab.yml
+containerlab --runtime c9s deploy -t clos.clab.yml
 ```
 
 creates the `c9s-clos` namespace and places the lab's `Topology`,
@@ -167,7 +168,7 @@ ownership labels, containerlab uses it but preserves it during destroy.
 Set `--namespace` when a shared or externally managed namespace is required:
 
 ```bash
-containerlab --runtime clabernetes --namespace default deploy -t clos.clab.yml
+containerlab --runtime c9s --namespace default deploy -t clos.clab.yml
 ```
 
 All single-lab lifecycle commands must use the same flag or environment
@@ -215,7 +216,7 @@ events, and destroy operations.
 Deploying with the c9s runtime looks like a regular containerlab deployment:
 
 ```bash
-containerlab --runtime clabernetes deploy -t topo.clab.yml
+containerlab --runtime c9s deploy -t topo.clab.yml
 ```
 
 The deploy flow is:
@@ -256,7 +257,7 @@ can take several minutes to load and boot. Override it when a lab needs a
 different startup window, for example:
 
 ```bash
-containerlab --runtime clabernetes --timeout 10m deploy -t topo.clab.yml
+containerlab --runtime c9s --timeout 10m deploy -t topo.clab.yml
 ```
 
 Deterministic planning failures (an unsupported construct that only the device
@@ -289,7 +290,7 @@ Use `deploy --reconfigure` when you explicitly want to delete and recreate every
 different lab name or namespace when you want a separate lab:
 
 ```bash
-containerlab --runtime clabernetes --name <new-lab-name> deploy -t topo.clab.yml
+containerlab --runtime c9s --name <new-lab-name> deploy -t topo.clab.yml
 ```
 
 A failure while waiting for a newly created lab to become ready rolls back the
@@ -303,9 +304,9 @@ Both commands use the same c9s preparation path as deploy, including extended-li
 normalization, compatibility checks, and local-file staging checks:
 
 ```bash
-containerlab --runtime clabernetes validate -t topo.clab.yml
-containerlab --runtime clabernetes deploy --dry-run -t topo.clab.yml
-containerlab --runtime clabernetes deploy --dry-run --format json -t topo.clab.yml
+containerlab --runtime c9s validate -t topo.clab.yml
+containerlab --runtime c9s deploy --dry-run -t topo.clab.yml
+containerlab --runtime c9s deploy --dry-run --format json -t topo.clab.yml
 ```
 
 `validate` reports whether the topology can be represented by the c9s runtime without reading
@@ -322,9 +323,9 @@ and Node resources. An empty `changes` list means the deployed resources already
 Inspect works with a topology file, a lab name, or all known c9s labs:
 
 ```bash
-containerlab --runtime clabernetes inspect -t topo.clab.yml
-containerlab --runtime clabernetes inspect --name clos
-containerlab --runtime clabernetes inspect --all
+containerlab --runtime c9s inspect -t topo.clab.yml
+containerlab --runtime c9s inspect --name clos
+containerlab --runtime c9s inspect --all
 ```
 
 For c9s labs, inspect reads kubernetes resources instead of local container
@@ -350,7 +351,7 @@ kubectl -n <namespace> get node.c9s.run,link.c9s.run,nodeprofile.c9s.run,deploy,
 `exec` runs the user command in the node's device container:
 
 ```bash
-containerlab --runtime clabernetes exec -t topo.clab.yml --cmd 'ip addr'
+containerlab --runtime c9s exec -t topo.clab.yml --cmd 'ip addr'
 ```
 
 Under the hood, containerlab:
@@ -377,9 +378,9 @@ Node lifecycle commands operate on the kubernetes Deployments created by
 Clabernetes.
 
 ```bash
-containerlab --runtime clabernetes stop -t topo.clab.yml
-containerlab --runtime clabernetes start -t topo.clab.yml
-containerlab --runtime clabernetes restart -t topo.clab.yml
+containerlab --runtime c9s stop -t topo.clab.yml
+containerlab --runtime c9s start -t topo.clab.yml
+containerlab --runtime c9s restart -t topo.clab.yml
 ```
 
 `stop` sets the Clabernetes ignore-reconcile label on the selected `Node`
@@ -409,7 +410,7 @@ kubectl.kubernetes.io/restartedAt=<utc timestamp>
 Saving a c9s lab runs each node's save lifecycle inside its device container:
 
 ```bash
-containerlab --runtime clabernetes save -t topo.clab.yml
+containerlab --runtime c9s save -t topo.clab.yml
 ```
 
 For each selected node, containerlab derives the node's typed lifecycle
@@ -422,7 +423,7 @@ runtimes, against the live device. Nodes without a save-capable container
 the outer containerlab command runs:
 
 ```bash
-containerlab --runtime clabernetes save -t topo.clab.yml --copy ./startup-configs
+containerlab --runtime c9s save -t topo.clab.yml --copy ./startup-configs
 ```
 
 The copied files follow the normal containerlab copy layout:
@@ -447,9 +448,9 @@ files, the c9s runtime has nothing to copy for that node.
 The c9s runtime can stream Node, Topology, pod, and interface-stat events:
 
 ```bash
-containerlab --runtime clabernetes events --format json
-containerlab --runtime clabernetes events --initial-state
-containerlab --runtime clabernetes events --interface-stats --format json
+containerlab --runtime c9s events --format json
+containerlab --runtime c9s events --initial-state
+containerlab --runtime c9s events --interface-stats --format json
 ```
 
 For c9s, events do not come from Docker events on the outer host. Containerlab
@@ -595,7 +596,7 @@ namespace to exist and never creates or deletes it:
 
 ```bash
 kubectl get namespace default
-containerlab --runtime clabernetes --namespace default deploy -t topo.clab.yml
+containerlab --runtime c9s --namespace default deploy -t topo.clab.yml
 ```
 
 ### CRDs are missing
@@ -621,7 +622,7 @@ kubectl api-resources | grep -i c9s
 kubectl get crd nodes.c9s.run links.c9s.run nodeprofiles.c9s.run
 ```
 
-Install Clabernetes and its CRDs before using `--runtime clabernetes`.
+Install Clabernetes and its CRDs before using `--runtime c9s`.
 
 ### Manager is not reconciling
 
@@ -667,7 +668,7 @@ For c9s, `inspect` looks for c9s Nodes grouped by
 Check:
 
 ```bash
-containerlab --runtime clabernetes inspect --all
+containerlab --runtime c9s inspect --all
 kubectl get nodes.c9s.run -A -l c9s.run/topologyOwner
 ```
 
@@ -735,9 +736,9 @@ Known command differences:
 - `inspect interfaces` is rejected. Host-side `tc` or netem operations do not
   have the same local namespace access they have with Docker labs.
 - `graph` and `tools` commands operate on local containers and host networking
-  and are rejected with an error when the `clabernetes` runtime is selected.
+  and are rejected with an error when the `c9s` runtime is selected.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting
-  the global `clabernetes` lab runtime.
+  the global `c9s` lab runtime.
 - A lab name maps to one canonical `c9s-<lab-name>` namespace in the selected
   cluster.
 
@@ -749,4 +750,5 @@ kubectl get nodes.c9s.run -A -l c9s.run/topologyOwner
 kubectl -n <namespace> get deploy,pod,svc,cm,pvc \
   -l c9s.run/topologyOwner=<lab>
 ```
+
 ///

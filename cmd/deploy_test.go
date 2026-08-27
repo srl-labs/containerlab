@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 )
 
 func TestApplyIsDeployAlias(t *testing.T) {
@@ -47,7 +48,7 @@ func TestPostDeployVersionDisplaySkipsLabRuntimes(t *testing.T) {
 	}{
 		{name: "default runtime", want: true},
 		{name: "docker runtime", runtime: "docker", want: true},
-		{name: "clabernetes runtime", runtime: "clabernetes", want: false},
+		{name: "clabernetes runtime", runtime: clablabruntime.ClabernetesRuntimeName, want: false},
 	}
 
 	for _, tt := range tests {

@@ -26,6 +26,20 @@ import (
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )
 
+func TestRuntimeName(t *testing.T) {
+	t.Parallel()
+
+	if clablabruntime.ClabernetesRuntimeName != "c9s" {
+		t.Fatalf("runtime name = %q, want c9s", clablabruntime.ClabernetesRuntimeName)
+	}
+
+	for _, name := range []string{"c9s", "C9S", "c9S"} {
+		if !clablabruntime.IsLabRuntimeName(name) {
+			t.Fatalf("runtime name %q was not recognized", name)
+		}
+	}
+}
+
 func TestParseProcNetDev(t *testing.T) {
 	t.Parallel()
 

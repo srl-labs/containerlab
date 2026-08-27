@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 )
 
 func TestRootRequirementHelpers(t *testing.T) {
@@ -35,7 +36,7 @@ func TestRootRequirementHelpers(t *testing.T) {
 		},
 		{
 			name:               "clabernetes runtime",
-			runtime:            "clabernetes",
+			runtime:            clablabruntime.ClabernetesRuntimeName,
 			wantGlobalRoot:     false,
 			wantCommandSkipped: true,
 		},
@@ -91,7 +92,7 @@ func TestApplyLabRuntimeDefaultTimeout(t *testing.T) {
 	}{
 		{
 			name:            "clabernetes default",
-			runtime:         "clabernetes",
+			runtime:         clablabruntime.ClabernetesRuntimeName,
 			initialTimeout:  defaultTimeout,
 			expectedTimeout: defaultLabRuntimeTimeout,
 		},
@@ -103,14 +104,14 @@ func TestApplyLabRuntimeDefaultTimeout(t *testing.T) {
 		},
 		{
 			name:            "explicit flag wins",
-			runtime:         "clabernetes",
+			runtime:         clablabruntime.ClabernetesRuntimeName,
 			explicitFlag:    "45s",
 			initialTimeout:  defaultTimeout,
 			expectedTimeout: 45 * time.Second,
 		},
 		{
 			name:            "explicit environment wins",
-			runtime:         "clabernetes",
+			runtime:         clablabruntime.ClabernetesRuntimeName,
 			explicitEnv:     "3m",
 			initialTimeout:  3 * time.Minute,
 			expectedTimeout: 3 * time.Minute,
@@ -190,19 +191,19 @@ func TestCheckLabRuntimeCommandSupport(t *testing.T) {
 		},
 		{
 			name:    "deploy with clabernetes runtime",
-			runtime: "clabernetes",
+			runtime: clablabruntime.ClabernetesRuntimeName,
 			cmd:     deploy,
 			wantErr: false,
 		},
 		{
 			name:    "graph with clabernetes runtime",
-			runtime: "clabernetes",
+			runtime: clablabruntime.ClabernetesRuntimeName,
 			cmd:     graph,
 			wantErr: true,
 		},
 		{
 			name:    "tools subcommand with clabernetes runtime",
-			runtime: "clabernetes",
+			runtime: clablabruntime.ClabernetesRuntimeName,
 			cmd:     sshx,
 			wantErr: true,
 		},
@@ -254,7 +255,7 @@ func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := checkLabRuntimeCommandSupport(command, "clabernetes")
+			err := checkLabRuntimeCommandSupport(command, clablabruntime.ClabernetesRuntimeName)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("checkLabRuntimeCommandSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -268,7 +269,10 @@ func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
 		root.AddCommand(inspect)
 		inspect.AddCommand(interfaces)
 
-		if err := checkLabRuntimeCommandSupport(interfaces, "clabernetes"); err == nil {
+		if err := checkLabRuntimeCommandSupport(
+			interfaces,
+			clablabruntime.ClabernetesRuntimeName,
+		); err == nil {
 			t.Fatal("inspect interfaces was accepted for clabernetes")
 		}
 	})

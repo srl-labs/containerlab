@@ -138,9 +138,9 @@ func resolveRuntimeName(name string) string {
 
 	switch {
 	case name != "":
-		return name
+		return strings.ToLower(name)
 	case envN != "":
-		return envN
+		return strings.ToLower(envN)
 	default:
 		return clabruntimedocker.RuntimeName
 	}

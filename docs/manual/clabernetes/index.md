@@ -21,7 +21,7 @@ Clabernetes deploys containerlab topologies into a kubernetes cluster. The goal 
 
 You can use clabernetes in two ways:
 
-- with the native [`containerlab --runtime clabernetes`](runtime.md) workflow
+- with the native [`containerlab --runtime c9s`](runtime.md) workflow
 - with [`clabverter`](install.md#clabverter), which converts topology files into kubernetes manifests
 
 If all goes to plan, Clabernetes is going to be one of the solutions to enable [multi-node labs](../multi-node.md) and allow its users to create large topologies powered by a k8s cluster.

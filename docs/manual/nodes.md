@@ -688,9 +688,11 @@ Options for the per-node `runtime` parameter are:
 The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable.
 
 /// note | Clabernetes lab runtime
-The global `--runtime` flag and `CLAB_RUNTIME` environment variable also accept `clabernetes`. This is a whole-lab runtime that sends the topology to kubernetes as a Clabernetes `Topology` resource. It is not a valid per-node `runtime:` value.
+The global `--runtime` flag and `CLAB_RUNTIME` environment variable accept
+`c9s`. This is a whole-lab runtime that sends the topology to kubernetes as a
+Clabernetes `Topology` resource. It is not a valid per-node `runtime:` value.
 
-See [Containerlab runtime](clabernetes/runtime.md) for details.
+See [c9s runtime](clabernetes/runtime.md) for details.
 ///
 
 ```yaml

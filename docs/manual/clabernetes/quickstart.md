@@ -164,7 +164,7 @@ Clabverter is not a requirement to run clabernetes, but it is a helper tool to c
 
 /// note | Native containerlab runtime
 Recent containerlab versions can also deploy to clabernetes directly with
-`containerlab --runtime clabernetes`. This quickstart keeps using `clabverter`
+`containerlab --runtime c9s`. This quickstart keeps using `clabverter`
 because it shows the generated kubernetes manifests explicitly. If you want the
 regular containerlab CLI lifecycle, see the [Containerlab runtime](runtime.md)
 page.
