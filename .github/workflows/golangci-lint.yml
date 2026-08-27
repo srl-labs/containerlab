@@ -10,16 +10,20 @@ on:
       go_ver:
         description: "Go version"
         required: false
-        default: "1.26.7"
+        default: ""
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - id: vars
+        run: |
+          source .github/vars.env
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ inputs.go_ver }}
+          go-version: ${{ inputs.go_ver || steps.vars.outputs.go_ver }}
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9

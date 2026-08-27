@@ -5,19 +5,17 @@ name: force-build
 on:
   workflow_dispatch:
 
-# make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GO_VER: "1.26.7"
   CGO_ENABLED: 0
   GORELEASER_VER: v2.0.1
-  PY_VER: "3.10"
-  UV_VER: "0.11.23"
 
 jobs:
   get-tag:
     runs-on: ubuntu-24.04
     outputs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
+      go_ver: ${{ steps.git_tag.outputs.go_ver }}
+      uv_ver: ${{ steps.git_tag.outputs.uv_ver }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -26,11 +24,16 @@ jobs:
       - name: Get git tag
         id: git_tag
         run: |
-          echo "::set-output name=git_tag::$(git tag --points-at)"
-          echo ${{ steps.git_tag.outputs.git_tag }}
+          source .github/vars.env
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
+          echo "uv_ver=$UV_VER" >> "$GITHUB_OUTPUT"
+          git_tag=$(git tag --points-at | tr '\n' ' ')
+          echo "git_tag=$git_tag" >> "$GITHUB_OUTPUT"
+          echo "$git_tag"
 
   build-and-release:
-    needs: get-tag
+    needs:
+      - get-tag
     if: ${{ needs.get-tag.outputs.git_tag != '' }}
     runs-on: ubuntu-24.04
     steps:
@@ -41,7 +44,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version: ${{ needs.get-tag.outputs.go_ver }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -60,7 +63,9 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
-    needs: build-and-release
+    needs:
+      - build-and-release
+      - get-tag
     runs-on: ubuntu-24.04
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     permissions:
@@ -75,7 +80,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: ${{ env.UV_VER }}
+          version: ${{ needs.get-tag.outputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v7
