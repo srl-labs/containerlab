@@ -12,15 +12,34 @@ name: srsim-tests
       runtime:
         type: string
         default: "docker"
+      ref:
+        type: string
+        default: ""
+    secrets:
+      SRSIM_LICENSE:
+        required: false
 
 jobs:
+  check-license:
+    runs-on: ubuntu-24.04
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - id: check
+        env:
+          SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+        run: |
+          if [[ -n "$SRSIM_LICENSE" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
   srsim-tests:
     runs-on: ubuntu-24.04
-    # Skip this job if running from a fork PR (secrets are not available)
-    # github.event.pull_request.head.repo.full_name will be different from github.repository for fork PRs
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    needs: check-license
+    if: needs.check-license.outputs.available == 'true'
     env:
-      SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
       SRSIM_IMAGE_TAG: 26.7.R1
     strategy:
       matrix:
@@ -41,6 +60,8 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
 
       - uses: actions/download-artifact@v8
         with:
@@ -50,7 +71,9 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Create license file from env vars
-        run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license.txt
+        env:
+          SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+        run: sudo mkdir -p /opt/nokia/sros/ && echo "$SRSIM_LICENSE" | sudo tee /opt/nokia/sros/license.txt > /dev/null && sudo chmod 600 /opt/nokia/sros/license.txt
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -81,10 +104,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Pull and re-tag srsim image
         run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+
+      - name: Logout from GitHub Container Registry
+        run: docker logout ghcr.io
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
