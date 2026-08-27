@@ -225,7 +225,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 			}
 		}
 
-		o.Global.CleanOnCancel = cleanOnCancel
+		o.Global.CleanOnCancel.Store(cleanOnCancel)
 	}
 
 	deploymentOptions, err := clabcore.NewDeployOptions(o.Deploy.MaxWorkers)
@@ -245,6 +245,12 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
+		// a deployment interrupted by the user leaves behind whatever it managed to
+		// create, so tear it down before surfacing the cancellation
+		if o.Global.CleanOnCancel.Load() && cancellationRequested() {
+			destroyCancelledDeploy(o)
+		}
+
 		return err
 	}
 

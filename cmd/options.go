@@ -3,6 +3,7 @@ package cmd
 import (
 	"net"
 	"os"
+	"sync/atomic"
 	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -250,8 +251,9 @@ type GlobalOptions struct {
 	DebugCount       int
 
 	// special flag that should only be set by deploy, informs the context handler to destroy
-	// (or not) when root context is canceled
-	CleanOnCancel bool
+	// (or not) when root context is canceled. The signal handler goroutine reads it while
+	// deploy is running, so it is atomic.
+	CleanOnCancel atomic.Bool
 
 	// special flag that is only set on deploy,
 	// if true, the topology file backup is created at /tmp/.clab/bak
