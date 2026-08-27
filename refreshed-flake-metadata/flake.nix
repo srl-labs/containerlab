@@ -20,7 +20,7 @@
           pname = "containerlab";
           inherit version;
           src = ./.;
-          vendorHash = "sha256-YjNjS2rrxrNuF2e/tVAwPOLDxtWemNbvdMDc+AlGCpE=";
+          vendorHash = "sha256-mC2E00TTj5kyr1FI/7wRy/swFS87g56j5eHD+8yp8B8=";
           env = {
             CGO_ENABLED = 0;
           };
