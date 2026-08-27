@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
+	clabernetescompiler "github.com/clabernetes/clabernetes/compiler"
 	clabernetesconfig "github.com/clabernetes/clabernetes/config"
-	clabernetescontrollerstopology "github.com/clabernetes/clabernetes/controllers/topology"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -54,11 +54,11 @@ func compilePrimitiveResources(
 		return nil, fmt.Errorf("failed to prepare c9s primitive resources: %w", err)
 	}
 
-	compiled, err := clabernetescontrollerstopology.CompileTopologyWithOptions(
+	compiled, err := clabernetescompiler.CompileTopologyWithOptions(
 		c9sCompileLogger{},
 		topology,
-		clabernetescontrollerstopology.CompileOptions{
-			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyError,
+		clabernetescompiler.CompileOptions{
+			UnsupportedFieldPolicy: clabernetescompiler.UnsupportedFieldPolicyError,
 		},
 	)
 	if err != nil {
@@ -66,7 +66,7 @@ func compilePrimitiveResources(
 	}
 
 	set := &primitiveResourceSet{}
-	for _, profile := range clabernetescontrollerstopology.RenderNodeProfiles(
+	for _, profile := range clabernetescompiler.RenderNodeProfiles(
 		topology,
 		compiled,
 		clabernetesconfig.GetFakeManager,
@@ -78,7 +78,7 @@ func compilePrimitiveResources(
 		set.nodeProfiles = append(set.nodeProfiles, obj)
 	}
 
-	for _, link := range clabernetescontrollerstopology.RenderLinks(
+	for _, link := range clabernetescompiler.RenderLinks(
 		topology,
 		compiled,
 		clabernetesconfig.GetFakeManager,
@@ -90,7 +90,7 @@ func compilePrimitiveResources(
 		set.links = append(set.links, obj)
 	}
 
-	for _, node := range clabernetescontrollerstopology.RenderNodes(
+	for _, node := range clabernetescompiler.RenderNodes(
 		topology,
 		compiled,
 		clabernetesconfig.GetFakeManager,
