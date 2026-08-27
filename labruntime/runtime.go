@@ -27,6 +27,9 @@ type DeployRequest struct {
 	TopologyDefinition []byte
 	Wait               bool
 	Timeout            time.Duration
+	// NoTopologyCR deploys without a controller-owned topology object: the runtime compiles the
+	// topology client-side and manages the individual lab resources directly.
+	NoTopologyCR bool
 }
 
 type DestroyRequest struct {
@@ -88,11 +91,15 @@ type SaveResult struct {
 }
 
 type NodeState struct {
-	Name                string
-	Kind                string
-	Image               string
-	State               string
-	Ready               bool
+	Name  string
+	Kind  string
+	Image string
+	State string
+	Ready bool
+	// MgmtIPv4Address and MgmtIPv6Address are the node's allocated management addresses in
+	// CIDR notation, when the runtime reports them.
+	MgmtIPv4Address     string
+	MgmtIPv6Address     string
 	LoadBalancerAddress string
 }
 

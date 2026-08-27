@@ -41,10 +41,19 @@ func (r *Runtime) Deploy(
 	switch {
 	case apierrors.IsNotFound(err):
 		existingTopology = nil
-		// Expected for the primary Node/Link path.
+		// Expected for a fresh lab and for labs deployed without a Topology resource.
 	case err != nil:
 		return nil, fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
 			namespace, req.Name, err)
+	}
+
+	// A Topology-owned lab cannot be reconciled directly: the controller owns the primitive
+	// resources and would revert every direct write. Fail closed instead of fighting it.
+	if req.NoTopologyCR && existingTopology != nil {
+		return nil, fmt.Errorf(
+			"clabernetes lab %s/%s is owned by a Topology resource; "+
+				"deploy without --no-topology-cr to reconcile it, or destroy the lab first",
+			namespace, req.Name)
 	}
 
 	primitiveExists, err := r.primitiveLabExists(ctx, req.Name, namespace)
@@ -56,7 +65,6 @@ func (r *Runtime) Deploy(
 	if err != nil {
 		return nil, err
 	}
-	desiredTopology := prepared.topology
 	stagedConfigMaps := prepared.configMaps
 	primitives := prepared.primitives
 	log.Info(
@@ -66,18 +74,20 @@ func (r *Runtime) Deploy(
 		"config-maps", len(stagedConfigMaps),
 	)
 
-	// Compatibility Topologies are still supported for labs created by older versions. Keep
-	// their controller ownership intact and reconcile the definition in place. New labs and
-	// current primitive labs are reconciled directly through Node, Link, and LauncherProfile.
+	// The Topology resource is the primary deployment path: containerlab persists the rendered
+	// definition and the clabernetes controller compiles and owns the Node, Link, and NodeProfile
+	// resources. --no-topology-cr keeps that compilation client-side instead and manages the
+	// primitive resources directly.
 	if existingTopology != nil {
-		return r.reconcileCompatibilityTopology(
+		return r.reconcileTopology(
 			ctx,
 			req,
 			namespace,
-			desiredTopology,
-			primitives,
-			stagedConfigMaps,
+			prepared,
 		)
+	}
+	if !req.NoTopologyCR {
+		return r.deployTopology(ctx, req, namespace, prepared, primitiveExists)
 	}
 
 	managedNamespace := req.Namespace == "" && r.labNamespaceOverride == ""
@@ -95,7 +105,6 @@ func (r *Runtime) Deploy(
 			_, _ = r.deleteManagedLabNamespace(ctx, req.Name, namespace)
 		}
 	}
-
 	if err = r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
 		cleanupNamespace()
 
@@ -113,7 +122,7 @@ func (r *Runtime) Deploy(
 		"nodes", len(primitives.nodes),
 		"links", len(primitives.links),
 	)
-	appliedNodes, createdNodes, createdResources, err := r.reconcilePrimitiveResources(
+	appliedNodes, createdResources, err := r.reconcilePrimitiveResources(
 		ctx,
 		namespace,
 		req.Name,
@@ -146,25 +155,16 @@ func (r *Runtime) Deploy(
 	if err = r.deleteStaleConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
 		return nil, err
 	}
-
-	if req.Wait {
-		if err = r.waitPrimitiveLinksResolved(
-			ctx,
-			namespace,
-			primitives.links,
-			req.Timeout,
-		); err != nil {
-			if !primitiveExists {
-				r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
-				r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
-				cleanupNamespace()
-			}
-
-			return nil, err
-		}
+	if !req.Wait {
+		return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
 	}
 
-	if err = r.enablePrimitiveNodeDeployments(ctx, namespace, createdNodes); err != nil {
+	if err = r.waitPrimitiveLinksResolved(
+		ctx,
+		namespace,
+		primitives.links,
+		req.Timeout,
+	); err != nil {
 		if !primitiveExists {
 			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
 			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
@@ -172,10 +172,6 @@ func (r *Runtime) Deploy(
 		}
 
 		return nil, err
-	}
-
-	if !req.Wait {
-		return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
 	}
 
 	if err := r.waitReady(ctx, req.Name, namespace, req.Timeout); err != nil {
@@ -208,13 +204,13 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	log.Info("Deleting clabernetes lab resources", "name", req.Name, "namespace", namespace)
 
 	var deleteErrors []error
-	// Delete the compatibility owner first when present so it cannot recreate compiler output
-	// while the primitive resources are being removed.
+	// Delete the owning Topology first when present so the controller cannot recreate compiler
+	// output while the primitive resources are being removed.
 	err = r.client.Resource(topologyGVR).Namespace(namespace).
 		Delete(ctx, req.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		deleteErrors = append(deleteErrors, fmt.Errorf(
-			"failed to delete compatibility clabernetes topology %s/%s: %w",
+			"failed to delete clabernetes topology %s/%s: %w",
 			namespace, req.Name, err))
 	}
 
@@ -224,7 +220,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	}{
 		{name: "nodes", gvr: nodeGVR},
 		{name: "links", gvr: linkGVR},
-		{name: "launcher profiles", gvr: launcherProfileGVR},
+		{name: "node profiles", gvr: nodeProfileGVR},
 	} {
 		list, listErr := r.primitiveResourcesForTopology(ctx, gvr.gvr, req.Name, namespace)
 		if listErr != nil {
@@ -431,6 +427,7 @@ func (r *Runtime) waitReady(
 	var lastState *clablabruntime.LabState
 	readinessProgress := nodeReadinessProgress{}
 	imageProgress := imagePullProgress{}
+	phaseProgress := nodePhaseProgress{}
 	log.Info("Waiting for clabernetes lab to become ready", "name", name, "namespace", namespace)
 
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
@@ -451,17 +448,17 @@ func (r *Runtime) waitReady(
 					namespace, name, err)
 			}
 			lastState = state
-			imageRequests, imageErr := r.imagePullRequests(ctx, namespace, state)
-			if imageErr != nil {
-				imageProgress.reportListError(imageErr)
-			} else {
-				imageProgress.report(imageRequests)
-			}
-			imageProgress.inspectLauncherCopies(ctx, r, namespace, state)
+			imageProgress.observe(ctx, r, namespace, state)
+			phaseProgress.observe(ctx, r, name, namespace)
 			readinessProgress.report(state)
 
 			if state.Ready {
 				return true, nil
+			}
+			if failure := phaseProgress.terminalFailure(); failure != "" {
+				return false, fmt.Errorf(
+					"clabernetes lab %s/%s cannot be planned: %s",
+					namespace, name, failure)
 			}
 			if state.State == "deployfailed" {
 				return false, fmt.Errorf("clabernetes topology %s/%s reported deployfailed",
@@ -612,7 +609,7 @@ func (r *Runtime) waitDeleted(
 			for _, gvr := range []schema.GroupVersionResource{
 				nodeGVR,
 				linkGVR,
-				launcherProfileGVR,
+				nodeProfileGVR,
 			} {
 				list, err := r.primitiveResourcesForTopology(ctx, gvr, name, namespace)
 				if err != nil {

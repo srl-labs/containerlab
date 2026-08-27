@@ -339,6 +339,14 @@ The extended File ACLs are provisioned for the lab directory by default, unless 
 
 While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
 
+#### no-topology-cr
+
+The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy persists the rendered topology as a c9s `Topology` resource and the Clabernetes manager compiles it into the `Node`, `Link`, and `NodeProfile` resources. With this flag, containerlab skips the `Topology` resource and compiles the topology client-side, creating and reconciling those resources directly.
+
+```bash
+containerlab --runtime clabernetes deploy -t mylab.clab.yml --no-topology-cr
+```
+
 #### owner
 
 The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.

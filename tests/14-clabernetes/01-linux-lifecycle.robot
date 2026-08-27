@@ -27,7 +27,13 @@ Deploy c9s linux lab
     ${output} =    Run Clab Command    deploy -t ${topo}
     Should Be Equal As Integers    ${output.rc}    0
 
-Deploy emits primary c9s resources without a Topology payload
+Deploy creates the Topology resource and controller-compiled primitives
+    ${topology} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get topology.c9s.run ${lab-name} -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${topology.rc}    0
+    Should Contain    ${topology.stdout}    ${lab-name}
+
     ${nodes} =    Process.Run Process
     ...    kubectl -n ${lab-namespace} get nodes.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
     ...    shell=True
@@ -40,12 +46,6 @@ Deploy emits primary c9s resources without a Topology payload
     ...    shell=True
     Should Be Equal As Integers    ${links.rc}    0
     Should Not Be Empty    ${links.stdout}
-
-    ${topology} =    Process.Run Process
-    ...    kubectl -n ${lab-namespace} get topology.c9s.run ${lab-name} --ignore-not-found -o name
-    ...    shell=True
-    Should Be Equal As Integers    ${topology.rc}    0
-    Should Be Empty    ${topology.stdout}
 
 Inspect c9s linux lab by topology and name
     ${topology_inspect} =    Run Clab Command    inspect -t ${topo}
@@ -112,6 +112,33 @@ Destroy c9s linux lab
 
     ${inspect_all} =    Run Clab Command    inspect --all
     Should Not Contain    ${inspect_all.stdout}    ${lab-name}
+
+    ${namespace} =    Process.Run Process
+    ...    kubectl get namespace ${lab-namespace} --ignore-not-found -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${namespace.rc}    0
+    Should Be Empty    ${namespace.stdout}
+
+Deploy c9s linux lab without a Topology resource
+    ${output} =    Run Clab Command    deploy -t ${topo} --no-topology-cr
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${topology} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get topology.c9s.run ${lab-name} --ignore-not-found -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${topology.rc}    0
+    Should Be Empty    ${topology.stdout}
+
+    ${nodes} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get nodes.c9s.run -l c9s.run/topologyOwner\=${lab-name} -o name
+    ...    shell=True
+    Should Be Equal As Integers    ${nodes.rc}    0
+    Should Contain    ${nodes.stdout}    node.c9s.run/client
+    Should Contain    ${nodes.stdout}    node.c9s.run/server
+
+Destroy c9s linux lab deployed without a Topology resource
+    ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
+    Should Be Equal As Integers    ${output.rc}    0
 
     ${namespace} =    Process.Run Process
     ...    kubectl get namespace ${lab-namespace} --ignore-not-found -o name

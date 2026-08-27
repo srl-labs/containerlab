@@ -48,6 +48,7 @@ func (c *CLab) deployWithLabRuntime(
 		return nil, err
 	}
 	req.Wait = true
+	req.NoTopologyCR = options != nil && options.noTopologyCR
 
 	state, err := c.LabRuntime.Deploy(ctx, req)
 	if err != nil {
@@ -115,11 +116,45 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 		return fmt.Errorf("topology name is required")
 	}
 
-	return c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+	err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
 		Name:    c.Config.Name,
 		Wait:    true,
 		Timeout: c.timeout,
 	})
+	if err != nil {
+		return err
+	}
+
+	if opts.cleanup {
+		return c.cleanupLabRuntimeLabDir()
+	}
+
+	return nil
+}
+
+// cleanupLabRuntimeLabDir removes the local lab directory for --cleanup parity with local
+// runtimes. Controller-driven runtimes keep node state remotely, so the directory usually only
+// exists when a lab was previously deployed locally or configs were copied out.
+func (c *CLab) cleanupLabRuntimeLabDir() error {
+	if c.TopoPaths == nil || !c.TopoPaths.TopologyFileIsSet() {
+		return nil
+	}
+
+	labDir := c.TopoPaths.TopologyLabDir()
+	if labDir == "" {
+		return nil
+	}
+	if _, err := os.Stat(labDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	log.Info("Removing lab directory", "path", labDir)
+
+	if err := os.RemoveAll(labDir); err != nil {
+		return fmt.Errorf("failed to remove lab directory %q: %w", labDir, err)
+	}
+
+	return nil
 }
 
 func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
@@ -403,27 +438,52 @@ func (c *CLab) containerFromLabNode(
 		Status:          containerStatus,
 		Labels:          labels,
 		NetworkName:     state.Namespace,
-		NetworkSettings: managementAddress(node.LoadBalancerAddress),
+		NetworkSettings: managementAddress(node),
 	}
 }
 
-func managementAddress(addr string) clabruntime.GenericMgmtIPs {
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		return clabruntime.GenericMgmtIPs{}
-	}
+// managementAddress reports the address a user reaches the node at: the LoadBalancer address
+// when the node is exposed, otherwise the allocated management address.
+func managementAddress(node clablabruntime.NodeState) clabruntime.GenericMgmtIPs {
+	settings := clabruntime.GenericMgmtIPs{}
 
-	if ip.To4() != nil {
-		return clabruntime.GenericMgmtIPs{
-			IPv4addr: addr,
-			IPv4pLen: 32,
+	if ip := net.ParseIP(node.LoadBalancerAddress); ip != nil {
+		if ip.To4() != nil {
+			settings.IPv4addr = node.LoadBalancerAddress
+			settings.IPv4pLen = 32
+		} else {
+			settings.IPv6addr = node.LoadBalancerAddress
+			settings.IPv6pLen = 128
 		}
 	}
 
-	return clabruntime.GenericMgmtIPs{
-		IPv6addr: addr,
-		IPv6pLen: 128,
+	if settings.IPv4addr == "" {
+		settings.IPv4addr, settings.IPv4pLen = splitManagementCIDR(node.MgmtIPv4Address)
 	}
+	if settings.IPv6addr == "" {
+		settings.IPv6addr, settings.IPv6pLen = splitManagementCIDR(node.MgmtIPv6Address)
+	}
+
+	return settings
+}
+
+func splitManagementCIDR(cidr string) (string, int) {
+	if cidr == "" {
+		return "", 0
+	}
+
+	ip, network, err := net.ParseCIDR(cidr)
+	if err != nil {
+		if net.ParseIP(cidr) != nil {
+			return cidr, 0
+		}
+
+		return "", 0
+	}
+
+	prefixLen, _ := network.Mask.Size()
+
+	return ip.String(), prefixLen
 }
 
 func labRuntimeTopologyPath(c *CLab, state *clablabruntime.LabState) string {

@@ -231,7 +231,7 @@ As you can see, we have two namespaces: `c9s` and `c9s-vlan`. The `c9s` namespac
 
 ### Topology resource
 
-The `Topology` compatibility resource holds the original containerlab definition. c9s compiles it into the primary `Node`, `Link`, and `LauncherProfile` resources in the `c9s-vlan` namespace:
+The `Topology` resource holds the original containerlab definition. c9s compiles it into the primary `Node`, `Link`, and `NodeProfile` resources in the `c9s-vlan` namespace:
 
 ``` {.bash .no-select}
 kubectl get --namespace c9s-vlan Topology

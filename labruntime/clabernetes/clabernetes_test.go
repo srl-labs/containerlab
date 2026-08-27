@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
@@ -61,51 +60,78 @@ func TestParseProcNetDevRejectsMalformedLine(t *testing.T) {
 	}
 }
 
-func TestPreferredNestedContainerName(t *testing.T) {
+func TestPreferredDeviceContainerName(t *testing.T) {
 	t.Parallel()
 
+	directContainers := func(entries ...map[string]any) *unstructured.Unstructured {
+		containers := make([]any, 0, len(entries))
+		for _, entry := range entries {
+			containers = append(containers, any(entry))
+		}
+
+		return &unstructured.Unstructured{Object: map[string]any{
+			"status": map[string]any{"directContainers": containers},
+		}}
+	}
+
 	tests := []struct {
-		name           string
-		nodeName       string
-		exactNames     []string
-		componentNames []string
-		want           string
-		wantError      string
+		name      string
+		nodeName  string
+		node      *unstructured.Unstructured
+		want      string
+		wantError string
 	}{
 		{
-			name:       "regular-node",
-			nodeName:   "router",
-			exactNames: []string{"router"},
-			want:       "router",
+			name:     "single-container-node",
+			nodeName: "router",
+			node: directContainers(
+				map[string]any{"name": "node-router-abc"},
+			),
+			want: "node-router-abc",
 		},
 		{
-			name:           "components-prefer-cpm-a",
-			nodeName:       "srsim",
-			componentNames: []string{"srsim-2", "srsim-b", "srsim-1", "srsim-a"},
-			want:           "srsim-a",
+			name:     "primary-container-preferred",
+			nodeName: "router",
+			node: directContainers(
+				map[string]any{"name": "node-card-one", "componentID": "1"},
+				map[string]any{"name": "node-primary", "componentID": ""},
+			),
+			want: "node-primary",
 		},
 		{
-			name:           "components-fall-back-to-cpm-b",
-			nodeName:       "srsim",
-			componentNames: []string{"srsim-1", "srsim-b"},
-			want:           "srsim-b",
+			name:     "components-prefer-cpm-a",
+			nodeName: "srsim",
+			node: directContainers(
+				map[string]any{"name": "node-two", "componentID": "2"},
+				map[string]any{"name": "node-b", "componentID": "b"},
+				map[string]any{"name": "node-one", "componentID": "1"},
+				map[string]any{"name": "node-a", "componentID": "a"},
+			),
+			want: "node-a",
 		},
 		{
-			name:      "missing-node",
+			name:     "components-fall-back-to-cpm-b",
+			nodeName: "srsim",
+			node: directContainers(
+				map[string]any{"name": "node-one", "componentID": "1"},
+				map[string]any{"name": "node-b", "componentID": "cpm-b"},
+			),
+			want: "node-b",
+		},
+		{
+			name:      "no-observed-containers",
 			nodeName:  "missing",
-			wantError: "was not found",
+			node:      &unstructured.Unstructured{Object: map[string]any{}},
+			wantError: "was not observed yet",
 		},
 		{
-			name:           "missing-cpm",
-			nodeName:       "srsim",
-			componentNames: []string{"srsim-1", "srsim-2"},
-			wantError:      "CPM component container",
-		},
-		{
-			name:       "ambiguous-exact-node",
-			nodeName:   "router",
-			exactNames: []string{"router-duplicate", "router"},
-			wantError:  "multiple nested containers",
+			name:     "missing-cpm",
+			nodeName: "srsim",
+			node: directContainers(
+				map[string]any{"name": "node-one", "componentID": "1"},
+				map[string]any{"name": "node-two", "componentID": "2"},
+			),
+			wantError: "CPM component container",
 		},
 	}
 
@@ -113,15 +139,11 @@ func TestPreferredNestedContainerName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := preferredNestedContainerName(
-				tt.nodeName,
-				tt.exactNames,
-				tt.componentNames,
-			)
+			got, err := preferredDeviceContainerName(tt.node, tt.nodeName)
 			if tt.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
 					t.Fatalf(
-						"preferredNestedContainerName() error = %v, want %q",
+						"preferredDeviceContainerName() error = %v, want %q",
 						err,
 						tt.wantError,
 					)
@@ -133,7 +155,7 @@ func TestPreferredNestedContainerName(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got != tt.want {
-				t.Fatalf("preferredNestedContainerName() = %q, want %q", got, tt.want)
+				t.Fatalf("preferredDeviceContainerName() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -264,6 +286,7 @@ func TestDeployUsesNamespaceOverrideWithoutManagingIt(t *testing.T) {
 		Name:               "lab1",
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -302,6 +325,7 @@ func TestDeployCreatesAndDestroyRemovesDedicatedLabNamespace(t *testing.T) {
 		Name:               "lab1",
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -427,19 +451,7 @@ func TestStateFromTopology(t *testing.T) {
 		Object: map[string]any{
 			"status": map[string]any{
 				"topologyReady": true,
-				"topologyState": "ready",
-				"nodeReadiness": map[string]any{
-					"client": "ready",
-					"server": "notready",
-				},
-				"exposedPorts": map[string]any{
-					"client": map[string]any{
-						"loadBalancerAddress": "192.0.2.10",
-					},
-					"server": map[string]any{
-						"loadBalancerAddress": "not-an-ip",
-					},
-				},
+				"topologyState": "running",
 			},
 			"spec": map[string]any{
 				"definition": map[string]any{
@@ -466,7 +478,7 @@ func TestStateFromTopology(t *testing.T) {
 		state.Owner != "alice" ||
 		state.TopologyPath != "k8s://lab-ns/topologies/lab1" ||
 		!state.Ready ||
-		state.State != "ready" {
+		state.State != "running" {
 		t.Fatalf("unexpected state metadata: %+v", state)
 	}
 	if len(state.Nodes) != 2 {
@@ -474,21 +486,12 @@ func TestStateFromTopology(t *testing.T) {
 	}
 
 	client := state.Nodes[0]
-	if client.Name != "client" ||
-		client.Kind != "linux" ||
-		client.Image != "client:latest" ||
-		client.State != "ready" ||
-		!client.Ready ||
-		client.LoadBalancerAddress != "192.0.2.10" {
+	if client.Name != "client" || client.Kind != "linux" || client.Image != "client:latest" {
 		t.Fatalf("unexpected client state: %+v", client)
 	}
 
 	server := state.Nodes[1]
-	if server.Name != "server" ||
-		server.Kind != "srl" ||
-		server.Image != "server:latest" ||
-		server.Ready ||
-		server.LoadBalancerAddress != "" {
+	if server.Name != "server" || server.Kind != "srl" || server.Image != "server:latest" {
 		t.Fatalf("unexpected server state: %+v", server)
 	}
 }
@@ -500,7 +503,7 @@ func TestPrimitiveResourcesUseCurrentC9sAPI(t *testing.T) {
 		"topology":         topologyGVR,
 		"node":             nodeGVR,
 		"link":             linkGVR,
-		"launcher profile": launcherProfileGVR,
+		"node profile":     nodeProfileGVR,
 	} {
 		if gvr.Group != "c9s.run" || gvr.Version != "v1alpha1" {
 			t.Fatalf("unexpected %s GVR: %+v", name, gvr)
@@ -513,7 +516,7 @@ func TestPrimitiveResourceGroupOrder(t *testing.T) {
 
 	set := &primitiveResourceSet{}
 	groups := set.groups()
-	want := []string{"LauncherProfile", "Link", "Node"}
+	want := []string{"NodeProfile", "Link", "Node"}
 	got := make([]string, 0, len(groups))
 	for _, group := range groups {
 		got = append(got, group.kind)
@@ -524,58 +527,14 @@ func TestPrimitiveResourceGroupOrder(t *testing.T) {
 	}
 }
 
-func TestStageAndEnablePrimitiveNodeDeployments(t *testing.T) {
-	t.Parallel()
-
-	node := &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": c9sAPIVersion,
-		"kind":       "Node",
-		"metadata": map[string]any{
-			"name":      "node1",
-			"namespace": "lab-ns",
-			"labels": map[string]any{
-				"keep": "value",
-			},
-		},
-	}}
-	set := &primitiveResourceSet{nodes: []*unstructured.Unstructured{node}}
-	stagePrimitiveNodeDeployments(set)
-
-	if node.GetLabels()[clabernetesconstants.LabelDisableDeployments] != "true" {
-		t.Fatalf("staged node labels = %v", node.GetLabels())
-	}
-
-	r := newTestRuntime()
-	created, err := r.client.Resource(nodeGVR).Namespace("lab-ns").Create(
-		context.Background(),
-		node,
-		metav1.CreateOptions{},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := r.enablePrimitiveNodeDeployments(
-		context.Background(),
-		"lab-ns",
-		map[string]*unstructured.Unstructured{"node1": created},
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	actual := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
-	if _, exists := actual.GetLabels()[clabernetesconstants.LabelDisableDeployments]; exists {
-		t.Fatalf("enabled node retains staging label: %v", actual.GetLabels())
-	}
-	if actual.GetLabels()["keep"] != "value" {
-		t.Fatalf("enable patch did not preserve labels: %v", actual.GetLabels())
-	}
-}
-
 func TestPrimitiveLinkPendingReason(t *testing.T) {
 	t.Parallel()
 
 	link := &unstructured.Unstructured{Object: map[string]any{
 		"status": map[string]any{
+			"conditions": []any{
+				map[string]any{"type": "Accepted", "status": "True"},
+			},
 			"resolvedEndpoints": map[string]any{
 				"endpointA": map[string]any{"nodeName": "node1", "uid": "uid-1"},
 				"endpointB": map[string]any{"nodeName": "host"},
@@ -586,16 +545,26 @@ func TestPrimitiveLinkPendingReason(t *testing.T) {
 		t.Fatalf("resolved link reported pending: %q", reason)
 	}
 
-	if err := unstructured.SetNestedField(
+	if err := unstructured.SetNestedSlice(
 		link.Object,
-		"endpoint node missing",
+		[]any{map[string]any{
+			"type":    "Accepted",
+			"status":  "False",
+			"reason":  "EndpointsUnresolved",
+			"message": "endpoint node missing",
+		}},
 		"status",
-		"error",
+		"conditions",
 	); err != nil {
 		t.Fatal(err)
 	}
 	if reason := primitiveLinkPendingReason(link); reason != "endpoint node missing" {
-		t.Fatalf("pending reason = %q, want endpoint status error", reason)
+		t.Fatalf("pending reason = %q, want Accepted condition message", reason)
+	}
+
+	fresh := &unstructured.Unstructured{Object: map[string]any{}}
+	if reason := primitiveLinkPendingReason(fresh); reason != "waiting for Accepted" {
+		t.Fatalf("pending reason for fresh link = %q, want waiting for Accepted", reason)
 	}
 }
 
@@ -737,41 +706,43 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	}
 }
 
-func TestImagePullRequestsFilterAndProgress(t *testing.T) {
-	request := func(name, node, image, kubernetesNode string) *unstructured.Unstructured {
-		return &unstructured.Unstructured{Object: map[string]any{
-			"apiVersion": c9sAPIVersion,
-			"kind":       "ImageRequest",
-			"metadata": map[string]any{
-				"name":      name,
-				"namespace": "lab-ns",
+func TestImagePullProgressReportsKubeletEvents(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "node1-abc",
+			Namespace: "lab-ns",
+			Labels: map[string]string{
+				labelApp:           clabernetesAppValue,
+				labelTopologyOwner: "lab1",
+				labelTopologyNode:  "node1",
 			},
-			"spec": map[string]any{
-				"topologyNodeName": node,
-				"requestedImage":   image,
-				"kubernetesNode":   kubernetesNode,
+		},
+		Spec: corev1.PodSpec{
+			NodeName: "worker-a",
+			InitContainers: []corev1.Container{
+				{Name: "planner", Image: "example/c9s:latest"},
 			},
-		}}
+			Containers: []corev1.Container{
+				{Name: "node-one", Image: "example/node1:latest"},
+			},
+		},
+	}
+	event := func(name, reason, message string) *corev1.Event {
+		return &corev1.Event{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "lab-ns"},
+			InvolvedObject: corev1.ObjectReference{
+				Kind: "Pod", Name: "node1-abc", Namespace: "lab-ns",
+			},
+			Reason:  reason,
+			Message: message,
+		}
 	}
 
-	r := newTestRuntime(
-		request("node1-image", "node1", "example/node1:latest", "worker-a"),
-		request("node1-other-image", "node1", "example/other:latest", "worker-a"),
-		request("foreign-image", "foreign", "example/foreign:latest", "worker-b"),
-	)
-	requests, err := r.imagePullRequests(
-		context.Background(),
-		"lab-ns",
-		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
-			{Name: "node1", Image: "example/node1:latest"},
-		}},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(requests) != 1 || requests[0].name != "node1-image" {
-		t.Fatalf("image pull requests = %+v, want only node1-image", requests)
-	}
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{
+		pod,
+		event("pull-start", "Pulling", `Pulling image "example/node1:latest"`),
+		event("infra-pull", "Pulling", `Pulling image "example/c9s:latest"`),
+	})
 
 	var output bytes.Buffer
 	oldLevel := log.GetLevel()
@@ -782,8 +753,9 @@ func TestImagePullRequestsFilterAndProgress(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
+	state := &clablabruntime.LabState{Name: "lab1"}
 	progress := imagePullProgress{}
-	progress.report(requests)
+	progress.observe(context.Background(), r, "lab-ns", state)
 	got := output.String()
 	if !strings.Contains(got, "Pulling clabernetes node image") ||
 		!strings.Contains(got, "node=node1") ||
@@ -791,70 +763,68 @@ func TestImagePullRequestsFilterAndProgress(t *testing.T) {
 		!strings.Contains(got, "kubernetes-node=worker-a") {
 		t.Fatalf("image pull start was not reported:\n%s", got)
 	}
+	if strings.Contains(got, "example/c9s:latest") {
+		t.Fatalf("infrastructure image pull must not be reported:\n%s", got)
+	}
 
 	output.Reset()
-	progress.report(requests)
+	progress.observe(context.Background(), r, "lab-ns", state)
 	if output.Len() != 0 {
 		t.Fatalf("unchanged image pull should not produce repeated log lines:\n%s", output.String())
 	}
 
+	if _, err := r.kubeClient.CoreV1().Events("lab-ns").Create(
+		context.Background(),
+		event(
+			"pull-done",
+			"Pulled",
+			`Successfully pulled image "example/node1:latest" in 1.5s`,
+		),
+		metav1.CreateOptions{},
+	); err != nil {
+		t.Fatal(err)
+	}
+
 	output.Reset()
-	progress.report(nil)
+	progress.observe(context.Background(), r, "lab-ns", state)
 	got = output.String()
 	if !strings.Contains(got, "Clabernetes node image pull completed") ||
-		!strings.Contains(got, "node=node1") ||
-		!strings.Contains(got, "image=example/node1:latest") {
+		!strings.Contains(got, "node=node1") {
 		t.Fatalf("image pull completion was not reported:\n%s", got)
 	}
+}
 
-	output.Reset()
-	progress.report(nil)
-	if output.Len() != 0 {
-		t.Fatalf("completed image pull should not produce repeated log lines:\n%s", output.String())
+func TestNodePlanFailureClassification(t *testing.T) {
+	t.Parallel()
+
+	nodeWithCondition := func(reason, message string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"status": map[string]any{
+				"conditions": []any{map[string]any{
+					"type":    "PlanApplied",
+					"status":  "False",
+					"reason":  reason,
+					"message": message,
+				}},
+			},
+		}}
 	}
 
-	output.Reset()
-	progress.reportLauncherLog(launcherImageLog{
-		podName:        "pod1",
-		node:           "node1",
-		image:          "example/node1:latest",
-		kubernetesNode: "worker-a",
-		content: "image \"example/node1:latest\" is present, begin copy to docker daemon...\n" +
-			"Loaded image: example/node1:latest\n",
-	})
-	got = output.String()
-	if !strings.Contains(got, "already present on Kubernetes node") ||
-		strings.Contains(got, "copied to launcher Docker daemon") ||
-		strings.Count(got, "node=node1") != 1 {
-		t.Fatalf("cached image copy lifecycle was not reported:\n%s", got)
+	failure, streak := nodePlanFailure(nodeWithCondition("PlanUnsupported", "cannot do that"))
+	if failure != "cannot do that" || streak != terminalFailureStreak {
+		t.Fatalf("PlanUnsupported = (%q, %d), want terminal", failure, streak)
 	}
 
-	output.Reset()
-	progress.reportLauncherLog(launcherImageLog{
-		podName:        "pod1",
-		node:           "node1",
-		image:          "example/node1:latest",
-		kubernetesNode: "worker-a",
-		content:        "Loaded image: example/node1:latest\n",
-	})
-	if output.Len() != 0 {
-		t.Fatalf("completed image copy should not produce repeated log lines:\n%s", output.String())
+	failure, streak = nodePlanFailure(
+		nodeWithCondition("OCIMetadataResolveManifest", "unauthorized"),
+	)
+	if failure != "unauthorized" || streak != registryFailureStreak {
+		t.Fatalf("OCIMetadata = (%q, %d), want registry debounce", failure, streak)
 	}
 
-	output.Reset()
-	progress.reportLauncherLog(launcherImageLog{
-		podName:        "pod2",
-		node:           "node2",
-		image:          "example/node2:latest",
-		kubernetesNode: "worker-b",
-		content: "image \"example/node2:latest\" is now available on node, continuing...\n" +
-			"Loaded image: example/node2:latest\n",
-	})
-	got = output.String()
-	if !strings.Contains(got, "Copying clabernetes node image") ||
-		strings.Contains(got, "already present") ||
-		strings.Contains(got, "copied to launcher Docker daemon") {
-		t.Fatalf("pulled image copy lifecycle was not reported:\n%s", got)
+	failure, _ = nodePlanFailure(nodeWithCondition("PlanMissingInput", "inventory settling"))
+	if failure != "" {
+		t.Fatalf("PlanMissingInput must not be terminal, got %q", failure)
 	}
 }
 
@@ -890,7 +860,7 @@ func TestManagePrimitiveOnlyLab(t *testing.T) {
 	}}
 	profile := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": c9sAPIVersion,
-		"kind":       "LauncherProfile",
+		"kind":       "NodeProfile",
 		"metadata": map[string]any{
 			"name":      "primitive-lab",
 			"namespace": "lab-ns",
@@ -933,7 +903,7 @@ func TestManagePrimitiveOnlyLab(t *testing.T) {
 	}{
 		{gvr: nodeGVR, name: "node1"},
 		{gvr: linkGVR, name: "node1-eth1-host-eth1"},
-		{gvr: launcherProfileGVR, name: "primitive-lab"},
+		{gvr: nodeProfileGVR, name: "primitive-lab"},
 	} {
 		_, err := r.client.Resource(resource.gvr).Namespace("lab-ns").
 			Get(context.Background(), resource.name, metav1.GetOptions{})
@@ -943,7 +913,7 @@ func TestManagePrimitiveOnlyLab(t *testing.T) {
 	}
 }
 
-func TestResolveLauncherNode(t *testing.T) {
+func TestResolvePrimaryNode(t *testing.T) {
 	t.Parallel()
 
 	networkModes := map[string]string{
@@ -952,11 +922,11 @@ func TestResolveLauncherNode(t *testing.T) {
 		"nested":    "container:secondary",
 	}
 
-	if got := resolveLauncherNode("nested", networkModes); got != "primary" {
-		t.Fatalf("resolveLauncherNode(nested) = %q, want primary", got)
+	if got := resolvePrimaryNode("nested", networkModes); got != "primary" {
+		t.Fatalf("resolvePrimaryNode(nested) = %q, want primary", got)
 	}
-	if got := resolveLauncherNode("standalone", networkModes); got != "standalone" {
-		t.Fatalf("resolveLauncherNode(standalone) = %q, want standalone", got)
+	if got := resolvePrimaryNode("standalone", networkModes); got != "standalone" {
+		t.Fatalf("resolvePrimaryNode(standalone) = %q, want standalone", got)
 	}
 }
 
@@ -982,6 +952,7 @@ func TestDeployCreatesPrimitiveResources(t *testing.T) {
 		Owner:              "alice",
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1005,7 +976,7 @@ func TestDeployCreatesPrimitiveResources(t *testing.T) {
 		t.Fatalf("node image = %q, want alpine:latest", got)
 	}
 
-	profiles, err := r.client.Resource(launcherProfileGVR).Namespace("lab-ns").
+	profiles, err := r.client.Resource(nodeProfileGVR).Namespace("lab-ns").
 		List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -1029,6 +1000,280 @@ func TestDeployCreatesPrimitiveResources(t *testing.T) {
 		"nodeName",
 	); got != "node1" {
 		t.Fatalf("link endpointA nodeName = %q, want node1", got)
+	}
+}
+
+func TestDeployCreatesTopologyResource(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		Owner:              "alice",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-ns" || state.Owner != "alice" {
+		t.Fatalf("unexpected deploy state: %+v", state)
+	}
+
+	obj := getTestTopology(t, r, "lab-ns", "lab1")
+	if got := topologyDefinition(t, obj); got != definition {
+		t.Fatalf("topology definition = %q, want %q", got, definition)
+	}
+	if obj.GetLabels()[clabconstants.Owner] != "alice" {
+		t.Fatalf("unexpected topology labels: %v", obj.GetLabels())
+	}
+	// The controller compiles the Topology into primitive resources; containerlab must not
+	// create them itself on this path.
+	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+	assertNoTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
+}
+
+func TestDeployNoTopologyCRRejectsTopologyOwnedLab(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", definition))
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "owned by a Topology resource") {
+		t.Fatalf("unexpected topology ownership error: %v", err)
+	}
+	_ = getTestTopology(t, r, "lab-ns", "lab1")
+}
+
+func TestDeployAdoptsPrimitiveOnlyLabIntoTopology(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	existingNode := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "node1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelApp:           clabernetesAppValue,
+				labelTopologyOwner: "lab1",
+			},
+		},
+	}}
+
+	r := newTestRuntime(existingNode)
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-ns" {
+		t.Fatalf("unexpected deploy state: %+v", state)
+	}
+
+	// The controller adopts label-matched primitive resources once the Topology exists; the
+	// pre-existing Node must survive the deployment.
+	_ = getTestTopology(t, r, "lab-ns", "lab1")
+	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
+}
+
+func TestFreshTopologyDeployTimeoutRollsBackTopology(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:      "timeout-lab",
+		Namespace: "lab-ns",
+		TopologyDefinition: []byte(`topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+`),
+		Wait:    true,
+		Timeout: 20 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected readiness timeout")
+	}
+
+	assertNoTestTopology(t, r, "lab-ns", "timeout-lab")
+}
+
+func TestWaitTopologyGenerationObserved(t *testing.T) {
+	t.Parallel()
+
+	topology := func(generation, observed int64, topologyError string) *unstructured.Unstructured {
+		status := map[string]any{}
+		if observed != 0 {
+			status["observedGeneration"] = observed
+		}
+		if topologyError != "" {
+			status["error"] = topologyError
+		}
+
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": c9sAPIVersion,
+			"kind":       "Topology",
+			"metadata": map[string]any{
+				"name":       "lab1",
+				"namespace":  "lab-ns",
+				"generation": generation,
+			},
+			"status": status,
+		}}
+	}
+
+	r := newTestRuntime(topology(2, 2, ""))
+	if err := r.waitTopologyGenerationObserved(
+		context.Background(), "lab-ns", "lab1", 50*time.Millisecond,
+	); err != nil {
+		t.Fatalf("observed current generation reported an error: %v", err)
+	}
+
+	// A controller that predates observedGeneration never reports it; readiness is the only
+	// signal then and the wait must not run out the clock.
+	r = newTestRuntime(topology(2, 0, ""))
+	if err := r.waitTopologyGenerationObserved(
+		context.Background(), "lab-ns", "lab1", 50*time.Millisecond,
+	); err != nil {
+		t.Fatalf("missing observedGeneration reported an error: %v", err)
+	}
+
+	r = newTestRuntime(topology(2, 1, ""))
+	err := r.waitTopologyGenerationObserved(
+		context.Background(), "lab-ns", "lab1", 30*time.Millisecond,
+	)
+	if err == nil || !strings.Contains(err.Error(), "observe topology") {
+		t.Fatalf("stale observedGeneration error = %v, want observation timeout", err)
+	}
+
+	r = newTestRuntime(topology(2, 1, "duplicate resources found in the lab-ns namespace"))
+	err = r.waitTopologyGenerationObserved(
+		context.Background(), "lab-ns", "lab1", 30*time.Millisecond,
+	)
+	if err == nil || !strings.Contains(err.Error(), "duplicate resources") {
+		t.Fatalf("controller error = %v, want fail-fast with the reported message", err)
+	}
+}
+
+func TestPlanReportsTopologyDiffWithoutMutation(t *testing.T) {
+	t.Parallel()
+
+	const initial = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+`
+	const changed = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	freshPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(freshPlan.Changes) != 1 ||
+		freshPlan.Changes[0].Action != clablabruntime.ChangeCreate ||
+		freshPlan.Changes[0].Kind != "Topology" {
+		t.Fatalf("fresh plan changes = %+v, want one Topology create", freshPlan.Changes)
+	}
+	assertNoTestTopology(t, r, "lab-ns", "plan-lab")
+
+	namespacedPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantCreates := map[string]bool{
+		"Namespace/c9s-plan-lab": false,
+		"Topology/plan-lab":      false,
+	}
+	for _, change := range namespacedPlan.Changes {
+		key := change.Kind + "/" + change.Name
+		if _, ok := wantCreates[key]; ok && change.Action == clablabruntime.ChangeCreate {
+			wantCreates[key] = true
+		}
+	}
+	for change, found := range wantCreates {
+		if !found {
+			t.Fatalf("plan for missing namespace = %+v, missing create %s",
+				namespacedPlan.Changes, change)
+		}
+	}
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial), Wait: false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	noOpPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noOpPlan.Changes) != 0 {
+		t.Fatalf("no-op plan changes = %+v, want none", noOpPlan.Changes)
+	}
+
+	changedPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(changed),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(changedPlan.Changes) != 1 ||
+		changedPlan.Changes[0].Action != clablabruntime.ChangeUpdate ||
+		changedPlan.Changes[0].Kind != "Topology" {
+		t.Fatalf("changed plan = %+v, want one Topology update", changedPlan.Changes)
+	}
+
+	if _, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+		NoTopologyCR: true,
+	}); err == nil || !strings.Contains(err.Error(), "owned by a Topology resource") {
+		t.Fatalf("unexpected --no-topology-cr plan error: %v", err)
 	}
 }
 
@@ -1088,6 +1333,7 @@ topology:
 		TopologyLabDir:     filepath.Join(topologyDir, "clab-lab1"),
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1205,22 +1451,6 @@ topology:
         - 8080:80
 `,
 		},
-		{
-			name: "lossy link metadata",
-			definition: `topology:
-  nodes:
-    node1:
-      kind: linux
-      image: alpine
-    node2:
-      kind: linux
-      image: alpine
-  links:
-    - endpoints: ["node1:eth1", "node2:eth1"]
-      labels:
-        purpose: test
-`,
-		},
 	}
 
 	for _, tt := range tests {
@@ -1242,18 +1472,74 @@ topology:
 func TestValidateRejectsStructurallyUnsupportedContainerlabSemantics(t *testing.T) {
 	t.Parallel()
 
-	r := newTestRuntime()
-	err := r.Validate(context.Background(), clablabruntime.DeployRequest{
-		Name:      "structurally-unsupported",
-		Namespace: "lab-ns",
-		TopologyDefinition: []byte(`topology:
+	tests := []struct {
+		name       string
+		definition string
+		wantError  string
+	}{
+		{
+			name: "bridge pseudo-node",
+			definition: `topology:
   nodes:
     br0:
       kind: bridge
-`),
-	})
-	if err == nil || !strings.Contains(err.Error(), "pseudo-node") {
-		t.Fatalf("Validate() error = %v, want structurally unsupported pseudo-node error", err)
+`,
+			wantError: "pseudo-node",
+		},
+		{
+			name: "link labels",
+			definition: `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine
+    node2:
+      kind: linux
+      image: alpine
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+      labels:
+        purpose: test
+`,
+			wantError: "unsupported by c9s",
+		},
+		{
+			name: "unsupported node field",
+			definition: `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine
+      cpu-set: 0-3
+`,
+			wantError: "unsupported by c9s",
+		},
+		{
+			name: "invalid kubernetes node name",
+			definition: `topology:
+  nodes:
+    Node_One:
+      kind: linux
+      image: alpine
+`,
+			wantError: "RFC 1035",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRuntime()
+			err := r.Validate(context.Background(), clablabruntime.DeployRequest{
+				Name:               "structurally-unsupported",
+				Namespace:          "lab-ns",
+				TopologyDefinition: []byte(tt.definition),
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("Validate() error = %v, want error containing %q", err, tt.wantError)
+			}
+		})
 	}
 }
 
@@ -1281,6 +1567,7 @@ func TestPlanReportsPrimitiveDiffWithoutMutation(t *testing.T) {
 	r := newTestRuntime()
 	freshPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
 		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+		NoTopologyCR: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1292,12 +1579,14 @@ func TestPlanReportsPrimitiveDiffWithoutMutation(t *testing.T) {
 
 	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
 		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial), Wait: false,
+		NoTopologyCR: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	noOpPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
 		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+		NoTopologyCR: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1308,6 +1597,7 @@ func TestPlanReportsPrimitiveDiffWithoutMutation(t *testing.T) {
 
 	changedPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
 		Name: "plan-lab", Namespace: "lab-ns", TopologyDefinition: []byte(changed),
+		NoTopologyCR: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1372,15 +1662,16 @@ func TestFreshDeployReadinessTimeoutRollsBackCreatedPrimitives(t *testing.T) {
       kind: linux
       image: alpine:3
 `),
-		Wait:    true,
-		Timeout: 20 * time.Millisecond,
+		Wait:         true,
+		Timeout:      20 * time.Millisecond,
+		NoTopologyCR: true,
 	})
 	if err == nil {
 		t.Fatal("expected readiness timeout")
 	}
 
 	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
-	assertNoTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "timeout-lab")
+	assertNoTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "timeout-lab")
 }
 
 func TestReconcileReadinessTimeoutRetainsExistingLab(t *testing.T) {
@@ -1402,6 +1693,7 @@ func TestReconcileReadinessTimeoutRetainsExistingLab(t *testing.T) {
 	r := newTestRuntime()
 	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
 		Name: "retained-lab", Namespace: "lab-ns", TopologyDefinition: []byte(initial),
+		NoTopologyCR: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1409,6 +1701,7 @@ func TestReconcileReadinessTimeoutRetainsExistingLab(t *testing.T) {
 	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
 		Name: "retained-lab", Namespace: "lab-ns", TopologyDefinition: []byte(changed),
 		Wait: true, Timeout: 20 * time.Millisecond,
+		NoTopologyCR: true,
 	})
 	if err == nil {
 		t.Fatal("expected reconcile readiness timeout")
@@ -1422,7 +1715,7 @@ func TestReconcileReadinessTimeoutRetainsExistingLab(t *testing.T) {
 	if image != "alpine:latest" {
 		t.Fatalf("retained node image = %q, want reconciled image", image)
 	}
-	_ = getTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "retained-lab")
+	_ = getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "retained-lab")
 }
 
 func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
@@ -1455,6 +1748,7 @@ func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
 		TopologyFile:       topologyFile,
 		TopologyDefinition: []byte(initialDefinition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	}
 	if _, err := r.Deploy(context.Background(), req); err != nil {
 		t.Fatal(err)
@@ -1503,6 +1797,7 @@ topology:
 		Namespace:          "lab-ns",
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1544,6 +1839,7 @@ topology:
 		Namespace:          "lab-ns",
 		TopologyDefinition: []byte(definition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1563,7 +1859,7 @@ topology:
 		t.Fatalf("prometheus normalized ports = %v, found=%t, err=%v; want 9090", ports, found, err)
 	}
 
-	profile := getTestPrimitive(t, r, launcherProfileGVR, "lab-ns", "st")
+	profile := getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "st")
 	if enabled, found, err := unstructured.NestedBool(
 		profile.Object,
 		"spec",
@@ -1601,7 +1897,7 @@ topology:
 	}
 }
 
-func TestDeployReconcilesCompatibilityTopology(t *testing.T) {
+func TestDeployReconcilesExistingTopology(t *testing.T) {
 	t.Parallel()
 
 	const existingDefinition = `topology:
@@ -1669,6 +1965,7 @@ func TestDeployReconcilesPrimitiveResources(t *testing.T) {
 		Namespace:          "lab-ns",
 		TopologyDefinition: []byte(initialDefinition),
 		Wait:               false,
+		NoTopologyCR:       true,
 	}
 	if _, err := r.Deploy(context.Background(), request); err != nil {
 		t.Fatal(err)
@@ -1713,10 +2010,7 @@ func TestDeployReconcilesPrimitiveResources(t *testing.T) {
 		t.Fatalf("node1 retained stop lifecycle label: %v", node1.GetLabels())
 	}
 
-	node2 := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node2")
-	if _, exists := node2.GetLabels()[clabernetesconstants.LabelDisableDeployments]; exists {
-		t.Fatalf("new node retained deployment staging label: %v", node2.GetLabels())
-	}
+	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "node2")
 	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "old-node")
 
 	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
@@ -1761,7 +2055,8 @@ func TestDeployRejectsPrimitiveResourceOwnedByAnotherLab(t *testing.T) {
       kind: linux
       image: alpine:latest
 `),
-		Wait: false,
+		Wait:         false,
+		NoTopologyCR: true,
 	})
 	if err == nil || !strings.Contains(err.Error(), "belongs to another lab") {
 		t.Fatalf("unexpected ownership collision error: %v", err)
@@ -1797,9 +2092,9 @@ func TestDeployDuplicateCheckIsNamespaceScoped(t *testing.T) {
 		t.Fatalf("unexpected deploy state: %+v", state)
 	}
 
+	// The same-named topology in lab-a must not shadow the fresh deployment into lab-b.
 	_ = getTestTopology(t, r, "lab-a", "lab1")
-	assertNoTestTopology(t, r, "lab-b", "lab1")
-	_ = getTestPrimitive(t, r, nodeGVR, "lab-b", "node1")
+	_ = getTestTopology(t, r, "lab-b", "lab1")
 }
 
 func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
@@ -1888,30 +2183,39 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 }
 
 func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
+	return newTestRuntimeWithKubeObjects(objects, nil)
+}
+
+func newTestRuntimeWithKubeObjects(
+	objects []*unstructured.Unstructured,
+	kubeObjects []k8sruntime.Object,
+) *Runtime {
 	runtimeObjects := make([]k8sruntime.Object, 0, len(objects))
 	for _, obj := range objects {
 		runtimeObjects = append(runtimeObjects, obj)
 	}
 
+	baseKubeObjects := []k8sruntime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultNamespace}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-ns"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-b"}},
+	}
+	baseKubeObjects = append(baseKubeObjects, kubeObjects...)
+
 	return &Runtime{
 		client: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
 			k8sruntime.NewScheme(),
 			map[schema.GroupVersionResource]string{
-				topologyGVR:        "TopologyList",
-				nodeGVR:            "NodeList",
-				linkGVR:            "LinkList",
-				launcherProfileGVR: "LauncherProfileList",
-				imageRequestGVR:    "ImageRequestList",
+				topologyGVR:    "TopologyList",
+				nodeGVR:        "NodeList",
+				linkGVR:        "LinkList",
+				nodeProfileGVR: "NodeProfileList",
 			},
 			runtimeObjects...,
 		),
-		kubeClient: kubefake.NewSimpleClientset(
-			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultNamespace}},
-			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-ns"}},
-			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-a"}},
-			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab-b"}},
-		),
-		namespace: defaultNamespace,
+		kubeClient: kubefake.NewSimpleClientset(baseKubeObjects...),
+		namespace:  defaultNamespace,
 	}
 }
 

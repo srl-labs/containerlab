@@ -47,16 +47,10 @@ var linkGVR = schema.GroupVersionResource{
 	Resource: "links",
 }
 
-var launcherProfileGVR = schema.GroupVersionResource{
+var nodeProfileGVR = schema.GroupVersionResource{
 	Group:    "c9s.run",
 	Version:  "v1alpha1",
-	Resource: "launcherprofiles",
-}
-
-var imageRequestGVR = schema.GroupVersionResource{
-	Group:    "c9s.run",
-	Version:  "v1alpha1",
-	Resource: "imagerequests",
+	Resource: "nodeprofiles",
 }
 
 type Runtime struct {

@@ -5,15 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/log"
-	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -34,21 +34,20 @@ func (r *Runtime) Exec(
 		return nil, fmt.Errorf("command is required")
 	}
 
-	pod, err := r.launcherPod(ctx, req.Name, req.Namespace, req.NodeName)
+	pod, err := r.devicePod(ctx, req.Name, req.Namespace, req.NodeName)
 	if err != nil {
 		return nil, err
 	}
 
-	containerName, err := r.nestedContainerName(ctx, pod, req.NodeName)
+	containerName, err := r.deviceContainerName(ctx, pod, req.Name, req.Namespace, req.NodeName)
 	if err != nil {
 		return nil, err
 	}
 
 	execCmd := clabexec.NewExecCmdFromSlice(req.Command)
 	result := clabexec.NewExecResult(execCmd)
-	cmd := append([]string{"docker", "exec", containerName}, req.Command...)
 
-	stdout, stderr, rc, err := r.execInPod(ctx, pod, cmd)
+	stdout, stderr, rc, err := r.execInPod(ctx, pod, containerName, req.Command)
 	if err != nil {
 		return nil, err
 	}
@@ -60,102 +59,111 @@ func (r *Runtime) Exec(
 	return result, nil
 }
 
-func (r *Runtime) nestedContainerName(
+// deviceContainerName selects the Kubernetes container representing the logical node inside its
+// device pod. The Node controller publishes the deterministic container names in
+// status.directContainers; a single-container node uses it directly, and a multi-container
+// (chassis) node prefers the primary application container, then the active-preferred CPM
+// component ("a" before "b").
+func (r *Runtime) deviceContainerName(
 	ctx context.Context,
 	pod *corev1.Pod,
+	topologyName,
+	namespace,
 	nodeName string,
 ) (string, error) {
-	exactNames, err := r.nestedContainerNamesByLabel(
-		ctx,
-		pod,
-		clabconstants.NodeName,
-		nodeName,
-	)
+	namespace, err := r.namespaceForLab(topologyName, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	componentNames := []string(nil)
-	if len(exactNames) == 0 {
-		componentNames, err = r.nestedContainerNamesByLabel(
-			ctx,
-			pod,
-			clabconstants.RootNodeName,
-			nodeName,
-		)
-		if err != nil {
-			return "", err
+	node, err := r.client.Resource(nodeGVR).Namespace(namespace).
+		Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get c9s node %s/%s/%s: %w",
+			namespace, topologyName, nodeName, err)
+	}
+
+	name, err := preferredDeviceContainerName(node, nodeName)
+	if err == nil {
+		return name, nil
+	}
+
+	// Before the plan is applied the Node has no container observations yet; the pod's
+	// default-container annotation still identifies the primary application container.
+	if pod != nil && pod.Labels[labelTopologyNode] == nodeName {
+		if fallback := pod.Annotations["kubectl.kubernetes.io/default-container"]; fallback != "" {
+			return fallback, nil
 		}
 	}
 
-	return preferredNestedContainerName(nodeName, exactNames, componentNames)
+	return "", err
 }
 
-func (r *Runtime) nestedContainerNamesByLabel(
-	ctx context.Context,
-	pod *corev1.Pod,
-	label,
-	value string,
-) ([]string, error) {
-	stdout, stderr, rc, err := r.execInPod(ctx, pod, []string{
-		"docker",
-		"ps",
-		"--all",
-		"--filter",
-		fmt.Sprintf("label=%s=%s", label, value),
-		"--format",
-		"{{.Names}}",
+func preferredDeviceContainerName(node *unstructured.Unstructured, nodeName string) (string, error) {
+	containers, _, _ := unstructured.NestedSlice(node.Object, "status", "directContainers")
+
+	type deviceContainer struct {
+		name        string
+		componentID string
+	}
+
+	observed := make([]deviceContainer, 0, len(containers))
+	for _, raw := range containers {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := entry["name"].(string)
+		if name == "" {
+			continue
+		}
+		componentID, _ := entry["componentID"].(string)
+		observed = append(observed, deviceContainer{name: name, componentID: componentID})
+	}
+
+	if len(observed) == 0 {
+		return "", fmt.Errorf("device container for node %q was not observed yet", nodeName)
+	}
+	if len(observed) == 1 {
+		return observed[0].name, nil
+	}
+
+	for _, container := range observed {
+		if container.componentID == "" {
+			return container.name, nil
+		}
+	}
+
+	sort.Slice(observed, func(i, j int) bool {
+		return observed[i].componentID < observed[j].componentID
 	})
-	if err != nil {
-		return nil, err
-	}
-	if rc != 0 {
-		return nil, fmt.Errorf(
-			"failed listing nested containers for node %q: rc=%d stderr=%s",
-			value,
-			rc,
-			strings.TrimSpace(string(stderr)),
-		)
-	}
-
-	return strings.Fields(string(stdout)), nil
-}
-
-func preferredNestedContainerName(
-	nodeName string,
-	exactNames,
-	componentNames []string,
-) (string, error) {
-	switch len(exactNames) {
-	case 1:
-		return exactNames[0], nil
-	case 0:
-	default:
-		return "", fmt.Errorf("multiple nested containers matched node %q: %v", nodeName, exactNames)
-	}
-
-	slices.Sort(componentNames)
-
-	for _, cpmSuffix := range []string{"-a", "-b"} {
-		for _, componentName := range componentNames {
-			if strings.EqualFold(componentName, nodeName+cpmSuffix) {
-				return componentName, nil
+	// Chassis component IDs carry the imported per-component runtime identity, e.g. "sros-a"
+	// for node "sros" slot A. Prefer the active-preferred CPM slots.
+	for _, cpmSuffix := range []string{"a", "b"} {
+		for _, container := range observed {
+			if strings.EqualFold(container.componentID, cpmSuffix) ||
+				strings.EqualFold(container.componentID, "cpm-"+cpmSuffix) ||
+				strings.EqualFold(container.componentID, nodeName+"-"+cpmSuffix) {
+				return container.name, nil
 			}
 		}
 	}
 
-	if len(componentNames) == 0 {
-		return "", fmt.Errorf("nested container for node %q was not found", nodeName)
+	componentIDs := make([]string, 0, len(observed))
+	for _, container := range observed {
+		componentIDs = append(componentIDs, container.componentID)
 	}
 
 	return "", fmt.Errorf(
 		"CPM component container for node %q was not found among %v",
 		nodeName,
-		componentNames,
+		componentIDs,
 	)
 }
 
-func (r *Runtime) launcherPod(
+// devicePod resolves the pod hosting the given logical node. Nodes grouped through
+// network-mode container: chains share the pod of the group's primary node.
+func (r *Runtime) devicePod(
 	ctx context.Context,
 	name,
 	namespace,
@@ -166,25 +174,25 @@ func (r *Runtime) launcherPod(
 	if err != nil {
 		return nil, err
 	}
-	launchers, err := r.launcherNodeNames(ctx, name, namespace, []string{nodeName})
+	primaries, err := r.primaryNodeNames(ctx, name, namespace, []string{nodeName})
 	if err != nil {
 		return nil, err
 	}
-	launcherNode := launchers[nodeName]
+	primaryNode := primaries[nodeName]
 
 	list, err := r.kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{
 			labelApp:           clabernetesAppValue,
 			labelTopologyOwner: name,
-			labelTopologyNode:  launcherNode,
+			labelTopologyNode:  primaryNode,
 		}.String(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list clabernetes launcher pods for node %s/%s/%s: %w",
+		return nil, fmt.Errorf("failed to list clabernetes device pods for node %s/%s/%s: %w",
 			namespace, name, nodeName, err)
 	}
 	if len(list.Items) == 0 {
-		return nil, fmt.Errorf("clabernetes launcher pod for node %s/%s/%s was not found",
+		return nil, fmt.Errorf("clabernetes device pod for node %s/%s/%s was not found",
 			namespace, name, nodeName)
 	}
 
@@ -209,7 +217,7 @@ func (r *Runtime) launcherPod(
 	}
 
 	if len(list.Items) > 1 {
-		log.Warn("multiple clabernetes launcher pods matched node, using newest",
+		log.Warn("multiple clabernetes device pods matched node, using newest",
 			"namespace", namespace,
 			"lab", name,
 			"node", nodeName,
@@ -223,17 +231,17 @@ func (r *Runtime) launcherPod(
 func (r *Runtime) execInPod(
 	ctx context.Context,
 	pod *corev1.Pod,
+	containerName string,
 	command []string,
 ) ([]byte, []byte, int, error) {
 	if pod == nil {
-		return nil, nil, 0, fmt.Errorf("launcher pod is nil")
+		return nil, nil, 0, fmt.Errorf("device pod is nil")
 	}
 	if len(command) == 0 {
 		return nil, nil, 0, fmt.Errorf("command is required")
 	}
 
-	containerName := ""
-	if len(pod.Spec.Containers) != 0 {
+	if containerName == "" && len(pod.Spec.Containers) != 0 {
 		containerName = pod.Spec.Containers[0].Name
 	}
 

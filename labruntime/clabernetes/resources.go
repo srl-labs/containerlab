@@ -10,13 +10,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
-	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -62,7 +60,7 @@ func (r *Runtime) primitiveLabExists(
 	name,
 	namespace string,
 ) (bool, error) {
-	for _, gvr := range []schema.GroupVersionResource{nodeGVR, linkGVR, launcherProfileGVR} {
+	for _, gvr := range []schema.GroupVersionResource{nodeGVR, linkGVR, nodeProfileGVR} {
 		list, err := r.primitiveResourcesForTopology(ctx, gvr, name, namespace)
 		if err != nil {
 			return false, err
@@ -165,12 +163,8 @@ func primitiveLinkPendingReason(link *unstructured.Unstructured) string {
 		return "not found"
 	}
 
-	if statusError, _, _ := unstructured.NestedString(
-		link.Object,
-		"status",
-		"error",
-	); statusError != "" {
-		return statusError
+	if reason := conditionPendingReason(link, "Accepted"); reason != "" {
+		return reason
 	}
 
 	for _, endpointName := range []string{"endpointA", "endpointB"} {
@@ -203,37 +197,33 @@ func primitiveLinkPendingReason(link *unstructured.Unstructured) string {
 	return ""
 }
 
-func (r *Runtime) enablePrimitiveNodeDeployments(
-	ctx context.Context,
-	namespace string,
-	nodes map[string]*unstructured.Unstructured,
-) error {
-	patch := []byte(fmt.Sprintf(
-		`{"metadata":{"labels":{"%s":null}}}`,
-		clabernetesconstants.LabelDisableDeployments,
-	))
-
-	names := make([]string, 0, len(nodes))
-	for name := range nodes {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		_, err := r.client.Resource(nodeGVR).Namespace(namespace).Patch(
-			ctx,
-			name,
-			types.MergePatchType,
-			patch,
-			metav1.PatchOptions{},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to enable c9s Node deployment %s/%s: %w",
-				namespace, name, err)
+// conditionPendingReason reports why the named status condition is not yet True, or "" once it
+// is. The message is preferred over the machine reason because it is written for lab authors.
+func conditionPendingReason(obj *unstructured.Unstructured, conditionType string) string {
+	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	for _, raw := range conditions {
+		condition, ok := raw.(map[string]any)
+		if !ok {
+			continue
 		}
+		if condition["type"] != conditionType {
+			continue
+		}
+		if condition["status"] == "True" {
+			return ""
+		}
+
+		if message, ok := condition["message"].(string); ok && message != "" {
+			return message
+		}
+		if reason, ok := condition["reason"].(string); ok && reason != "" {
+			return reason
+		}
+
+		return fmt.Sprintf("waiting for %s", conditionType)
 	}
 
-	return nil
+	return fmt.Sprintf("waiting for %s", conditionType)
 }
 
 func (r *Runtime) deleteCreatedPrimitiveResources(
@@ -263,7 +253,7 @@ func nodeNetworkMode(node *unstructured.Unstructured) string {
 	return networkMode
 }
 
-func resolveLauncherNode(nodeName string, networkModes map[string]string) string {
+func resolvePrimaryNode(nodeName string, networkModes map[string]string) string {
 	current := nodeName
 	seen := map[string]struct{}{}
 
@@ -282,7 +272,7 @@ func resolveLauncherNode(nodeName string, networkModes map[string]string) string
 	}
 }
 
-func (r *Runtime) launcherNodeNames(
+func (r *Runtime) primaryNodeNames(
 	ctx context.Context,
 	topologyName,
 	namespace string,
@@ -305,27 +295,27 @@ func (r *Runtime) launcherNodeNames(
 			return nil, fmt.Errorf("node %q was not found in topology %s/%s",
 				nodeName, r.namespaceFor(namespace), topologyName)
 		}
-		resolved[nodeName] = resolveLauncherNode(nodeName, networkModes)
+		resolved[nodeName] = resolvePrimaryNode(nodeName, networkModes)
 	}
 
 	return resolved, nil
 }
 
-func uniqueLauncherNodes(nodeNames []string, launchers map[string]string) []string {
+func uniquePrimaryNodes(nodeNames []string, primaries map[string]string) []string {
 	unique := make([]string, 0, len(nodeNames))
 	seen := map[string]struct{}{}
 
 	for _, nodeName := range nodeNames {
-		launcher := launchers[nodeName]
-		if launcher == "" {
-			launcher = nodeName
+		primary := primaries[nodeName]
+		if primary == "" {
+			primary = nodeName
 		}
-		if _, ok := seen[launcher]; ok {
+		if _, ok := seen[primary]; ok {
 			continue
 		}
 
-		seen[launcher] = struct{}{}
-		unique = append(unique, launcher)
+		seen[primary] = struct{}{}
+		unique = append(unique, primary)
 	}
 
 	return unique

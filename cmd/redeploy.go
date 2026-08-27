@@ -118,6 +118,12 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.SkipLabDirectoryFileACLs,
 		"skip the lab directory extended ACLs provisioning",
 	)
+	c.Flags().BoolVar(
+		&o.Deploy.NoTopologyCR,
+		"no-topology-cr",
+		o.Deploy.NoTopologyCR,
+		noTopologyCRFlagHelp,
+	)
 
 	return c, nil
 }

@@ -226,10 +226,10 @@ var labRuntimeUnsupportedFlags = map[string][]string{ //nolint:gochecknoglobals
 		"restore", "restore-all", "skip-labdir-acl", "skip-post-deploy", "export-template",
 	},
 	"destroy": {
-		"cleanup", "graceful", "keep-mgmt-net", "max-workers", "node-filter",
+		"graceful", "keep-mgmt-net", "max-workers", "node-filter",
 	},
 	"redeploy": {
-		"cleanup", "graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
+		"graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
 		"max-workers", "network", "skip-labdir-acl", "skip-post-deploy", "export-template",
 	},
 }

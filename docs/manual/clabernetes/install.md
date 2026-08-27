@@ -4,15 +4,15 @@ Clabernetes runs on a Kubernetes cluster and hence requires one to be available 
 
 Clabernetes project consists of two main components:
 
-- Clabernetes manager (a.k.a. controller) - k8s controllers that reconcile c9s `Node`, `Link`, `LauncherProfile`, and compatibility `Topology` resources.
+- Clabernetes manager (a.k.a. controller) - k8s controllers that reconcile c9s `Node`, `Link`, `NodeProfile`, and `Topology` resources.
 - Clabverter - a CLI tool that converts containerlab topology files into Clabernetes resources.
 
 /// note | Using the containerlab runtime
 When you use [`containerlab --runtime clabernetes`](runtime.md), containerlab
-compiles the topology in memory and creates the primary `Node`, `Link`, and
-`LauncherProfile` custom resources directly. In that workflow you still need
-the Clabernetes manager and CRDs installed in the cluster, but you don't need
-to run `clabverter` for every deployment.
+creates the `Topology` custom resource for you (or, with `--no-topology-cr`,
+the primary `Node`, `Link`, and `NodeProfile` resources directly). In that
+workflow you still need the Clabernetes manager and CRDs installed in the
+cluster, but you don't need to run `clabverter` for every deployment.
 ///
 
 ## Clabernetes Manager
@@ -51,8 +51,6 @@ helm upgrade --install --version 0.0.0 --create-namespace --namespace c9s \
     --set manager.managerLogLevel=debug \
     --set manager.controllerLogLevel=debug \
     --set manager.imagePullPolicy=Always \
-    --set globalConfig.deployment.launcherImagePullPolicy=Always \
-    --set globalConfig.deployment.launcherLogLevel=debug \
     clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
 ```
 

@@ -1,8 +1,16 @@
 # Packet capture in Clabernetes
 
-It is quite interesting to see how Clabernetes uses different datapath stitching tricks to connect lab nodes running in different containers. Sometimes looking at the packets exchanged between the nodes can help to understand the inner workings of the setup and often comes in handy when troubleshooting.
+It is quite interesting to see how Clabernetes carries lab traffic between nodes running in different pods. Sometimes looking at the packets exchanged between the nodes can help to understand the inner workings of the setup and often comes in handy when troubleshooting.
 
 Capturing packets in Clabernetes is similar to capturing packets in Containerlab, with just one more indirection level added. Check the basics of [packet capture in Containerlab](../wireshark.md) to get started, because we will use the same technique here.
+
+All containers of a device pod share one network namespace, so `kubectl exec`
+with `tcpdump` sees the node's lab interfaces regardless of which container it
+runs in. When the device image itself has no `tcpdump`, the pod's `clabwire`
+connectivity sidecar provides a purpose-built capture helper
+(`kubectl exec <pod> -c clabwire -- /clabernetes/manager node-runtime packet-capture --help`)
+that streams pcap data for a plan-owned interface, including 802.1Q tags that
+the kernel would otherwise strip.
 
 ## Capture script
 

@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/log"
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
 	clabernetesconfig "github.com/clabernetes/clabernetes/config"
-	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	clabernetescontrollerstopology "github.com/clabernetes/clabernetes/controllers/topology"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,9 +14,9 @@ import (
 )
 
 type primitiveResourceSet struct {
-	launcherProfiles []*unstructured.Unstructured
-	links            []*unstructured.Unstructured
-	nodes            []*unstructured.Unstructured
+	nodeProfiles []*unstructured.Unstructured
+	links        []*unstructured.Unstructured
+	nodes        []*unstructured.Unstructured
 }
 
 type primitiveResourceGroup struct {
@@ -26,30 +25,20 @@ type primitiveResourceGroup struct {
 	objects []*unstructured.Unstructured
 }
 
+// groups returns the resource groups in the same order the c9s Topology controller emits them:
+// profiles carry the policy Nodes resolve, and Links must be complete before their Nodes so the
+// node controller never plans against a partial wiring view.
 func (s *primitiveResourceSet) groups() []primitiveResourceGroup {
 	return []primitiveResourceGroup{
-		{gvr: launcherProfileGVR, kind: "LauncherProfile", objects: s.launcherProfiles},
+		{gvr: nodeProfileGVR, kind: "NodeProfile", objects: s.nodeProfiles},
 		{gvr: linkGVR, kind: "Link", objects: s.links},
 		{gvr: nodeGVR, kind: "Node", objects: s.nodes},
 	}
 }
 
-// stagePrimitiveNodeDeployments prevents the asynchronous Node controller from creating launcher
-// workloads while the Link controller is still binding the complete, already-created wiring set.
-func stagePrimitiveNodeDeployments(set *primitiveResourceSet) {
-	for _, node := range set.nodes {
-		labels := node.GetLabels()
-		if labels == nil {
-			labels = map[string]string{}
-		}
-		labels[clabernetesconstants.LabelDisableDeployments] = "true"
-		node.SetLabels(labels)
-	}
-}
-
-// compilePrimitiveResources runs the same compiler and renderer used by c9s' compatibility
-// Topology controller, but keeps the Topology in memory. Only the resulting O(1)-per-object
-// LauncherProfile, Link, and Node resources are sent to the Kubernetes API server.
+// compilePrimitiveResources runs the same fail-closed compiler and renderer used by c9s' Topology
+// controller, but keeps the Topology in memory. Only the resulting O(1)-per-object NodeProfile,
+// Link, and Node resources are sent to the Kubernetes API server.
 func compilePrimitiveResources(
 	desiredTopology *unstructured.Unstructured,
 ) (*primitiveResourceSet, error) {
@@ -65,35 +54,28 @@ func compilePrimitiveResources(
 		return nil, fmt.Errorf("failed to prepare c9s primitive resources: %w", err)
 	}
 
-	// In-memory objects do not pass through API-server defaulting.
-	if topology.Spec.Connectivity == "" {
-		topology.Spec.Connectivity = string(clabernetesapisv1alpha1.LinkConnectivityVXLAN)
-	}
-
 	compiled, err := clabernetescontrollerstopology.CompileTopologyWithOptions(
 		c9sCompileLogger{},
 		topology,
 		clabernetescontrollerstopology.CompileOptions{
-			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyWarn,
+			UnsupportedFieldPolicy: clabernetescontrollerstopology.UnsupportedFieldPolicyError,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile containerlab topology for c9s: %w", err)
 	}
 
-	configurePrimitiveReadiness(topology)
-
 	set := &primitiveResourceSet{}
-	for _, profile := range clabernetescontrollerstopology.RenderLauncherProfiles(
+	for _, profile := range clabernetescontrollerstopology.RenderNodeProfiles(
 		topology,
 		compiled,
 		clabernetesconfig.GetFakeManager,
 	) {
-		obj, err := primitiveObject(profile, "LauncherProfile", desiredTopology)
+		obj, err := primitiveObject(profile, "NodeProfile", desiredTopology)
 		if err != nil {
 			return nil, err
 		}
-		set.launcherProfiles = append(set.launcherProfiles, obj)
+		set.nodeProfiles = append(set.nodeProfiles, obj)
 	}
 
 	for _, link := range clabernetescontrollerstopology.RenderLinks(
@@ -121,13 +103,6 @@ func compilePrimitiveResources(
 	}
 
 	return set, nil
-}
-
-// In-memory compatibility Topologies do not pass through API-server defaulting. Enable c9s'
-// generic nested-container readiness explicitly, without inferring behavior from kinds, images,
-// ports, or credentials in containerlab.
-func configurePrimitiveReadiness(topology *clabernetesapisv1alpha1.Topology) {
-	topology.Spec.StatusProbes = clabernetesapisv1alpha1.StatusProbes{Enabled: true}
 }
 
 func primitiveObject(

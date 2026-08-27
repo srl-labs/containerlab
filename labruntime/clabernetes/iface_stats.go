@@ -42,9 +42,9 @@ func (r *Runtime) pollInterfaceStats(
 					continue
 				}
 
-				pod, err := r.launcherPod(ctx, state.Name, state.Namespace, node.Name)
+				pod, err := r.devicePod(ctx, state.Name, state.Namespace, node.Name)
 				if err != nil {
-					log.Debug("failed to resolve clabernetes launcher pod for interface stats",
+					log.Debug("failed to resolve clabernetes device pod for interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,
@@ -53,9 +53,15 @@ func (r *Runtime) pollInterfaceStats(
 					continue
 				}
 
-				containerName, err := r.nestedContainerName(ctx, pod, node.Name)
+				containerName, err := r.deviceContainerName(
+					ctx,
+					pod,
+					state.Name,
+					state.Namespace,
+					node.Name,
+				)
 				if err != nil {
-					log.Debug("failed to resolve nested container for interface stats",
+					log.Debug("failed to resolve device container for interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,
@@ -65,8 +71,8 @@ func (r *Runtime) pollInterfaceStats(
 					continue
 				}
 
-				stdout, stderr, rc, err := r.execInPod(ctx, pod,
-					[]string{"docker", "exec", containerName, "cat", "/proc/net/dev"})
+				stdout, stderr, rc, err := r.execInPod(ctx, pod, containerName,
+					[]string{"cat", "/proc/net/dev"})
 				if err != nil {
 					log.Debug("failed to collect clabernetes interface stats",
 						"namespace", state.Namespace,

@@ -2,7 +2,6 @@ package clabernetes
 
 import (
 	"fmt"
-	"net"
 	"sort"
 
 	"github.com/charmbracelet/log"
@@ -54,6 +53,13 @@ func topologyObject(
 		"definition": map[string]any{
 			"containerlab": definition,
 		},
+		// The runtime's readiness contract requires c9s status probes. Persist the setting
+		// explicitly: CRD defaulting cannot materialize it in an absent statusProbes object, and
+		// the controller's typed writes would then pin the zero value (disabled) instead. This
+		// mirrors configurePrimitiveReadiness on the client-side compile.
+		"statusProbes": map[string]any{
+			"enabled": true,
+		},
 	}
 	for _, opt := range opts {
 		opt(spec)
@@ -69,6 +75,9 @@ func topologyObject(
 	}
 }
 
+// stateFromTopology builds the lab-state skeleton from a Topology CR. The direct-runtime
+// Topology status intentionally carries only aggregate readiness -- per-node detail is always
+// filled in from the Node objects and workloads by enrichState.
 func stateFromTopology(obj *unstructured.Unstructured, namespace string) *clablabruntime.LabState {
 	if obj.GetNamespace() != "" {
 		namespace = obj.GetNamespace()
@@ -80,39 +89,21 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *clabla
 	if owner == "" {
 		owner = obj.GetAnnotations()[clabconstants.Owner]
 	}
-	nodeReadiness, _, _ := unstructured.NestedStringMap(
-		obj.Object,
-		"status",
-		"nodeReadiness",
-	)
-	exposedPorts, _, _ := unstructured.NestedMap(obj.Object, "status", "exposedPorts")
 	nodeSpecs := nodeSpecsFromTopology(obj)
 
-	nodeNames := make([]string, 0, len(nodeSpecs)+len(nodeReadiness))
-	seenNodes := map[string]struct{}{}
+	nodeNames := make([]string, 0, len(nodeSpecs))
 	for nodeName := range nodeSpecs {
-		nodeNames = append(nodeNames, nodeName)
-		seenNodes[nodeName] = struct{}{}
-	}
-	for nodeName := range nodeReadiness {
-		if _, ok := seenNodes[nodeName]; ok {
-			continue
-		}
 		nodeNames = append(nodeNames, nodeName)
 	}
 	sort.Strings(nodeNames)
 
 	nodes := make([]clablabruntime.NodeState, 0, len(nodeNames))
 	for _, nodeName := range nodeNames {
-		nodeState := nodeReadiness[nodeName]
 		spec := nodeSpecs[nodeName]
 		nodes = append(nodes, clablabruntime.NodeState{
-			Name:                nodeName,
-			Kind:                spec.Kind,
-			Image:               spec.Image,
-			State:               nodeState,
-			Ready:               nodeState == "ready",
-			LoadBalancerAddress: loadBalancerAddress(exposedPorts, nodeName),
+			Name:  nodeName,
+			Kind:  spec.Kind,
+			Image: spec.Image,
 		})
 	}
 
@@ -141,15 +132,6 @@ type containerlabDefinition struct {
 func nodeSpecsFromTopology(obj *unstructured.Unstructured) map[string]nodeSpec {
 	specs := map[string]nodeSpec{}
 
-	statusConfigs, _, _ := unstructured.NestedStringMap(obj.Object, "status", "configs")
-	for _, config := range statusConfigs {
-		mergeNodeSpecs(specs, config)
-	}
-
-	if len(specs) != 0 {
-		return specs
-	}
-
 	definition, _, _ := unstructured.NestedString(
 		obj.Object,
 		"spec",
@@ -177,25 +159,3 @@ func mergeNodeSpecs(specs map[string]nodeSpec, definition string) {
 	}
 }
 
-func loadBalancerAddress(exposedPorts map[string]any, nodeName string) string {
-	raw, ok := exposedPorts[nodeName]
-	if !ok {
-		return ""
-	}
-
-	nodeExpose, ok := raw.(map[string]any)
-	if !ok {
-		return ""
-	}
-
-	addr, ok := nodeExpose["loadBalancerAddress"].(string)
-	if !ok {
-		return ""
-	}
-
-	if net.ParseIP(addr) == nil {
-		return ""
-	}
-
-	return addr
-}

@@ -72,6 +72,7 @@ func (c *CLab) Deploy(
 		if err != nil {
 			return nil, err
 		}
+		req.NoTopologyCR = options.noTopologyCR
 
 		plan, err := planner.Plan(ctx, req)
 		if err != nil {

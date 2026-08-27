@@ -94,6 +94,10 @@ func (r *Runtime) ensureLabNamespace(
 			Labels: map[string]string{
 				labelRuntime:       clabernetesAppValue,
 				labelTopologyOwner: name,
+				// The c9s connectivity sidecar is privileged; without this label a cluster
+				// enforcing a restrictive Pod Security default rejects every device pod.
+				// clabverter stamps the same label on the namespaces it emits.
+				"pod-security.kubernetes.io/enforce": "privileged",
 			},
 		},
 	}, metav1.CreateOptions{})

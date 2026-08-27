@@ -27,14 +27,14 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 	if err != nil {
 		return err
 	}
-	launchers, err := r.launcherNodeNames(ctx, req.Name, namespace, targets)
+	primaries, err := r.primaryNodeNames(ctx, req.Name, namespace, targets)
 	if err != nil {
 		return err
 	}
-	launcherNodes := uniqueLauncherNodes(targets, launchers)
+	primaryNodes := uniquePrimaryNodes(targets, primaries)
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	for _, nodeName := range launcherNodes {
+	for _, nodeName := range primaryNodes {
 		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
 		if err != nil {
 			return err
@@ -67,7 +67,7 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 			return err
 		}
 	}
-	for _, nodeName := range launcherNodes {
+	for _, nodeName := range primaryNodes {
 		if err := r.setNodeIgnoreReconcile(ctx, req.Name, namespace, nodeName, false); err != nil {
 			return err
 		}
@@ -158,17 +158,17 @@ func (r *Runtime) setNodesReplicas(
 	if err != nil {
 		return err
 	}
-	launchers, err := r.launcherNodeNames(ctx, req.Name, namespace, targets)
+	primaries, err := r.primaryNodeNames(ctx, req.Name, namespace, targets)
 	if err != nil {
 		return err
 	}
-	launcherNodes := uniqueLauncherNodes(targets, launchers)
+	primaryNodes := uniquePrimaryNodes(targets, primaries)
 
 	if replicas == 0 {
 		if err := r.setTopologyIgnoreReconcile(ctx, req.Name, namespace, true); err != nil {
 			return err
 		}
-		for _, nodeName := range launcherNodes {
+		for _, nodeName := range primaryNodes {
 			if err := r.setNodeIgnoreReconcile(
 				ctx,
 				req.Name,
@@ -181,7 +181,7 @@ func (r *Runtime) setNodesReplicas(
 		}
 	}
 
-	for _, nodeName := range launcherNodes {
+	for _, nodeName := range primaryNodes {
 		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
 		if err != nil {
 			return err
@@ -207,7 +207,7 @@ func (r *Runtime) setNodesReplicas(
 	}
 
 	if replicas > 0 {
-		for _, nodeName := range launcherNodes {
+		for _, nodeName := range primaryNodes {
 			if err := r.setNodeIgnoreReconcile(
 				ctx,
 				req.Name,
@@ -380,17 +380,17 @@ func (r *Runtime) deploymentForNode(
 	nodeName string,
 ) (*appsv1.Deployment, error) {
 	namespace = r.namespaceFor(namespace)
-	launchers, err := r.launcherNodeNames(ctx, name, namespace, []string{nodeName})
+	primaries, err := r.primaryNodeNames(ctx, name, namespace, []string{nodeName})
 	if err != nil {
 		return nil, err
 	}
-	launcherNode := launchers[nodeName]
+	primaryNode := primaries[nodeName]
 
 	list, err := r.kubeClient.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{
 			labelApp:           clabernetesAppValue,
 			labelTopologyOwner: name,
-			labelTopologyNode:  launcherNode,
+			labelTopologyNode:  primaryNode,
 		}.String(),
 	})
 	if err != nil {

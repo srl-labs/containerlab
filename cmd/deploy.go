@@ -23,6 +23,10 @@ import (
 
 const (
 	postDeployVersionCheckTimeout = 3 * time.Second
+
+	noTopologyCRFlagHelp = "do not create a clabernetes Topology resource; compile the topology " +
+		"client-side and manage the lab's Node, Link, and NodeProfile resources directly " +
+		"(clabernetes runtime only)"
 )
 
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
@@ -173,6 +177,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 			"Can be specified multiple times. Overrides --restore-all for specified nodes.",
 	)
 
+	c.Flags().BoolVar(
+		&o.Deploy.NoTopologyCR,
+		"no-topology-cr",
+		o.Deploy.NoTopologyCR,
+		noTopologyCRFlagHelp,
+	)
+
 	return c, nil
 }
 
@@ -183,6 +194,11 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 			"--dry-run cannot be combined with --reconfigure: " +
 				"reconfigure always destroys and redeploys the full lab",
 		)
+	}
+
+	if o.Deploy.NoTopologyCR && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--no-topology-cr is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
 	}
 
 	o.Global.BackupTopologyFile = !o.Deploy.DryRun
@@ -224,7 +240,8 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetSkipPostDeploy(o.Deploy.SkipPostDeploy).
 		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs).
 		SetRestoreAll(o.Deploy.RestoreAll).
-		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots)
+		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots).
+		SetNoTopologyCR(o.Deploy.NoTopologyCR)
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {

@@ -1,6 +1,6 @@
 # Topology Configuration
 
-The Topology custom resource (CR) is the high-level compatibility API for deploying a complete containerlab definition. c9s compiles it into the primary Node, Link, and LauncherProfile resources. This page covers the Topology configuration options.
+The Topology custom resource (CR) is the high-level API for deploying a complete containerlab definition. c9s compiles it into the primary Node, Link, and NodeProfile resources. This page covers the Topology configuration options.
 
 ## Definition
 
@@ -59,7 +59,7 @@ spec:
 
 ## Deployment Configuration
 
-Controls launcher pod settings.
+Controls the Kubernetes side of the device workloads.
 
 ### Resources
 
@@ -102,7 +102,7 @@ spec:
 
 ### File Mounting
 
-Mount files from ConfigMaps or URLs into launcher pods.
+Mount files from ConfigMaps, Secrets, or URLs into the device pods.
 
 #### From ConfigMap
 
@@ -147,16 +147,8 @@ PVC size cannot be reduced after creation. Storage class is immutable after crea
 
 ### Other Deployment Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `deployment.privilegedLauncher` | bool | `true` | Run launcher in privileged mode |
-| `deployment.containerlabDebug` | bool | `false` | Enable containerlab debug logging |
-| `deployment.containerlabTimeout` | string | - | Deploy timeout (e.g., "30m") |
-| `deployment.containerlabVersion` | string | - | Override containerlab version |
-| `deployment.launcherImage` | string | - | Override launcher image |
-| `deployment.launcherImagePullPolicy` | enum | - | Image pull policy: IfNotPresent, Always, Never |
-| `deployment.launcherLogLevel` | enum | - | Log level: disabled, critical, warn, info, debug |
-| `deployment.extraEnv` | list | - | Additional environment variables |
+The device image is pulled natively by the kubelet; use `imagePull.policy` and
+`imagePull.pullSecrets` to control it.
 
 ## Status Probes
 
@@ -190,41 +182,23 @@ spec:
 
 ## Image Pull Configuration
 
-Control image pulling behavior:
+The kubelet pulls device images natively:
 
 ```yaml
 spec:
   imagePull:
-    pullThroughOverride: auto
-    insecureRegistries:
-      - internal-registry.local:5000
+    policy: IfNotPresent
     pullSecrets:
       - my-registry-secret
-    dockerDaemonConfig: daemon-config-secret
-    dockerConfig: docker-config-secret
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `pullThroughOverride` | enum | Pull-through mode: auto, always, never |
-| `insecureRegistries` | list | Registries without valid TLS |
-| `pullSecrets` | list | Kubernetes secrets for private registries |
-| `dockerDaemonConfig` | string | Secret with daemon.json |
-| `dockerConfig` | string | Secret with Docker config.json |
+| `policy` | enum | Kubernetes pull policy: IfNotPresent, Always, Never |
+| `pullSecrets` | list | Same-namespace dockerconfigjson Secrets handed to the kubelet |
 
-## Connectivity
-
-Inter-node tunnel type for datapath stitching:
-
-| Value | Description |
-|-------|-------------|
-| `vxlan` | VXLAN tunnels (default) |
-| `slurpeeth` | Experimental TCP tunnels (avoids MTU issues) |
-
-```yaml
-spec:
-  connectivity: vxlan
-```
+The manager also uses the pull secrets to read image metadata from the
+registry when planning a device workload.
 
 ## Naming
 
@@ -273,8 +247,6 @@ spec:
         - filePath: /opt/srlinux/etc/license.key
           configMapName: srl-license
           configMapPath: license.key
-    privilegedLauncher: true
-    launcherLogLevel: info
   statusProbes:
     enabled: true
     probeConfiguration:
@@ -283,9 +255,8 @@ spec:
         username: admin
         password: NokiaSrl1!
   imagePull:
-    pullThroughOverride: auto
+    policy: IfNotPresent
   naming: prefixed
-  connectivity: vxlan
   definition:
     containerlab: |
       name: production

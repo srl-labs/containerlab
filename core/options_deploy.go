@@ -16,6 +16,7 @@ type DeployOptions struct {
 	skipLabDirFileACLs   bool     // skip setting the extended File ACL entries on the lab directory.
 	restoreAll           string   // restoreAll specifies a directory to scan for snapshot files.
 	restoreNodeSnapshots []string // restoreNodeSnapshots maps node names to specific snapshot file paths.
+	noTopologyCR         bool     // noTopologyCR deploys a lab-runtime lab without a Topology resource.
 }
 
 // NewDeployOptions creates a new DeployOptions instance with the specified maxWorkers value.
@@ -37,6 +38,18 @@ func (d *DeployOptions) SetReconfigure(b bool) *DeployOptions {
 // Reconfigure returns the reconfigure option value.
 func (d *DeployOptions) Reconfigure() bool {
 	return d.reconfigure
+}
+
+// SetNoTopologyCR sets the noTopologyCR option and returns the updated DeployOptions instance.
+func (d *DeployOptions) SetNoTopologyCR(b bool) *DeployOptions {
+	d.noTopologyCR = b
+
+	return d
+}
+
+// NoTopologyCR returns the noTopologyCR option value.
+func (d *DeployOptions) NoTopologyCR() bool {
+	return d.noTopologyCR
 }
 
 // SetDryRun sets the dryRun option and returns the updated DeployOptions instance.

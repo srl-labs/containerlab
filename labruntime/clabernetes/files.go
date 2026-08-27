@@ -26,9 +26,12 @@ import (
 )
 
 const (
-	fileModeRead                 = "read"
-	fileModeExecute              = "execute"
-	inlineStartupConfigMountPath = "/clabernetes/startup-config"
+	fileModeRead    = "read"
+	fileModeExecute = "execute"
+	// An inline startup-config is by definition a partial configuration merged over the kind
+	// default; the .partial marker in the staged path is how node implementations detect that
+	// (same convention as clabverter).
+	inlineStartupConfigMountPath = "/clabernetes/startup-config.partial.cfg"
 	maxConfigMapFileBytes        = 950_000
 	kubernetesNameMaxLen         = 63
 	clabernetesNamingNonPrefixed = "non-prefixed"

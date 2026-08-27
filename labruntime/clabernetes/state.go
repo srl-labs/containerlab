@@ -33,22 +33,38 @@ func stateFromNodeResources(
 
 	state.Nodes = make([]clablabruntime.NodeState, 0, len(nodeResources))
 	for idx := range nodeResources {
-		nodeResource := &nodeResources[idx]
-		node := clablabruntime.NodeState{Name: nodeResource.GetName()}
-		node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
-		node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
-		node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
-		node.Ready = node.State == "ready"
-		node.LoadBalancerAddress, _, _ = unstructured.NestedString(
-			nodeResource.Object,
-			"status",
-			"exposedPorts",
-			"loadBalancerAddress",
-		)
-		state.Nodes = append(state.Nodes, node)
+		state.Nodes = append(state.Nodes, nodeStateFromResource(&nodeResources[idx]))
 	}
 
 	return state
+}
+
+func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabruntime.NodeState {
+	node := clablabruntime.NodeState{Name: nodeResource.GetName()}
+	node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
+	node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
+	node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
+	node.Ready = node.State == "ready"
+	node.LoadBalancerAddress, _, _ = unstructured.NestedString(
+		nodeResource.Object,
+		"status",
+		"exposedPorts",
+		"loadBalancerAddress",
+	)
+	node.MgmtIPv4Address, _, _ = unstructured.NestedString(
+		nodeResource.Object,
+		"status",
+		"directManagement",
+		"ipv4",
+	)
+	node.MgmtIPv6Address, _, _ = unstructured.NestedString(
+		nodeResource.Object,
+		"status",
+		"directManagement",
+		"ipv6",
+	)
+
+	return node
 }
 
 func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
@@ -69,21 +85,8 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	networkModes := make(map[string]string, len(nodeResources.Items))
 	for idx := range nodeResources.Items {
 		nodeResource := &nodeResources.Items[idx]
-		nodeName := nodeResource.GetName()
-		node := nodesByName[nodeName]
-		node.Name = nodeName
-		node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
-		node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
-		node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
-		node.Ready = node.State == "ready"
-		node.LoadBalancerAddress, _, _ = unstructured.NestedString(
-			nodeResource.Object,
-			"status",
-			"exposedPorts",
-			"loadBalancerAddress",
-		)
-		nodesByName[nodeName] = node
-		networkModes[nodeName] = nodeNetworkMode(nodeResource)
+		nodesByName[nodeResource.GetName()] = nodeStateFromResource(nodeResource)
+		networkModes[nodeResource.GetName()] = nodeNetworkMode(nodeResource)
 	}
 
 	deployments, err := r.deploymentsForTopology(ctx, state.Name, state.Namespace)
@@ -143,7 +146,7 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 
 		matched := false
 		for logicalNodeName, node := range nodesByName {
-			if resolveLauncherNode(logicalNodeName, networkModes) != nodeName {
+			if resolvePrimaryNode(logicalNodeName, networkModes) != nodeName {
 				continue
 			}
 

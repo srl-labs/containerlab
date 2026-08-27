@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 type preparedDeployment struct {
@@ -39,9 +41,15 @@ func prepareDesiredDeployment(
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
 	}
-
 	primitives, err := compilePrimitiveResources(desiredTopology)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := validatePrimitiveNodeKinds(primitives); err != nil {
+		return nil, err
+	}
+	if err := validatePrimitiveNodeNames(primitives); err != nil {
 		return nil, err
 	}
 
@@ -50,6 +58,62 @@ func prepareDesiredDeployment(
 		configMaps: stagedConfigMaps,
 		primitives: primitives,
 	}, nil
+}
+
+// unsupportedC9sNodeKinds names containerlab pseudo-node kinds that reference host-machine
+// constructs a Kubernetes pod cannot provide. The c9s compiler treats kinds as opaque, so the
+// runtime rejects them client-side before anything is created.
+var unsupportedC9sNodeKinds = map[string]string{ //nolint:gochecknoglobals
+	"bridge":        "host Linux bridges do not exist in a Kubernetes pod network",
+	"ovs-bridge":    "host Open vSwitch bridges do not exist in a Kubernetes pod network",
+	"host":          "the containerlab host machine is not part of a Kubernetes cluster",
+	"ext-container": "externally managed containers are not reachable from c9s pods",
+	"k8s-kind":      "nested kind clusters are not supported by the c9s runtime",
+}
+
+// validatePrimitiveNodeKinds rejects pseudo-node kinds that cannot be realized by c9s.
+func validatePrimitiveNodeKinds(primitives *primitiveResourceSet) error {
+	var unsupported []string
+	for _, node := range primitives.nodes {
+		kind, _, _ := unstructured.NestedString(node.Object, "spec", "kind")
+		reason, isUnsupported := unsupportedC9sNodeKinds[kind]
+		if !isUnsupported {
+			continue
+		}
+		unsupported = append(unsupported, fmt.Sprintf(
+			"node %q uses pseudo-node kind %q: %s", node.GetName(), kind, reason))
+	}
+	if len(unsupported) == 0 {
+		return nil
+	}
+	sort.Strings(unsupported)
+
+	return fmt.Errorf("topology contains features unsupported by c9s: %s",
+		strings.Join(unsupported, "; "))
+}
+
+// validatePrimitiveNodeNames rejects node names Kubernetes cannot carry. c9s uses containerlab
+// node names verbatim as Node object, Deployment, and Service names, so every node name must be
+// a DNS-1035 label. Failing here keeps the deploy fail-closed instead of surfacing an opaque
+// API-server rejection after some resources were already created.
+func validatePrimitiveNodeNames(primitives *primitiveResourceSet) error {
+	var invalid []string
+	for _, node := range primitives.nodes {
+		name := node.GetName()
+		if errs := validation.IsDNS1035Label(name); len(errs) != 0 {
+			invalid = append(invalid, fmt.Sprintf("%s (%s)", name, errs[0]))
+		}
+	}
+	if len(invalid) == 0 {
+		return nil
+	}
+	sort.Strings(invalid)
+
+	return fmt.Errorf(
+		"c9s node names must be lowercase RFC 1035 labels "+
+			"(start with a letter, contain only a-z, 0-9 and '-'): %s",
+		strings.Join(invalid, "; "),
+	)
 }
 
 // Validate compiles the containerlab/c9s subset and stages all local-path inputs in memory.
@@ -100,7 +164,7 @@ func (r *Runtime) Plan(
 		return nil, err
 	}
 	if !namespaceExists {
-		appendAllDesiredCreates(plan, namespace, prepared)
+		appendAllDesiredCreates(plan, namespace, prepared, req.NoTopologyCR)
 		sortDeployPlan(plan)
 
 		return plan, nil
@@ -109,7 +173,14 @@ func (r *Runtime) Plan(
 	existingTopology, err := r.client.Resource(topologyGVR).Namespace(namespace).
 		Get(ctx, req.Name, metav1.GetOptions{})
 	if err == nil {
-		updated := reconciledPrimitiveObject(existingTopology, prepared.topology, false)
+		if req.NoTopologyCR {
+			return nil, fmt.Errorf(
+				"clabernetes lab %s/%s is owned by a Topology resource; "+
+					"deploy without --no-topology-cr to reconcile it, or destroy the lab first",
+				namespace, req.Name)
+		}
+
+		updated := reconciledPrimitiveObject(existingTopology, prepared.topology)
 		if !primitiveObjectsConform(existingTopology, updated) {
 			appendPlanChange(plan, clablabruntime.ChangeUpdate, "Topology", namespace, req.Name)
 		}
@@ -125,13 +196,19 @@ func (r *Runtime) Plan(
 			namespace, req.Name, err)
 	}
 
-	if err := r.planPrimitiveResources(ctx, namespace, req.Name, prepared.primitives, plan); err != nil {
-		return nil, err
+	if req.NoTopologyCR {
+		err := r.planPrimitiveResources(ctx, namespace, req.Name, prepared.primitives, plan)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// The controller compiles and owns the primitive resources once the Topology exists, so
+		// the plan reports only the resources containerlab itself would create.
+		appendPlanChange(plan, clablabruntime.ChangeCreate, "Topology", namespace, req.Name)
 	}
 	if err := r.planConfigMaps(ctx, namespace, req.Name, prepared.configMaps, plan); err != nil {
 		return nil, err
 	}
-
 	sortDeployPlan(plan)
 
 	return plan, nil
@@ -172,11 +249,28 @@ func appendAllDesiredCreates(
 	plan *clablabruntime.DeployPlan,
 	namespace string,
 	prepared *preparedDeployment,
+	noTopologyCR bool,
 ) {
-	for _, group := range prepared.primitives.groups() {
-		for _, obj := range group.objects {
-			appendPlanChange(plan, clablabruntime.ChangeCreate, group.kind, namespace, obj.GetName())
+	if noTopologyCR {
+		for _, group := range prepared.primitives.groups() {
+			for _, obj := range group.objects {
+				appendPlanChange(
+					plan,
+					clablabruntime.ChangeCreate,
+					group.kind,
+					namespace,
+					obj.GetName(),
+				)
+			}
 		}
+	} else {
+		appendPlanChange(
+			plan,
+			clablabruntime.ChangeCreate,
+			"Topology",
+			namespace,
+			prepared.topology.GetName(),
+		)
 	}
 	for _, configMap := range prepared.configMaps {
 		appendPlanChange(plan, clablabruntime.ChangeCreate, "ConfigMap", namespace, configMap.name)
@@ -209,7 +303,7 @@ func (r *Runtime) planPrimitiveResources(
 				continue
 			}
 
-			updated := reconciledPrimitiveObject(actual, obj, false)
+			updated := reconciledPrimitiveObject(actual, obj)
 			if !primitiveObjectsConform(actual, updated) {
 				appendPlanChange(plan, clablabruntime.ChangeUpdate, group.kind, namespace, obj.GetName())
 			}
@@ -219,7 +313,7 @@ func (r *Runtime) planPrimitiveResources(
 	for _, group := range []primitiveResourceGroup{
 		{gvr: linkGVR, kind: "Link"},
 		{gvr: nodeGVR, kind: "Node"},
-		{gvr: launcherProfileGVR, kind: "LauncherProfile"},
+		{gvr: nodeProfileGVR, kind: "NodeProfile"},
 	} {
 		for name, actual := range existing[group.gvr] {
 			if actual.GetLabels()[labelTopologyOwner] != topologyName {
