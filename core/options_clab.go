@@ -139,7 +139,6 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 			c.globalRuntimeName = name
 
 			lr, err := clablabruntime.Init(name, clablabruntime.Config{
-				Debug:     rtconfig != nil && rtconfig.Debug,
 				Timeout:   runtimeTimeout(rtconfig),
 				Namespace: labRuntimeNamespace(rtconfig),
 			})

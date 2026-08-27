@@ -50,17 +50,18 @@ func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) e
 			deployment.Spec.Replicas = &replicas
 		}
 
-		_, err = r.kubeClient.AppsV1().Deployments(namespace).
+		restarted, err := r.kubeClient.AppsV1().Deployments(namespace).
 			Update(ctx, deployment, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to restart clabernetes node %s/%s/%s: %w",
 				namespace, req.Name, nodeName, err)
 		}
 
-		if err := r.waitDeploymentReplicas(
+		if err := r.waitDeploymentRollout(
 			ctx,
 			namespace,
-			deployment.Name,
+			restarted.Name,
+			restarted.Generation,
 			1,
 			req.Timeout,
 		); err != nil {
@@ -188,17 +189,18 @@ func (r *Runtime) setNodesReplicas(
 		}
 
 		deployment.Spec.Replicas = &replicas
-		_, err = r.kubeClient.AppsV1().Deployments(namespace).
+		scaled, err := r.kubeClient.AppsV1().Deployments(namespace).
 			Update(ctx, deployment, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to set clabernetes node %s/%s/%s replicas to %d: %w",
 				namespace, req.Name, nodeName, replicas, err)
 		}
 
-		if err := r.waitDeploymentReplicas(
+		if err := r.waitDeploymentRollout(
 			ctx,
 			namespace,
-			deployment.Name,
+			scaled.Name,
+			scaled.Generation,
 			replicas,
 			req.Timeout,
 		); err != nil {
@@ -324,10 +326,18 @@ func (r *Runtime) setTopologyIgnoreReconcile(
 	return nil
 }
 
-func (r *Runtime) waitDeploymentReplicas(
+// waitDeploymentRollout blocks until the Deployment controller has acted on the spec generation
+// this operation wrote and the rollout has settled on the requested replica count.
+//
+// Ready replicas alone are not a rollout signal: during a rolling update the outgoing pod keeps
+// reporting ready until the replacement is available, so a restart would return before the new
+// pod had even been created. Comparing the total replica count against the updated one is what
+// rules out a pod that still belongs to the previous pod template.
+func (r *Runtime) waitDeploymentRollout(
 	ctx context.Context,
 	namespace,
 	name string,
+	generation int64,
 	replicas int32,
 	timeout time.Duration,
 ) error {
@@ -343,13 +353,18 @@ func (r *Runtime) waitDeploymentReplicas(
 					namespace, name, err)
 			}
 
-			if replicas == 0 {
-				return deployment.Status.Replicas == 0 &&
-					deployment.Status.AvailableReplicas == 0, nil
+			status := deployment.Status
+			if status.ObservedGeneration < generation {
+				return false, nil
 			}
 
-			return deployment.Status.ReadyReplicas >= replicas &&
-				deployment.Status.AvailableReplicas >= replicas, nil
+			if replicas == 0 {
+				return status.Replicas == 0 && status.AvailableReplicas == 0, nil
+			}
+
+			return status.UpdatedReplicas >= replicas &&
+				status.Replicas == status.UpdatedReplicas &&
+				status.AvailableReplicas >= replicas, nil
 		})
 }
 

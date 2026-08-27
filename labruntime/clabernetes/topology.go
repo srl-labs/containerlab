@@ -158,4 +158,3 @@ func mergeNodeSpecs(specs map[string]nodeSpec, definition string) {
 		specs[nodeName] = spec
 	}
 }
-

@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -500,10 +501,10 @@ func TestPrimitiveResourcesUseCurrentC9sAPI(t *testing.T) {
 	t.Parallel()
 
 	for name, gvr := range map[string]schema.GroupVersionResource{
-		"topology":         topologyGVR,
-		"node":             nodeGVR,
-		"link":             linkGVR,
-		"node profile":     nodeProfileGVR,
+		"topology":     topologyGVR,
+		"node":         nodeGVR,
+		"link":         linkGVR,
+		"node profile": nodeProfileGVR,
 	} {
 		if gvr.Group != "c9s.run" || gvr.Version != "v1alpha1" {
 			t.Fatalf("unexpected %s GVR: %+v", name, gvr)
@@ -2182,6 +2183,127 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	}
 }
 
+func TestWaitDeploymentRolloutWaitsForTheOutgoingReplicaToGo(t *testing.T) {
+	t.Parallel()
+
+	// Mid rolling update: the Deployment controller has observed the new generation and the
+	// replacement pod is up, but the outgoing pod is still counted and still available. Ready
+	// replicas alone would call this settled.
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "server",
+			Namespace:  defaultNamespace,
+			Generation: 2,
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 2,
+			Replicas:           2,
+			UpdatedReplicas:    1,
+			ReadyReplicas:      1,
+			AvailableReplicas:  1,
+		},
+	}
+
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := r.waitDeploymentRollout(ctx, defaultNamespace, "server", 2, 1, 50*time.Millisecond)
+	if err == nil {
+		t.Fatal("rollout wait returned while the previous pod template was still running")
+	}
+}
+
+func TestWaitDeploymentRolloutWaitsForTheObservedGeneration(t *testing.T) {
+	t.Parallel()
+
+	// The write landed but the Deployment controller has not acted on it yet, so the status
+	// still describes the previous pod template.
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "server",
+			Namespace:  defaultNamespace,
+			Generation: 3,
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 2,
+			Replicas:           1,
+			UpdatedReplicas:    1,
+			ReadyReplicas:      1,
+			AvailableReplicas:  1,
+		},
+	}
+
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := r.waitDeploymentRollout(ctx, defaultNamespace, "server", 3, 1, 50*time.Millisecond)
+	if err == nil {
+		t.Fatal("rollout wait returned before the deployment controller observed the update")
+	}
+}
+
+func TestWaitDeploymentRolloutReturnsOnSettledRollout(t *testing.T) {
+	t.Parallel()
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "server",
+			Namespace:  defaultNamespace,
+			Generation: 2,
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 2,
+			Replicas:           1,
+			UpdatedReplicas:    1,
+			ReadyReplicas:      1,
+			AvailableReplicas:  1,
+		},
+	}
+
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
+
+	if err := r.waitDeploymentRollout(
+		context.Background(),
+		defaultNamespace,
+		"server",
+		2,
+		1,
+		time.Second,
+	); err != nil {
+		t.Fatalf("rollout wait did not return on a settled rollout: %v", err)
+	}
+}
+
+func TestWaitDeploymentRolloutReturnsOnScaleToZero(t *testing.T) {
+	t.Parallel()
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "server",
+			Namespace:  defaultNamespace,
+			Generation: 4,
+		},
+		Status: appsv1.DeploymentStatus{ObservedGeneration: 4},
+	}
+
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
+
+	if err := r.waitDeploymentRollout(
+		context.Background(),
+		defaultNamespace,
+		"server",
+		4,
+		0,
+		time.Second,
+	); err != nil {
+		t.Fatalf("rollout wait did not return on a stopped deployment: %v", err)
+	}
+}
+
 func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 	return newTestRuntimeWithKubeObjects(objects, nil)
 }
@@ -2304,20 +2426,6 @@ func topologyDefinition(t *testing.T, obj *unstructured.Unstructured) string {
 	}
 
 	return definition
-}
-
-func topologyNaming(t *testing.T, obj *unstructured.Unstructured) string {
-	t.Helper()
-
-	naming, found, err := unstructured.NestedString(obj.Object, "spec", "naming")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !found {
-		return ""
-	}
-
-	return naming
 }
 
 func getTestConfigMap(

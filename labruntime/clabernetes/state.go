@@ -150,10 +150,10 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 				continue
 			}
 
-			// Node status is the authoritative signal that the nested containerlab node is ready.
-			// A launcher Deployment can be ready before containerlab has created the inner
-			// container. Deployment state remains the fallback for older resources without Node
-			// readiness, and replicas=0 is always an explicit stopped state.
+			// The Node's status.readiness is the authoritative signal for the device itself; a
+			// Deployment can report ready before the controller has observed the device
+			// container as ready. Deployment state is therefore only the fallback for a Node
+			// carrying no readiness yet, and replicas=0 is always an explicit stopped state.
 			if replicas == 0 || node.State == "" {
 				node.State = deploymentState
 				node.Ready = deploymentReady

@@ -89,10 +89,9 @@ type stagedConfigMapMount struct {
 }
 
 type stagedLocalFile struct {
-	filePath     string
-	resolvedPath string
-	mode         string
-	content      []byte
+	filePath string
+	mode     string
+	content  []byte
 }
 
 func stageTopologyLocalFiles(
@@ -410,7 +409,7 @@ func stageBindFiles(
 }
 
 // stageAdditionalNodeFiles covers path-bearing fields that containerlab normally resolves on
-// the machine running the CLI. A remote launcher cannot see those paths unless the adapter copies
+// the machine running the CLI. A device pod cannot see those paths unless the adapter copies
 // them into the node's ConfigMap-backed file projection first.
 func stageAdditionalNodeFiles(
 	config *clabRuntimeConfig,
@@ -591,10 +590,9 @@ func loadStagedLocalFile(
 	}
 
 	return stagedLocalFile{
-		filePath:     filepath.ToSlash(filePath),
-		resolvedPath: resolvedPath,
-		mode:         mode,
-		content:      content,
+		filePath: filepath.ToSlash(filePath),
+		mode:     mode,
+		content:  content,
 	}, nil
 }
 
@@ -749,7 +747,7 @@ func (r *Runtime) applyStagedConfigMaps(
 	for _, staged := range configMaps {
 		configMap := stagedConfigMapObject(namespace, topologyName, staged, nil)
 
-		created, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
+		_, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
 			Create(ctx, configMap, metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			existing, getErr := r.kubeClient.CoreV1().ConfigMaps(namespace).
@@ -766,11 +764,9 @@ func (r *Runtime) applyStagedConfigMaps(
 			updated.Labels = mergeDesiredMetadata(existing.Labels, configMap.Labels)
 			updated.Data = configMap.Data
 			updated.BinaryData = configMap.BinaryData
-			if stagedConfigMapsConform(existing, updated) {
-				created = existing
-				err = nil
-			} else {
-				created, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
+			err = nil
+			if !stagedConfigMapsConform(existing, updated) {
+				_, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
 					Update(ctx, updated, metav1.UpdateOptions{})
 			}
 		}
@@ -781,8 +777,6 @@ func (r *Runtime) applyStagedConfigMaps(
 				err,
 			)
 		}
-
-		_ = created
 	}
 
 	return nil

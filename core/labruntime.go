@@ -199,11 +199,6 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 	return nil
 }
 
-func (c *CLab) unsupportedLabRuntimeOperation(operation string) error {
-	return fmt.Errorf("%s is not supported for lab runtime %q yet",
-		operation, c.globalRuntimeName)
-}
-
 func (c *CLab) ListLabRuntimeContainers(
 	ctx context.Context,
 	all bool,
@@ -226,10 +221,6 @@ func (c *CLab) ListLabRuntimeContainers(
 		}
 
 		return filterLabRuntimeContainers(containers, opts.ToFilters()), nil
-	}
-
-	if c.Config.Name == "" {
-		return nil, fmt.Errorf("topology name is required")
 	}
 
 	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})

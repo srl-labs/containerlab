@@ -33,26 +33,9 @@ func validateFn(o *Options) error {
 		return err
 	}
 
-	if c.Config.Name == "" || len(c.Nodes) == 0 {
-		if c.LabRuntime != nil && c.Config.Name != "" {
-			// Lab runtimes intentionally do not instantiate native node implementations.
-			if err := c.ValidateLabRuntimeTopology(context.Background()); err != nil {
-				return err
-			}
-
-			log.Info("Topology is valid for lab runtime", "name", c.Config.Name,
-				"runtime", o.Global.Runtime)
-
-			return nil
-		}
-
-		return fmt.Errorf(
-			"topology file %q defines no name or nodes. likely an empty file",
-			c.TopoPaths.TopologyFilenameBase(),
-		)
-	}
-
-	if c.LabRuntime != nil {
+	// Lab runtimes intentionally do not instantiate native node implementations, so the node
+	// count below says nothing about them -- the runtime's own compiler is the validation.
+	if c.LabRuntime != nil && c.Config.Name != "" {
 		if err := c.ValidateLabRuntimeTopology(context.Background()); err != nil {
 			return err
 		}
@@ -61,6 +44,13 @@ func validateFn(o *Options) error {
 			"runtime", o.Global.Runtime)
 
 		return nil
+	}
+
+	if c.Config.Name == "" || len(c.Nodes) == 0 {
+		return fmt.Errorf(
+			"topology file %q defines no name or nodes. likely an empty file",
+			c.TopoPaths.TopologyFilenameBase(),
+		)
 	}
 
 	if err := c.ResolveLinks(); err != nil {

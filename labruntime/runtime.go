@@ -13,7 +13,6 @@ const (
 )
 
 type Config struct {
-	Debug     bool
 	Timeout   time.Duration
 	Namespace string
 }
