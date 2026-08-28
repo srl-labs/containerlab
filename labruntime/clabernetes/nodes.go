@@ -140,11 +140,12 @@ func (r *Runtime) targetNodes(
 	}
 
 	for _, nodeName := range req.Nodes {
-		if _, ok := known[nodeName]; !ok {
+		resolved, ok := resolveKnownNodeName(known, nodeName)
+		if !ok {
 			return nil, "", fmt.Errorf("node %q was not found in topology %s/%s",
 				nodeName, namespace, req.Name)
 		}
-		targets = append(targets, nodeName)
+		targets = append(targets, resolved)
 	}
 
 	return targets, namespace, nil

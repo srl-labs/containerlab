@@ -177,9 +177,20 @@ func stageTopologyLocalFiles(
 		}
 	}
 
+	// Sanitizing after the local files are staged keeps the file lookups on the paths the node
+	// names in the topology file spell out, while everything sent to Kubernetes uses the renamed
+	// nodes.
+	renames, err := sanitizeNodeNames(config, nodeNames)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if len(renames) != 0 {
+		definitionChanged = true
+	}
+
 	topologyDefinition := req.TopologyDefinition
 	if definitionChanged {
-		updatedDefinition, err := renderClabernetesTopologyDefinition(config)
+		updatedDefinition, err := renderClabernetesTopologyDefinition(config, renames)
 		if err != nil {
 			return nil, nil, "", fmt.Errorf(
 				"failed to render updated clabernetes topology definition: %w",
@@ -190,11 +201,15 @@ func stageTopologyLocalFiles(
 	}
 
 	stagedConfigMaps := collectStagedConfigMaps(startupConfigMaps, extraConfigMaps)
+	renameStagedConfigMapNodes(stagedConfigMaps, renames)
 
 	return topologyDefinition, stagedConfigMaps, naming, nil
 }
 
-func renderClabernetesTopologyDefinition(config *clabRuntimeConfig) ([]byte, error) {
+func renderClabernetesTopologyDefinition(
+	config *clabRuntimeConfig,
+	renames map[string]string,
+) ([]byte, error) {
 	if config == nil {
 		return nil, fmt.Errorf("topology config is nil")
 	}
@@ -211,6 +226,7 @@ func renderClabernetesTopologyDefinition(config *clabRuntimeConfig) ([]byte, err
 		if err != nil {
 			return nil, err
 		}
+		renameBriefLinkEndpoints(links, renames)
 
 		rendered.Topology = &clabernetesRenderTopology{
 			Defaults: config.Topology.Defaults,

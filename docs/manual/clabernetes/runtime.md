@@ -175,14 +175,28 @@ All single-lab lifecycle commands must use the same flag or environment
 override. Because the namespace is then shared, node and other resource names
 can conflict between labs.
 
-/// warning | Lab and node names
-`c9s-<lab-name>` must be a valid Kubernetes DNS label and cannot exceed 63
-characters. This leaves at most 59 characters for the lab name.
+/// note | Lab and node names
+Kubernetes object names are lowercase DNS labels, and a lot of labs name their
+nodes `R1` or `PE_1`. Containerlab sanitizes the lab name and every node name
+Kubernetes cannot carry instead of rejecting the topology: the name is
+lower-cased, every character outside `a-z`, `0-9` and `-` becomes `-`, a name
+that would start with a digit is prefixed with `clab-`, and a name longer than
+63 characters is truncated and suffixed with a hash. `R1` becomes `r1`, `PE_1`
+becomes `pe-1`.
 
-Node names are used verbatim as Kubernetes object, Deployment, and Service
-names: they must be lowercase RFC 1035 labels (start with a letter, contain
-only `a-z`, `0-9`, and `-`). The runtime rejects invalid node names before
-creating anything.
+Every rename is logged, and the topology is rewritten before it reaches the
+cluster, so links, `network-mode: container:<node>` and the staged file mounts
+follow the node. Node names on the command line (`node start R1`,
+`--node-filter R1`, `save`) are accepted in either form. Everything
+containerlab reports back — `inspect`, container names, the `clab-node-name`
+label — uses the sanitized name, because that is the name the objects carry in
+the cluster.
+
+Two node names that differ only in a character Kubernetes cannot carry (`R1`
+and `r1`) would end up as one object; that is an error, not a merge.
+
+`c9s-<lab-name>` must still fit in a DNS label of 63 characters, which leaves
+at most 59 characters for the lab name.
 ///
 
 Some commands intentionally look across namespaces:

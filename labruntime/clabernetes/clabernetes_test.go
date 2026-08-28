@@ -1436,6 +1436,141 @@ topology:
 	}
 }
 
+func TestDeploySanitizesNodeNamesKubernetesCannotCarry(t *testing.T) {
+	t.Parallel()
+
+	topologyDir := t.TempDir()
+	writeFile(t, filepath.Join(topologyDir, "configs", "R1", "init.sh"), "#!/bin/sh\n", 0o644)
+
+	const definition = `name: lab1
+topology:
+  nodes:
+    R1:
+      kind: linux
+      image: alpine:3
+      binds:
+        - configs/R1/init.sh:/init.sh
+    Client_2:
+      kind: linux
+      image: alpine:3
+    r1-console:
+      kind: linux
+      image: alpine:3
+      network-mode: container:R1
+  links:
+    - endpoints: ["R1:eth1", "Client_2:eth1"]
+`
+
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, definition, 0o644)
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyLabDir:     filepath.Join(topologyDir, "clab-lab1"),
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, nodeName := range []string{"r1", "client-2", "r1-console"} {
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName)
+	}
+	for _, nodeName := range []string{"R1", "Client_2"} {
+		assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName)
+	}
+
+	if got, _, _ := unstructured.NestedString(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "r1-console").Object,
+		"spec",
+		"network-mode",
+	); got != "container:r1" {
+		t.Fatalf("r1-console network-mode = %q, want container:r1", got)
+	}
+
+	links, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links.Items) != 1 {
+		t.Fatalf("len(links) = %d, want 1", len(links.Items))
+	}
+	for _, endpoint := range []struct {
+		field string
+		want  string
+	}{
+		{field: "endpointA", want: "r1"},
+		{field: "endpointB", want: "client-2"},
+	} {
+		got, _, _ := unstructured.NestedString(
+			links.Items[0].Object,
+			"spec",
+			endpoint.field,
+			"nodeName",
+		)
+		if got != endpoint.want {
+			t.Fatalf("link %s nodeName = %q, want %q", endpoint.field, got, endpoint.want)
+		}
+	}
+
+	assertFileMount(
+		t,
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "r1"),
+		"configs/R1/init.sh",
+		"lab1-r1-files",
+		safeConfigMapKey("configs/R1/init.sh"),
+		"read",
+	)
+
+	configMap := getTestConfigMap(t, r, "lab-ns", "lab1-r1-files")
+	if len(configMap.OwnerReferences) != 1 || configMap.OwnerReferences[0].Name != "r1" {
+		t.Fatalf("ConfigMap owner references = %+v, want the sanitized node", configMap.OwnerReferences)
+	}
+}
+
+func TestTargetNodesResolvesNodeNamesFromTheTopologyFile(t *testing.T) {
+	t.Parallel()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "r1",
+			"namespace": "lab-ns",
+			"labels": map[string]any{
+				labelTopologyOwner: "lab1",
+			},
+		},
+		"spec": map[string]any{"kind": "linux", "image": "alpine:3"},
+	}}
+
+	r := newTestRuntime(node)
+	targets, namespace, err := r.targetNodes(context.Background(), clablabruntime.NodeRequest{
+		Name:      "lab1",
+		Namespace: "lab-ns",
+		Nodes:     []string{"R1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if namespace != "lab-ns" || len(targets) != 1 || targets[0] != "r1" {
+		t.Fatalf("targetNodes() = %v (namespace %q), want [r1] in lab-ns", targets, namespace)
+	}
+
+	if _, _, err := r.targetNodes(context.Background(), clablabruntime.NodeRequest{
+		Name:      "lab1",
+		Namespace: "lab-ns",
+		Nodes:     []string{"R2"},
+	}); err == nil {
+		t.Fatal("targetNodes() error = nil, want an error for a node the lab does not have")
+	}
+}
+
 func TestValidateAcceptsLossyContainerlabSemantics(t *testing.T) {
 	t.Parallel()
 
@@ -1530,14 +1665,17 @@ func TestValidateRejectsStructurallyUnsupportedContainerlabSemantics(t *testing.
 			wantError: "unsupported by c9s",
 		},
 		{
-			name: "invalid kubernetes node name",
+			name: "node names colliding once sanitized",
 			definition: `topology:
   nodes:
-    Node_One:
+    R1:
+      kind: linux
+      image: alpine
+    r1:
       kind: linux
       image: alpine
 `,
-			wantError: "RFC 1035",
+			wantError: "both map onto",
 		},
 	}
 

@@ -291,11 +291,14 @@ func (r *Runtime) primaryNodeNames(
 
 	resolved := make(map[string]string, len(nodeNames))
 	for _, nodeName := range nodeNames {
-		if _, ok := networkModes[nodeName]; !ok {
+		// Callers address nodes by the name the topology file uses; the lab carries the
+		// sanitized name. The result stays keyed by what the caller asked for.
+		known, ok := resolveKnownNodeName(networkModes, nodeName)
+		if !ok {
 			return nil, fmt.Errorf("node %q was not found in topology %s/%s",
 				nodeName, r.namespaceFor(namespace), topologyName)
 		}
-		resolved[nodeName] = resolvePrimaryNode(nodeName, networkModes)
+		resolved[nodeName] = resolvePrimaryNode(known, networkModes)
 	}
 
 	return resolved, nil

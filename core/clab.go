@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -161,6 +162,10 @@ func (c *CLab) prepareLabRuntimeTopology() error {
 		)
 	}
 
+	if err := c.sanitizeLabRuntimeNames(); err != nil {
+		return err
+	}
+
 	if err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name); err != nil {
 		return err
 	}
@@ -169,6 +174,58 @@ func (c *CLab) prepareLabRuntimeTopology() error {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
 	}
+
+	return nil
+}
+
+// sanitizeLabRuntimeNames aligns the lab and node names with what a lab runtime can name the
+// objects it creates with. The lab name is renamed here so containerlab and the runtime keep
+// addressing the lab by the same name; node names are renamed by the runtime itself, where the
+// topology it hands over is rewritten, and are only reported here.
+func (c *CLab) sanitizeLabRuntimeNames() error {
+	if sanitized := clablabruntime.SanitizeName(c.Config.Name); sanitized != c.Config.Name {
+		if sanitized == "" {
+			return fmt.Errorf(
+				"lab name %q holds no character a lab runtime object name can be built from",
+				c.Config.Name,
+			)
+		}
+
+		log.Warn(
+			"Lab name cannot name the objects the lab runtime creates and was sanitized",
+			"name", c.Config.Name,
+			"sanitized", sanitized,
+		)
+
+		c.Config.Name = sanitized
+	}
+
+	if c.Config.Topology == nil {
+		return nil
+	}
+
+	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
+	for nodeName := range c.Config.Topology.Nodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	if err != nil {
+		return err
+	}
+	if len(renames) == 0 {
+		return nil
+	}
+
+	renamed := make([]string, 0, len(renames))
+	for _, nodeName := range slices.Sorted(maps.Keys(renames)) {
+		renamed = append(renamed, fmt.Sprintf("%s -> %s", nodeName, renames[nodeName]))
+	}
+
+	log.Warn(
+		"Node names cannot name the objects the lab runtime creates and were sanitized",
+		"nodes", strings.Join(renamed, ", "),
+	)
 
 	return nil
 }

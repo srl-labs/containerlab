@@ -34,12 +34,22 @@ func (r *Runtime) Exec(
 		return nil, fmt.Errorf("command is required")
 	}
 
-	pod, err := r.devicePod(ctx, req.Name, req.Namespace, req.NodeName)
+	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	containerName, err := r.deviceContainerName(ctx, pod, req.Name, req.Namespace, req.NodeName)
+	nodeName, err := r.resolveNodeName(ctx, req.Name, namespace, req.NodeName)
+	if err != nil {
+		return nil, err
+	}
+
+	pod, err := r.devicePod(ctx, req.Name, namespace, nodeName)
+	if err != nil {
+		return nil, err
+	}
+
+	containerName, err := r.deviceContainerName(ctx, pod, req.Name, namespace, nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +169,37 @@ func preferredDeviceContainerName(node *unstructured.Unstructured, nodeName stri
 		nodeName,
 		componentIDs,
 	)
+}
+
+// resolveNodeName maps a node name a caller supplied onto the node the lab carries in Kubernetes.
+// A name the runtime would not have renamed is used as it is, so the common case costs nothing.
+func (r *Runtime) resolveNodeName(
+	ctx context.Context,
+	topologyName,
+	namespace,
+	nodeName string,
+) (string, error) {
+	if clablabruntime.SanitizeName(nodeName) == nodeName {
+		return nodeName, nil
+	}
+
+	nodes, err := r.nodesForTopology(ctx, topologyName, namespace)
+	if err != nil {
+		return "", err
+	}
+
+	known := make(map[string]struct{}, len(nodes.Items))
+	for idx := range nodes.Items {
+		known[nodes.Items[idx].GetName()] = struct{}{}
+	}
+
+	resolved, ok := resolveKnownNodeName(known, nodeName)
+	if !ok {
+		return "", fmt.Errorf("node %q was not found in topology %s/%s",
+			nodeName, r.namespaceFor(namespace), topologyName)
+	}
+
+	return resolved, nil
 }
 
 // devicePod resolves the pod hosting the given logical node. Nodes grouped through

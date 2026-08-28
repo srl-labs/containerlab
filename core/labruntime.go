@@ -400,10 +400,11 @@ func (c *CLab) containerFromLabNode(
 
 	var image string
 	if c.Config.Topology != nil {
-		labels[clabconstants.NodeKind] = c.Config.Topology.GetNodeKind(node.Name)
-		image = c.Config.Topology.GetNodeImage(node.Name)
+		topologyNode := c.topologyNodeName(node.Name)
+		labels[clabconstants.NodeKind] = c.Config.Topology.GetNodeKind(topologyNode)
+		image = c.Config.Topology.GetNodeImage(topologyNode)
 
-		if group := c.Config.Topology.GetNodeGroup(node.Name); group != "" {
+		if group := c.Config.Topology.GetNodeGroup(topologyNode); group != "" {
 			labels[clabconstants.NodeGroup] = group
 		}
 	}
@@ -431,6 +432,26 @@ func (c *CLab) containerFromLabNode(
 		NetworkName:     state.Namespace,
 		NetworkSettings: managementAddress(node),
 	}
+}
+
+// topologyNodeName maps a node name a lab runtime reports back onto the topology node it belongs
+// to. The runtime renames the nodes Kubernetes cannot carry, so the state it reports does not
+// always use the name the topology file wrote.
+func (c *CLab) topologyNodeName(name string) string {
+	if c.Config.Topology == nil {
+		return name
+	}
+	if _, ok := c.Config.Topology.Nodes[name]; ok {
+		return name
+	}
+
+	for nodeName := range c.Config.Topology.Nodes {
+		if clablabruntime.SanitizeName(nodeName) == name {
+			return nodeName
+		}
+	}
+
+	return name
 }
 
 // managementAddress reports the address a user reaches the node at: the LoadBalancer address

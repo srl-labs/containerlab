@@ -94,8 +94,9 @@ func validatePrimitiveNodeKinds(primitives *primitiveResourceSet) error {
 
 // validatePrimitiveNodeNames rejects node names Kubernetes cannot carry. c9s uses containerlab
 // node names verbatim as Node object, Deployment, and Service names, so every node name must be
-// a DNS-1035 label. Failing here keeps the deploy fail-closed instead of surfacing an opaque
-// API-server rejection after some resources were already created.
+// a DNS-1035 label. Node names are sanitized while the topology is staged, so this is the
+// backstop that keeps the deploy fail-closed instead of surfacing an opaque API-server rejection
+// after some resources were already created.
 func validatePrimitiveNodeNames(primitives *primitiveResourceSet) error {
 	var invalid []string
 	for _, node := range primitives.nodes {
