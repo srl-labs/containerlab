@@ -457,7 +457,7 @@ func (r *Runtime) waitReady(
 			}
 			if failure := phaseProgress.terminalFailure(); failure != "" {
 				return false, fmt.Errorf(
-					"clabernetes lab %s/%s cannot be planned: %s",
+					"clabernetes lab %s/%s cannot be deployed: %s",
 					namespace, name, failure)
 			}
 			if state.State == "deployfailed" {

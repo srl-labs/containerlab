@@ -307,6 +307,10 @@ var terminalPlanReasons = map[string]struct{}{
 	"PlanInvariant":     {},
 	"PlanSideEffect":    {},
 	"PlanSerialization": {},
+	// The API server rejected the rendered device Deployment; the controller cannot converge
+	// without a spec change. DeploymentApplyFailed (transient apply errors) is deliberately
+	// absent.
+	"DeploymentInvalid": {},
 }
 
 // nodePlanFailure reports a deterministic device-planning failure for the node together with
