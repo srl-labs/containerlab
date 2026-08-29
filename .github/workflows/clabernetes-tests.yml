@@ -75,7 +75,7 @@ jobs:
             -v "${HOME}/.cache/helm:/root/.cache/helm" \
             alpine/helm:3.18.2 \
             upgrade --install --create-namespace --namespace c9s \
-              clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes
+              clabernetes oci://ghcr.io/clabernetes/clabernetes/clabernetes:0.0.0
 
           kubectl -n c9s rollout status deploy/clabernetes-manager --timeout=180s
 
