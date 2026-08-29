@@ -20,10 +20,6 @@ suite=$2
 shift 2
 extra_robot_args=("$@")
 
-if [ "${runtime}" = "c9s" ]; then
-  runtime=clabernetes
-fi
-
 # set containerlab binary path to a value of CLAB_BIN env variable
 # unless it is not set, then use 'containerlab' as a default value
 if [ -z "${CLAB_BIN:-}" ]; then
@@ -56,7 +52,7 @@ function get_logname() {
 }
 
 robot_args=()
-if [ "${runtime}" = "clabernetes" ]; then
+if [ "${runtime}" = "c9s" ]; then
   robot_args+=(--include clabernetes)
 fi
 

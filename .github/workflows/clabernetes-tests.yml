@@ -81,7 +81,7 @@ jobs:
 
       - name: Run Clabernetes Robot tests
         run: |
-          bash ./tests/rf-run.sh clabernetes ./tests/14-clabernetes
+          bash ./tests/rf-run.sh c9s ./tests/14-clabernetes
 
       - name: Upload test report
         uses: actions/upload-artifact@v6

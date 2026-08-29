@@ -10,7 +10,7 @@ Test Tags           clabernetes    c9s
 
 
 *** Variables ***
-${runtime}              clabernetes
+${runtime}              c9s
 ${lab-name}             c9s-linux-lifecycle
 ${lab-file}             01-linux-lifecycle.clab.yml
 ${topo}                 ${CURDIR}/${lab-file}
@@ -149,7 +149,7 @@ Destroy c9s linux lab deployed without a Topology resource
 
 *** Keywords ***
 Setup
-    Skip If    '${runtime}' != 'clabernetes'    This suite targets the clabernetes runtime.
+    Skip If    '${runtime}' != 'c9s'    This suite targets the c9s runtime.
     Remove File If Exists    ${events-log}
     Remove File If Exists    ${events-err}
     ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
