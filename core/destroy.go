@@ -130,8 +130,20 @@ func (c *CLab) makeCopyForDestroy(
 		varsFiles = c.TopoPaths.VarsFilenamesAbsPath()
 	}
 
-	if clabutils.FileOrDirExists(topo) {
-		newOpts = append(newOpts, WithTopoPath(topo, varsFiles))
+	destroyTopo := availableDestroyTopology(
+		topo,
+		c.TopoPaths.TopologyFilenameAbsPath(),
+		opts.all,
+	)
+	if destroyTopo != "" {
+		if destroyTopo != topo {
+			log.Debugf(
+				"labeled topology file %q not found, using requested topology %q for destroy",
+				topo,
+				destroyTopo,
+			)
+		}
+		newOpts = append(newOpts, WithTopoPath(destroyTopo, varsFiles))
 	} else {
 		// Derive lab name from lab directory (format: clab-<labname>)
 		labName := filepath.Base(labDir)
@@ -194,6 +206,16 @@ func (c *CLab) makeCopyForDestroy(
 	}
 
 	return cc, nil
+}
+
+func availableDestroyTopology(labeledTopo, requestedTopo string, all bool) string {
+	if clabutils.FileOrDirExists(labeledTopo) {
+		return labeledTopo
+	}
+	if !all && clabutils.FileOrDirExists(requestedTopo) {
+		return requestedTopo
+	}
+	return ""
 }
 
 func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
