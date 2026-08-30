@@ -117,8 +117,28 @@ func (c *CLab) planApply(
 	plan := newApplyPlan(currentNodes, state)
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		if _, exists := currentNodes[nodeName]; !exists {
-			status := c.Nodes[nodeName].GetContainerStatus(ctx)
+		_, runtimeExists := currentNodes[nodeName]
+		status := clabruntime.NotFound
+		parkingExists := false
+		if runtimeExists {
+			if _, parked := c.applyParkingLinkNode(nodeName); parked {
+				parkingExists = true
+				status = c.Nodes[nodeName].GetContainerStatus(ctx)
+			} else {
+				continue
+			}
+		} else {
+			status = c.Nodes[nodeName].GetContainerStatus(ctx)
+		}
+		if treatAsAddedParkedNode(runtimeExists, status, parkingExists) {
+			// Runtime discovery can briefly retain the just-removed container.
+			// The parking namespace is authoritative for a filtered
+			// destroy --keep-links: plan this as an added+parked node.
+			delete(currentNodes, nodeName)
+			runtimeExists = false
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+		if !runtimeExists {
 			if status != clabruntime.NotFound {
 				return nil, fmt.Errorf(
 					"node %q container %q already exists outside the runtime lab state",
@@ -188,6 +208,14 @@ func (c *CLab) planApply(
 	}
 
 	return plan, nil
+}
+
+func treatAsAddedParkedNode(
+	runtimeExists bool,
+	status clabruntime.ContainerStatus,
+	parkingExists bool,
+) bool {
+	return runtimeExists && status == clabruntime.NotFound && parkingExists
 }
 
 func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
@@ -409,7 +437,10 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			n = parkingNode
 			usingParkingNode = true
 		}
-		if _, start := plan.startNodeSet[nodeName]; start && !usingParkingNode {
+		if usingParkingNode {
+			// Added+parked nodes are discovered exclusively through the parking
+			// namespace; their destination container does not exist yet.
+		} else if _, start := plan.startNodeSet[nodeName]; start {
 			parkingNode, ok := c.applyParkingLinkNode(nodeName)
 			if !ok {
 				continue

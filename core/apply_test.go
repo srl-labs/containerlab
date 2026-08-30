@@ -443,6 +443,20 @@ func TestApplyPlanLinkNeedsDeployMatchesRenamedParkedVethByPeer(t *testing.T) {
 	}
 }
 
+func TestTreatAsAddedParkedNodeWithStaleRuntimeEntry(t *testing.T) {
+	t.Parallel()
+
+	if !treatAsAddedParkedNode(true, clabruntime.NotFound, true) {
+		t.Fatal("expected missing container with stale runtime entry and parking namespace to be added+parked")
+	}
+	if treatAsAddedParkedNode(true, clabruntime.Running, true) {
+		t.Fatal("running container must not be reclassified")
+	}
+	if treatAsAddedParkedNode(true, clabruntime.NotFound, false) {
+		t.Fatal("missing container without parking namespace must not be reclassified as parked")
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 
