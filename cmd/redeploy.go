@@ -124,6 +124,12 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.NoTopologyCR,
 		noTopologyCRFlagHelp,
 	)
+	c.Flags().StringVar(
+		&o.Deploy.ImagePullSecret,
+		"image-pull-secret",
+		o.Deploy.ImagePullSecret,
+		imagePullSecretFlagHelp,
+	)
 
 	return c, nil
 }

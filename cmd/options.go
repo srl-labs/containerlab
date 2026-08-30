@@ -41,7 +41,8 @@ func GetOptions() *Options {
 			Filter:        &FilterOptions{},
 			NodeLifecycle: &NodeLifecycleOptions{},
 			Deploy: &DeployOptions{
-				LabOwner: os.Getenv("CLAB_OWNER"),
+				LabOwner:        os.Getenv("CLAB_OWNER"),
+				ImagePullSecret: clablabruntime.DefaultImagePullSecret,
 			},
 			Destroy: &DestroyOptions{},
 			Save:    &SaveOptions{},
@@ -328,6 +329,7 @@ type DeployOptions struct {
 	RestoreNodeSnapshots     []string
 	ExportRenderedTopology   string
 	NoTopologyCR             bool
+	ImagePullSecret          string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {

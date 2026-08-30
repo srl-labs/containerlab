@@ -27,6 +27,9 @@ const (
 	noTopologyCRFlagHelp = "do not create a clabernetes Topology resource; compile the topology " +
 		"client-side and manage the lab's Node, Link, and NodeProfile resources directly " +
 		"(clabernetes runtime only)"
+
+	imagePullSecretFlagHelp = "name of the image pull secret populated in the clabernetes " +
+		"Topology CR; the secret must exist in the lab namespace (clabernetes runtime only)"
 )
 
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
@@ -184,6 +187,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		noTopologyCRFlagHelp,
 	)
 
+	c.Flags().StringVar(
+		&o.Deploy.ImagePullSecret,
+		"image-pull-secret",
+		o.Deploy.ImagePullSecret,
+		imagePullSecretFlagHelp,
+	)
+
 	return c, nil
 }
 
@@ -198,6 +208,12 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	if o.Deploy.NoTopologyCR && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
 		return fmt.Errorf("--no-topology-cr is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if o.Deploy.ImagePullSecret != clablabruntime.DefaultImagePullSecret &&
+		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
 			clablabruntime.ClabernetesRuntimeName)
 	}
 
@@ -241,7 +257,8 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs).
 		SetRestoreAll(o.Deploy.RestoreAll).
 		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots).
-		SetNoTopologyCR(o.Deploy.NoTopologyCR)
+		SetNoTopologyCR(o.Deploy.NoTopologyCR).
+		SetImagePullSecret(o.Deploy.ImagePullSecret)
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {

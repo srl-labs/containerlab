@@ -37,6 +37,7 @@ func prepareDesiredDeployment(
 		req.Owner,
 		string(topologyDefinition),
 		topologyWithNaming(naming),
+		topologyWithImagePullSecret(req.ImagePullSecret),
 	)
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
@@ -185,7 +186,13 @@ func (r *Runtime) Plan(
 		if !primitiveObjectsConform(existingTopology, updated) {
 			appendPlanChange(plan, clablabruntime.ChangeUpdate, "Topology", namespace, req.Name)
 		}
-		if err := r.planConfigMaps(ctx, namespace, req.Name, prepared.configMaps, plan); err != nil {
+		if err := r.planConfigMaps(
+			ctx,
+			namespace,
+			req.Name,
+			prepared.configMaps,
+			plan,
+		); err != nil {
 			return nil, err
 		}
 		sortDeployPlan(plan)
@@ -224,7 +231,8 @@ func (r *Runtime) planNamespace(
 	existing, err := r.kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	managed := req.Namespace == "" && r.labNamespaceOverride == ""
 	if err == nil {
-		if owner := existing.Labels[labelTopologyOwner]; managed && owner != "" && owner != req.Name {
+		if owner := existing.Labels[labelTopologyOwner]; managed && owner != "" &&
+			owner != req.Name {
 			return false, fmt.Errorf("c9s namespace %q belongs to lab %q, not %q",
 				namespace, owner, req.Name)
 		}
@@ -289,7 +297,12 @@ func (r *Runtime) planPrimitiveResources(
 	if err != nil {
 		return err
 	}
-	if err := validatePrimitiveResourceOwnership(existing, desired, topologyName, namespace); err != nil {
+	if err := validatePrimitiveResourceOwnership(
+		existing,
+		desired,
+		topologyName,
+		namespace,
+	); err != nil {
 		return err
 	}
 
@@ -300,13 +313,25 @@ func (r *Runtime) planPrimitiveResources(
 			desiredNames[group.gvr][obj.GetName()] = struct{}{}
 			actual := existing[group.gvr][obj.GetName()]
 			if actual == nil {
-				appendPlanChange(plan, clablabruntime.ChangeCreate, group.kind, namespace, obj.GetName())
+				appendPlanChange(
+					plan,
+					clablabruntime.ChangeCreate,
+					group.kind,
+					namespace,
+					obj.GetName(),
+				)
 				continue
 			}
 
 			updated := reconciledPrimitiveObject(actual, obj)
 			if !primitiveObjectsConform(actual, updated) {
-				appendPlanChange(plan, clablabruntime.ChangeUpdate, group.kind, namespace, obj.GetName())
+				appendPlanChange(
+					plan,
+					clablabruntime.ChangeUpdate,
+					group.kind,
+					namespace,
+					obj.GetName(),
+				)
 			}
 		}
 	}

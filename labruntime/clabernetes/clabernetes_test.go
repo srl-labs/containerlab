@@ -1056,6 +1056,148 @@ func TestDeployCreatesTopologyResource(t *testing.T) {
 	assertNoTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
 }
 
+func TestTopologyPullSecrets(t *testing.T) {
+	t.Parallel()
+
+	obj := topologyObject("lab1", "lab-ns", "", "topology:\n",
+		topologyWithImagePullSecret(""))
+	assertTopologyPullSecrets(t, obj, []string{clablabruntime.DefaultImagePullSecret})
+
+	obj = topologyObject("lab1", "lab-ns", "", "topology:\n",
+		topologyWithImagePullSecret("my-registry-secret"))
+	assertTopologyPullSecrets(t, obj, []string{"my-registry-secret"})
+}
+
+func assertTopologyPullSecrets(t *testing.T, obj *unstructured.Unstructured, want []string) {
+	t.Helper()
+
+	secrets, found, err := unstructured.NestedStringSlice(
+		obj.Object,
+		"spec",
+		"imagePull",
+		"pullSecrets",
+	)
+	if err != nil || !found {
+		t.Fatalf("topology imagePull.pullSecrets not found: %v", err)
+	}
+	if !slices.Equal(secrets, want) {
+		t.Fatalf("topology imagePull.pullSecrets = %v, want %v", secrets, want)
+	}
+}
+
+func TestDeployPopulatesTopologyImagePullSecret(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	tests := []struct {
+		name       string
+		secret     string
+		wantSecret string
+	}{
+		{name: "default", wantSecret: clablabruntime.DefaultImagePullSecret},
+		{name: "custom", secret: "my-registry-secret", wantSecret: "my-registry-secret"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRuntime()
+			_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+				Name:               "lab1",
+				Namespace:          "lab-ns",
+				TopologyDefinition: []byte(definition),
+				Wait:               false,
+				ImagePullSecret:    tt.secret,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assertTopologyPullSecrets(
+				t,
+				getTestTopology(t, r, "lab-ns", "lab1"),
+				[]string{tt.wantSecret},
+			)
+		})
+	}
+}
+
+func TestDeployReconcilesTopologyImagePullSecret(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", definition,
+		topologyWithImagePullSecret(clablabruntime.DefaultImagePullSecret)))
+
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		ImagePullSecret:    "my-registry-secret",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertTopologyPullSecrets(
+		t,
+		getTestTopology(t, r, "lab-ns", "lab1"),
+		[]string{"my-registry-secret"},
+	)
+}
+
+func TestDeployWithoutTopologyCRPopulatesNodeProfilePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile := getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
+	secrets, found, err := unstructured.NestedStringSlice(
+		profile.Object,
+		"spec",
+		"imagePull",
+		"pullSecrets",
+	)
+	if err != nil || !found {
+		t.Fatalf("node profile imagePull.pullSecrets not found: %v", err)
+	}
+	if !slices.Equal(secrets, []string{clablabruntime.DefaultImagePullSecret}) {
+		t.Fatalf("node profile imagePull.pullSecrets = %v, want [%s]",
+			secrets, clablabruntime.DefaultImagePullSecret)
+	}
+}
+
 func TestDeployNoTopologyCRRejectsTopologyOwnedLab(t *testing.T) {
 	t.Parallel()
 
@@ -1529,7 +1671,10 @@ topology:
 
 	configMap := getTestConfigMap(t, r, "lab-ns", "lab1-r1-files")
 	if len(configMap.OwnerReferences) != 1 || configMap.OwnerReferences[0].Name != "r1" {
-		t.Fatalf("ConfigMap owner references = %+v, want the sanitized node", configMap.OwnerReferences)
+		t.Fatalf(
+			"ConfigMap owner references = %+v, want the sanitized node",
+			configMap.OwnerReferences,
+		)
 	}
 }
 
@@ -1726,7 +1871,10 @@ func TestPlanReportsPrimitiveDiffWithoutMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(freshPlan.Changes) != 4 {
-		t.Fatalf("fresh plan changes = %+v, want profile, two nodes, and link creates", freshPlan.Changes)
+		t.Fatalf(
+			"fresh plan changes = %+v, want profile, two nodes, and link creates",
+			freshPlan.Changes,
+		)
 	}
 	assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
 
@@ -2129,7 +2277,12 @@ func TestDeployReconcilesPrimitiveResources(t *testing.T) {
 		"example.com/preserved": "true",
 		labelIgnoreReconcile:    "true",
 	}))
-	if err := unstructured.SetNestedField(node1.Object, "ready", "status", "readiness"); err != nil {
+	if err := unstructured.SetNestedField(
+		node1.Object,
+		"ready",
+		"status",
+		"readiness",
+	); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").Update(

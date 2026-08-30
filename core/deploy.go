@@ -73,6 +73,7 @@ func (c *CLab) Deploy(
 			return nil, err
 		}
 		req.NoTopologyCR = options.noTopologyCR
+		req.ImagePullSecret = options.imagePullSecret
 
 		plan, err := planner.Plan(ctx, req)
 		if err != nil {

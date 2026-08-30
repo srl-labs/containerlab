@@ -113,6 +113,10 @@ The `--skip-labdir-acl` flag can be used to skip the lab directory access contro
 
 The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It makes the deploy phase skip the c9s `Topology` resource and create the compiled `Node`, `Link`, and `NodeProfile` resources directly. See [`deploy --no-topology-cr`](deploy.md#no-topology-cr).
 
+#### image-pull-secret
+
+The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR during the deploy phase. See [`deploy --image-pull-secret`](deploy.md#image-pull-secret).
+
 ### Examples
 
 #### Redeploy a lab using the given topology file

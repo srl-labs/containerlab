@@ -49,6 +49,9 @@ func (c *CLab) deployWithLabRuntime(
 	}
 	req.Wait = true
 	req.NoTopologyCR = options != nil && options.noTopologyCR
+	if options != nil {
+		req.ImagePullSecret = options.imagePullSecret
+	}
 
 	state, err := c.LabRuntime.Deploy(ctx, req)
 	if err != nil {
@@ -91,7 +94,10 @@ func (c *CLab) ValidateLabRuntimeTopology(ctx context.Context) error {
 
 	validator, ok := c.LabRuntime.(clablabruntime.TopologyValidator)
 	if !ok {
-		return fmt.Errorf("lab runtime %q does not support topology validation", c.globalRuntimeName)
+		return fmt.Errorf(
+			"lab runtime %q does not support topology validation",
+			c.globalRuntimeName,
+		)
 	}
 
 	req, err := c.labRuntimeDeployRequest()
@@ -104,8 +110,10 @@ func (c *CLab) ValidateLabRuntimeTopology(ctx context.Context) error {
 
 func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
 	if len(opts.nodeFilter) != 0 {
-		return fmt.Errorf("node-filter is not supported for lab runtime %q; no resources were deleted",
-			c.globalRuntimeName)
+		return fmt.Errorf(
+			"node-filter is not supported for lab runtime %q; no resources were deleted",
+			c.globalRuntimeName,
+		)
 	}
 
 	if opts.all {

@@ -33,10 +33,47 @@ func TestApplyIsDeployAlias(t *testing.T) {
 		t.Fatal("deploy command is missing the apply alias")
 	}
 
-	for _, flagName := range []string{"dry-run", "max-workers", "skip-post-deploy", "export-template"} {
+	for _, flagName := range []string{
+		"dry-run",
+		"max-workers",
+		"skip-post-deploy",
+		"export-template",
+		"image-pull-secret",
+	} {
 		if deploy.Flags().Lookup(flagName) == nil {
 			t.Fatalf("deploy command missing %q flag", flagName)
 		}
+	}
+}
+
+func TestDeployImagePullSecretFlagDefault(t *testing.T) {
+	optionsInstance = nil
+
+	cmd, err := Entrypoint()
+	if err != nil {
+		t.Fatalf("failed to create command: %v", err)
+	}
+
+	deploy := findCommand(cmd, "deploy")
+	if deploy == nil {
+		t.Fatal("deploy command is not registered")
+	}
+
+	flag := deploy.Flags().Lookup("image-pull-secret")
+	if flag == nil {
+		t.Fatal("deploy command missing image-pull-secret flag")
+	}
+	if flag.DefValue != clablabruntime.DefaultImagePullSecret {
+		t.Fatalf("image-pull-secret default = %q, want %q",
+			flag.DefValue, clablabruntime.DefaultImagePullSecret)
+	}
+
+	redeploy := findCommand(cmd, "redeploy")
+	if redeploy == nil {
+		t.Fatal("redeploy command is not registered")
+	}
+	if redeploy.Flags().Lookup("image-pull-secret") == nil {
+		t.Fatal("redeploy command missing image-pull-secret flag")
 	}
 }
 
@@ -54,7 +91,12 @@ func TestPostDeployVersionDisplaySkipsLabRuntimes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := shouldDisplayPostDeployVersion(tt.runtime); got != tt.want {
-				t.Fatalf("shouldDisplayPostDeployVersion(%q) = %t, want %t", tt.runtime, got, tt.want)
+				t.Fatalf(
+					"shouldDisplayPostDeployVersion(%q) = %t, want %t",
+					tt.runtime,
+					got,
+					tt.want,
+				)
 			}
 		})
 	}

@@ -348,6 +348,16 @@ The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabe
 containerlab --runtime c9s deploy -t mylab.clab.yml --no-topology-cr
 ```
 
+#### image-pull-secret
+
+The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR (`spec.imagePull.pullSecrets`), which the kubelet uses when pulling node images. The secret must exist in the lab namespace.
+
+The default value is `regcred`.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret
+```
+
 #### owner
 
 The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.
