@@ -159,3 +159,14 @@ func TestMgmtNetworksForCleanupIncludesStateRecordedNetworks(t *testing.T) {
 		t.Fatalf("mgmtNetworksForCleanup without state = %+v", networks)
 	}
 }
+
+func TestWithDestroyKeepLinks(t *testing.T) {
+	t.Parallel()
+
+	opts := NewDestroyOptions()
+	WithDestroyKeepLinks()(opts)
+
+	if !opts.keepLinks {
+		t.Fatal("WithDestroyKeepLinks did not enable link preservation")
+	}
+}

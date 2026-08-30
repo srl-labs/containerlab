@@ -191,6 +191,10 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		)
 	}
 
+	if o.Destroy.KeepLinks {
+		destroyOptions = append(destroyOptions, clabcore.WithDestroyKeepLinks())
+	}
+
 	if o.Destroy.Cleanup {
 		destroyOptions = append(
 			destroyOptions,
@@ -366,6 +370,7 @@ type DestroyOptions struct {
 	Cleanup               bool
 	All                   bool
 	KeepManagementNetwork bool
+	KeepLinks             bool
 	AutoApprove           bool
 }
 
