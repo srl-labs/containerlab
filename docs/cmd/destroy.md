@@ -40,6 +40,16 @@ To make containerlab attempt a graceful shutdown of the running containers, add 
 
 Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
 
+#### keep-links
+
+The local `--keep-links` flag preserves the data-plane interfaces of nodes selected with
+`--node-filter`. Containerlab parks the interfaces in persistent network namespaces before it
+removes the containers. A subsequent `deploy` or `apply` restores the interfaces when it creates
+the missing nodes, preserving the existing veth pairs and their peer interfaces.
+
+This flag is intended for replacing selected nodes and requires `--node-filter`. It cannot be
+combined with `--cleanup`.
+
 #### all
 
 Destroy command provided with `--all | -a` flag will perform the deletion of all the labs running on the container host. It will not touch containers launched manually.
@@ -69,6 +79,13 @@ containerlab destroy -t mylab.clab.yml
 
 ```bash
 containerlab destroy -t mylab.clab.yml --cleanup
+```
+
+#### Destroy selected nodes while preserving their links for replacement
+
+```bash
+containerlab destroy -t mylab.clab.yml --node-filter node1,node2 --keep-links --keep-mgmt-net
+containerlab apply -t replacement.clab.yml
 ```
 
 #### Destroy a lab without specifying topology file

@@ -213,6 +213,15 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 			plan.parkedNodeSet[nodeName] = struct{}{}
 		}
 	}
+
+	// A previous filtered destroy --keep-links leaves the node's interfaces in
+	// its deterministic parking namespace. Treat the missing container as an
+	// already-parked added node so apply restores rather than recreates its links.
+	for nodeName := range plan.addedNodeSet {
+		if _, exists := c.applyParkingLinkNode(nodeName); exists {
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+	}
 }
 
 func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
@@ -387,6 +396,11 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
 				continue
 			}
+			parkingNode, ok := c.applyParkingLinkNode(nodeName)
+			if !ok {
+				continue
+			}
+			n = parkingNode
 		}
 		if _, start := plan.startNodeSet[nodeName]; start {
 			parkingNode, ok := c.applyParkingLinkNode(nodeName)

@@ -72,3 +72,14 @@ func TestWithLabNameOnly_setsNameWithoutTopologyFile(t *testing.T) {
 		t.Fatal("topology file should not be set for lab-name-only init")
 	}
 }
+
+func TestWithDestroyKeepLinks(t *testing.T) {
+	t.Parallel()
+
+	opts := NewDestroyOptions()
+	WithDestroyKeepLinks()(opts)
+
+	if !opts.keepLinks {
+		t.Fatal("WithDestroyKeepLinks did not enable link preservation")
+	}
+}

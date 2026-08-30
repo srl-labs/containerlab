@@ -95,7 +95,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 			return err
 		}
 
-		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
+		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet, opts.keepLinks)
 		if err != nil {
 			log.Errorf("Error occurred during the %s lab deletion: %v", cc.Config.Name, err)
 			errs = append(errs, err)
@@ -240,7 +240,12 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 	return nil
 }
 
-func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
+func (c *CLab) destroy(
+	ctx context.Context,
+	maxWorkers uint,
+	keepMgmtNet,
+	keepLinks bool,
+) error {
 	var containers []clabruntime.GenericContainer
 	var err error
 
@@ -269,14 +274,24 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
 	if len(c.Nodes) > 0 {
-		err := clablinks.CleanupFilteredLinks(
-			ctx,
-			c.Config.Topology.Links,
-			c.Config.Name,
-			c.nodeFilter,
-		)
-		if err != nil {
-			return err
+		if keepLinks {
+			for _, nodeName := range sortedNodeNames(c.Nodes) {
+				node := c.Nodes[nodeName]
+				log.Info("Parking links for node replacement", "node", nodeName)
+				if err := node.ParkEndpoints(ctx); err != nil {
+					return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
+				}
+			}
+		} else {
+			err := clablinks.CleanupFilteredLinks(
+				ctx,
+				c.Config.Topology.Links,
+				c.Config.Name,
+				c.nodeFilter,
+			)
+			if err != nil {
+				return err
+			}
 		}
 		c.deleteNodes(ctx, maxWorkers)
 	} else {
