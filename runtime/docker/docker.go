@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -168,17 +169,14 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this
 		// network
-		netRes, err := d.Client.NetworkInspect(
+		netRes, raw, err := d.Client.NetworkInspectWithRaw(
 			context.TODO(),
 			d.mgmt.Network,
 			networkapi.InspectOptions{},
 		)
 		// if the network is successfully found, set the bridge used by it
 		if err == nil {
-			bridge, bridgeErr := bridgeNameFromInspect(&netRes, d.mgmt.Network)
-			if bridgeErr == nil {
-				d.mgmt.Bridge = bridge
-			}
+			d.mgmt.Bridge = d.detectMgmtBridgeName(context.TODO(), d.mgmt.Network, netRes, raw)
 			log.Debugf(
 				"detected network name in use: %s, backed by bridge %s",
 				d.mgmt.Network,
@@ -197,18 +195,33 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	bridgeName := d.mgmt.Bridge
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
-	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	netResource, rawNetResource, err := d.Client.NetworkInspectWithRaw(nctx, d.mgmt.Network, networkapi.InspectOptions{})
 	switch {
 	case cerrdefs.IsNotFound(err):
 		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
 		if err != nil {
 			return err
 		}
+		netResource, rawNetResource, err = d.Client.NetworkInspectWithRaw(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		if err != nil {
+			return err
+		}
+		if inspectedBridgeName := d.detectMgmtBridgeName(nctx, d.mgmt.Network, netResource, rawNetResource); inspectedBridgeName != "" {
+			bridgeName = inspectedBridgeName
+		}
 	case err == nil:
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
 		if err != nil {
 			return err
+		}
+		if inspectedBridgeName := d.detectMgmtBridgeName(
+			nctx,
+			d.mgmt.Network,
+			netResource,
+			rawNetResource,
+		); inspectedBridgeName != "" {
+			bridgeName = inspectedBridgeName
 		}
 
 	default:
@@ -231,6 +244,88 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
 	return d.postCreateNetActions()
+}
+
+func (d *DockerRuntime) detectMgmtBridgeName(
+	ctx context.Context,
+	networkName string,
+	netResource networkapi.Inspect,
+	raw []byte,
+) string {
+	if name := netavarkNetworkInterface(raw); name != "" {
+		return name
+	}
+
+	if name := d.libpodNetworkInterface(ctx, networkName); name != "" {
+		return name
+	}
+
+	return mgmtBridgeNameFromInspect(networkName, netResource, "")
+}
+
+func mgmtBridgeNameFromInspect(
+	networkName string,
+	netResource networkapi.Inspect,
+	podmanNetworkInterface string,
+) string {
+	if podmanNetworkInterface != "" {
+		return podmanNetworkInterface
+	}
+
+	name, err := bridgeNameFromInspect(&netResource, networkName)
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+func netavarkNetworkInterface(raw []byte) string {
+	var inspect struct {
+		NetworkInterface string `json:"network_interface"`
+	}
+	if err := json.Unmarshal(raw, &inspect); err != nil {
+		return ""
+	}
+
+	return inspect.NetworkInterface
+}
+
+func (d *DockerRuntime) libpodNetworkInterface(ctx context.Context, networkName string) string {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"http://"+dockerC.DummyHost+"/v5.0.0/libpod/networks/json",
+		nil,
+	)
+	if err != nil {
+		return ""
+	}
+
+	resp, err := d.Client.HTTPClient().Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var networks []struct {
+		Name             string `json:"name"`
+		NetworkInterface string `json:"network_interface"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&networks); err != nil {
+		return ""
+	}
+
+	for _, network := range networks {
+		if network.Name == networkName {
+			return network.NetworkInterface
+		}
+	}
+
+	return ""
 }
 
 // skipcq: GO-R1005
