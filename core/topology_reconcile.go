@@ -299,6 +299,9 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 		if _, exists := plan.desiredEndpointSet[key]; exists {
 			continue
 		}
+		if _, parked := plan.parkedNodeSet[key.node]; parked {
+			continue
+		}
 		c.addStaleApplyEndpoint(ctx, plan, plannedEndpointSet, key)
 	}
 }
@@ -384,7 +387,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	for _, nodeName := range sortedLinkNodeNames(desiredNodes) {
 		n := desiredNodes[nodeName]
 		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
-			continue
+			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+				continue
+			}
 		}
 
 		if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
@@ -392,6 +397,7 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				continue
 			}
 		}
+		usingParkingNode := false
 		if _, added := plan.addedNodeSet[nodeName]; added {
 			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
 				continue
@@ -401,8 +407,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				continue
 			}
 			n = parkingNode
+			usingParkingNode = true
 		}
-		if _, start := plan.startNodeSet[nodeName]; start {
+		if _, start := plan.startNodeSet[nodeName]; start && !usingParkingNode {
 			parkingNode, ok := c.applyParkingLinkNode(nodeName)
 			if !ok {
 				continue
@@ -776,7 +783,12 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 			}
 		}
 		if _, live := p.liveEndpointSet[key]; !live {
-			return true
+			if _, parked := p.parkedNodeSet[key.node]; !parked {
+				return true
+			}
+			if len(p.liveEndpointCandidates(ep)) == 0 {
+				return true
+			}
 		}
 	}
 
@@ -789,27 +801,44 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 		return true
 	}
 
-	left, leftOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[0])]
-	right, rightOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[1])]
-	if !leftOK || !rightOK {
-		return false
+	leftCandidates := p.liveEndpointCandidates(endpoints[0])
+	rightCandidates := p.liveEndpointCandidates(endpoints[1])
+
+	for _, left := range leftCandidates {
+		for _, right := range rightCandidates {
+			if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[0].IsNodeless() && left.MasterName != endpoints[0].GetNode().GetShortName() {
+				continue
+			}
+			if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[1].IsNodeless() && right.MasterName != endpoints[1].GetNode().GetShortName() {
+				continue
+			}
+			if left.PeerIndex != 0 && right.PeerIndex != 0 &&
+				left.PeerIndex == right.Index && right.PeerIndex == left.Index {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (p *applyPlan) liveEndpointCandidates(ep clablinks.Endpoint) []clablinks.OwnedInterface {
+	key := endpointKeyFromEndpoint(ep)
+	if info, ok := p.liveEndpointInfo[key]; ok {
+		return []clablinks.OwnedInterface{info}
+	}
+	if _, parked := p.parkedNodeSet[key.node]; !parked {
+		return nil
 	}
 
-	if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[0].IsNodeless() &&
-		left.MasterName != endpoints[0].GetNode().GetShortName() {
-		return false
+	var candidates []clablinks.OwnedInterface
+	for liveKey, info := range p.liveEndpointInfo {
+		if liveKey.node == key.node {
+			candidates = append(candidates, info)
+		}
 	}
-	if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[1].IsNodeless() &&
-		right.MasterName != endpoints[1].GetNode().GetShortName() {
-		return false
-	}
-
-	return left.PeerIndex != 0 &&
-		right.PeerIndex != 0 &&
-		left.PeerIndex == right.Index &&
-		right.PeerIndex == left.Index
+	return candidates
 }
 
 func (p *applyPlan) deployNodeNames() []string {
