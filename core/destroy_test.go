@@ -17,6 +17,22 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func TestAvailableDestroyTopologyFallsBackToRequestedTopology(t *testing.T) {
+	t.Parallel()
+
+	requested := filepath.Join(t.TempDir(), "current.clab.yml")
+	if err := os.WriteFile(requested, []byte("name: test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := availableDestroyTopology("/missing/temporary-apply.yml", requested, false); got != requested {
+		t.Fatalf("availableDestroyTopology() = %q, want requested topology %q", got, requested)
+	}
+	if got := availableDestroyTopology("/missing/temporary-apply.yml", requested, true); got != "" {
+		t.Fatalf("availableDestroyTopology(all) = %q, want no cross-lab fallback", got)
+	}
+}
+
 // makeCopyForDestroy must apply WithTopoPath (or WithLabNameOnly) before WithNodeFilter so that
 // filterClabNodes runs against a loaded topology. This mirrors the option order used there.
 func TestDestroyMakeCopyOptionOrder_nodeFilterAfterTopo(t *testing.T) {
