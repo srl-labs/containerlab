@@ -117,8 +117,28 @@ func (c *CLab) planApply(
 	plan := newApplyPlan(currentNodes, state)
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		if _, exists := currentNodes[nodeName]; !exists {
-			status := c.Nodes[nodeName].GetContainerStatus(ctx)
+		_, runtimeExists := currentNodes[nodeName]
+		status := clabruntime.NotFound
+		parkingExists := false
+		if runtimeExists {
+			if _, parked := c.applyParkingLinkNode(nodeName); parked {
+				parkingExists = true
+				status = c.Nodes[nodeName].GetContainerStatus(ctx)
+			} else {
+				continue
+			}
+		} else {
+			status = c.Nodes[nodeName].GetContainerStatus(ctx)
+		}
+		if treatAsAddedParkedNode(runtimeExists, status, parkingExists) {
+			// Runtime discovery can briefly retain the just-removed container.
+			// The parking namespace is authoritative for a filtered
+			// destroy --keep-links: plan this as an added+parked node.
+			delete(currentNodes, nodeName)
+			runtimeExists = false
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+		if !runtimeExists {
 			if status != clabruntime.NotFound {
 				return nil, fmt.Errorf(
 					"node %q container %q already exists outside the runtime lab state",
@@ -190,6 +210,14 @@ func (c *CLab) planApply(
 	return plan, nil
 }
 
+func treatAsAddedParkedNode(
+	runtimeExists bool,
+	status clabruntime.ContainerStatus,
+	parkingExists bool,
+) bool {
+	return runtimeExists && status == clabruntime.NotFound && parkingExists
+}
+
 func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
 	if _, planned := p.plannedLinkSet[linkIdx]; planned {
 		return
@@ -210,6 +238,15 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 			continue
 		}
 		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+	}
+
+	// A previous filtered destroy --keep-links leaves the node's interfaces in
+	// its deterministic parking namespace. Treat the missing container as an
+	// already-parked added node so apply restores rather than recreates its links.
+	for nodeName := range plan.addedNodeSet {
+		if _, exists := c.applyParkingLinkNode(nodeName); exists {
 			plan.parkedNodeSet[nodeName] = struct{}{}
 		}
 	}
@@ -288,6 +325,9 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 
 	for _, key := range sortedEndpointKeys(plan.liveEndpointSet) {
 		if _, exists := plan.desiredEndpointSet[key]; exists {
+			continue
+		}
+		if _, parked := plan.parkedNodeSet[key.node]; parked {
 			continue
 		}
 		c.addStaleApplyEndpoint(ctx, plan, plannedEndpointSet, key)
@@ -375,7 +415,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	for _, nodeName := range sortedLinkNodeNames(desiredNodes) {
 		n := desiredNodes[nodeName]
 		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
-			continue
+			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+				continue
+			}
 		}
 
 		if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
@@ -383,12 +425,22 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				continue
 			}
 		}
+		usingParkingNode := false
 		if _, added := plan.addedNodeSet[nodeName]; added {
 			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
 				continue
 			}
+			parkingNode, ok := c.applyParkingLinkNode(nodeName)
+			if !ok {
+				continue
+			}
+			n = parkingNode
+			usingParkingNode = true
 		}
-		if _, start := plan.startNodeSet[nodeName]; start {
+		if usingParkingNode {
+			// Added+parked nodes are discovered exclusively through the parking
+			// namespace; their destination container does not exist yet.
+		} else if _, start := plan.startNodeSet[nodeName]; start {
 			parkingNode, ok := c.applyParkingLinkNode(nodeName)
 			if !ok {
 				continue
@@ -762,7 +814,12 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 			}
 		}
 		if _, live := p.liveEndpointSet[key]; !live {
-			return true
+			if _, parked := p.parkedNodeSet[key.node]; !parked {
+				return true
+			}
+			if len(p.liveEndpointCandidates(ep)) == 0 {
+				return true
+			}
 		}
 	}
 
@@ -775,27 +832,44 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 		return true
 	}
 
-	left, leftOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[0])]
-	right, rightOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[1])]
-	if !leftOK || !rightOK {
-		return false
+	leftCandidates := p.liveEndpointCandidates(endpoints[0])
+	rightCandidates := p.liveEndpointCandidates(endpoints[1])
+
+	for _, left := range leftCandidates {
+		for _, right := range rightCandidates {
+			if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[0].IsNodeless() && left.MasterName != endpoints[0].GetNode().GetShortName() {
+				continue
+			}
+			if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[1].IsNodeless() && right.MasterName != endpoints[1].GetNode().GetShortName() {
+				continue
+			}
+			if left.PeerIndex != 0 && right.PeerIndex != 0 &&
+				left.PeerIndex == right.Index && right.PeerIndex == left.Index {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (p *applyPlan) liveEndpointCandidates(ep clablinks.Endpoint) []clablinks.OwnedInterface {
+	key := endpointKeyFromEndpoint(ep)
+	if info, ok := p.liveEndpointInfo[key]; ok {
+		return []clablinks.OwnedInterface{info}
+	}
+	if _, parked := p.parkedNodeSet[key.node]; !parked {
+		return nil
 	}
 
-	if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[0].IsNodeless() &&
-		left.MasterName != endpoints[0].GetNode().GetShortName() {
-		return false
+	var candidates []clablinks.OwnedInterface
+	for liveKey, info := range p.liveEndpointInfo {
+		if liveKey.node == key.node {
+			candidates = append(candidates, info)
+		}
 	}
-	if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[1].IsNodeless() &&
-		right.MasterName != endpoints[1].GetNode().GetShortName() {
-		return false
-	}
-
-	return left.PeerIndex != 0 &&
-		right.PeerIndex != 0 &&
-		left.PeerIndex == right.Index &&
-		right.PeerIndex == left.Index
+	return candidates
 }
 
 func (p *applyPlan) deployNodeNames() []string {

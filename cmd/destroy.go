@@ -69,6 +69,12 @@ func destroyCmd(o *Options) (*cobra.Command, error) {
 		o.Destroy.KeepManagementNetwork,
 		"do not remove the management network",
 	)
+	c.Flags().BoolVar(
+		&o.Destroy.KeepLinks,
+		"keep-links",
+		o.Destroy.KeepLinks,
+		"preserve data-plane links when destroying nodes selected with --node-filter",
+	)
 	c.Flags().StringSliceVarP(
 		&o.Filter.NodeFilter,
 		"node-filter",
@@ -81,6 +87,14 @@ func destroyCmd(o *Options) (*cobra.Command, error) {
 }
 
 func destroyFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Destroy.KeepLinks && len(o.Filter.NodeFilter) == 0 {
+		return fmt.Errorf("keep-links requires node-filter")
+	}
+
+	if o.Destroy.KeepLinks && o.Destroy.Cleanup {
+		return fmt.Errorf("keep-links cannot be used with cleanup")
+	}
+
 	if o.Destroy.Cleanup && len(o.Filter.NodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}

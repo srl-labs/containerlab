@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -58,6 +59,9 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src Node) error {
 }
 
 func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, error) {
+	if err := p.renamePairedEndpoints(ctx, dst); err != nil {
+		return nil, err
+	}
 	if err := p.DiscoverOwnedEndpoints(ctx, dst); err != nil {
 		return nil, err
 	}
@@ -93,6 +97,79 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, erro
 	}
 
 	return moved, nil
+}
+
+// renamePairedEndpoints maps parked veths to the destination topology by their
+// surviving peer. The parked interface name belongs to the old node kind and
+// is not part of the preserved link's identity.
+func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error {
+	desiredByPeerIndex := map[int]string{}
+	for _, desired := range dst.GetEndpoints() {
+		linkEndpoints := RuntimeEndpoints(desired.GetLink())
+		if len(linkEndpoints) != 2 {
+			continue
+		}
+		var peer Endpoint
+		if linkEndpoints[0] == desired {
+			peer = linkEndpoints[1]
+		} else if linkEndpoints[1] == desired {
+			peer = linkEndpoints[0]
+		} else {
+			continue
+		}
+
+		err := peer.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
+			peerLink, err := netlink.LinkByName(peer.GetIfaceName())
+			if _, notFound := err.(netlink.LinkNotFoundError); notFound {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			desiredByPeerIndex[peerLink.Attrs().Index] = desired.GetIfaceName()
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to inspect peer for %q: %w", desired.GetIfaceName(), err)
+		}
+	}
+
+	return p.ExecFunction(ctx, func(_ ns.NetNS) error {
+		parkedLinks, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+		for _, parkedLink := range parkedLinks {
+			if parkedLink.Type() != "veth" {
+				continue
+			}
+			veth, ok := parkedLink.(*netlink.Veth)
+			if !ok {
+				veth = &netlink.Veth{LinkAttrs: *parkedLink.Attrs()}
+			}
+			peerIndex, err := netlink.VethPeerIndex(veth)
+			if err != nil {
+				return err
+			}
+			newName, matched := desiredByPeerIndex[peerIndex]
+			oldName := parkedLink.Attrs().Name
+			if !matched || newName == oldName {
+				continue
+			}
+			if !HasOwnershipAltNameFor(parkedLink, dst.GetShortName(), oldName) {
+				continue
+			}
+			if err := netlink.LinkSetName(parkedLink, newName); err != nil {
+				return fmt.Errorf("failed to rename parked interface %q to %q: %w", oldName, newName, err)
+			}
+			if err := replaceOwnershipAltName(parkedLink, dst.GetShortName(), oldName, newName); err != nil {
+				_ = netlink.LinkSetName(parkedLink, oldName)
+				return err
+			}
+			log.Infof("Renamed parked interface node=%s interface=%s new-interface=%s", dst.GetShortName(), oldName, newName)
+		}
+		return nil
+	})
 }
 
 func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Node) error {
