@@ -104,7 +104,19 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	nodeType := strings.ToLower(n.Cfg.NodeType)
 
-	n.Pid = strconv.Itoa(n.Cfg.Index + 1) // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+	pid := n.Cfg.Index + 1 // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+
+	// CLAB_IOL_PID_OFFSET shifts the auto-assigned PID, e.g. to keep IDs unique across labs.
+	if v, ok := n.Cfg.Env["CLAB_IOL_PID_OFFSET"]; ok {
+		offset, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("invalid CLAB_IOL_PID_OFFSET %q: %w", v, err)
+		}
+
+		pid += offset
+	}
+
+	n.Pid = strconv.Itoa(pid)
 
 	env := map[string]string{
 		"IOL_PID": n.Pid,
