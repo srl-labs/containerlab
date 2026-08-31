@@ -11,8 +11,9 @@
 
 This lab consists of two Cisco IOL routers connected through a Cisco IOL L2 switch.
 
-```
-r1<---->sw<---->r2
+```mermaid
+graph LR
+    r1[r1] <--> sw[sw] <--> r2[r2]
 ```
 
 The [IOL images](../manual/kinds/cisco_iol.md) are built with [vrnetlab](../manual/vrnetlab.md). The routers use the regular IOL image, the switch uses the L2 image and is marked with `type: l2` in the topology file.
@@ -62,8 +63,15 @@ Success rate is 80 percent (4/5), round-trip min/avg/max = 1/1/2 ms
 
 Labs running on different hosts can be interconnected with containerlab by stitching an interface from each topology together with a VXLAN tunnel:
 
-```
-topology1.clab.yml <--> vxlan-stitch <--> topology2.clab.yml
+```mermaid
+graph LR
+    subgraph server1[Server 1]
+        topology1[topology1.clab.yml]
+    end
+    subgraph server2[Server 2]
+        topology2[topology2.clab.yml]
+    end
+    topology1 <-->|vxlan-stitch| topology2
 ```
 
 Read more about this in the [`vxlan-stitch` link documentation](../manual/topo-def-file.md#vxlan-stitched) and the [multi-node labs](multinode.md) example.
