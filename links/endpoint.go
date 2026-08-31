@@ -10,6 +10,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
 )
 
 // Endpoint is the interface that all endpoint types implement.
@@ -228,8 +230,28 @@ func (e *EndpointGeneric) Activate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return netlink.LinkSetUp(link)
+		return activateLink(link)
 	})
+}
+
+// activateLink brings a link up and clears IFF_DORMANT. Some network OSes
+// leave that flag behind on veths which are later parked and restored into a
+// different node. netlink.LinkSetUp only changes IFF_UP, so the stale dormant
+// state would otherwise survive the restore.
+func activateLink(link netlink.Link) error {
+	req := nl.NewNetlinkRequest(unix.RTM_NEWLINK, unix.NLM_F_ACK)
+	req.AddData(newActivateLinkMessage(link.Attrs().Index))
+
+	_, err := req.Execute(unix.NETLINK_ROUTE, 0)
+	return err
+}
+
+func newActivateLinkMessage(index int) *nl.IfInfomsg {
+	msg := nl.NewIfInfomsg(unix.AF_UNSPEC)
+	msg.Change = unix.IFF_UP | unix.IFF_DORMANT
+	msg.Flags = unix.IFF_UP
+	msg.Index = int32(index)
+	return msg
 }
 
 func ensureOwnershipAltName(ctx context.Context, e Endpoint) error {
