@@ -71,6 +71,7 @@ nav:
       - Linux container: manual/kinds/linux.md
       - Generic VM: manual/kinds/generic_vm.md
       - RARE/freeRtr: manual/kinds/rare-freertr.md
+      - FRRouting: manual/kinds/frr.md
       - Openvswitch bridge: manual/kinds/ovs-bridge.md
       - External container: manual/kinds/ext-container.md
       - Host: manual/kinds/host.md

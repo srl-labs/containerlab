@@ -3,28 +3,27 @@ name: frr01
 topology:
   groups:
     routers:
-      kind: linux
-      image: quay.io/frrouting/frr:10.5.1
+      kind: frr
+      image: quay.io/frrouting/frr:containerlab-10.7.1
+      # This lab only runs OSPF. Omit this to start every FRR daemon instead.
+      extras:
+        frr:
+          daemons:
+            - ospfd
     hosts:
       kind: linux
       image: wbitt/network-multitool:3.22.2
-      
+
   nodes:
     router1:
       group: routers
-      binds:
-        - router1/daemons:/etc/frr/daemons
-        - router1/frr.conf:/etc/frr/frr.conf
+      startup-config: router1/frr.conf
     router2:
       group: routers
-      binds:
-        - router2/daemons:/etc/frr/daemons
-        - router2/frr.conf:/etc/frr/frr.conf
+      startup-config: router2/frr.conf
     router3:
       group: routers
-      binds:
-        - router3/daemons:/etc/frr/daemons
-        - router3/frr.conf:/etc/frr/frr.conf
+      startup-config: router3/frr.conf
     PC1:
       group: hosts
       exec:
