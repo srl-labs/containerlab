@@ -1,0 +1,37 @@
+# Two Cisco IOL routers connected through an IOL L2 switch.
+#
+# Ethernet0/0 is reserved for management (placed in the clab-mgmt VRF);
+# data-plane interfaces start at Ethernet0/1.
+# See https://containerlab.dev/manual/kinds/cisco_iol/
+name: cisco_iol
+
+topology:
+  nodes:
+    r1:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.12.01
+    r2:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.12.01
+    sw:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:L2-17.12.01
+      type: l2
+
+  links:
+    - endpoints: ["r1:Ethernet0/1", "sw:Ethernet0/1"]
+    - endpoints: ["r2:Ethernet0/1", "sw:Ethernet0/2"]
+
+    # To stitch this lab to a copy of it running on another host, uncomment
+    # the native vxlan-stitch link below and mirror it on the other host
+    # with `remote` pointing back. Containerlab creates the host VXLAN
+    # tunnel and the tc-stitched veth on deploy and removes both on destroy.
+    # Give each host a unique CLAB_IOL_PID_OFFSET (see the lab docs) so the
+    # stitched IOL nodes keep unique MAC addresses and STP bridge IDs.
+    # - type: vxlan-stitch
+    #   endpoint:
+    #     node: sw
+    #     interface: eth3 # Ethernet0/3
+    #   remote: 10.99.0.2 # the other host's IP address
+    #   vni: 100
+    #   dst-port: 14789
