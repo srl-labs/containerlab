@@ -68,7 +68,7 @@ topology1.clab.yml <--> vxlan-stitch <--> topology2.clab.yml
 
 Read more about this in the [`vxlan-stitch` link documentation](../manual/topo-def-file.md#vxlan-stitched) and the [multi-node labs](multinode.md) example.
 
-When interconnecting labs this way, extra configuration is necessary to ensure crossfunctionality between topologies utilizing Cisco IOL L2 images. Due to system internals of how the NODE ID is generated and used for the images, an ID OFFSET needs to be configured to avoid duplicate/overlapping Bridge IDs and STP issues in the supertopology. 
+When interconnecting labs this way, extra configuration is necessary to ensure crossfunctionality between topologies utilizing Cisco IOL L2 images. Due to system internals of how the APP ID is generated and used for the images, an ID OFFSET needs to be configured to avoid duplicate/overlapping Bridge IDs and STP issues in the supertopology.
 
 The OFFSET can be controlled by utilizing the `CLAB_IOL_PID_OFFSET` environment variable:
 
@@ -77,10 +77,10 @@ topology:
   kinds:
     cisco_iol:
       env:
-        CLAB_IOL_PID_OFFSET: "64" # topology2 only; topology1 stays unset or vice versa
+        CLAB_IOL_PID_OFFSET: "64" # topology2 only; topology1 stays unset (or vice versa)
 ```
 
-For example, setting the offset to `64` would skew the starting bridge ID for the topology from `aabb.cc00.0100` to `aabb.cc00.4100`.
+For example, setting the OFFSET to `64` would skew the starting bridge ID for the topology from `aabb.cc00.0100` to `aabb.cc00.4100`.
 
 Refer to the [multinode-site-a][site-a-topofile] and [multinode-site-b][site-b-topofile] examples for more information.
 
