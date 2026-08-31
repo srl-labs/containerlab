@@ -29,7 +29,8 @@ const (
 		"(clabernetes runtime only)"
 
 	imagePullSecretFlagHelp = "name of the image pull secret populated in the clabernetes " +
-		"Topology CR; the secret must exist in the lab namespace (clabernetes runtime only)"
+		"Topology CR; the secret must exist in the lab namespace, and when unset no pull " +
+		"secret is referenced at all (clabernetes runtime only)"
 )
 
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
@@ -211,7 +212,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 			clablabruntime.ClabernetesRuntimeName)
 	}
 
-	if o.Deploy.ImagePullSecret != clablabruntime.DefaultImagePullSecret &&
+	if o.Deploy.ImagePullSecret != "" &&
 		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
 		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
 			clablabruntime.ClabernetesRuntimeName)

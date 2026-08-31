@@ -11,9 +11,6 @@ import (
 
 const (
 	ClabernetesRuntimeName = "c9s"
-	// DefaultImagePullSecret is the image pull secret name populated in the clabernetes
-	// Topology when a deploy request does not name one.
-	DefaultImagePullSecret = "regcred"
 )
 
 type Config struct {
@@ -34,8 +31,8 @@ type DeployRequest struct {
 	// topology client-side and manages the individual lab resources directly.
 	NoTopologyCR bool
 	// ImagePullSecret names the same-namespace Docker-config Secret placed on device pods
-	// through Pod.spec.imagePullSecrets. Runtimes fall back to DefaultImagePullSecret when it
-	// is empty.
+	// through Pod.spec.imagePullSecrets. Empty means the lab references no pull secret at
+	// all: public images and clusters whose runtime already holds credentials need none.
 	ImagePullSecret string
 }
 

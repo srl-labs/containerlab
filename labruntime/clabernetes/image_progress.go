@@ -203,9 +203,9 @@ type nodePhaseProgress struct {
 // condition needs a debounce against in-flight reconciliation.
 const terminalFailureStreak = 3
 
-// registryFailureStreak is the debounce for registry metadata failures (missing credentials,
-// unknown image). They are usually configuration mistakes that would otherwise hang the deploy
-// until timeout, but a registry blip must not abort a deploy, hence the longer window.
+// registryFailureStreak is the debounce for registry metadata failures (missing credentials or
+// pull secret, unknown image). They are usually configuration mistakes that would otherwise hang
+// the deploy until timeout, but a registry blip must not abort a deploy, hence the longer window.
 const registryFailureStreak = 15
 
 // terminalFailure reports one deterministic per-node failure observed during the wait, or "".
@@ -329,7 +329,8 @@ func nodePlanFailure(node *unstructured.Unstructured) (string, int) {
 		reason, _ := condition["reason"].(string)
 		requiredStreak := 0
 		switch {
-		case strings.HasPrefix(reason, "OCIMetadata"):
+		case strings.HasPrefix(reason, "OCIMetadata"),
+			strings.HasPrefix(reason, "ImagePullSecret"):
 			requiredStreak = registryFailureStreak
 		default:
 			if _, terminal := terminalPlanReasons[reason]; terminal {

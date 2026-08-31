@@ -40,15 +40,15 @@ spec:
   definition:
     containerlab: |
       <rendered containerlab topology>
-  imagePull:
-    pullSecrets:
-      - regcred
 ```
 
 The `imagePull.pullSecrets` list names the docker-config secrets the kubelet
-uses when pulling node images. It defaults to `regcred`; pass
-`deploy --image-pull-secret <secret-name>` to populate a different name. The
-referenced secret must exist in the lab namespace.
+uses when pulling node images. It is set only when the deploy passes
+`deploy --image-pull-secret <secret-name>`; without the flag no pull secret is
+referenced, which is the right shape for public images and for clusters whose
+container runtime already holds registry credentials. The referenced secret
+must exist in the lab namespace (`regcred` is a common name for it by
+Kubernetes convention).
 
 The Clabernetes manager compiles that definition into the primary c9s
 resources — `Node`, `Link`, and `NodeProfile` — and owns them from then on.

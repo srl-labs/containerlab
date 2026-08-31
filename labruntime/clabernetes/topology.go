@@ -23,12 +23,13 @@ func topologyWithNaming(naming string) topologyObjectOption {
 }
 
 // topologyWithImagePullSecret sets the image pull secret the kubelet uses when pulling device
-// images. An empty name falls back to the runtime default so a Topology always carries a pull
-// secret reference unless the deploy deliberately named a different one.
+// images. An empty name leaves imagePull unset entirely: the controller fails closed on a named
+// Secret that does not exist, so a Topology must only reference one the deploy actually asked
+// for.
 func topologyWithImagePullSecret(secret string) topologyObjectOption {
 	return func(spec map[string]any) {
 		if secret == "" {
-			secret = clablabruntime.DefaultImagePullSecret
+			return
 		}
 		spec["imagePull"] = map[string]any{
 			"pullSecrets": []any{secret},

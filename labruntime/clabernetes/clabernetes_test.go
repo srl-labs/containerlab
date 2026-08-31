@@ -1061,7 +1061,7 @@ func TestTopologyPullSecrets(t *testing.T) {
 
 	obj := topologyObject("lab1", "lab-ns", "", "topology:\n",
 		topologyWithImagePullSecret(""))
-	assertTopologyPullSecrets(t, obj, []string{clablabruntime.DefaultImagePullSecret})
+	assertNoTopologyPullSecrets(t, obj)
 
 	obj = topologyObject("lab1", "lab-ns", "", "topology:\n",
 		topologyWithImagePullSecret("my-registry-secret"))
@@ -1085,6 +1085,18 @@ func assertTopologyPullSecrets(t *testing.T, obj *unstructured.Unstructured, wan
 	}
 }
 
+func assertNoTopologyPullSecrets(t *testing.T, obj *unstructured.Unstructured) {
+	t.Helper()
+
+	imagePull, found, err := unstructured.NestedMap(obj.Object, "spec", "imagePull")
+	if err != nil {
+		t.Fatalf("topology imagePull: %v", err)
+	}
+	if found {
+		t.Fatalf("topology imagePull = %v, want unset", imagePull)
+	}
+}
+
 func TestDeployPopulatesTopologyImagePullSecret(t *testing.T) {
 	t.Parallel()
 
@@ -1096,12 +1108,12 @@ func TestDeployPopulatesTopologyImagePullSecret(t *testing.T) {
 `
 
 	tests := []struct {
-		name       string
-		secret     string
-		wantSecret string
+		name        string
+		secret      string
+		wantSecrets []string
 	}{
-		{name: "default", wantSecret: clablabruntime.DefaultImagePullSecret},
-		{name: "custom", secret: "my-registry-secret", wantSecret: "my-registry-secret"},
+		{name: "unset means no pull secret"},
+		{name: "custom", secret: "my-registry-secret", wantSecrets: []string{"my-registry-secret"}},
 	}
 
 	for _, tt := range tests {
@@ -1120,11 +1132,12 @@ func TestDeployPopulatesTopologyImagePullSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertTopologyPullSecrets(
-				t,
-				getTestTopology(t, r, "lab-ns", "lab1"),
-				[]string{tt.wantSecret},
-			)
+			obj := getTestTopology(t, r, "lab-ns", "lab1")
+			if len(tt.wantSecrets) == 0 {
+				assertNoTopologyPullSecrets(t, obj)
+				return
+			}
+			assertTopologyPullSecrets(t, obj, tt.wantSecrets)
 		})
 	}
 }
@@ -1140,7 +1153,7 @@ func TestDeployReconcilesTopologyImagePullSecret(t *testing.T) {
 `
 
 	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", definition,
-		topologyWithImagePullSecret(clablabruntime.DefaultImagePullSecret)))
+		topologyWithImagePullSecret("regcred")))
 
 	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
 		Name:               "lab1",
@@ -1158,9 +1171,61 @@ func TestDeployReconcilesTopologyImagePullSecret(t *testing.T) {
 		getTestTopology(t, r, "lab-ns", "lab1"),
 		[]string{"my-registry-secret"},
 	)
+
+	// A reconcile without a pull secret must also clear a stale stamped reference; historic
+	// deploys defaulted every Topology to a "regcred" Secret that often never existed.
+	_, err = r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertNoTopologyPullSecrets(t, getTestTopology(t, r, "lab-ns", "lab1"))
 }
 
 func TestDeployWithoutTopologyCRPopulatesNodeProfilePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+		ImagePullSecret:    "my-registry-secret",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile := getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
+	secrets, found, err := unstructured.NestedStringSlice(
+		profile.Object,
+		"spec",
+		"imagePull",
+		"pullSecrets",
+	)
+	if err != nil || !found {
+		t.Fatalf("node profile imagePull.pullSecrets not found: %v", err)
+	}
+	if !slices.Equal(secrets, []string{"my-registry-secret"}) {
+		t.Fatalf("node profile imagePull.pullSecrets = %v, want [my-registry-secret]", secrets)
+	}
+}
+
+func TestDeployWithoutTopologyCROmitsNodeProfilePullSecretsWhenUnset(t *testing.T) {
 	t.Parallel()
 
 	const definition = `topology:
@@ -1189,12 +1254,11 @@ func TestDeployWithoutTopologyCRPopulatesNodeProfilePullSecrets(t *testing.T) {
 		"imagePull",
 		"pullSecrets",
 	)
-	if err != nil || !found {
-		t.Fatalf("node profile imagePull.pullSecrets not found: %v", err)
+	if err != nil {
+		t.Fatalf("node profile imagePull.pullSecrets: %v", err)
 	}
-	if !slices.Equal(secrets, []string{clablabruntime.DefaultImagePullSecret}) {
-		t.Fatalf("node profile imagePull.pullSecrets = %v, want [%s]",
-			secrets, clablabruntime.DefaultImagePullSecret)
+	if found && len(secrets) != 0 {
+		t.Fatalf("node profile imagePull.pullSecrets = %v, want none", secrets)
 	}
 }
 

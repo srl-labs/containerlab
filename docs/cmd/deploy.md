@@ -352,7 +352,7 @@ containerlab --runtime c9s deploy -t mylab.clab.yml --no-topology-cr
 
 The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR (`spec.imagePull.pullSecrets`), which the kubelet uses when pulling node images. The secret must exist in the lab namespace.
 
-The default value is `regcred`.
+When the flag is not set, no pull secret is referenced at all: public images and clusters whose container runtime already holds registry credentials need none.
 
 ```bash
 containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret

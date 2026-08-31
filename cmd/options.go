@@ -41,8 +41,7 @@ func GetOptions() *Options {
 			Filter:        &FilterOptions{},
 			NodeLifecycle: &NodeLifecycleOptions{},
 			Deploy: &DeployOptions{
-				LabOwner:        os.Getenv("CLAB_OWNER"),
-				ImagePullSecret: clablabruntime.DefaultImagePullSecret,
+				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
 			Destroy: &DestroyOptions{},
 			Save:    &SaveOptions{},

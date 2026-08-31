@@ -63,9 +63,8 @@ func TestDeployImagePullSecretFlagDefault(t *testing.T) {
 	if flag == nil {
 		t.Fatal("deploy command missing image-pull-secret flag")
 	}
-	if flag.DefValue != clablabruntime.DefaultImagePullSecret {
-		t.Fatalf("image-pull-secret default = %q, want %q",
-			flag.DefValue, clablabruntime.DefaultImagePullSecret)
+	if flag.DefValue != "" {
+		t.Fatalf("image-pull-secret default = %q, want no implicit pull secret", flag.DefValue)
 	}
 
 	redeploy := findCommand(cmd, "redeploy")
