@@ -352,7 +352,6 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 		Header: text.Colors{text.Bold},
 	}
 
-	// For --wide, avoid AutoMerge and multi-line cells
 	headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
 	if o.Inspect.Wide {
 		headerBase = slices.Insert(headerBase, 0, "Owner")
@@ -362,31 +361,33 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 
 	var colConfigs []tableWriter.ColumnConfig
 
+	// Lab-level columns (Topology, Lab Name, Owner) AutoMerge across nodes of the same lab.
 	if o.Destroy.All {
 		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-		if !o.Inspect.Wide {
-			colConfigs = append(
-				colConfigs,
-				tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				},
-				tableWriter.ColumnConfig{
-					Number:    2, //nolint: mnd
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				},
-			)
-		}
-		// If wide, do not set AutoMerge for any columns
-	} else {
-		header = headerBase
-
-		if !o.Inspect.Wide {
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+		colConfigs = append(
+			colConfigs,
+			tableWriter.ColumnConfig{
 				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			},
+			tableWriter.ColumnConfig{
+				Number:    2, //nolint: mnd
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			},
+		)
+		if o.Inspect.Wide {
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    3, //nolint: mnd
 				AutoMerge: true, VAlign: text.VAlignMiddle,
 			})
 		}
+	} else {
+		header = headerBase
+
+		colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+			Number:    1,
+			AutoMerge: true, VAlign: text.VAlignMiddle,
+		})
 	}
 
 	table.AppendHeader(header)
