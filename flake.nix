@@ -77,7 +77,7 @@
             enable = lib.mkEnableOption "containerlab";
             package = lib.mkOption {
               type = lib.types.package;
-              default = self.packages.${pkgs.system}.containerlab;
+              default = self.packages.${pkgs.stdenv.hostPlatform.system}.containerlab;
               description = "The containerlab package to install.";
             };
           };
