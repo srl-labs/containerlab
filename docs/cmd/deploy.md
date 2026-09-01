@@ -83,6 +83,12 @@ The currently declared modes per kind:
 | images built with Boxen | `live`     | Detected via the `org.opencontainers.image.vendor=Boxen` label |
 | all other kinds         | `recreate` | Conservative default for kinds not yet validated               |
 
+#### Peers of a recreated node
+
+Recreating a node tears down every link it owns, including the end that lives in a node the topology change did not touch. Rebuilding the link hands that peer a brand new interface, and any dataplane state the peer set up for the old interface when it started is lost with it. VM-backed kinds are the ones this hurts: vrnetlab bridges each `ethN` to the VM's `tapN` with tc rules that are installed once, at container start.
+
+Those peers are therefore run through the same policy: a `live` peer keeps its in-place handling, a `restart` or `recreate` peer gets its own lifecycle action, logged with the reason `peer node recreated`. Since recreating a peer tears down that peer's links in turn, the effect can travel further than the link you edited. In a lab built only of VM kinds, adding a single link can recreate a large part of the topology. Set `link-apply-mode: live` on the nodes whose NOS handles hot-plugged interfaces to keep the blast radius small.
+
 #### Overriding the mode
 
 If you know that a node's NOS handles hot-plugged interfaces (or at least survives a plain

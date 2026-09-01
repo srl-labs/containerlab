@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
@@ -444,7 +446,7 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	plan.plannedLinkSet = map[int]struct{}{1: {}}
 	plan.addedLinks = []clablinks.Link{link2}
 
-	c.planRecreatedNodeLinks(plan)
+	c.planRecreatedNodeLinks(context.Background(), plan)
 
 	if got, want := len(plan.addedLinks), 2; got != want {
 		t.Fatalf("planned links = %d, want %d", got, want)
@@ -458,6 +460,145 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	result := applyResultFromPlan(plan)
 	if got, want := len(result.AddedLinks), 2; got != want {
 		t.Fatalf("reported added links = %d, want %d", got, want)
+	}
+}
+
+// applyTestLink builds a veth link between two fake link nodes, taken from nodes
+// by name so that both ends of a chain share the same node object.
+func applyTestLink(
+	nodes map[string]*applyFakeLinkNode,
+	aName, aIface, bName, bIface string,
+) clablinks.Link {
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(nodes[aName], aIface, link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(nodes[bName], bIface, link)),
+	}
+
+	return link
+}
+
+func TestPlanRecreatedNodeLinksPlansPeersOfRebuiltLinks(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		// link-apply-mode of every node that is not the seed of the recreation.
+		peerModes map[string]clabnodes.LinkApplyMode
+		// nodes this apply creates; they come up with the rebuilt link in place.
+		addedNodes    []string
+		links         [][4]string
+		wantRecreated []string
+		wantRestarted []string
+		// links that get rebuilt: only those touching a recreated node.
+		wantLinks int
+	}{
+		{
+			name: "recreate peer is recreated, live peer is left alone",
+			peerModes: map[string]clabnodes.LinkApplyMode{
+				"n2": clabnodes.LinkApplyModeRecreate,
+				"n3": clabnodes.LinkApplyModeLive,
+			},
+			links: [][4]string{
+				{"n1", "eth1", "n2", "eth1"},
+				{"n1", "eth2", "n3", "eth1"},
+			},
+			wantRecreated: []string{"n1", "n2"},
+			wantLinks:     2,
+		},
+		{
+			name: "restart peer is restarted and does not pull in its own peers",
+			peerModes: map[string]clabnodes.LinkApplyMode{
+				"n2": clabnodes.LinkApplyModeRestart,
+				"n3": clabnodes.LinkApplyModeRecreate,
+			},
+			links: [][4]string{
+				{"n1", "eth1", "n2", "eth1"},
+				{"n2", "eth2", "n3", "eth1"},
+			},
+			wantRecreated: []string{"n1"},
+			wantRestarted: []string{"n2"},
+			wantLinks:     1,
+		},
+		{
+			name: "recreated peer pulls in a node that is not a peer of the seed",
+			peerModes: map[string]clabnodes.LinkApplyMode{
+				"n2": clabnodes.LinkApplyModeRecreate,
+				"n3": clabnodes.LinkApplyModeRecreate,
+			},
+			links: [][4]string{
+				{"n1", "eth1", "n2", "eth1"},
+				{"n2", "eth2", "n3", "eth1"},
+			},
+			wantRecreated: []string{"n1", "n2", "n3"},
+			wantLinks:     2,
+		},
+		{
+			name: "node created by this apply is left alone",
+			peerModes: map[string]clabnodes.LinkApplyMode{
+				"n2": clabnodes.LinkApplyModeRecreate,
+			},
+			addedNodes: []string{"n2"},
+			links: [][4]string{
+				{"n1", "eth1", "n2", "eth1"},
+			},
+			wantRecreated: []string{"n1"},
+			wantLinks:     1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+
+			linkNodes := map[string]*applyFakeLinkNode{}
+			for _, l := range tt.links {
+				for _, name := range []string{l[0], l[2]} {
+					if _, exists := linkNodes[name]; !exists {
+						linkNodes[name] = &applyFakeLinkNode{name: name}
+					}
+				}
+			}
+
+			c := &CLab{
+				Links: map[int]clablinks.Link{},
+				Nodes: map[string]clabnodes.Node{},
+			}
+			for i, l := range tt.links {
+				c.Links[i] = applyTestLink(linkNodes, l[0], l[1], l[2], l[3])
+			}
+			for name, mode := range tt.peerModes {
+				node := clabmocksmocknodes.NewMockNode(ctrl)
+				node.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+				node.EXPECT().LinkApplyMode(gomock.Any()).Return(mode).AnyTimes()
+				c.Nodes[name] = node
+			}
+
+			plan := newApplyPlan(nil, nil)
+			// n1 is the node the topology change recreates.
+			plan.recreatedNodeSet = map[string]struct{}{"n1": {}}
+			for _, name := range tt.addedNodes {
+				plan.addedNodeSet[name] = struct{}{}
+			}
+
+			c.planRecreatedNodeLinks(context.Background(), plan)
+
+			if diff := cmp.Diff(tt.wantRecreated, sortedStringSet(plan.recreatedNodeSet),
+				cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("recreated nodes mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(tt.wantRestarted, sortedStringSet(plan.linkRestartNodeSet),
+				cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("restarted nodes mismatch (-want +got):\n%s", diff)
+			}
+
+			if got, want := len(plan.addedLinks), tt.wantLinks; got != want {
+				t.Errorf("planned links = %d, want %d", got, want)
+			}
+		})
 	}
 }
 

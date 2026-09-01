@@ -181,7 +181,7 @@ func (c *CLab) planApply(
 		}
 	}
 
-	c.planRecreatedNodeLinks(plan)
+	c.planRecreatedNodeLinks(ctx, plan)
 	for nodeName := range plan.recreatedNodeSet {
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
@@ -245,26 +245,76 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 }
 
-func (c *CLab) planRecreatedNodeLinks(plan *applyPlan) {
+// planRecreatedNodeLinks plans the rebuild of every link that touches a recreated
+// node, and gives the peer on the other end its own lifecycle action.
+//
+// A recreated node tears down all of its veths, so a peer that stays up gets a new
+// interface and silently loses the dataplane state it had for the old one. That
+// hurts VM kinds: vrnetlab writes its tc ethN to tapN redirect once per tap, at VM
+// boot, so the link comes back up on every visible layer and carries nothing.
+//
+// Peers therefore follow the same link-apply-mode policy as the nodes whose links
+// changed, and a recreated peer tears down its own links in turn, so the plan is
+// grown until it stops changing.
+func (c *CLab) planRecreatedNodeLinks(ctx context.Context, plan *applyPlan) {
 	if plan == nil || len(plan.recreatedNodeSet) == 0 {
 		return
 	}
 
-	rebuildSet := make(map[string]struct{}, len(plan.recreatedNodeSet))
-	for nodeName := range plan.recreatedNodeSet {
-		if _, parked := plan.parkedNodeSet[nodeName]; parked {
-			continue
-		}
-		rebuildSet[nodeName] = struct{}{}
-	}
+	plannedPeers := map[string]struct{}{}
 
-	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		link := c.Links[linkIdx]
-		if !linkTouchesNodeSet(link, rebuildSet) {
-			continue
+	for {
+		rebuildSet := make(map[string]struct{}, len(plan.recreatedNodeSet))
+		for nodeName := range plan.recreatedNodeSet {
+			if _, parked := plan.parkedNodeSet[nodeName]; parked {
+				continue
+			}
+			rebuildSet[nodeName] = struct{}{}
 		}
 
-		plan.addDeployApplyLink(linkIdx, link)
+		peers := map[string]struct{}{}
+
+		for _, linkIdx := range sortedLinkIndexes(c.Links) {
+			link := c.Links[linkIdx]
+			if !linkTouchesNodeSet(link, rebuildSet) {
+				continue
+			}
+
+			plan.addDeployApplyLink(linkIdx, link)
+
+			for _, ep := range clablinks.RuntimeEndpoints(link) {
+				nodeName := ep.GetNode().GetShortName()
+				if _, rebuilt := rebuildSet[nodeName]; rebuilt {
+					continue
+				}
+				if _, done := plannedPeers[nodeName]; done {
+					continue
+				}
+				// a node that is being created by this apply comes up with the
+				// rebuilt link already in place.
+				if _, added := plan.addedNodeSet[nodeName]; added {
+					continue
+				}
+				peers[nodeName] = struct{}{}
+			}
+		}
+
+		if len(peers) == 0 {
+			return
+		}
+
+		recreatedBefore := len(plan.recreatedNodeSet)
+
+		for _, nodeName := range sortedStringSet(peers) {
+			plannedPeers[nodeName] = struct{}{}
+			c.planAffectedApplyNode(ctx, plan, nodeName, "peer node recreated")
+		}
+
+		// only a newly recreated peer tears down further links, so there is
+		// nothing left to discover once the recreated set stops growing.
+		if len(plan.recreatedNodeSet) == recreatedBefore {
+			return
+		}
 	}
 }
 
