@@ -411,6 +411,16 @@ Ensure "inspect all" outputs IP addresses
     ${ipv6} =    String.Strip String    ${data}[6]
     Run Keyword    Match IPv6 Address    ${ipv6}
 
+Ensure "inspect all wide" merges lab columns
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --all --wide
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Owner
+    # topology path is merged across the three nodes of this lab
+    ${topo-count} =    Get Count    ${output}    ${lab-file}
+    Should Be Equal As Integers    ${topo-count}    1
+
 Verify "inspect interfaces" contains the expected output
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} inspect interfaces -t ${CURDIR}/${lab-file}
