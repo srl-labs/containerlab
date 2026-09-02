@@ -34,6 +34,12 @@ type DeployRequest struct {
 	// through Pod.spec.imagePullSecrets. Empty means the lab references no pull secret at
 	// all: public images and clusters whose runtime already holds credentials need none.
 	ImagePullSecret string
+	// NoPersistence deploys the lab on ephemeral node storage. By default every node's
+	// artifact volume is backed by a persistent claim so saved device configuration survives
+	// Pod replacement, matching the local-runtime lab directory contract; opting out trades
+	// that for not needing a dynamically provisionable storage class, and every Pod
+	// replacement then resets the node to its declared configuration.
+	NoPersistence bool
 }
 
 type DestroyRequest struct {

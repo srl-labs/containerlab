@@ -37,6 +37,27 @@ func topologyWithImagePullSecret(secret string) topologyObjectOption {
 	}
 }
 
+// topologyWithPersistence backs each node's artifact volume with a persistent claim so saved
+// device configuration survives Pod replacement, the same contract a local runtime provides
+// through the lab directory. Disabled leaves persistence unset entirely: ephemeral storage is
+// the CRD default, and a reconcile that drops the field makes the controller remove the
+// c9s-owned claims.
+func topologyWithPersistence(enabled bool) topologyObjectOption {
+	return func(spec map[string]any) {
+		if !enabled {
+			return
+		}
+		deployment, ok := spec["deployment"].(map[string]any)
+		if !ok {
+			deployment = map[string]any{}
+			spec["deployment"] = deployment
+		}
+		deployment["persistence"] = map[string]any{
+			"enabled": true,
+		}
+	}
+}
+
 func topologyObject(
 	name,
 	namespace,

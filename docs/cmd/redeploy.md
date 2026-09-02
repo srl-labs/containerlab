@@ -117,6 +117,10 @@ The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabe
 
 The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR during the deploy phase. See [`deploy --image-pull-secret`](deploy.md#image-pull-secret).
 
+#### no-persistence
+
+The `--no-persistence` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It makes the deploy phase run the lab nodes on ephemeral storage instead of the default per-node persistent volumes. See [`deploy --no-persistence`](deploy.md#no-persistence).
+
 ### Examples
 
 #### Redeploy a lab using the given topology file

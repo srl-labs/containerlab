@@ -51,6 +51,7 @@ func (c *CLab) deployWithLabRuntime(
 	req.NoTopologyCR = options != nil && options.noTopologyCR
 	if options != nil {
 		req.ImagePullSecret = options.imagePullSecret
+		req.NoPersistence = options.noPersistence
 	}
 
 	state, err := c.LabRuntime.Deploy(ctx, req)

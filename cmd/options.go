@@ -329,6 +329,7 @@ type DeployOptions struct {
 	ExportRenderedTopology   string
 	NoTopologyCR             bool
 	ImagePullSecret          string
+	NoPersistence            bool
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {

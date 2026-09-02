@@ -358,6 +358,16 @@ When the flag is not set, no pull secret is referenced at all: public images and
 containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret
 ```
 
+#### no-persistence
+
+The `--no-persistence` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy enables persistence on the c9s `Topology` CR (`spec.deployment.persistence.enabled`), backing every node's artifact volume with a PersistentVolumeClaim so saved device configuration survives pod replacement -- the same contract the lab directory provides with local runtimes. This requires a dynamically provisionable (default) storage class in the cluster.
+
+With this flag, nodes run on ephemeral storage instead: no storage class is needed, and every pod replacement resets the node to its declared startup configuration.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --no-persistence
+```
+
 #### owner
 
 The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.

@@ -1262,6 +1262,133 @@ func TestDeployWithoutTopologyCROmitsNodeProfilePullSecretsWhenUnset(t *testing.
 	}
 }
 
+func TestTopologyPersistence(t *testing.T) {
+	t.Parallel()
+
+	obj := topologyObject("lab1", "lab-ns", "", "topology:\n",
+		topologyWithPersistence(true))
+	assertTopologyPersistenceEnabled(t, obj)
+
+	obj = topologyObject("lab1", "lab-ns", "", "topology:\n",
+		topologyWithPersistence(false))
+	assertNoTopologyPersistence(t, obj)
+}
+
+func assertTopologyPersistenceEnabled(t *testing.T, obj *unstructured.Unstructured) {
+	t.Helper()
+
+	enabled, found, err := unstructured.NestedBool(
+		obj.Object,
+		"spec",
+		"deployment",
+		"persistence",
+		"enabled",
+	)
+	if err != nil || !found {
+		t.Fatalf("topology deployment.persistence.enabled not found: %v", err)
+	}
+	if !enabled {
+		t.Fatal("topology deployment.persistence.enabled = false, want true")
+	}
+}
+
+func assertNoTopologyPersistence(t *testing.T, obj *unstructured.Unstructured) {
+	t.Helper()
+
+	persistence, found, err := unstructured.NestedMap(
+		obj.Object,
+		"spec",
+		"deployment",
+		"persistence",
+	)
+	if err != nil {
+		t.Fatalf("topology deployment.persistence: %v", err)
+	}
+	if found {
+		t.Fatalf("topology deployment.persistence = %v, want unset", persistence)
+	}
+}
+
+func TestDeployPopulatesTopologyPersistence(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	tests := []struct {
+		name          string
+		noPersistence bool
+	}{
+		{name: "persistent by default"},
+		{name: "opted out", noPersistence: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRuntime()
+			_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+				Name:               "lab1",
+				Namespace:          "lab-ns",
+				TopologyDefinition: []byte(definition),
+				Wait:               false,
+				NoPersistence:      tt.noPersistence,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			obj := getTestTopology(t, r, "lab-ns", "lab1")
+			if tt.noPersistence {
+				assertNoTopologyPersistence(t, obj)
+				return
+			}
+			assertTopologyPersistenceEnabled(t, obj)
+		})
+	}
+}
+
+func TestDeployWithoutTopologyCRPopulatesNodeProfilePersistence(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile := getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
+	enabled, found, err := unstructured.NestedBool(
+		profile.Object,
+		"spec",
+		"deployment",
+		"persistence",
+		"enabled",
+	)
+	if err != nil || !found || !enabled {
+		t.Fatalf("node profile deployment.persistence.enabled = %t, found=%t, err=%v; want true",
+			enabled, found, err)
+	}
+}
+
 func TestDeployNoTopologyCRRejectsTopologyOwnedLab(t *testing.T) {
 	t.Parallel()
 

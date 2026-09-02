@@ -38,6 +38,7 @@ func prepareDesiredDeployment(
 		string(topologyDefinition),
 		topologyWithNaming(naming),
 		topologyWithImagePullSecret(req.ImagePullSecret),
+		topologyWithPersistence(!req.NoPersistence),
 	)
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err

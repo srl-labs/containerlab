@@ -31,6 +31,11 @@ const (
 	imagePullSecretFlagHelp = "name of the image pull secret populated in the clabernetes " +
 		"Topology CR; the secret must exist in the lab namespace, and when unset no pull " +
 		"secret is referenced at all (clabernetes runtime only)"
+
+	noPersistenceFlagHelp = "deploy lab nodes on ephemeral storage instead of the default " +
+		"per-node persistent volumes; saved device configuration is then lost on any pod " +
+		"replacement, but no dynamically provisionable storage class is required " +
+		"(clabernetes runtime only)"
 )
 
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
@@ -195,6 +200,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		imagePullSecretFlagHelp,
 	)
 
+	c.Flags().BoolVar(
+		&o.Deploy.NoPersistence,
+		"no-persistence",
+		o.Deploy.NoPersistence,
+		noPersistenceFlagHelp,
+	)
+
 	return c, nil
 }
 
@@ -215,6 +227,11 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	if o.Deploy.ImagePullSecret != "" &&
 		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
 		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if o.Deploy.NoPersistence && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--no-persistence is only supported with the %q runtime",
 			clablabruntime.ClabernetesRuntimeName)
 	}
 
@@ -259,7 +276,8 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetRestoreAll(o.Deploy.RestoreAll).
 		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots).
 		SetNoTopologyCR(o.Deploy.NoTopologyCR).
-		SetImagePullSecret(o.Deploy.ImagePullSecret)
+		SetImagePullSecret(o.Deploy.ImagePullSecret).
+		SetNoPersistence(o.Deploy.NoPersistence)
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {

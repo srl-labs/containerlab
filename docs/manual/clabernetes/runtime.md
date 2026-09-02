@@ -533,6 +533,37 @@ currently limited to 950 KB. These projections are snapshots taken at deploy
 time, not mutable host bind mounts; run deploy again after changing a source
 file.
 
+### Device state persistence
+
+By default, deploy enables [Clabernetes persistence](https://github.com/clabernetes/clabernetes/blob/main/docs/guides/persistence.md)
+on the lab: every node's artifact volume is backed by a per-node
+PersistentVolumeClaim, and the in-cluster claim plays the role the
+[lab directory](../conf-artifacts.md) plays with local runtimes. The startup
+configuration seeds the node once; from then on the configuration the device
+saved wins, and a pod restart, eviction, or unrelated topology change never
+silently reverts saved work. `enforce-startup-config` makes the declared
+configuration win on every boot, exactly as it does locally.
+
+This requires a dynamically provisionable (default) storage class in the
+cluster. Deploy with `--no-persistence` to run nodes on ephemeral storage
+instead; every pod replacement then factory-resets the node to its declared
+configuration.
+
+No local lab directory is created for c9s labs: the cluster holds the lab
+state. Use `containerlab --runtime c9s save --copy <dir>` to export saved
+configurations to local disk when you want a copy outside the cluster.
+
+`containerlab --runtime c9s destroy` deletes the lab namespace and with it
+the claims and all saved device state -- it behaves like a local
+`destroy --cleanup`. To re-seed a single node from its declared configuration
+without redeploying the lab, annotate its Node with a device-state reset
+token:
+
+```bash
+kubectl -n <namespace> annotate node.c9s.run <node> \
+  c9s.run/device-state-reset=$(date +%s) --overwrite
+```
+
 ## RBAC requirements
 
 The kube identity used by the outer containerlab process must be able to:

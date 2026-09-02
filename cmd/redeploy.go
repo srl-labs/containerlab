@@ -130,6 +130,12 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.ImagePullSecret,
 		imagePullSecretFlagHelp,
 	)
+	c.Flags().BoolVar(
+		&o.Deploy.NoPersistence,
+		"no-persistence",
+		o.Deploy.NoPersistence,
+		noPersistenceFlagHelp,
+	)
 
 	return c, nil
 }

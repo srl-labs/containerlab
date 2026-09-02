@@ -18,6 +18,7 @@ type DeployOptions struct {
 	restoreNodeSnapshots []string // restoreNodeSnapshots maps node names to specific snapshot file paths.
 	noTopologyCR         bool     // noTopologyCR deploys a lab-runtime lab without a Topology resource.
 	imagePullSecret      string   // imagePullSecret is the secret name populated in the lab-runtime Topology.
+	noPersistence        bool     // noPersistence deploys a lab-runtime lab on ephemeral node storage.
 }
 
 // NewDeployOptions creates a new DeployOptions instance with the specified maxWorkers value.
@@ -64,6 +65,19 @@ func (d *DeployOptions) SetImagePullSecret(secret string) *DeployOptions {
 // ImagePullSecret returns the imagePullSecret option value.
 func (d *DeployOptions) ImagePullSecret() string {
 	return d.imagePullSecret
+}
+
+// SetNoPersistence sets the noPersistence option and returns the updated DeployOptions
+// instance.
+func (d *DeployOptions) SetNoPersistence(b bool) *DeployOptions {
+	d.noPersistence = b
+
+	return d
+}
+
+// NoPersistence returns the noPersistence option value.
+func (d *DeployOptions) NoPersistence() bool {
+	return d.noPersistence
 }
 
 // SetDryRun sets the dryRun option and returns the updated DeployOptions instance.
