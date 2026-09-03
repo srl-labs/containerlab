@@ -32,6 +32,9 @@ const (
 		"Topology CR; the secret must exist in the lab namespace, and when unset no pull " +
 		"secret is referenced at all (clabernetes runtime only)"
 
+	exposeTypeFlagHelp = "Kubernetes Service type used to expose lab nodes; one of " +
+		"ClusterIP, Headless, LoadBalancer, or None (c9s runtime only)"
+
 	noPersistenceFlagHelp = "deploy lab nodes on ephemeral storage instead of the default " +
 		"per-node persistent volumes; saved device configuration is then lost on any pod " +
 		"replacement, but no dynamically provisionable storage class is required " +
@@ -200,6 +203,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		imagePullSecretFlagHelp,
 	)
 
+	c.Flags().StringVar(
+		&o.Deploy.ExposeType,
+		"expose-type",
+		o.Deploy.ExposeType,
+		exposeTypeFlagHelp,
+	)
+
 	c.Flags().BoolVar(
 		&o.Deploy.NoPersistence,
 		"no-persistence",
@@ -228,6 +238,10 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
 		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
 			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if err := normalizeExposeTypeFlag(o); err != nil {
+		return err
 	}
 
 	if o.Deploy.NoPersistence && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
@@ -277,6 +291,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots).
 		SetNoTopologyCR(o.Deploy.NoTopologyCR).
 		SetImagePullSecret(o.Deploy.ImagePullSecret).
+		SetExposeType(o.Deploy.ExposeType).
 		SetNoPersistence(o.Deploy.NoPersistence)
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
@@ -315,6 +330,21 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// print table summary
 	return PrintContainerInspect(result.Containers, o)
+}
+
+func normalizeExposeTypeFlag(o *Options) error {
+	if o.Deploy.ExposeType != "" && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--expose-type is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	exposeType, err := clablabruntime.NormalizeExposeType(o.Deploy.ExposeType)
+	if err != nil {
+		return fmt.Errorf("invalid --expose-type: %w", err)
+	}
+	o.Deploy.ExposeType = exposeType
+
+	return nil
 }
 
 func shouldDisplayPostDeployVersion(runtimeName string) bool {

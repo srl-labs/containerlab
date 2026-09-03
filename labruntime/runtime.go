@@ -11,7 +11,37 @@ import (
 
 const (
 	ClabernetesRuntimeName = "c9s"
+
+	ExposeTypeClusterIP    = "ClusterIP"
+	ExposeTypeHeadless     = "Headless"
+	ExposeTypeLoadBalancer = "LoadBalancer"
+	ExposeTypeNone         = "None"
 )
+
+var exposeTypes = map[string]string{ //nolint:gochecknoglobals
+	strings.ToLower(ExposeTypeClusterIP):    ExposeTypeClusterIP,
+	strings.ToLower(ExposeTypeHeadless):     ExposeTypeHeadless,
+	strings.ToLower(ExposeTypeLoadBalancer): ExposeTypeLoadBalancer,
+	strings.ToLower(ExposeTypeNone):         ExposeTypeNone,
+}
+
+// NormalizeExposeType validates a c9s expose type and returns its canonical CRD spelling.
+func NormalizeExposeType(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	if normalized, ok := exposeTypes[strings.ToLower(value)]; ok {
+		return normalized, nil
+	}
+
+	return "", fmt.Errorf("invalid expose type %q; must be one of %s, %s, %s, %s",
+		value,
+		ExposeTypeClusterIP,
+		ExposeTypeHeadless,
+		ExposeTypeLoadBalancer,
+		ExposeTypeNone,
+	)
+}
 
 type Config struct {
 	Timeout   time.Duration
@@ -34,6 +64,9 @@ type DeployRequest struct {
 	// through Pod.spec.imagePullSecrets. Empty means the lab references no pull secret at
 	// all: public images and clusters whose runtime already holds credentials need none.
 	ImagePullSecret string
+	// ExposeType controls the Kubernetes Service type c9s creates for lab nodes. Empty uses the
+	// c9s CRD default.
+	ExposeType string
 	// NoPersistence deploys the lab on ephemeral node storage. By default every node's
 	// artifact volume is backed by a persistent claim so saved device configuration survives
 	// Pod replacement, matching the local-runtime lab directory contract; opting out trades

@@ -18,6 +18,7 @@ type DeployOptions struct {
 	restoreNodeSnapshots []string // restoreNodeSnapshots maps node names to specific snapshot file paths.
 	noTopologyCR         bool     // noTopologyCR deploys a lab-runtime lab without a Topology resource.
 	imagePullSecret      string   // imagePullSecret is the secret name populated in the lab-runtime Topology.
+	exposeType           string   // exposeType controls the Services emitted for a lab-runtime lab.
 	noPersistence        bool     // noPersistence deploys a lab-runtime lab on ephemeral node storage.
 }
 
@@ -65,6 +66,18 @@ func (d *DeployOptions) SetImagePullSecret(secret string) *DeployOptions {
 // ImagePullSecret returns the imagePullSecret option value.
 func (d *DeployOptions) ImagePullSecret() string {
 	return d.imagePullSecret
+}
+
+// SetExposeType sets the c9s Service exposure type and returns the updated DeployOptions instance.
+func (d *DeployOptions) SetExposeType(exposeType string) *DeployOptions {
+	d.exposeType = exposeType
+
+	return d
+}
+
+// ExposeType returns the c9s Service exposure type.
+func (d *DeployOptions) ExposeType() string {
+	return d.exposeType
 }
 
 // SetNoPersistence sets the noPersistence option and returns the updated DeployOptions

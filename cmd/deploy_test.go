@@ -39,9 +39,33 @@ func TestApplyIsDeployAlias(t *testing.T) {
 		"skip-post-deploy",
 		"export-template",
 		"image-pull-secret",
+		"expose-type",
 	} {
 		if deploy.Flags().Lookup(flagName) == nil {
 			t.Fatalf("deploy command missing %q flag", flagName)
+		}
+	}
+}
+
+func TestDeployExposeTypeFlag(t *testing.T) {
+	optionsInstance = nil
+
+	cmd, err := Entrypoint()
+	if err != nil {
+		t.Fatalf("failed to create command: %v", err)
+	}
+
+	for _, commandName := range []string{"deploy", "redeploy"} {
+		command := findCommand(cmd, commandName)
+		if command == nil {
+			t.Fatalf("%s command is not registered", commandName)
+		}
+		flag := command.Flags().Lookup("expose-type")
+		if flag == nil {
+			t.Fatalf("%s command missing expose-type flag", commandName)
+		}
+		if flag.DefValue != "" {
+			t.Fatalf("%s expose-type default = %q, want c9s CRD default", commandName, flag.DefValue)
 		}
 	}
 }

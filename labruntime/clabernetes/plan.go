@@ -26,6 +26,10 @@ func prepareDesiredDeployment(
 	req clablabruntime.DeployRequest,
 	namespace string,
 ) (*preparedDeployment, error) {
+	exposeType, err := clablabruntime.NormalizeExposeType(req.ExposeType)
+	if err != nil {
+		return nil, err
+	}
 	topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(req)
 	if err != nil {
 		return nil, err
@@ -38,6 +42,7 @@ func prepareDesiredDeployment(
 		string(topologyDefinition),
 		topologyWithNaming(naming),
 		topologyWithImagePullSecret(req.ImagePullSecret),
+		topologyWithExposeType(exposeType),
 		topologyWithPersistence(!req.NoPersistence),
 	)
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {

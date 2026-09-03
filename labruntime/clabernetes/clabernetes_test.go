@@ -1262,6 +1262,70 @@ func TestDeployWithoutTopologyCROmitsNodeProfilePullSecretsWhenUnset(t *testing.
 	}
 }
 
+func TestDeployPopulatesTopologyExposeType(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		ExposeType:         "clusterip",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertExposeType(t, getTestTopology(t, r, "lab-ns", "lab1"), "ClusterIP")
+}
+
+func TestDeployWithoutTopologyCRPopulatesNodeProfileExposeType(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+		ExposeType:         "headless",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile := getTestPrimitive(t, r, nodeProfileGVR, "lab-ns", "lab1")
+	assertExposeType(t, profile, "Headless")
+}
+
+func assertExposeType(t *testing.T, obj *unstructured.Unstructured, want string) {
+	t.Helper()
+
+	got, found, err := unstructured.NestedString(obj.Object, "spec", "expose", "exposeType")
+	if err != nil || !found {
+		t.Fatalf("spec.expose.exposeType not found: %v", err)
+	}
+	if got != want {
+		t.Fatalf("spec.expose.exposeType = %q, want %q", got, want)
+	}
+}
+
 func TestTopologyPersistence(t *testing.T) {
 	t.Parallel()
 

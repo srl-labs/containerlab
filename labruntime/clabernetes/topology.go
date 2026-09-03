@@ -37,6 +37,17 @@ func topologyWithImagePullSecret(secret string) topologyObjectOption {
 	}
 }
 
+func topologyWithExposeType(exposeType string) topologyObjectOption {
+	return func(spec map[string]any) {
+		if exposeType == "" {
+			return
+		}
+		spec["expose"] = map[string]any{
+			"exposeType": exposeType,
+		}
+	}
+}
+
 // topologyWithPersistence backs each node's artifact volume with a persistent claim so saved
 // device configuration survives Pod replacement, the same contract a local runtime provides
 // through the lab directory. Disabled leaves persistence unset entirely: ephemeral storage is

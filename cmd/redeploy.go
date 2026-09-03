@@ -130,6 +130,12 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.ImagePullSecret,
 		imagePullSecretFlagHelp,
 	)
+	c.Flags().StringVar(
+		&o.Deploy.ExposeType,
+		"expose-type",
+		o.Deploy.ExposeType,
+		exposeTypeFlagHelp,
+	)
 	c.Flags().BoolVar(
 		&o.Deploy.NoPersistence,
 		"no-persistence",
@@ -141,6 +147,10 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 }
 
 func redeployFn(cobraCmd *cobra.Command, o *Options) error {
+	if err := normalizeExposeTypeFlag(o); err != nil {
+		return err
+	}
+
 	// First destroy the lab
 	err := destroyFn(cobraCmd, o)
 	if err != nil {
