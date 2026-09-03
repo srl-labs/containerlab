@@ -7,7 +7,11 @@ IP Addresses
 * **PC2:** 192.168.12.2/24
 * **PC3:** 192.168.13.2/24
 
-This is also an example of how to pre-configure lab nodes on "linux" node types in Containerlab.
+The routers use the [`frr`](https://containerlab.dev/manual/kinds/frr/) kind. Containerlab writes `/etc/frr/frr.conf` from each node's `startup-config`, along with `/etc/frr/daemons` and `/etc/frr/vtysh.conf`, and makes the routers reachable over SSH:
+
+```bash
+ssh root@clab-frr01-router1
+```
 
 To start this lab, run the *clab deploy* command.
 
