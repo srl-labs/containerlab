@@ -247,16 +247,30 @@ With `--max-workers` flag, it is possible to limit the number of concurrent work
 
 #### runtime
 
-Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
+Containerlab nodes can be started by different local container runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
 
-A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The possible value are:
+A global runtime can be selected with the `--runtime | -r` flag. The possible values are:
 
-* `docker` - default
-* `podman` - experimental support
+- `docker` - default local container runtime
+- `podman` - experimental local container runtime
+- `c9s` - Clabernetes lab runtime that deploys the whole topology to a kubernetes cluster
+
+/// note
+`c9s` is a lab runtime, not a per-node container runtime. When it is selected, containerlab renders the topology and creates a Clabernetes `Topology` custom resource. See [Containerlab runtime](../manual/clabernetes/runtime.md) for details.
+
+By default, the Clabernetes runtime deploys each lab into a managed
+`c9s-<lab-name>` namespace. Use the global `--namespace` option, which has no
+short form, to target an existing namespace instead:
+
+```bash
+containerlab --runtime c9s --namespace default deploy -t topo.clab.yml
+```
+
+///
 
 #### timeout
 
-A global `--timeout` flag drives the timeout of API requests that containerlab send toward external resources. Currently the only external resource is the container runtime (i.e. docker).
+A global `--timeout` flag drives the timeout of API requests that containerlab sends toward external resources, such as the selected container runtime or the kubernetes API used by the Clabernetes lab runtime.
 
 In a busy compute the runtime may respond longer than anticipated, in that case increasing the timeout may help.
 
@@ -297,18 +311,22 @@ Node filtering applies to fresh deployments (including `--reconfigure`) only. Wh
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 
+/// warning | Clabernetes runtime
+`deploy --node-filter` is not supported with `--runtime c9s`. Clabernetes reconciles the complete topology stored in a `Topology` custom resource. After the topology exists, use node filtering with commands such as `start`, `stop`, `restart`, `exec`, or `save`.
+///
+
 #### skip-post-deploy
 
 The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment, affecting all nodes.
 
 The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
 
-* Readiness and health checks
-* TLS certificate provisioning
-* Saving startup configuration
-* Applying overlay CLI configuration
-* Populating `/etc/hosts` with peer node entries
-* Disabling TX checksum offload
+- Readiness and health checks
+- TLS certificate provisioning
+- Saving startup configuration
+- Applying overlay CLI configuration
+- Populating `/etc/hosts` with peer node entries
+- Disabling TX checksum offload
 
 Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
 
@@ -321,6 +339,50 @@ The `--skip-labdir-acl` flag can be used to skip the lab directory access contro
 The extended File ACLs are provisioned for the lab directory by default, unless this flag is set. Extended File ACLs allow a sudo user to access the files in the lab directory that might be created by the `root` user from within the container node.
 
 While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
+
+#### no-topology-cr
+
+The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy persists the rendered topology as a c9s `Topology` resource and the Clabernetes manager compiles it into the `Node`, `Link`, and `NodeProfile` resources. With this flag, containerlab skips the `Topology` resource and compiles the topology client-side, creating and reconciling those resources directly.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --no-topology-cr
+```
+
+#### emit-crs
+
+The `--emit-crs` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. Instead of applying anything, deploy prints the Kubernetes manifests it would create to stdout as a multi-document YAML stream, so they can be saved, edited by hand, and applied with `kubectl`. The cluster is not contacted.
+
+The bundle contains, in apply order, the managed lab `Namespace` (omitted when a namespace override is in effect, since that namespace must already exist), the `ConfigMap` resources that stage local files such as startup configs and binds, and then either the `Topology` resource or, together with `--no-topology-cr`, the compiled `NodeProfile`, `Link`, and `Node` resources. Text files are staged as plain `data` entries so they can be edited in place; only files that are not valid text end up base64-encoded under `binaryData`. The other c9s flags (`--no-topology-cr`, `--image-pull-secret`, `--expose-type`, `--no-persistence`, `--owner`) shape the emitted manifests exactly as they shape a real deployment. With `--format json` the bundle is printed as a single `v1/List` object instead.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs > mylab-crs.yaml
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs --no-topology-cr > mylab-crs.yaml
+kubectl apply -f mylab-crs.yaml
+```
+
+Every emitted resource carries the labels containerlab uses to discover a lab, so a bundle applied by hand remains manageable with `inspect`, `destroy`, and the node lifecycle commands. Note that a later `deploy` of the same topology reconciles the cluster back to the topology file and discards manual edits made to the applied manifests.
+
+`--emit-crs` cannot be combined with `--dry-run` or `--reconfigure`.
+
+#### image-pull-secret
+
+The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR (`spec.imagePull.pullSecrets`), which the kubelet uses when pulling node images. The secret must exist in the lab namespace.
+
+When the flag is not set, no pull secret is referenced at all: public images and clusters whose container runtime already holds registry credentials need none.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret
+```
+
+#### no-persistence
+
+The `--no-persistence` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy enables persistence on the c9s `Topology` CR (`spec.deployment.persistence.enabled`), backing every node's artifact volume with a PersistentVolumeClaim so saved device configuration survives pod replacement -- the same contract the lab directory provides with local runtimes. This requires a dynamically provisionable (default) storage class in the cluster.
+
+With this flag, nodes run on ephemeral storage instead: no storage class is needed, and every pod replacement resets the node to its declared startup configuration.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --no-persistence
+```
 
 #### owner
 
@@ -383,9 +445,9 @@ containerlab deploy -t mylab.clab.yml \
 
 In this example:
 
-* Nodes with snapshots in `./snapshots/` will restore from there
-* Node `r3` will restore from `./backups/r3-old.tar` (override)
-* Nodes without snapshots will deploy fresh
+- Nodes with snapshots in `./snapshots/` will restore from there
+- Node `r3` will restore from `./backups/r3-old.tar` (override)
+- Nodes without snapshots will deploy fresh
 
 > See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
 
@@ -393,12 +455,16 @@ In this example:
 
 #### `CLAB_RUNTIME`
 
-Default value of "runtime" key for nodes, same as global `--runtime | -r` flag described above.
-Affects all containerlab commands in the same way, not just `deploy`.
+Default value for the global `--runtime | -r` flag described above. It affects all containerlab commands in the same way, not just `deploy`.
 
-Intended to be set in environments where non-default container runtime should be used, to avoid needing to specify it for every command invocation or in every configuration file.
+For `docker` or `podman`, it selects the default local container runtime. For `c9s`, it selects the whole-lab Clabernetes runtime.
 
-Example command-line usage: `CLAB_RUNTIME=podman containerlab deploy`
+Example command-line usage:
+
+```bash
+CLAB_RUNTIME=podman containerlab deploy
+CLAB_RUNTIME=c9s containerlab deploy -t topo.clab.yml
+```
 
 #### `CLAB_VERSION_CHECK`
 
@@ -447,6 +513,14 @@ It can also reconcile an already deployed lab by name:
 ```bash
 containerlab apply --name mylab
 ```
+
+#### Emit the clabernetes manifests instead of deploying
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs > mylab-crs.yaml
+```
+
+Prints the `Namespace`, `ConfigMap`, and `Topology` manifests deploy would create to stdout without touching the cluster. Edit the file and apply it with `kubectl apply -f mylab-crs.yaml`. Add `--no-topology-cr` to emit the compiled `NodeProfile`, `Link`, and `Node` resources instead of the `Topology`.
 
 #### Deploy a lab without specifying topology file
 

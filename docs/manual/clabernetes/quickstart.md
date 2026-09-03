@@ -21,7 +21,7 @@ Let's see how it all works, buckle up!
 
 ## Creating a cluster
 
-Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. Surely, it is best to have a real deal available to you, but for demo purposes we'll use [`kind`](https://kind.sigs.k8s.io/) v0.22.0 to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
+Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. Surely, it is best to have a real deal available to you, but for demo purposes we'll use [`kind`](https://kind.sigs.k8s.io/) v0.32.0 to create a local multi-node kubernetes cluster. c9s 0.7 requires Kubernetes 1.31 or newer. If you already have a compatible k8s cluster, feel free to use it instead[^1]!
 
 With the following command we instruct kind to set up a three node k8s cluster with two worker and one control plane nodes.
 
@@ -47,9 +47,9 @@ Check that the cluster is ready and proceed with installing clabernetes.
 ```bash
 ❯ kubectl get nodes 
 NAME                STATUS   ROLES           AGE     VERSION
-c9s-control-plane   Ready    control-plane   5m6s    v1.29.2
-c9s-worker          Ready    <none>          4m46s   v1.29.2
-c9s-worker2         Ready    <none>          4m42s   v1.29.2
+c9s-control-plane   Ready    control-plane   5m6s    v1.35.0
+c9s-worker          Ready    <none>          4m46s   v1.35.0
+c9s-worker2         Ready    <none>          4m42s   v1.35.0
 ```
 
 ## Installing clabernetes
@@ -66,7 +66,7 @@ alias helm='docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
     -v ~/.config/helm:/root/.config/helm \
     -v ~/.cache/helm:/root/.cache/helm \
-    alpine/helm:3.12.3'
+alpine/helm:3.18.2'
 ```
 
 ///
@@ -79,7 +79,7 @@ alias helm='docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
     -v ~/.config/helm:/root/.config/helm \
     -v ~/.cache/helm:/root/.cache/helm \
-    alpine/helm:3.12.3'
+    alpine/helm:3.18.2'
 ```
 
 ///
@@ -162,6 +162,14 @@ To make sure you have a smooth sailing in the clabernetes waters we've created a
 
 Clabverter is not a requirement to run clabernetes, but it is a helper tool to convert containerlab topologies to clabernetes resources and kubernetes objects.
 
+/// note | Native containerlab runtime
+Recent containerlab versions can also deploy to clabernetes directly with
+`containerlab --runtime c9s`. This quickstart keeps using `clabverter`
+because it shows the generated kubernetes manifests explicitly. If you want the
+regular containerlab CLI lifecycle, see the [Containerlab runtime](runtime.md)
+page.
+///
+
 As per clabverter's [installation instructions](install.md#clabverter) we will setup an alias that uses the latest available clabverter container image:
 
 --8<-- "docs/manual/clabernetes/install.md:cv-install"
@@ -223,7 +231,7 @@ As you can see, we have two namespaces: `c9s` and `c9s-vlan`. The `c9s` namespac
 
 ### Topology resource
 
-The *main* clabernetes resource is called `Topology` and we should be able to find it in the `c9s-vlan` namespace where all lab resources are deployed:
+The `Topology` resource holds the original containerlab definition. c9s compiles it into the primary `Node`, `Link`, and `NodeProfile` resources in the `c9s-vlan` namespace:
 
 ``` {.bash .no-select}
 kubectl get --namespace c9s-vlan Topology
@@ -236,7 +244,7 @@ vlan   containerlab   14h
 ```
 </div>
 
-Looking in the Topology CR we can see that the original containerlab topology definition can be found under the `spec.definition.containerlab` field of the custom resource. Clabernetes took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
+Looking in the Topology CR we can see that the original containerlab topology definition can be found under the `spec.definition.containerlab` field. Topology status now contains bounded node/link counts and conditions; per-node readiness and exposed-port allocations live on the generated `Node` resources:
 
 ``` {.bash .no-select}
 kubectl get --namespace c9s-vlan Topology vlan -o yaml

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -20,6 +21,8 @@ import (
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	_ "github.com/srl-labs/containerlab/labruntime/all"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -33,12 +36,13 @@ import (
 var ErrNodeNotFound = errors.New("node not found")
 
 type CLab struct {
-	Config    *Config `json:"config,omitempty"`
-	TopoPaths *clabtypes.TopoPaths
-	Nodes     map[string]clabnodes.Node `json:"nodes,omitempty"`
-	Links     map[int]clablinks.Link    `json:"links,omitempty"`
-	Endpoints []clablinks.Endpoint
-	Runtimes  map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
+	Config     *Config `json:"config,omitempty"`
+	TopoPaths  *clabtypes.TopoPaths
+	Nodes      map[string]clabnodes.Node `json:"nodes,omitempty"`
+	Links      map[int]clablinks.Link    `json:"links,omitempty"`
+	Endpoints  []clablinks.Endpoint
+	Runtimes   map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
+	LabRuntime clablabruntime.LabRuntime               `json:"-"`
 	// reg is a registry of node kinds
 	Reg  *clabnodes.NodeRegistry
 	Cert *clabcert.Cert
@@ -66,6 +70,8 @@ type CLab struct {
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string
 	gitHash   string
+
+	renderedTopology []byte
 }
 
 // NewContainerLab function defines a new container lab.
@@ -97,7 +103,11 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
-		err = c.parseTopology()
+		if c.LabRuntime != nil {
+			err = c.prepareLabRuntimeTopology()
+		} else {
+			err = c.parseTopology()
+		}
 	}
 
 	// Extract the host systems DNS servers and populate the
@@ -113,16 +123,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
 // Order of preference: cli flag -> env var -> default value of docker.
 func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
-	envN := os.Getenv("CLAB_RUNTIME")
-	log.Debugf("env runtime var value is %v", envN)
-
-	switch {
-	case name != "":
-	case envN != "":
-		name = envN
-	default:
-		name = clabruntimedocker.RuntimeName
-	}
+	name = resolveRuntimeName(name)
 
 	runtimeInitializer, ok := clabruntime.ContainerRuntimes[name]
 	if !ok {
@@ -130,6 +131,103 @@ func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
 	}
 
 	return name, runtimeInitializer, nil
+}
+
+func resolveRuntimeName(name string) string {
+	envN := os.Getenv("CLAB_RUNTIME")
+	log.Debugf("env runtime var value is %v", envN)
+
+	switch {
+	case name != "":
+		return strings.ToLower(name)
+	case envN != "":
+		return strings.ToLower(envN)
+	default:
+		return clabruntimedocker.RuntimeName
+	}
+}
+
+func (c *CLab) prepareLabRuntimeTopology() error {
+	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
+
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
+		r := c.magicTopoNameReplacer()
+		oldName := c.Config.Name
+		c.Config.Name = r.Replace(c.Config.Name)
+		log.Debugf(
+			"Topology name contains Git variables, substituted topology name: %q -> %q",
+			oldName,
+			c.Config.Name,
+		)
+	}
+
+	if err := c.sanitizeLabRuntimeNames(); err != nil {
+		return err
+	}
+
+	if err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name); err != nil {
+		return err
+	}
+
+	if c.Config.Prefix == nil {
+		c.Config.Prefix = new(string)
+		*c.Config.Prefix = defaultPrefix
+	}
+
+	return nil
+}
+
+// sanitizeLabRuntimeNames aligns the lab and node names with what a lab runtime can name the
+// objects it creates with. The lab name is renamed here so containerlab and the runtime keep
+// addressing the lab by the same name; node names are renamed by the runtime itself, where the
+// topology it hands over is rewritten, and are only reported here.
+func (c *CLab) sanitizeLabRuntimeNames() error {
+	if sanitized := clablabruntime.SanitizeName(c.Config.Name); sanitized != c.Config.Name {
+		if sanitized == "" {
+			return fmt.Errorf(
+				"lab name %q holds no character a lab runtime object name can be built from",
+				c.Config.Name,
+			)
+		}
+
+		log.Warn(
+			"Lab name cannot name the objects the lab runtime creates and was sanitized",
+			"name", c.Config.Name,
+			"sanitized", sanitized,
+		)
+
+		c.Config.Name = sanitized
+	}
+
+	if c.Config.Topology == nil {
+		return nil
+	}
+
+	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
+	for nodeName := range c.Config.Topology.Nodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	if err != nil {
+		return err
+	}
+	if len(renames) == 0 {
+		return nil
+	}
+
+	renamed := make([]string, 0, len(renames))
+	for _, nodeName := range slices.Sorted(maps.Keys(renames)) {
+		renamed = append(renamed, fmt.Sprintf("%s -> %s", nodeName, renames[nodeName]))
+	}
+
+	log.Warn(
+		"Node names cannot name the objects the lab runtime creates and were sanitized",
+		"nodes", strings.Join(renamed, ", "),
+	)
+
+	return nil
 }
 
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
@@ -186,6 +284,11 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	}
 
 	c.nodeFilter = nodeFilter
+
+	if c.LabRuntime != nil {
+		log.Infof("Applying node filter: %q", nodeFilter)
+		return nil
+	}
 
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {

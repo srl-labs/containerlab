@@ -14,6 +14,10 @@ func eventsCmd(o *Options) (*cobra.Command, error) {
 			"reference: https://containerlab.dev/cmd/events/",
 		Aliases: []string{"ev"},
 		PreRunE: func(*cobra.Command, []string) error {
+			if commandSkipsRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {

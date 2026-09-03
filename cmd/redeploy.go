@@ -13,6 +13,10 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 			"reference: https://containerlab.dev/cmd/redeploy/",
 		Aliases: []string{"rdep"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if commandSkipsRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		SilenceUsage: true,
@@ -114,11 +118,39 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.SkipLabDirectoryFileACLs,
 		"skip the lab directory extended ACLs provisioning",
 	)
+	c.Flags().BoolVar(
+		&o.Deploy.NoTopologyCR,
+		"no-topology-cr",
+		o.Deploy.NoTopologyCR,
+		noTopologyCRFlagHelp,
+	)
+	c.Flags().StringVar(
+		&o.Deploy.ImagePullSecret,
+		"image-pull-secret",
+		o.Deploy.ImagePullSecret,
+		imagePullSecretFlagHelp,
+	)
+	c.Flags().StringVar(
+		&o.Deploy.ExposeType,
+		"expose-type",
+		o.Deploy.ExposeType,
+		exposeTypeFlagHelp,
+	)
+	c.Flags().BoolVar(
+		&o.Deploy.NoPersistence,
+		"no-persistence",
+		o.Deploy.NoPersistence,
+		noPersistenceFlagHelp,
+	)
 
 	return c, nil
 }
 
 func redeployFn(cobraCmd *cobra.Command, o *Options) error {
+	if err := normalizeExposeTypeFlag(o); err != nil {
+		return err
+	}
+
 	// First destroy the lab
 	err := destroyFn(cobraCmd, o)
 	if err != nil {
