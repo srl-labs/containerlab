@@ -348,6 +348,22 @@ The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabe
 containerlab --runtime c9s deploy -t mylab.clab.yml --no-topology-cr
 ```
 
+#### emit-crs
+
+The `--emit-crs` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. Instead of applying anything, deploy prints the Kubernetes manifests it would create to stdout as a multi-document YAML stream, so they can be saved, edited by hand, and applied with `kubectl`. The cluster is not contacted.
+
+The bundle contains, in apply order, the managed lab `Namespace` (omitted when a namespace override is in effect, since that namespace must already exist), the `ConfigMap` resources that stage local files such as startup configs and binds, and then either the `Topology` resource or, together with `--no-topology-cr`, the compiled `NodeProfile`, `Link`, and `Node` resources. Text files are staged as plain `data` entries so they can be edited in place; only files that are not valid text end up base64-encoded under `binaryData`. The other c9s flags (`--no-topology-cr`, `--image-pull-secret`, `--expose-type`, `--no-persistence`, `--owner`) shape the emitted manifests exactly as they shape a real deployment. With `--format json` the bundle is printed as a single `v1/List` object instead.
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs > mylab-crs.yaml
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs --no-topology-cr > mylab-crs.yaml
+kubectl apply -f mylab-crs.yaml
+```
+
+Every emitted resource carries the labels containerlab uses to discover a lab, so a bundle applied by hand remains manageable with `inspect`, `destroy`, and the node lifecycle commands. Note that a later `deploy` of the same topology reconciles the cluster back to the topology file and discards manual edits made to the applied manifests.
+
+`--emit-crs` cannot be combined with `--dry-run` or `--reconfigure`.
+
 #### image-pull-secret
 
 The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR (`spec.imagePull.pullSecrets`), which the kubelet uses when pulling node images. The secret must exist in the lab namespace.
@@ -497,6 +513,14 @@ It can also reconcile an already deployed lab by name:
 ```bash
 containerlab apply --name mylab
 ```
+
+#### Emit the clabernetes manifests instead of deploying
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --emit-crs > mylab-crs.yaml
+```
+
+Prints the `Namespace`, `ConfigMap`, and `Topology` manifests deploy would create to stdout without touching the cluster. Edit the file and apply it with `kubectl apply -f mylab-crs.yaml`. Add `--no-topology-cr` to emit the compiled `NodeProfile`, `Link`, and `Node` resources instead of the `Topology`.
 
 #### Deploy a lab without specifying topology file
 

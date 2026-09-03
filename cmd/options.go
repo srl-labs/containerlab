@@ -331,6 +331,7 @@ type DeployOptions struct {
 	ImagePullSecret          string
 	ExposeType               string
 	NoPersistence            bool
+	EmitCRs                  bool
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {

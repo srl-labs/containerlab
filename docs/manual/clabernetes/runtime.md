@@ -96,6 +96,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `events` | watches Clabernetes resources and pods |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, NodeProfile, Link, and Node resources without changing them |
+| `deploy --emit-crs` | prints the Namespace, ConfigMap, and Topology (or NodeProfile, Link, and Node) manifests deploy would create, without contacting the cluster |
 
 ## Requirements
 
@@ -320,15 +321,16 @@ resources and managed namespace created by that deployment. A timeout while
 reconciling a lab that already existed retains the lab for diagnosis and a
 later corrective reconciliation.
 
-### Validation and dry-run
+### Validation, dry-run, and emitting manifests
 
-Both commands use the same c9s preparation path as deploy, including extended-link
+All three modes use the same c9s preparation path as deploy, including extended-link
 normalization, compatibility checks, and local-file staging checks:
 
 ```bash
 containerlab --runtime c9s validate -t topo.clab.yml
 containerlab --runtime c9s deploy --dry-run -t topo.clab.yml
 containerlab --runtime c9s deploy --dry-run --format json -t topo.clab.yml
+containerlab --runtime c9s deploy --emit-crs -t topo.clab.yml > topo-crs.yaml
 ```
 
 `validate` reports whether the topology can be represented by the c9s runtime without reading
@@ -339,6 +341,18 @@ with a warning. `deploy --dry-run` additionally reads the selected cluster and r
 exact create, update, and delete plan for the resources containerlab itself would change:
 Namespace, ConfigMap, and the `Topology` — or, with `--no-topology-cr`, the NodeProfile, Link,
 and Node resources. An empty `changes` list means the deployed resources already conform.
+
+`deploy --emit-crs` prints those same resources as a multi-document YAML stream on stdout and
+exits without contacting the cluster. Log output stays on stderr, so the stream can be redirected
+to a file, edited, and applied with `kubectl apply -f`. The bundle contains the managed lab
+Namespace (omitted when a namespace override is in effect), the staged ConfigMaps, and the
+`Topology` — or, with `--no-topology-cr`, the compiled NodeProfile, Link, and Node resources.
+Staged text files are plain `data` entries in their ConfigMaps; only files that are not valid
+text are base64-encoded under `binaryData`.
+Every object carries the `c9s.run/topologyOwner` label, so a lab applied from an emitted bundle
+is discovered and managed like any other c9s lab. `--format json` prints the bundle as one
+`v1/List` object. A later `deploy` of the same topology reconciles the lab back to the topology
+file and discards manual edits made to the applied manifests.
 
 ## Inspect
 

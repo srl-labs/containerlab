@@ -58,6 +58,25 @@ func (r *Runtime) namespaceForLab(name, namespace string) (string, error) {
 	return canonicalNamespaceForLab(name)
 }
 
+// labNamespaceObject is the managed lab namespace containerlab creates for a lab. The same
+// object is emitted as a manifest, so a hand-applied lab is recognized as managed too.
+func labNamespaceObject(name, namespace string) *corev1.Namespace {
+	return &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+			Labels: map[string]string{
+				labelRuntime:       clabernetesAppValue,
+				labelTopologyOwner: name,
+				// The c9s connectivity sidecar is privileged; without this label a cluster
+				// enforcing a restrictive Pod Security default rejects every device pod.
+				// clabverter stamps the same label on the namespaces it emits.
+				"pod-security.kubernetes.io/enforce": "privileged",
+			},
+		},
+	}
+}
+
 func (r *Runtime) ensureLabNamespace(
 	ctx context.Context,
 	name,
@@ -88,19 +107,7 @@ func (r *Runtime) ensureLabNamespace(
 		)
 	}
 
-	_, err = namespaces.Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-			Labels: map[string]string{
-				labelRuntime:       clabernetesAppValue,
-				labelTopologyOwner: name,
-				// The c9s connectivity sidecar is privileged; without this label a cluster
-				// enforcing a restrictive Pod Security default rejects every device pod.
-				// clabverter stamps the same label on the namespaces it emits.
-				"pod-security.kubernetes.io/enforce": "privileged",
-			},
-		},
-	}, metav1.CreateOptions{})
+	_, err = namespaces.Create(ctx, labNamespaceObject(name, namespace), metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
 		existing, err = namespaces.Get(ctx, namespace, metav1.GetOptions{})
 		if err != nil {

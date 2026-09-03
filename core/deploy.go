@@ -72,10 +72,7 @@ func (c *CLab) Deploy(
 		if err != nil {
 			return nil, err
 		}
-		req.NoTopologyCR = options.noTopologyCR
-		req.ImagePullSecret = options.imagePullSecret
-		req.ExposeType = options.exposeType
-		req.NoPersistence = options.noPersistence
+		applyLabRuntimeDeployOptions(&req, options)
 
 		plan, err := planner.Plan(ctx, req)
 		if err != nil {

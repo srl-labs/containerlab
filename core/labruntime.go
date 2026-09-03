@@ -48,12 +48,7 @@ func (c *CLab) deployWithLabRuntime(
 		return nil, err
 	}
 	req.Wait = true
-	req.NoTopologyCR = options != nil && options.noTopologyCR
-	if options != nil {
-		req.ImagePullSecret = options.imagePullSecret
-		req.ExposeType = options.exposeType
-		req.NoPersistence = options.noPersistence
-	}
+	applyLabRuntimeDeployOptions(&req, options)
 
 	state, err := c.LabRuntime.Deploy(ctx, req)
 	if err != nil {
@@ -86,6 +81,47 @@ func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 		TopologyDefinition: c.renderedTopology,
 		Timeout:            c.timeout,
 	}, nil
+}
+
+// applyLabRuntimeDeployOptions copies the deploy options that shape remote resources onto the
+// runtime request in one place, so every path that builds a request agrees on them.
+func applyLabRuntimeDeployOptions(req *clablabruntime.DeployRequest, options *DeployOptions) {
+	if options == nil {
+		return
+	}
+
+	req.NoTopologyCR = options.noTopologyCR
+	req.ImagePullSecret = options.imagePullSecret
+	req.ExposeType = options.exposeType
+	req.NoPersistence = options.noPersistence
+}
+
+// LabRuntimeManifests renders the remote resources the selected runtime would create for the
+// topology, shaped by the same deploy options a real deployment honors, without contacting the
+// runtime's backend.
+func (c *CLab) LabRuntimeManifests(
+	ctx context.Context,
+	options *DeployOptions,
+) ([]clablabruntime.Manifest, error) {
+	if c.LabRuntime == nil {
+		return nil, fmt.Errorf("no lab runtime selected")
+	}
+
+	emitter, ok := c.LabRuntime.(clablabruntime.ManifestEmitter)
+	if !ok {
+		return nil, fmt.Errorf(
+			"lab runtime %q does not support emitting manifests",
+			c.globalRuntimeName,
+		)
+	}
+
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return nil, err
+	}
+	applyLabRuntimeDeployOptions(&req, options)
+
+	return emitter.Manifests(ctx, req)
 }
 
 // ValidateLabRuntimeTopology executes the selected runtime's compiler without mutation.

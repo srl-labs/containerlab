@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -39,6 +41,11 @@ const (
 		"per-node persistent volumes; saved device configuration is then lost on any pod " +
 		"replacement, but no dynamically provisionable storage class is required " +
 		"(clabernetes runtime only)"
+
+	emitCRsFlagHelp = "print the Kubernetes manifests deploy would create to stdout instead " +
+		"of applying them; the Topology resource by default, or the compiled NodeProfile, " +
+		"Link, and Node resources with --no-topology-cr, together with the lab Namespace " +
+		"and ConfigMaps they depend on (clabernetes runtime only)"
 )
 
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
@@ -217,6 +224,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		noPersistenceFlagHelp,
 	)
 
+	c.Flags().BoolVar(
+		&o.Deploy.EmitCRs,
+		"emit-crs",
+		o.Deploy.EmitCRs,
+		emitCRsFlagHelp,
+	)
+
 	return c, nil
 }
 
@@ -249,7 +263,12 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 			clablabruntime.ClabernetesRuntimeName)
 	}
 
-	o.Global.BackupTopologyFile = !o.Deploy.DryRun
+	if err := validateEmitCRsFlags(o); err != nil {
+		return err
+	}
+
+	// Neither preview mode changes the lab, so neither should leave a topology backup behind.
+	o.Global.BackupTopologyFile = !o.Deploy.DryRun && !o.Deploy.EmitCRs
 
 	var err error
 
@@ -260,20 +279,6 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
-	}
-
-	// destroy-on-cancel must only be armed when deploy creates the lab from scratch;
-	// canceling a reconciliation of an already deployed lab must not destroy it
-	if !o.Deploy.DryRun {
-		cleanOnCancel := o.Deploy.Reconfigure
-		if !cleanOnCancel {
-			cleanOnCancel, err = c.NeedsInitialDeploy(cobraCmd.Context())
-			if err != nil {
-				return err
-			}
-		}
-
-		o.Global.CleanOnCancel.Store(cleanOnCancel)
 	}
 
 	deploymentOptions, err := clabcore.NewDeployOptions(o.Deploy.MaxWorkers)
@@ -293,6 +298,31 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetImagePullSecret(o.Deploy.ImagePullSecret).
 		SetExposeType(o.Deploy.ExposeType).
 		SetNoPersistence(o.Deploy.NoPersistence)
+
+	// Emitting manifests never touches the cluster, so it returns before deploy probes the
+	// lab state or arms destroy-on-cancel.
+	if o.Deploy.EmitCRs {
+		manifests, err := c.LabRuntimeManifests(cobraCmd.Context(), deploymentOptions)
+		if err != nil {
+			return err
+		}
+
+		return printLabRuntimeManifests(os.Stdout, manifests, o.Inspect.Format)
+	}
+
+	// destroy-on-cancel must only be armed when deploy creates the lab from scratch;
+	// canceling a reconciliation of an already deployed lab must not destroy it
+	if !o.Deploy.DryRun {
+		cleanOnCancel := o.Deploy.Reconfigure
+		if !cleanOnCancel {
+			cleanOnCancel, err = c.NeedsInitialDeploy(cobraCmd.Context())
+			if err != nil {
+				return err
+			}
+		}
+
+		o.Global.CleanOnCancel.Store(cleanOnCancel)
+	}
 
 	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
@@ -349,6 +379,74 @@ func normalizeExposeTypeFlag(o *Options) error {
 
 func shouldDisplayPostDeployVersion(runtimeName string) bool {
 	return !clablabruntime.IsLabRuntimeName(runtimeName)
+}
+
+// validateEmitCRsFlags rejects --emit-crs outside the lab runtime that can render manifests and
+// in combination with the modes that imply a real or simulated deployment.
+func validateEmitCRsFlags(o *Options) error {
+	if !o.Deploy.EmitCRs {
+		return nil
+	}
+
+	if !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--emit-crs is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+	if o.Deploy.DryRun {
+		return fmt.Errorf(
+			"--emit-crs cannot be combined with --dry-run: " +
+				"dry-run plans against the cluster while emit-crs never contacts it",
+		)
+	}
+	if o.Deploy.Reconfigure {
+		return fmt.Errorf(
+			"--emit-crs cannot be combined with --reconfigure: " +
+				"reconfigure always destroys and redeploys the full lab",
+		)
+	}
+
+	return nil
+}
+
+// printLabRuntimeManifests writes the emitted resources as a multi-document YAML stream, or as
+// a v1 List for the json format, so the output can be redirected to a file and applied as is.
+func printLabRuntimeManifests(
+	w io.Writer,
+	manifests []clablabruntime.Manifest,
+	format string,
+) error {
+	if format == clabconstants.FormatJSON {
+		items := make([]map[string]any, 0, len(manifests))
+		for _, manifest := range manifests {
+			items = append(items, manifest.Object)
+		}
+
+		b, err := json.MarshalIndent(map[string]any{
+			"apiVersion": "v1",
+			"kind":       "List",
+			"items":      items,
+		}, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintln(w, string(b))
+
+		return err
+	}
+
+	for _, manifest := range manifests {
+		b, err := yaml.Marshal(manifest.Object)
+		if err != nil {
+			return fmt.Errorf("failed to render %s %s: %w", manifest.Kind, manifest.Name, err)
+		}
+
+		if _, err = fmt.Fprintf(w, "---\n%s", b); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // printDryRunResult prints the planned changes of a dry run, as JSON when requested via

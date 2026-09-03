@@ -218,6 +218,23 @@ type TopologyPlanner interface {
 	Plan(context.Context, DeployRequest) (*DeployPlan, error)
 }
 
+// Manifest is one remote resource a lab runtime would create for a topology, ready to be
+// serialized and applied by hand. Object is the complete resource including its type and
+// metadata; the identity fields are duplicated for summaries and tests.
+type Manifest struct {
+	APIVersion string
+	Kind       string
+	Namespace  string
+	Name       string
+	Object     map[string]any
+}
+
+// ManifestEmitter renders the exact resources a lab runtime would create for a topology, in
+// apply order, without reading or changing remote state.
+type ManifestEmitter interface {
+	Manifests(context.Context, DeployRequest) ([]Manifest, error)
+}
+
 type Initializer func(Config) (LabRuntime, error)
 
 var LabRuntimes = map[string]Initializer{}
