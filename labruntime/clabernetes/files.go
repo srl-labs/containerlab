@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/log"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -73,11 +74,33 @@ type clabernetesRenderTopology struct {
 }
 
 type stagedConfigMap struct {
-	name          string
-	nodeName      string
+	name     string
+	nodeName string
+	// data holds text files as plain strings and binaryData everything else. Kubernetes
+	// serializes binaryData as base64, so keeping text out of it is what makes an emitted or
+	// inspected ConfigMap readable and editable; the c9s controller reads either field.
+	data          map[string]string
 	binaryData    map[string][]byte
 	keyByFilePath map[string]string
 	mounts        []stagedConfigMapMount
+}
+
+// content returns the staged bytes for a ConfigMap key from whichever field holds them.
+func (c *stagedConfigMap) content(key string) ([]byte, bool) {
+	if text, ok := c.data[key]; ok {
+		return []byte(text), true
+	}
+	if content, ok := c.binaryData[key]; ok {
+		return content, true
+	}
+
+	return nil, false
+}
+
+// isTextContent reports whether a file can be stored as a plain ConfigMap string: valid UTF-8
+// with no NUL bytes. Anything else must go through binaryData to survive JSON encoding intact.
+func isTextContent(content []byte) bool {
+	return utf8.Valid(content) && !bytes.ContainsRune(content, 0)
 }
 
 type stagedConfigMapMount struct {
@@ -642,6 +665,7 @@ func getOrCreateStagedConfigMap(
 	configMap = &stagedConfigMap{
 		name:          name,
 		nodeName:      nodeName,
+		data:          map[string]string{},
 		binaryData:    map[string][]byte{},
 		keyByFilePath: map[string]string{},
 	}
@@ -658,14 +682,18 @@ func addStagedConfigMapData(
 	content []byte,
 ) error {
 	if existingKey, ok := configMap.keyByFilePath[filePath]; ok {
-		if !bytes.Equal(configMap.binaryData[existingKey], content) {
+		if existing, _ := configMap.content(existingKey); !bytes.Equal(existing, content) {
 			return fmt.Errorf("staged file path %q has conflicting content", filePath)
 		}
 
 		return nil
 	}
 
-	configMap.binaryData[configMapKey] = content
+	if isTextContent(content) {
+		configMap.data[configMapKey] = string(content)
+	} else {
+		configMap.binaryData[configMapKey] = content
+	}
 	configMap.keyByFilePath[filePath] = configMapKey
 	configMap.mounts = append(configMap.mounts, stagedConfigMapMount{
 		nodeName:      configMap.nodeName,
@@ -680,7 +708,7 @@ func addStagedConfigMapData(
 
 func uniqueConfigMapKey(configMap *stagedConfigMap, filePath string) string {
 	configMapKey := safeConfigMapKey(filePath)
-	if _, exists := configMap.binaryData[configMapKey]; !exists {
+	if _, exists := configMap.content(configMapKey); !exists {
 		return configMapKey
 	}
 
@@ -691,7 +719,7 @@ func uniqueConfigMapKey(configMap *stagedConfigMap, filePath string) string {
 			hex.EncodeToString(digest[:])[0:7],
 			fmt.Sprintf("%d", idx),
 		)
-		if _, exists := configMap.binaryData[candidate]; !exists {
+		if _, exists := configMap.content(candidate); !exists {
 			return candidate
 		}
 	}
@@ -810,7 +838,18 @@ func stagedConfigMapObject(
 	staged stagedConfigMap,
 	ownerReferences []metav1.OwnerReference,
 ) *corev1.ConfigMap {
+	// Empty maps are left nil so neither field is serialized when it carries nothing.
+	var data map[string]string
+	if len(staged.data) != 0 {
+		data = staged.data
+	}
+	var binaryData map[string][]byte
+	if len(staged.binaryData) != 0 {
+		binaryData = staged.binaryData
+	}
+
 	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            staged.name,
 			Namespace:       namespace,
@@ -821,7 +860,8 @@ func stagedConfigMapObject(
 				labelTopologyNode:  staged.nodeName,
 			},
 		},
-		BinaryData: staged.binaryData,
+		Data:       data,
+		BinaryData: binaryData,
 	}
 }
 

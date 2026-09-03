@@ -1754,8 +1754,10 @@ topology:
 		t.Fatalf("unexpected deploy state: %+v", state)
 	}
 
+	// Text files are staged as plain ConfigMap data so they stay readable in the cluster and
+	// in emitted manifests; binaryData is reserved for content that is not valid text.
 	clientConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-client2-files")
-	if got := string(clientConfigMap.BinaryData["configs-client2-iperf-sh"]); got != "#!/bin/sh\n" {
+	if got := clientConfigMap.Data["configs-client2-iperf-sh"]; got != "#!/bin/sh\n" {
 		t.Fatalf("unexpected client2 staged file content: %q", got)
 	}
 	for key, want := range map[string]string{
@@ -1763,22 +1765,21 @@ topology:
 		"configs-agent-yml":   "name: agent\n",
 		"configs-flash-cfg":   "hostname ceos\n",
 	} {
-		if got := string(clientConfigMap.BinaryData[key]); got != want {
+		if got := clientConfigMap.Data[key]; got != want {
 			t.Fatalf("staged %s content = %q, want %q", key, got, want)
 		}
 	}
+	if len(clientConfigMap.BinaryData) != 0 {
+		t.Fatalf("text files were staged as binaryData: %v", clientConfigMap.BinaryData)
+	}
 
 	prometheusConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-prometheus-files")
-	if got := string(
-		prometheusConfigMap.BinaryData["configs-prometheus-prometheus-yml"],
-	); got != "global: {}\n" {
+	if got := prometheusConfigMap.Data["configs-prometheus-prometheus-yml"]; got != "global: {}\n" {
 		t.Fatalf("unexpected prometheus staged file content: %q", got)
 	}
 
 	startupConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-leaf1-startup-config")
-	if got := string(
-		startupConfigMap.BinaryData["startup-config"],
-	); got != "set / system name leaf1\n" {
+	if got := startupConfigMap.Data["startup-config"]; got != "set / system name leaf1\n" {
 		t.Fatalf("unexpected startup config content: %q", got)
 	}
 
