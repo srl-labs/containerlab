@@ -1,0 +1,19 @@
+# Copyright 2026 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+modular: true
+chassis_name: 7250 IXR-10e-gen2cp
+chassis_mode: GEN2CP_ONLY
+cpm: cpm4-t-sync-ixr
+imm: imm2-36-400g-sync-qsfpdd
+
+chassis_configuration:
+  "chassis_type": 69
+  "base_mac": "{{ .MAC }}"
+  "cpm_card_type": 41
+
+slot_configuration:
+  1:
+    "card_type": 43
+    "mda_type": 199

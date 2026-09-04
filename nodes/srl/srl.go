@@ -108,25 +108,39 @@ var (
 		"ixr-h6":     "7220IXRH6.yml",
 		"ixr6":       "7250IXR6.yml",
 		"ixr-6":      "7250IXR6.yml",
-		"ixr6e":      "7250IXR6e.yml",
-		"ixr-6e":     "7250IXR6e.yml",
+		"ixr6e":      "7250IXR6e-gen2cp-qsfpdd.yml",
+		"ixr-6e":     "7250IXR6e-gen2cp-qsfpdd.yml",
 		"ixr10":      "7250IXR10.yml",
 		"ixr-10":     "7250IXR10.yml",
-		"ixr10e":     "7250IXR10e.yml",
-		"ixr-10e":    "7250IXR10e.yml",
-		"ixr18e":     "7250IXR18e.yml",
-		"ixr-18e":    "7250IXR18e.yml",
-		"sxr1x44s":   "7730SXR-1x-44s.yml",
-		"sxr-1x-44s": "7730SXR-1x-44s.yml",
-		"sxr1d32d":   "7730SXR-1d-32d.yml",
-		"sxr-1d-32d": "7730SXR-1d-32d.yml",
-		"sxr-1-32d":  "7730SXR-1-32d.yml",
-		"ixrx1b":     "7250IXRX1b.yml",
-		"ixr-x1b":    "7250IXRX1b.yml",
-		"ixrx3b":     "7250IXRX3b.yml",
-		"ixr-x3b":    "7250IXRX3b.yml",
-		"ixr-x4":     "7250IXRX4-QSFP-DD.yml",
-		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
+		"ixr10e":     "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr-10e":    "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr18e":     "7250IXR18e-qsfpdd.yml",
+		"ixr-18e":    "7250IXR18e-qsfpdd.yml",
+
+		"ixr-6e-gen2cp-qsfpdd":  "7250IXR6e-gen2cp-qsfpdd.yml",
+		"ixr-6e-gen2cp-qsfp28":  "7250IXR6e-gen2cp-qsfp28.yml",
+		"ixr-6e-gen2cp-sync":    "7250IXR6e-gen2cp-sync.yml",
+		"ixr-6e-gen3-qsfpdd":    "7250IXR6e-gen3-qsfpdd.yml",
+		"ixr-6e-gen3-osfp":      "7250IXR6e-gen3-osfp.yml",
+		"ixr-10e-gen2cp-qsfpdd": "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr-10e-gen2cp-qsfp28": "7250IXR10e-gen2cp-qsfp28.yml",
+		"ixr-10e-gen2cp-sync":   "7250IXR10e-gen2cp-sync.yml",
+		"ixr-10e-gen3-qsfpdd":   "7250IXR10e-gen3-qsfpdd.yml",
+		"ixr-10e-gen3-osfp":     "7250IXR10e-gen3-osfp.yml",
+		"ixr-18e-qsfpdd":        "7250IXR18e-qsfpdd.yml",
+		"ixr-18e-gen3-sync":     "7250IXR18e-gen3-sync.yml",
+		"ixr-18e-gen3-osfp":     "7250IXR18e-gen3-osfp.yml",
+		"sxr1x44s":              "7730SXR-1x-44s.yml",
+		"sxr-1x-44s":            "7730SXR-1x-44s.yml",
+		"sxr1d32d":              "7730SXR-1d-32d.yml",
+		"sxr-1d-32d":            "7730SXR-1d-32d.yml",
+		"sxr-1-32d":             "7730SXR-1-32d.yml",
+		"ixrx1b":                "7250IXRX1b.yml",
+		"ixr-x1b":               "7250IXRX1b.yml",
+		"ixrx3b":                "7250IXRX3b.yml",
+		"ixr-x3b":               "7250IXRX3b.yml",
+		"ixr-x4":                "7250IXRX4-QSFP-DD.yml",
+		"ixr-x4-d":              "7250IXRX4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -242,6 +256,17 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
 
+	// fail on an unusable components block here rather than midway through the deploy
+	if _, err := resolveSRLTopology(n.Cfg); err != nil {
+		return err
+	}
+
+	if len(n.Cfg.Components) > 1 {
+		log.Warn("Multiple line cards are rendered into the SR Linux topology file, but "+
+			"deploying a node with more than one line card is not supported yet",
+			"node", n.Cfg.ShortName, "line cards", len(n.Cfg.Components))
+	}
+
 	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
@@ -303,10 +328,16 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	n.topologyName = params.TopologyName
 
 	// platform specific pre-deploy actions
+	// modular chassis boot in the mode required by the line card generation they are populated
+	// with, unless the user pinned the mode explicitly.
 	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
-		// boot 6e/10e in GEN2CP_ONLY mode by default
-		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
-			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		topology, err := resolveSRLTopology(n.Cfg)
+		if err != nil {
+			return err
+		}
+
+		if topology.ChassisMode != "" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = topology.ChassisMode
 		}
 	}
 
@@ -610,31 +641,6 @@ func (n *srl) createSRLFiles() error {
 	}
 
 	return err
-}
-
-func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
-	dst := filepath.Join(cfg.LabDir, "topology.yml")
-
-	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
-	if err != nil {
-		return fmt.Errorf("failed to get srl topology file: %w", err)
-	}
-
-	mac := genMac(cfg)
-
-	log.Debug(mac, dst)
-
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := tpl.Execute(f, mac); err != nil {
-		return err
-	}
-
-	return f.Close()
 }
 
 // srlTemplateData top level data struct.
