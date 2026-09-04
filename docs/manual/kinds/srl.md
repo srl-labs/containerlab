@@ -188,7 +188,7 @@ Based on the provided type, containerlab will generate the topology file that wi
 
 ### Modular chassis
 
-The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavours. The card is chosen with a `components` block, where `type` names the line card:
+The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavors. The card is chosen with a `components` block, where `type` names the line card:
 
 ```yaml
 name: srl_modular
@@ -228,7 +228,7 @@ When no `components` block is given, `ixr-6e` and `ixr-10e` boot with `imm36-400
 Containerlab renders every declared line card into the generated topology file, but deploying a node with more than one line card is not supported yet.
 ///
 
-/// note | Legacy per-flavour types
+/// note | Legacy per-flavor types
 Every combination in the table above is also reachable as a dedicated type, such as `ixr-10e-gen3-osfp`. These types are kept for backwards compatibility; prefer `components`. The full list is in the [JSON schema file](https://github.com/srl-labs/containerlab/blob/main/schemas/clab.schema.json).
 ///
 

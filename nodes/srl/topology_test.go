@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// modularVariants is the catalogue of modular chassis flavours containerlab ships, transcribed
+// modularVariants is the catalog of modular chassis flavors containerlab ships, transcribed
 // from the SR Linux platform tables. It is the reference the embedded files are checked against.
 // The chassis, cpm and imm names are the ones a booted node reports for the numeric ids next to
 // them, captured from `info from state platform`.
