@@ -809,6 +809,178 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	}
 }
 
+func TestNetworkModeContainerTarget(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		networkMode string
+		want        string
+	}{
+		{networkMode: "", want: ""},
+		{networkMode: "host", want: ""},
+		{networkMode: "none", want: ""},
+		{networkMode: "container:worker1", want: "worker1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.networkMode, func(t *testing.T) {
+			t.Parallel()
+			if got := networkModeContainerTarget(tt.networkMode); got != tt.want {
+				t.Fatalf(
+					"networkModeContainerTarget(%q) = %q, want %q",
+					tt.networkMode,
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}
+
+func TestPlanNetworkModeCascadeForcesRecreate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "target"}).AnyTimes()
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"target":  target,
+			"sidecar": sidecar,
+		},
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet["target"] = struct{}{}
+	plan.restartNodeSet["sidecar"] = struct{}{}
+
+	c.planNetworkModeCascade(plan)
+
+	if _, recreated := plan.recreatedNodeSet["sidecar"]; !recreated {
+		t.Fatal("expected sidecar sharing the recreated node's netns to be recreated too")
+	}
+	if _, restarting := plan.restartNodeSet["sidecar"]; restarting {
+		t.Fatal("expected sidecar to be removed from restartNodeSet once forced to recreate")
+	}
+	if _, hasReason := plan.nodeChangeReasons["sidecar"]; !hasReason {
+		t.Fatal("expected a change reason to be recorded for the cascaded recreate")
+	}
+}
+
+func TestPlanNetworkModeCascadeIsTransitive(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	mid := clabmocksmocknodes.NewMockNode(ctrl)
+	leaf := clabmocksmocknodes.NewMockNode(ctrl)
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "target"}).AnyTimes()
+	mid.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "mid",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+	leaf.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "leaf",
+		NetworkMode: "container:mid",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"target": target,
+			"mid":    mid,
+			"leaf":   leaf,
+		},
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet["target"] = struct{}{}
+
+	c.planNetworkModeCascade(plan)
+
+	if _, recreated := plan.recreatedNodeSet["leaf"]; !recreated {
+		t.Fatal("expected recreate to cascade transitively through a chain of shared namespaces")
+	}
+}
+
+func TestPlanNetworkModeCascadeIgnoresAddedNodes(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "target"}).AnyTimes()
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"target":  target,
+			"sidecar": sidecar,
+		},
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet["target"] = struct{}{}
+	plan.addedNodeSet["sidecar"] = struct{}{}
+
+	c.planNetworkModeCascade(plan)
+
+	if _, recreated := plan.recreatedNodeSet["sidecar"]; recreated {
+		t.Fatal("a newly added sidecar should deploy fresh, not be marked recreated")
+	}
+}
+
+func TestCheckApplyNetworkModeTargetsRejectsDeletedTarget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:worker1",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"sidecar": sidecar},
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.deletedNodeSet["worker1"] = struct{}{}
+
+	err := c.checkApplyNetworkModeTargets(plan)
+	if err == nil {
+		t.Fatal("expected error when a network-mode target is deleted but the dependent stays")
+	}
+	if !strings.Contains(err.Error(), "sidecar") || !strings.Contains(err.Error(), "worker1") {
+		t.Fatalf("error = %v, want it to name both nodes", err)
+	}
+}
+
+func TestCheckApplyNetworkModeTargetsAllowsUnrelatedDeletion(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:worker1",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"sidecar": sidecar},
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.deletedNodeSet["unrelated"] = struct{}{}
+
+	if err := c.checkApplyNetworkModeTargets(plan); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
 	t.Parallel()
 
