@@ -2,6 +2,8 @@
 # Licensed under the BSD 3-Clause License.
 # SPDX-License-Identifier: BSD-3-Clause
 
+modular: false
+
 chassis_configuration:
   "chassis_type": 96
   "base_mac": "{{ .MAC }}"
