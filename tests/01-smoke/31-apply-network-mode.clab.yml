@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: apply-netmode
+
+topology:
+  nodes:
+    w1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+{{- if .driftW1 }}
+      env:
+        RECONCILE_MARKER: updated
+{{- end }}
+{{- if .addSidecar1 }}
+    w1-sc:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      network-mode: container:w1
+{{- end }}
+{{- if and .addTogether (not .removeW2) }}
+    w2:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+{{- end }}
+{{- if .addTogether }}
+    w2-sc:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      network-mode: container:w2
+{{- end }}

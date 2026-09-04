@@ -518,10 +518,28 @@ func (c *CLab) DeployNodes(
 		}()
 	}
 
+	// Feed each node from its own goroutine so that waiting for a
+	// network-mode: container:<target> target to be running never consumes
+	// a worker slot. Blocking inside the worker loop above would deadlock
+	// whenever a dependent node is dequeued before its target, since the
+	// same (limited) pool of workers is what would need to be free to
+	// create that target.
+	var feedWg sync.WaitGroup
 	for _, nodeName := range nodeNames {
-		input <- nodeName
+		feedWg.Add(1)
+		go func(nodeName string) {
+			defer feedWg.Done()
+			if err := c.waitForApplyNetworkModeTarget(ctx, nodeName); err != nil {
+				errCh <- err
+				return
+			}
+			input <- nodeName
+		}(nodeName)
 	}
-	close(input)
+	go func() {
+		feedWg.Wait()
+		close(input)
+	}()
 
 	var errs []error
 	for range nodeNames {
@@ -535,6 +553,36 @@ func (c *CLab) DeployNodes(
 	}
 
 	return nil
+}
+
+// waitForApplyNetworkModeTarget waits until a node's network-mode:
+// container:<target> target is running, so apply's incremental deploy never
+// races a newly created or recreated target against its dependent. The
+// target may be a node in this same apply call (added or recreated
+// alongside the dependent) or, like fresh deploy, an external container not
+// managed by this topology.
+func (c *CLab) waitForApplyNetworkModeTarget(ctx context.Context, nodeName string) error {
+	node, exists := c.Nodes[nodeName]
+	if !exists {
+		return nil
+	}
+
+	target := networkModeContainerTarget(node.Config().NetworkMode)
+	if target == "" {
+		return nil
+	}
+
+	targetNode, internal := c.Nodes[target]
+	if !internal {
+		return c.waitForExternalNodeDependencies(ctx, nodeName)
+	}
+
+	runtime := c.globalRuntime()
+	if runtime == nil {
+		return fmt.Errorf("container runtime is not initialized")
+	}
+
+	return clabruntime.WaitForContainerRunning(ctx, runtime, targetNode.Config().LongName, nodeName)
 }
 
 func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {

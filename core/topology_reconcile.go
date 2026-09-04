@@ -105,6 +105,93 @@ func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
 }
 
+// networkModeContainerTarget returns the referenced node name for a
+// "network-mode: container:<name>" config, or "" if networkMode does not
+// share another container's network namespace.
+func networkModeContainerTarget(networkMode string) string {
+	netModeArr := strings.SplitN(networkMode, ":", 2) //nolint: mnd
+	if netModeArr[0] != "container" || len(netModeArr) != 2 {
+		return ""
+	}
+
+	return netModeArr[1]
+}
+
+// checkApplyNetworkModeTargets rejects apply when a node's network-mode:
+// container:<target> target is being removed from the topology while the
+// dependent node stays desired. Deleting the target would leave the
+// dependent silently attached to a defunct network namespace.
+func (c *CLab) checkApplyNetworkModeTargets(plan *applyPlan) error {
+	if plan == nil {
+		return nil
+	}
+
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		networkMode := c.Nodes[nodeName].Config().NetworkMode
+		target := networkModeContainerTarget(networkMode)
+		if target == "" {
+			continue
+		}
+		if _, deleted := plan.deletedNodeSet[target]; deleted {
+			return fmt.Errorf(
+				"node %q has network-mode %q, but %q is being removed from the topology; "+
+					"remove or retarget %q as well",
+				nodeName,
+				networkMode,
+				target,
+				nodeName,
+			)
+		}
+	}
+
+	return nil
+}
+
+// planNetworkModeCascade forces recreation of nodes whose network-mode:
+// container:<target> target is itself being recreated. Docker binds
+// NetworkMode to the target container's ID at creation time, so a plain
+// restart of the dependent cannot rebind it to the target's new container;
+// only recreating the dependent does. Runs to a fixed point so chains of
+// shared-namespace nodes all get picked up.
+func (c *CLab) planNetworkModeCascade(plan *applyPlan) {
+	if plan == nil {
+		return
+	}
+
+	for {
+		changed := false
+
+		for _, nodeName := range sortedNodeNames(c.Nodes) {
+			if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
+				continue
+			}
+			if _, added := plan.addedNodeSet[nodeName]; added {
+				continue
+			}
+
+			target := networkModeContainerTarget(c.Nodes[nodeName].Config().NetworkMode)
+			if target == "" {
+				continue
+			}
+			if _, targetRecreated := plan.recreatedNodeSet[target]; !targetRecreated {
+				continue
+			}
+
+			plan.recreatedNodeSet[nodeName] = struct{}{}
+			delete(plan.restartNodeSet, nodeName)
+			delete(plan.linkRestartNodeSet, nodeName)
+			plan.nodeChangeReasons[nodeName] = fmt.Sprintf(
+				"network-mode target %q recreated", target,
+			)
+			changed = true
+		}
+
+		if !changed {
+			return
+		}
+	}
+}
+
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
@@ -137,9 +224,15 @@ func (c *CLab) planApply(
 		}
 	}
 
+	if err := c.checkApplyNetworkModeTargets(plan); err != nil {
+		return nil, err
+	}
+
 	if err := c.planNodeReconciliation(ctx, plan); err != nil {
 		return nil, err
 	}
+
+	c.planNetworkModeCascade(plan)
 
 	c.planParkedNodes(ctx, plan)
 	c.planStoppedNodes(ctx, plan)
