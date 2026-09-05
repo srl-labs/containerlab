@@ -439,17 +439,48 @@ func (n *iol) CheckInterfaceName() error {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
-	mgmt_str := fmt.Sprintf(
-		"\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
-		n.Cfg.MgmtIPv4Address,
-		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
-		n.Cfg.MgmtIPv6Address,
-		n.Cfg.MgmtIPv6PrefixLength,
-		n.Cfg.MgmtIPv4Gateway,
-		n.Cfg.MgmtIPv6Gateway,
-	)
+        // L2 IOL images default to switchport mode, which rejects IP addresses.
+        // We inject "no switchport" if the image name contains "l2" (case-insensitive).
+        switchportCmd := ""
+        if strings.Contains(strings.ToLower(n.Cfg.Image), "l2") {
+                switchportCmd = "no switchport\r"
+        }
 
-	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
+        // Align with other vrnetlab-based nodes by honoring topology env credentials,
+        // falling back to standard "admin/admin" if omitted.
+        username := "admin"
+        if u, ok := n.Cfg.Env["USERNAME"]; ok && u != "" {
+                username = u
+        }
+        password := "admin"
+        if p, ok := n.Cfg.Env["PASSWORD"]; ok && p != "" {
+                password = p
+        }
+
+        // IOS-XE (17.16+) boots slowly. We must wait for the VRF initialization
+        // to complete, otherwise IP configuration will be applied to the global table.
+        select {
+        case <-time.After(15 * time.Second):
+        case <-ctx.Done():
+                return ctx.Err()
+        }
+
+        // We prepend multiple carriage returns (\r\r\r\r) to explicitly wake up the console,
+        // clear any stale prompt states, and ensure it sits at a clean EXEC prompt before config entry.
+        mgmt_str := fmt.Sprintf(
+                "\r\r\r\renable\rconfig terminal\rinterface Ethernet0/0\r%sip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rusername %s privilege 15 password %s\rip ssh server algorithm hostkey rsa-sha2-256 rsa-sha2-512\rline vty 0 4\rlogin local\rtransport input ssh\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+                switchportCmd,
+                n.Cfg.MgmtIPv4Address,
+                clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+                n.Cfg.MgmtIPv6Address,
+                n.Cfg.MgmtIPv6PrefixLength,
+                username,
+                password,
+                n.Cfg.MgmtIPv4Gateway,
+                n.Cfg.MgmtIPv6Gateway,
+        )
+
+        return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
