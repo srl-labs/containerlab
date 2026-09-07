@@ -35,6 +35,22 @@ func TestGetCanonicalImageName(t *testing.T) {
 			got:  "custom.io/linux/alpine",
 			want: "custom.io/linux/alpine:latest",
 		},
+		"registry with a port and no tag": {
+			got:  "myregistry:5000/alpine",
+			want: "myregistry:5000/alpine:latest",
+		},
+		"registry with a port and a tag": {
+			got:  "myregistry:5000/alpine:v1",
+			want: "myregistry:5000/alpine:v1",
+		},
+		"dotted registry with a port and no tag": {
+			got:  "registry.local:5000/linux/alpine",
+			want: "registry.local:5000/linux/alpine:latest",
+		},
+		"localhost registry with a port and no tag": {
+			got:  "localhost:5000/alpine",
+			want: "localhost:5000/alpine:latest",
+		},
 	}
 
 	for name, tc := range tests {
