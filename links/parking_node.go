@@ -4,12 +4,19 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
+
+// containerNamer is implemented by nodes that expose a runtime container name,
+// used to locate the deterministic parking netns for a peer.
+type containerNamer interface {
+	GetContainerName() string
+}
 
 type ParkingNode struct {
 	GenericLinkNode
@@ -99,38 +106,63 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, erro
 	return moved, nil
 }
 
+type pendingPeerRename struct {
+	desiredName string
+	peerName    string
+}
+
+type indexedIface struct {
+	name  string
+	index int
+}
+
 // renamePairedEndpoints maps parked veths to the destination topology by their
 // surviving peer. The parked interface name belongs to the old node kind and
 // is not part of the preserved link's identity.
+//
+// When both ends of a link are parked, the peer's new name is not in the live
+// container ns. Resolve that peer from its parking ns (or from leftover old
+// names already restored into the live ns) and match by trailing port index.
 func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error {
 	desiredByPeerIndex := map[int]string{}
+	pendingByPeer := map[string][]pendingPeerRename{}
+	peerNodes := map[string]Node{}
+
 	for _, desired := range dst.GetEndpoints() {
-		linkEndpoints := RuntimeEndpoints(desired.GetLink())
-		if len(linkEndpoints) != 2 {
-			continue
-		}
-		var peer Endpoint
-		if linkEndpoints[0] == desired {
-			peer = linkEndpoints[1]
-		} else if linkEndpoints[1] == desired {
-			peer = linkEndpoints[0]
-		} else {
+		peer, ok := otherRuntimeEndpoint(desired)
+		if !ok {
 			continue
 		}
 
-		err := peer.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
-			peerLink, err := netlink.LinkByName(peer.GetIfaceName())
-			if _, notFound := err.(netlink.LinkNotFoundError); notFound {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			desiredByPeerIndex[peerLink.Attrs().Index] = desired.GetIfaceName()
-			return nil
-		})
+		index, found, err := linkIndexByName(ctx, peer.GetNode(), peer.GetIfaceName())
 		if err != nil {
 			return fmt.Errorf("failed to inspect peer for %q: %w", desired.GetIfaceName(), err)
+		}
+		if found {
+			desiredByPeerIndex[index] = desired.GetIfaceName()
+			continue
+		}
+
+		peerNodeName := peer.GetNode().GetShortName()
+		pendingByPeer[peerNodeName] = append(pendingByPeer[peerNodeName], pendingPeerRename{
+			desiredName: desired.GetIfaceName(),
+			peerName:    peer.GetIfaceName(),
+		})
+		peerNodes[peerNodeName] = peer.GetNode()
+	}
+
+	for peerNodeName, pending := range pendingByPeer {
+		mapped, err := resolveParkedPeerIndexes(
+			ctx,
+			peerNodes[peerNodeName],
+			pending,
+			desiredByPeerIndex,
+		)
+		if err != nil {
+			return err
+		}
+		for index, name := range mapped {
+			desiredByPeerIndex[index] = name
 		}
 	}
 
@@ -170,6 +202,209 @@ func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error
 		}
 		return nil
 	})
+}
+
+func otherRuntimeEndpoint(desired Endpoint) (Endpoint, bool) {
+	if desired == nil || desired.GetLink() == nil {
+		return nil, false
+	}
+	linkEndpoints := RuntimeEndpoints(desired.GetLink())
+	if len(linkEndpoints) != 2 {
+		return nil, false
+	}
+	if linkEndpoints[0] == desired {
+		return linkEndpoints[1], true
+	}
+	if linkEndpoints[1] == desired {
+		return linkEndpoints[0], true
+	}
+	return nil, false
+}
+
+func linkIndexByName(ctx context.Context, node Node, name string) (int, bool, error) {
+	var index int
+	found := false
+	err := node.ExecFunction(ctx, func(_ ns.NetNS) error {
+		peerLink, err := netlink.LinkByName(name)
+		if _, notFound := err.(netlink.LinkNotFoundError); notFound {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		index = peerLink.Attrs().Index
+		found = true
+		return nil
+	})
+	if err != nil {
+		return 0, false, err
+	}
+	return index, found, nil
+}
+
+func parkingNodeFor(node Node) (*ParkingNode, bool) {
+	namer, ok := node.(containerNamer)
+	if !ok {
+		return nil, false
+	}
+	containerName := namer.GetContainerName()
+	if containerName == "" {
+		return nil, false
+	}
+	parkPath, err := clabutils.GetNamedNetNS(clabutils.ParkingNetnsName(containerName))
+	if err != nil {
+		return nil, false
+	}
+	return NewParkingNode(containerName, parkPath), true
+}
+
+func resolveParkedPeerIndexes(
+	ctx context.Context,
+	peerNode Node,
+	pending []pendingPeerRename,
+	usedIndexes map[int]string,
+) (map[int]string, error) {
+	candidates, err := parkedPeerCandidates(ctx, peerNode, usedIndexes)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to inspect parked peers on %q: %w",
+			peerNode.GetShortName(),
+			err,
+		)
+	}
+	return mapParkedPeerIndexes(pending, candidates), nil
+}
+
+func parkedPeerCandidates(
+	ctx context.Context,
+	peerNode Node,
+	usedIndexes map[int]string,
+) ([]indexedIface, error) {
+	var candidates []indexedIface
+	seen := map[int]struct{}{}
+
+	appendOwned := func(node Node, ownerName string) error {
+		ifaces, err := DiscoverOwnedInterfacesFor(ctx, node, ownerName, nil)
+		if err != nil {
+			return err
+		}
+		for _, iface := range ifaces {
+			if iface.Type != "veth" || iface.Index == 0 {
+				continue
+			}
+			if _, used := usedIndexes[iface.Index]; used {
+				continue
+			}
+			if _, exists := seen[iface.Index]; exists {
+				continue
+			}
+			candidates = append(candidates, indexedIface{
+				name:  iface.Name,
+				index: iface.Index,
+			})
+			seen[iface.Index] = struct{}{}
+		}
+		return nil
+	}
+
+	if err := appendOwned(peerNode, peerNode.GetShortName()); err != nil {
+		return nil, err
+	}
+	if parkNode, ok := parkingNodeFor(peerNode); ok {
+		if err := appendOwned(parkNode, peerNode.GetShortName()); err != nil {
+			return nil, err
+		}
+	}
+
+	return candidates, nil
+}
+
+func mapParkedPeerIndexes(pending []pendingPeerRename, candidates []indexedIface) map[int]string {
+	result := map[int]string{}
+	used := map[int]struct{}{}
+	matched := make([]bool, len(pending))
+
+	tryMatch := func(name string, i int) bool {
+		port, ok := ifacePortIndex(name)
+		if !ok {
+			return false
+		}
+		cand, ok := uniqueIfaceByPort(candidates, used, port)
+		if !ok {
+			return false
+		}
+		result[cand.index] = pending[i].desiredName
+		used[cand.index] = struct{}{}
+		matched[i] = true
+		return true
+	}
+
+	for i, item := range pending {
+		if tryMatch(item.peerName, i) {
+			continue
+		}
+		tryMatch(item.desiredName, i)
+	}
+
+	var leftoverPending []int
+	for i, ok := range matched {
+		if !ok {
+			leftoverPending = append(leftoverPending, i)
+		}
+	}
+	var leftoverCands []indexedIface
+	for _, cand := range candidates {
+		if _, ok := used[cand.index]; ok {
+			continue
+		}
+		leftoverCands = append(leftoverCands, cand)
+	}
+	if len(leftoverPending) == 1 && len(leftoverCands) == 1 {
+		result[leftoverCands[0].index] = pending[leftoverPending[0]].desiredName
+	}
+
+	return result
+}
+
+func uniqueIfaceByPort(candidates []indexedIface, used map[int]struct{}, port int) (indexedIface, bool) {
+	found := indexedIface{}
+	count := 0
+	for _, cand := range candidates {
+		if _, ok := used[cand.index]; ok {
+			continue
+		}
+		candPort, ok := ifacePortIndex(cand.name)
+		if !ok || candPort != port {
+			continue
+		}
+		found = cand
+		count++
+		if count > 1 {
+			return indexedIface{}, false
+		}
+	}
+	if count != 1 {
+		return indexedIface{}, false
+	}
+	return found, true
+}
+
+// ifacePortIndex returns the trailing decimal run of a Linux iface name
+// (e1-3, et3, eth3).
+func ifacePortIndex(name string) (int, bool) {
+	end := len(name)
+	start := end
+	for start > 0 && name[start-1] >= '0' && name[start-1] <= '9' {
+		start--
+	}
+	if start == end {
+		return 0, false
+	}
+	port, err := strconv.Atoi(name[start:])
+	if err != nil {
+		return 0, false
+	}
+	return port, true
 }
 
 func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Node) error {
