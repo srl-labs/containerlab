@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -20,6 +21,58 @@ type networkModeTestNode struct {
 
 func (n *networkModeTestNode) Config() *clabtypes.NodeConfig { return n.cfg }
 
+func TestPlanNetworkModeCascadeScalesWithChainLength(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	c := &CLab{Nodes: map[string]clabnodes.Node{}}
+	const count = 256
+	for i := 0; i < count; i++ {
+		name := fmt.Sprintf("n%04d", i)
+		cfg := &clabtypes.NodeConfig{ShortName: name}
+		if i < count-1 {
+			cfg.NetworkMode = fmt.Sprintf("container:n%04d", i+1)
+		}
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		// Bound configuration reads rather than wall time so this regression
+		// detects repeated whole-chain scans without depending on CPU speed.
+		node.EXPECT().Config().Return(cfg).MaxTimes(2)
+		c.Nodes[name] = node
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet[fmt.Sprintf("n%04d", count-1)] = struct{}{}
+	c.planNetworkModeCascade(plan)
+	if len(plan.recreatedNodeSet) != count {
+		t.Fatalf("recreated %d nodes, want %d", len(plan.recreatedNodeSet), count)
+	}
+}
+
+func BenchmarkPlanNetworkModeCascade(b *testing.B) {
+	for _, count := range []int{100, 1000, 5000} {
+		b.Run(fmt.Sprint(count), func(b *testing.B) {
+			c := &CLab{Nodes: make(map[string]clabnodes.Node, count)}
+			for i := 0; i < count; i++ {
+				name := fmt.Sprintf("n%05d", i)
+				cfg := &clabtypes.NodeConfig{ShortName: name}
+				if i < count-1 {
+					cfg.NetworkMode = fmt.Sprintf("container:n%05d", i+1)
+				}
+				c.Nodes[name] = &networkModeTestNode{cfg: cfg}
+			}
+			root := fmt.Sprintf("n%05d", count-1)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				plan := newApplyPlan(nil, nil)
+				plan.recreatedNodeSet[root] = struct{}{}
+				c.planNetworkModeCascade(plan)
+				if len(plan.recreatedNodeSet) != count {
+					b.Fatal("incomplete cascade")
+				}
+			}
+		})
+	}
+}
+
 func TestPlanApplyCascadesLinkRestart(t *testing.T) {
 	t.Parallel()
 	c, current := newNetworkModePlanTestLab(t, clabruntime.Running, clabnodes.LinkApplyModeRestart)
@@ -27,7 +80,9 @@ func TestPlanApplyCascadesLinkRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := sortedStringSet(plan.linkRestartNodeSet); !slices.Equal(got, []string{"leaf", "sidecar", "target"}) {
+	if got := sortedStringSet(plan.linkRestartNodeSet); !slices.Equal(got, []string{
+		"leaf", "sidecar", "target",
+	}) {
 		t.Fatalf("restarted nodes = %v, want target and both dependents", got)
 	}
 	if len(plan.recreatedNodeSet) != 0 {
@@ -40,8 +95,10 @@ func TestPlanNetworkModeRestartsForNewDependents(t *testing.T) {
 	for _, late := range []bool{false, true} {
 		for _, recreated := range []bool{false, true} {
 			c := &CLab{Nodes: map[string]clabnodes.Node{
-				"target":  &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
-				"sidecar": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"}},
+				"target": &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
+				"sidecar": &networkModeTestNode{
+					cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"},
+				},
 			}}
 			plan := newApplyPlan(nil, nil)
 			if late {
@@ -80,7 +137,8 @@ func TestRestartApplyNodesOrdersNamespaceDependencies(t *testing.T) {
 			cfg.NetworkMode = "container:sidecar"
 		}
 		node.EXPECT().Config().Return(cfg).AnyTimes()
-		calls = append(calls, node.EXPECT().Stop(gomock.Any()).Return(nil), node.EXPECT().Start(gomock.Any()).Return(nil))
+		calls = append(calls, node.EXPECT().Stop(gomock.Any()).Return(nil),
+			node.EXPECT().Start(gomock.Any()).Return(nil))
 		node.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
 		c.Nodes[name] = node
 		nodeSet[name] = struct{}{}
@@ -106,8 +164,10 @@ func TestPlanNetworkModeRestartsForStoppedTarget(t *testing.T) {
 	t.Parallel()
 	for _, sidecarStopped := range []bool{false, true} {
 		c := &CLab{Nodes: map[string]clabnodes.Node{
-			"target":  &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
-			"sidecar": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"}},
+			"target": &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
+			"sidecar": &networkModeTestNode{
+				cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"},
+			},
 		}}
 		plan := newApplyPlan(nil, nil)
 		plan.startNodeSet["target"] = struct{}{}
@@ -118,7 +178,11 @@ func TestPlanNetworkModeRestartsForStoppedTarget(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, restart := plan.linkRestartNodeSet["sidecar"]; restart == sidecarStopped {
-			t.Fatalf("sidecar stopped=%v: restart=%v; only running dependents need restarting", sidecarStopped, restart)
+			t.Fatalf(
+				"sidecar stopped=%v: restart=%v; only running dependents need restarting",
+				sidecarStopped,
+				restart,
+			)
 		}
 	}
 }
@@ -184,7 +248,9 @@ func newNetworkModePlanTestLab(
 		node.EXPECT().GetContainerStatus(gomock.Any()).Return(status).AnyTimes()
 		node.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		node.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(&clabtypes.TopologyDiff{})
-		node.EXPECT().GetReconcilePlan(gomock.Any(), gomock.Any()).Return(&clabnodes.ReconcileResult{}, nil)
+		node.EXPECT().
+			GetReconcilePlan(gomock.Any(), gomock.Any()).
+			Return(&clabnodes.ReconcileResult{}, nil)
 		if name == "target" {
 			node.EXPECT().LinkApplyMode(gomock.Any()).Return(mode)
 		}

@@ -109,12 +109,10 @@ func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 // "network-mode: container:<name>" config, or "" if networkMode does not
 // share another container's network namespace.
 func networkModeContainerTarget(networkMode string) string {
-	netModeArr := strings.SplitN(networkMode, ":", 2) //nolint: mnd
-	if netModeArr[0] != "container" || len(netModeArr) != 2 {
-		return ""
+	if target, shared := strings.CutPrefix(networkMode, "container:"); shared {
+		return target
 	}
-
-	return netModeArr[1]
+	return ""
 }
 
 // checkApplyNetworkModeTargets rejects apply when a node's network-mode:
@@ -151,29 +149,30 @@ func (c *CLab) checkApplyNetworkModeTargets(plan *applyPlan) error {
 // container:<target> target is itself being recreated. Docker binds
 // NetworkMode to the target container's ID at creation time, so a plain
 // restart of the dependent cannot rebind it to the target's new container;
-// only recreating the dependent does. Runs to a fixed point so chains of
-// shared-namespace nodes all get picked up.
+// only recreating the dependent does. A reverse dependency graph visits each
+// node and dependency at most once, including long namespace-sharing chains.
 func (c *CLab) planNetworkModeCascade(plan *applyPlan) {
-	if plan == nil {
+	if plan == nil || len(plan.recreatedNodeSet) == 0 {
 		return
 	}
 
-	for {
-		changed := false
-
-		for _, nodeName := range sortedNodeNames(c.Nodes) {
+	dependents := make(map[string][]string)
+	for name, node := range c.Nodes {
+		if target := networkModeContainerTarget(node.Config().NetworkMode); target != "" {
+			dependents[target] = append(dependents[target], name)
+		}
+	}
+	queue := make([]string, 0, len(c.Nodes))
+	for name := range plan.recreatedNodeSet {
+		queue = append(queue, name)
+	}
+	for i := 0; i < len(queue); i++ {
+		target := queue[i]
+		for _, nodeName := range dependents[target] {
 			if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
 				continue
 			}
 			if _, added := plan.addedNodeSet[nodeName]; added {
-				continue
-			}
-
-			target := networkModeContainerTarget(c.Nodes[nodeName].Config().NetworkMode)
-			if target == "" {
-				continue
-			}
-			if _, targetRecreated := plan.recreatedNodeSet[target]; !targetRecreated {
 				continue
 			}
 
@@ -183,11 +182,7 @@ func (c *CLab) planNetworkModeCascade(plan *applyPlan) {
 			plan.nodeChangeReasons[nodeName] = fmt.Sprintf(
 				"network-mode target %q recreated", target,
 			)
-			changed = true
-		}
-
-		if !changed {
-			return
+			queue = append(queue, nodeName)
 		}
 	}
 }
