@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -255,6 +256,72 @@ func TestDeployNodesEmptyNodeNames(t *testing.T) {
 
 	if err := (&CLab{}).DeployNodes(context.Background(), nil, 0); err != nil {
 		t.Fatalf("expected nil for empty node list, got: %v", err)
+	}
+}
+
+func TestDeployApplyNodesStartsNamespaceTarget(t *testing.T) {
+	t.Parallel()
+	for _, startSidecar := range []bool{false, true} {
+		t.Run(fmt.Sprintf("start-sidecar=%v", startSidecar), func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			target := clabmocksmocknodes.NewMockNode(ctrl)
+			sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+			runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+			var running atomic.Bool
+			target.EXPECT().Config().Return(&clabtypes.NodeConfig{LongName: "clab-lab-target"}).AnyTimes()
+			target.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
+				running.Store(true)
+				return nil
+			})
+			sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{NetworkMode: "container:target"}).AnyTimes()
+			if startSidecar {
+				sidecar.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
+					if !running.Load() {
+						t.Error("sidecar started before its target")
+					}
+					return nil
+				})
+			} else {
+				sidecar.EXPECT().GetShortName().Return("sidecar")
+				sidecar.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(context.Context, *clabnodes.PreDeployParams) error {
+						if !running.Load() {
+							t.Error("sidecar created before its target started")
+						}
+						return nil
+					},
+				)
+				sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+				sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+			}
+			runtime.EXPECT().GetContainerStatus(gomock.Any(), "clab-lab-target").DoAndReturn(
+				func(context.Context, string) clabruntime.ContainerStatus {
+					if running.Load() {
+						return clabruntime.Running
+					}
+					return clabruntime.Stopped
+				},
+			).AnyTimes()
+			c := &CLab{
+				Config:            &Config{Name: "lab"},
+				Nodes:             map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+				Runtimes:          map[string]clabruntime.ContainerRuntime{clabruntimedocker.RuntimeName: runtime},
+				globalRuntimeName: clabruntimedocker.RuntimeName,
+			}
+			plan := newApplyPlan(nil, nil)
+			plan.startNodeSet["target"] = struct{}{}
+			if startSidecar {
+				plan.startNodeSet["sidecar"] = struct{}{}
+			} else {
+				plan.addedNodeSet["sidecar"] = struct{}{}
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := c.deployApplyNodes(ctx, plan, 1); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

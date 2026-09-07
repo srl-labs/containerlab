@@ -69,21 +69,6 @@ func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error
 	return nil
 }
 
-func (c *CLab) startStoppedNodes(ctx context.Context, plan *applyPlan) error {
-	for _, nodeName := range sortedStringSet(plan.startNodeSet) {
-		node, exists := c.Nodes[nodeName]
-		if !exists {
-			continue
-		}
-		log.Info("Starting stopped node", "node", nodeName)
-		if err := node.Start(ctx); err != nil {
-			return fmt.Errorf("failed starting node %q: %w", nodeName, err)
-		}
-	}
-
-	return nil
-}
-
 func (c *CLab) restartApplyNodes(
 	ctx context.Context,
 	nodeSet map[string]struct{},

@@ -45,11 +45,15 @@ func (c *CLab) planNetworkModeRestarts(plan *applyPlan) error {
 		}
 		target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
 		_, earlyRestart := plan.restartNodeSet[target]
+		_, starting := plan.startNodeSet[target]
 		_, lateRestart := plan.linkRestartNodeSet[target]
-		if !earlyRestart && !lateRestart {
+		if !earlyRestart && !starting && !lateRestart {
 			continue
 		}
 		if !lateRestart {
+			if _, starting := plan.startNodeSet[name]; starting {
+				continue
+			}
 			if _, added := plan.addedNodeSet[name]; added {
 				continue
 			}

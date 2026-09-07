@@ -102,6 +102,27 @@ func TestNetworkModeNodeOrderRejectsCycles(t *testing.T) {
 	}
 }
 
+func TestPlanNetworkModeRestartsForStoppedTarget(t *testing.T) {
+	t.Parallel()
+	for _, sidecarStopped := range []bool{false, true} {
+		c := &CLab{Nodes: map[string]clabnodes.Node{
+			"target":  &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
+			"sidecar": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"}},
+		}}
+		plan := newApplyPlan(nil, nil)
+		plan.startNodeSet["target"] = struct{}{}
+		if sidecarStopped {
+			plan.startNodeSet["sidecar"] = struct{}{}
+		}
+		if err := c.planNetworkModeRestarts(plan); err != nil {
+			t.Fatal(err)
+		}
+		if _, restart := plan.linkRestartNodeSet["sidecar"]; restart == sidecarStopped {
+			t.Fatalf("sidecar stopped=%v: restart=%v; only running dependents need restarting", sidecarStopped, restart)
+		}
+	}
+}
+
 func TestPlanApplyCascadesLinkRecreate(t *testing.T) {
 	t.Parallel()
 

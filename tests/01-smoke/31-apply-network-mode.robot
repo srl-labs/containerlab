@@ -27,12 +27,43 @@ Apply initial lab with a single node
     Should Be Equal As Integers    ${rc}    0
     Node Should Be Running    w1
 
+Apply adds a network-mode sidecar to a stopped target
+    [Timeout]    30 seconds
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} stop -t 1 clab-${lab-name}-w1
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Apply Topology    ${add-sidecar1-vars}    --max-workers 1
+    Should Be Equal As Integers    ${rc}    0
+    Node Should Be Running    w1
+    Node Should Be Running    w1-sc
+    Nodes Should Share Network Namespace    w1    w1-sc
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
+    Should Be Equal As Integers    ${rc}    0
+
 Apply adds a network-mode sidecar to an already-running target
     ${rc}    ${output} =    Apply Topology    ${add-sidecar1-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    added nodes
     Should Contain    ${output}    w1-sc
     Node Should Be Running    w1-sc
+    Nodes Should Share Network Namespace    w1    w1-sc
+
+Apply rejoins a running sidecar when starting its stopped target
+    [Timeout]    30 seconds
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} stop -t 1 clab-${lab-name}-w1
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Apply Topology    ${add-sidecar1-vars}    --max-workers 1
+    Should Be Equal As Integers    ${rc}    0
+    Nodes Should Share Network Namespace    w1    w1-sc
+
+Apply starts a stopped target and sidecar in dependency order
+    [Timeout]    30 seconds
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} stop -t 1 clab-${lab-name}-w1-sc clab-${lab-name}-w1
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Apply Topology    ${add-sidecar1-vars}    --max-workers 1
+    Should Be Equal As Integers    ${rc}    0
     Nodes Should Share Network Namespace    w1    w1-sc
 
 Apply cascades sidecar recreation when its network-mode target is recreated

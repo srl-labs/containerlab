@@ -186,15 +186,11 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.DeployNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+	if err := c.deployApplyNodes(ctx, plan, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
 	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
-		return nil, err
-	}
-
-	if err := c.startStoppedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 

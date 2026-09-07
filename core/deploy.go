@@ -493,6 +493,22 @@ func (c *CLab) DeployNodes(
 	nodeNames []string,
 	maxWorkers uint,
 ) error {
+	return c.deployNodes(ctx, nodeNames, maxWorkers, nil)
+}
+
+// deployApplyNodes schedules starts and creates together: a new sidecar can
+// depend on a stopped target, and a stopped node can depend on a new target.
+func (c *CLab) deployApplyNodes(ctx context.Context, plan *applyPlan, maxWorkers uint) error {
+	nodeNames := sortedStringSet(unionStringSets(plan.addedNodeSet, plan.recreatedNodeSet, plan.startNodeSet))
+	return c.deployNodes(ctx, nodeNames, maxWorkers, plan.startNodeSet)
+}
+
+func (c *CLab) deployNodes(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+	startNodeSet map[string]struct{},
+) error {
 	if len(nodeNames) == 0 {
 		return nil
 	}
@@ -512,6 +528,15 @@ func (c *CLab) DeployNodes(
 	for range maxWorkers {
 		go func() {
 			for nodeName := range input {
+				if _, start := startNodeSet[nodeName]; start {
+					log.Info("Starting stopped node", "node", nodeName)
+					err := c.Nodes[nodeName].Start(ctx)
+					if err != nil {
+						err = fmt.Errorf("failed starting node %q: %w", nodeName, err)
+					}
+					errCh <- err
+					continue
+				}
 				log.Info("Creating node", "node", nodeName)
 				errCh <- c.deployNode(ctx, c.Nodes[nodeName])
 			}
