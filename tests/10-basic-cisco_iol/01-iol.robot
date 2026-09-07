@@ -119,12 +119,8 @@ Verify connectivity via new management addresses on router1
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router1 "sh run interface Ethernet0/0"
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${ipv4_addr.upper()}
-    Should Contain    ${output}    ${ipv6_addr.upper()}
+    Wait Until Keyword Succeeds    3 min    15 sec
+    ...    Verify IOL SSH Mgmt Addrs    clab-${lab-name}-router1    ${ipv4_addr}    ${ipv6_addr}
 
 Verify connectivity via new management addresses on switch
     ${rc}    ${ipv4_addr} =    Run And Return Rc And Output
@@ -137,14 +133,19 @@ Verify connectivity via new management addresses on switch
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch "sh run interface Ethernet0/0"
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${ipv4_addr.upper()}
-    Should Contain    ${output}    ${ipv6_addr.upper()}
+    Wait Until Keyword Succeeds    3 min    15 sec
+    ...    Verify IOL SSH Mgmt Addrs    clab-${lab-name}-switch    ${ipv4_addr}    ${ipv6_addr}
 
 
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+
+Verify IOL SSH Mgmt Addrs
+    [Arguments]    ${host}    ${ipv4_addr}    ${ipv6_addr}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@${host} "sh run interface Ethernet0/0"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    ${ipv4_addr.upper()}
+    Should Contain    ${output}    ${ipv6_addr.upper()}
