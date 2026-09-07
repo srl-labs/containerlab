@@ -960,6 +960,18 @@ func TestCheckApplyNetworkModeTargetsRejectsDeletedTarget(t *testing.T) {
 	}
 }
 
+func TestCheckApplyNetworkModeTargetsNilPlan(t *testing.T) {
+	t.Parallel()
+	if err := (&CLab{}).checkApplyNetworkModeTargets(nil); err != nil {
+		t.Fatalf("unexpected error for nil plan: %v", err)
+	}
+}
+
+func TestPlanNetworkModeCascadeNilPlan(t *testing.T) {
+	t.Parallel()
+	(&CLab{}).planNetworkModeCascade(nil) // must not panic
+}
+
 func TestCheckApplyNetworkModeTargetsAllowsUnrelatedDeletion(t *testing.T) {
 	t.Parallel()
 
