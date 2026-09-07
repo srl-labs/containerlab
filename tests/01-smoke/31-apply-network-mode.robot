@@ -67,13 +67,26 @@ Apply rejects removing a network-mode target while its sidecar remains
     Node Should Be Running    w2
     Node Should Be Running    w2-sc
 
+Cleanup removes all incrementally added nodes
+    Cleanup Lab
+
 
 *** Keywords ***
 Setup
-    Run Clab Command    destroy --name ${lab-name} --cleanup
+    Cleanup Lab
 
 Teardown
-    Run Clab Command    destroy --name ${lab-name} --cleanup
+    Cleanup Lab
+
+Cleanup Lab
+    # Render every node, including nodes added with vars after the initial deployment.
+    ${rc}    ${output} =    Run Clab Command
+    ...    destroy -t ${CURDIR}/${topo} --vars ${CURDIR}/${add-together-vars} --cleanup
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${containers} =    Run And Return Rc And Output
+    ...    ${runtime} ps -aq --filter label=containerlab=${lab-name}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Empty    ${containers}
 
 Run Clab Command
     [Arguments]    ${args}
