@@ -225,15 +225,6 @@ func TestDeployNodesWaitsForNetworkModeTargetWithSingleWorker(t *testing.T) {
 	sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
 	sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
 
-	mockRuntime.EXPECT().GetContainerStatus(gomock.Any(), "clab-lab-target").DoAndReturn(
-		func(context.Context, string) clabruntime.ContainerStatus {
-			if targetDeployed.Load() {
-				return clabruntime.Running
-			}
-			return clabruntime.NotFound
-		},
-	).AnyTimes()
-
 	c := &CLab{
 		Config: &Config{Name: "lab"},
 		Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
@@ -245,7 +236,9 @@ func TestDeployNodesWaitsForNetworkModeTargetWithSingleWorker(t *testing.T) {
 
 	// The dependent is listed before its target on purpose, with exactly
 	// one worker, so a naive in-worker wait would deadlock here.
-	err := c.DeployNodes(context.Background(), []string{"sidecar", "target"}, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +252,76 @@ func TestDeployNodesEmptyNodeNames(t *testing.T) {
 	}
 }
 
+func TestDeployNodesPropagatesTargetFailure(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+	target.EXPECT().GetShortName().Return("target")
+	failure := errors.New("target pre-deploy failed")
+	target.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(failure)
+	sidecar.EXPECT().
+		Config().
+		Return(&clabtypes.NodeConfig{NetworkMode: "container:target"}).
+		AnyTimes()
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
+	if !errors.Is(err, failure) || errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want the target failure without waiting for a timeout", err)
+	}
+	if !strings.Contains(err.Error(), `node "sidecar" depends on failed node "target"`) {
+		t.Fatalf("error must identify the blocked dependent: %v", err)
+	}
+}
+
+func TestDeployNodesUnblocksNamespaceChainWithoutPolling(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	c := &CLab{Config: &Config{Name: "lab"}, Nodes: map[string]clabnodes.Node{}}
+	var calls []any
+	for _, name := range []string{"target", "sidecar", "leaf"} {
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		cfg := &clabtypes.NodeConfig{ShortName: name}
+		switch name {
+		case "sidecar":
+			cfg.NetworkMode = "container:target"
+		case "leaf":
+			cfg.NetworkMode = "container:sidecar"
+		}
+		node.EXPECT().Config().Return(cfg).AnyTimes()
+		node.EXPECT().GetShortName().Return(name)
+		calls = append(calls, node.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil))
+		node.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+		node.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+		c.Nodes[name] = node
+	}
+	gomock.InOrder(calls...)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	// No runtime is configured: internal task dependencies must use completion
+	// signals, even with a chain submitted in reverse order and only one worker.
+	if err := c.DeployNodes(ctx, []string{"leaf", "sidecar", "target"}, 1); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeployNodesRejectsNamespaceCycleBeforeDeployment(t *testing.T) {
+	t.Parallel()
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"a": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:b"}},
+		"b": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:a"}},
+	}}
+	if err := c.DeployNodes(context.Background(), []string{"a", "b"}, 1); err == nil {
+		t.Fatal("expected cyclic dependency error")
+	}
+}
+
 func TestDeployApplyNodesStartsNamespaceTarget(t *testing.T) {
 	t.Parallel()
 	for _, startSidecar := range []bool{false, true} {
@@ -269,12 +332,16 @@ func TestDeployApplyNodesStartsNamespaceTarget(t *testing.T) {
 			sidecar := clabmocksmocknodes.NewMockNode(ctrl)
 			runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 			var running atomic.Bool
-			target.EXPECT().Config().Return(&clabtypes.NodeConfig{LongName: "clab-lab-target"}).AnyTimes()
+			target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				LongName: "clab-lab-target",
+			}).AnyTimes()
 			target.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
 				running.Store(true)
 				return nil
 			})
-			sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{NetworkMode: "container:target"}).AnyTimes()
+			sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				NetworkMode: "container:target",
+			}).AnyTimes()
 			if startSidecar {
 				sidecar.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
 					if !running.Load() {
@@ -295,18 +362,13 @@ func TestDeployApplyNodesStartsNamespaceTarget(t *testing.T) {
 				sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
 				sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
 			}
-			runtime.EXPECT().GetContainerStatus(gomock.Any(), "clab-lab-target").DoAndReturn(
-				func(context.Context, string) clabruntime.ContainerStatus {
-					if running.Load() {
-						return clabruntime.Running
-					}
-					return clabruntime.Stopped
-				},
-			).AnyTimes()
+
 			c := &CLab{
-				Config:            &Config{Name: "lab"},
-				Nodes:             map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
-				Runtimes:          map[string]clabruntime.ContainerRuntime{clabruntimedocker.RuntimeName: runtime},
+				Config: &Config{Name: "lab"},
+				Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+				Runtimes: map[string]clabruntime.ContainerRuntime{
+					clabruntimedocker.RuntimeName: runtime,
+				},
 				globalRuntimeName: clabruntimedocker.RuntimeName,
 			}
 			plan := newApplyPlan(nil, nil)

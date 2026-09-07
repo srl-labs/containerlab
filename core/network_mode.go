@@ -10,6 +10,9 @@ func (c *CLab) networkModeNodeOrder(nodeNames []string) ([]string, error) {
 		if _, exists := c.Nodes[name]; !exists {
 			return nil, fmt.Errorf("node %q not found", name)
 		}
+		if _, duplicate := selected[name]; duplicate {
+			return nil, fmt.Errorf("node %q selected more than once", name)
+		}
 		selected[name] = struct{}{}
 	}
 	dependents := make(map[string][]string)

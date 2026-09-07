@@ -499,7 +499,9 @@ func (c *CLab) DeployNodes(
 // deployApplyNodes schedules starts and creates together: a new sidecar can
 // depend on a stopped target, and a stopped node can depend on a new target.
 func (c *CLab) deployApplyNodes(ctx context.Context, plan *applyPlan, maxWorkers uint) error {
-	nodeNames := sortedStringSet(unionStringSets(plan.addedNodeSet, plan.recreatedNodeSet, plan.startNodeSet))
+	nodeNames := sortedStringSet(
+		unionStringSets(plan.addedNodeSet, plan.recreatedNodeSet, plan.startNodeSet),
+	)
 	return c.deployNodes(ctx, nodeNames, maxWorkers, plan.startNodeSet)
 }
 
@@ -516,14 +518,21 @@ func (c *CLab) deployNodes(
 	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
 		maxWorkers = uint(len(nodeNames))
 	}
-	for _, nodeName := range nodeNames {
-		if _, exists := c.Nodes[nodeName]; !exists {
-			return fmt.Errorf("node %q not found", nodeName)
-		}
+	if _, err := c.networkModeNodeOrder(nodeNames); err != nil {
+		return err
 	}
 
 	input := make(chan string)
 	errCh := make(chan error, len(nodeNames))
+	completed := make(map[string]*nodeDeployCompletion, len(nodeNames))
+	for _, name := range nodeNames {
+		completed[name] = &nodeDeployCompletion{done: make(chan struct{})}
+	}
+	finish := func(name string, err error) {
+		completed[name].err = err
+		close(completed[name].done)
+		errCh <- err
+	}
 
 	for range maxWorkers {
 		go func() {
@@ -534,31 +543,31 @@ func (c *CLab) deployNodes(
 					if err != nil {
 						err = fmt.Errorf("failed starting node %q: %w", nodeName, err)
 					}
-					errCh <- err
+					finish(nodeName, err)
 					continue
 				}
 				log.Info("Creating node", "node", nodeName)
-				errCh <- c.deployNode(ctx, c.Nodes[nodeName])
+				finish(nodeName, c.deployNode(ctx, c.Nodes[nodeName]))
 			}
 		}()
 	}
 
-	// Feed each node from its own goroutine so that waiting for a
-	// network-mode: container:<target> target to be running never consumes
-	// a worker slot. Blocking inside the worker loop above would deadlock
-	// whenever a dependent node is dequeued before its target, since the
-	// same (limited) pool of workers is what would need to be free to
-	// create that target.
+	// Wait outside the worker pool. Targets in this operation signal completion
+	// directly, avoiding runtime polling and propagating failures to dependents.
 	var feedWg sync.WaitGroup
 	for _, nodeName := range nodeNames {
 		feedWg.Add(1)
 		go func(nodeName string) {
 			defer feedWg.Done()
-			if err := c.waitForApplyNetworkModeTarget(ctx, nodeName); err != nil {
-				errCh <- err
+			if err := c.waitForNodeDeployTarget(ctx, nodeName, completed); err != nil {
+				finish(nodeName, err)
 				return
 			}
-			input <- nodeName
+			select {
+			case input <- nodeName:
+			case <-ctx.Done():
+				finish(nodeName, ctx.Err())
+			}
 		}(nodeName)
 	}
 	go func() {
@@ -578,6 +587,40 @@ func (c *CLab) deployNodes(
 	}
 
 	return nil
+}
+
+type nodeDeployCompletion struct {
+	done chan struct{}
+	// Closing done publishes err to dependent goroutines.
+	err error
+}
+
+func (c *CLab) waitForNodeDeployTarget(
+	ctx context.Context,
+	name string,
+	completed map[string]*nodeDeployCompletion,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
+	if completion, selected := completed[target]; selected {
+		select {
+		case <-completion.done:
+			if completion.err != nil {
+				return fmt.Errorf(
+					"node %q depends on failed node %q: %w",
+					name,
+					target,
+					completion.err,
+				)
+			}
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return c.waitForApplyNetworkModeTarget(ctx, name)
 }
 
 // waitForApplyNetworkModeTarget waits until a node's network-mode:
