@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	clablinks "github.com/srl-labs/containerlab/links"
@@ -11,6 +12,95 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"go.uber.org/mock/gomock"
 )
+
+type networkModeTestNode struct {
+	clabnodes.Node
+	cfg *clabtypes.NodeConfig
+}
+
+func (n *networkModeTestNode) Config() *clabtypes.NodeConfig { return n.cfg }
+
+func TestPlanApplyCascadesLinkRestart(t *testing.T) {
+	t.Parallel()
+	c, current := newNetworkModePlanTestLab(t, clabruntime.Running, clabnodes.LinkApplyModeRestart)
+	plan, err := c.planApply(context.Background(), current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := sortedStringSet(plan.linkRestartNodeSet); !slices.Equal(got, []string{"leaf", "sidecar", "target"}) {
+		t.Fatalf("restarted nodes = %v, want target and both dependents", got)
+	}
+	if len(plan.recreatedNodeSet) != 0 {
+		t.Fatalf("restart must preserve container identities: %v", plan.recreatedNodeSet)
+	}
+}
+
+func TestPlanNetworkModeRestartsForNewDependents(t *testing.T) {
+	t.Parallel()
+	for _, late := range []bool{false, true} {
+		for _, recreated := range []bool{false, true} {
+			c := &CLab{Nodes: map[string]clabnodes.Node{
+				"target":  &networkModeTestNode{cfg: &clabtypes.NodeConfig{}},
+				"sidecar": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:target"}},
+			}}
+			plan := newApplyPlan(nil, nil)
+			if late {
+				plan.linkRestartNodeSet["target"] = struct{}{}
+			} else {
+				plan.restartNodeSet["target"] = struct{}{}
+			}
+			if recreated {
+				plan.recreatedNodeSet["sidecar"] = struct{}{}
+			} else {
+				plan.addedNodeSet["sidecar"] = struct{}{}
+			}
+			if err := c.planNetworkModeRestarts(plan); err != nil {
+				t.Fatal(err)
+			}
+			if _, restart := plan.linkRestartNodeSet["sidecar"]; restart != late {
+				t.Fatalf("late=%v recreated=%v: sidecar restart=%v", late, recreated, restart)
+			}
+		}
+	}
+}
+
+func TestRestartApplyNodesOrdersNamespaceDependencies(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	c := &CLab{Nodes: map[string]clabnodes.Node{}}
+	nodeSet := map[string]struct{}{}
+	var calls []any
+	for _, name := range []string{"target", "sidecar", "leaf"} {
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		cfg := &clabtypes.NodeConfig{ShortName: name}
+		switch name {
+		case "sidecar":
+			cfg.NetworkMode = "container:target"
+		case "leaf":
+			cfg.NetworkMode = "container:sidecar"
+		}
+		node.EXPECT().Config().Return(cfg).AnyTimes()
+		calls = append(calls, node.EXPECT().Stop(gomock.Any()).Return(nil), node.EXPECT().Start(gomock.Any()).Return(nil))
+		node.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+		c.Nodes[name] = node
+		nodeSet[name] = struct{}{}
+	}
+	gomock.InOrder(calls...)
+	if err := c.restartApplyNodes(context.Background(), nodeSet); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNetworkModeNodeOrderRejectsCycles(t *testing.T) {
+	t.Parallel()
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"a": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:b"}},
+		"b": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:a"}},
+	}}
+	if _, err := c.networkModeNodeOrder([]string{"a", "b"}); err == nil {
+		t.Fatal("expected cyclic dependency error")
+	}
+}
 
 func TestPlanApplyCascadesLinkRecreate(t *testing.T) {
 	t.Parallel()

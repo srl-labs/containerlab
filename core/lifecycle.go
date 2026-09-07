@@ -88,7 +88,10 @@ func (c *CLab) restartApplyNodes(
 	ctx context.Context,
 	nodeSet map[string]struct{},
 ) error {
-	nodeNames := sortedStringSet(nodeSet)
+	nodeNames, err := c.networkModeNodeOrder(sortedStringSet(nodeSet))
+	if err != nil {
+		return err
+	}
 
 	for _, nodeName := range nodeNames {
 		node := c.Nodes[nodeName]

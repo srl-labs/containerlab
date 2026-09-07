@@ -17,6 +17,7 @@ ${drift-w1-vars}            31-apply-network-mode.vars.drift-w1.yml
 ${add-together-vars}        31-apply-network-mode.vars.add-together.yml
 ${remove-w2-vars}           31-apply-network-mode.vars.remove-w2.yml
 ${link-recreate-vars}       31-apply-network-mode.vars.link-recreate.yml
+${link-restart-vars}        31-apply-network-mode.vars.link-restart.yml
 ${runtime-cli-exec-cmd}     docker exec
 
 
@@ -71,6 +72,20 @@ Apply cascades sidecar recreation for a link change
     ${sidecar_after} =    Node Runtime Identity    w1-sc
     Should Not Be Equal As Strings    ${w1_after}    ${w1_before}
     Should Not Be Equal As Strings    ${sidecar_after}    ${sidecar_before}
+    Nodes Should Share Network Namespace    w1    w1-sc
+    ${rc}    ${output} =    Apply Topology    ${add-together-vars}
+    Should Be Equal As Integers    ${rc}    0
+
+Apply restarts namespace dependents after a link-triggered target restart
+    ${w1_before} =    Node Container ID    w1
+    ${sidecar_before} =    Node Container ID    w1-sc
+    ${rc}    ${output} =    Apply Topology    ${link-restart-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    network-mode target
+    ${w1_after} =    Node Container ID    w1
+    ${sidecar_after} =    Node Container ID    w1-sc
+    Should Be Equal As Strings    ${w1_before}    ${w1_after}
+    Should Be Equal As Strings    ${sidecar_before}    ${sidecar_after}
     Nodes Should Share Network Namespace    w1    w1-sc
     ${rc}    ${output} =    Apply Topology    ${add-together-vars}
     Should Be Equal As Integers    ${rc}    0
@@ -131,6 +146,13 @@ Node Runtime Identity
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}
     Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    RETURN    ${output}
+
+Node Container ID
+    [Arguments]    ${node}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} inspect -f '{{.Id}}' clab-${lab-name}-${node}
     Should Be Equal As Integers    ${rc}    0
     RETURN    ${output}
 

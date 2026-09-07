@@ -282,6 +282,9 @@ func (c *CLab) planApply(
 		delete(plan.linkRestartNodeSet, nodeName)
 		delete(plan.startNodeSet, nodeName)
 	}
+	if err := c.planNetworkModeRestarts(plan); err != nil {
+		return nil, err
+	}
 
 	return plan, nil
 }
