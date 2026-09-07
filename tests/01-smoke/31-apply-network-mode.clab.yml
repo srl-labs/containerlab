@@ -11,6 +11,9 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+{{- if .linkApplyMode }}
+      link-apply-mode: {{ .linkApplyMode }}
+{{- end }}
 {{- if .driftW1 }}
       env:
         RECONCILE_MARKER: updated
@@ -34,4 +37,8 @@ topology:
       image: alpine:3
       cmd: tail -f /dev/null
       network-mode: container:w2
+{{- end }}
+{{- if .addLink }}
+  links:
+    - endpoints: [w1:eth1, w2:eth1]
 {{- end }}

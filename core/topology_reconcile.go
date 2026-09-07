@@ -232,8 +232,6 @@ func (c *CLab) planApply(
 		return nil, err
 	}
 
-	c.planNetworkModeCascade(plan)
-
 	c.planParkedNodes(ctx, plan)
 	c.planStoppedNodes(ctx, plan)
 
@@ -274,10 +272,15 @@ func (c *CLab) planApply(
 		}
 	}
 
+	// Link reconciliation can request additional recreations. Propagate namespace
+	// dependencies only after those decisions, then park every affected live node.
+	c.planNetworkModeCascade(plan)
+	c.planParkedNodes(ctx, plan)
 	c.planRecreatedNodeLinks(plan)
 	for nodeName := range plan.recreatedNodeSet {
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
+		delete(plan.startNodeSet, nodeName)
 	}
 
 	return plan, nil
@@ -298,6 +301,9 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.recreatedNodeSet {
+		if _, parked := plan.parkedNodeSet[nodeName]; parked {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue

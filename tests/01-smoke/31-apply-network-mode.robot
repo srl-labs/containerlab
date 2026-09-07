@@ -16,6 +16,7 @@ ${add-sidecar1-vars}        31-apply-network-mode.vars.add-sidecar1.yml
 ${drift-w1-vars}            31-apply-network-mode.vars.drift-w1.yml
 ${add-together-vars}        31-apply-network-mode.vars.add-together.yml
 ${remove-w2-vars}           31-apply-network-mode.vars.remove-w2.yml
+${link-recreate-vars}       31-apply-network-mode.vars.link-recreate.yml
 ${runtime-cli-exec-cmd}     docker exec
 
 
@@ -57,6 +58,22 @@ Apply adds a network-mode target and its sidecar together
     Node Should Be Running    w2
     Node Should Be Running    w2-sc
     Nodes Should Share Network Namespace    w2    w2-sc
+
+Apply cascades sidecar recreation for a link change
+    ${w1_before} =    Node Runtime Identity    w1
+    ${sidecar_before} =    Node Runtime Identity    w1-sc
+    ${rc}    ${output} =    Apply Topology    ${link-recreate-vars}    --dry-run
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    network-mode target
+    ${rc}    ${output} =    Apply Topology    ${link-recreate-vars}
+    Should Be Equal As Integers    ${rc}    0
+    ${w1_after} =    Node Runtime Identity    w1
+    ${sidecar_after} =    Node Runtime Identity    w1-sc
+    Should Not Be Equal As Strings    ${w1_after}    ${w1_before}
+    Should Not Be Equal As Strings    ${sidecar_after}    ${sidecar_before}
+    Nodes Should Share Network Namespace    w1    w1-sc
+    ${rc}    ${output} =    Apply Topology    ${add-together-vars}
+    Should Be Equal As Integers    ${rc}    0
 
 Apply rejects removing a network-mode target while its sidecar remains
     ${rc}    ${output} =    Apply Topology    ${remove-w2-vars}
