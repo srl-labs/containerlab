@@ -8,7 +8,7 @@ Suite Teardown      Cleanup
 
 *** Variables ***
 ${lab-name}         frr-native
-${topology}         ${CURDIR}/31-frr.clab.yml
+${topology}         ${CURDIR}/01-frr.clab.yml
 ${runtime}          docker
 ${runtime-cli}      sudo ${runtime}
 ${config-dir}       ${CURDIR}/clab-${lab-name}/r1/config

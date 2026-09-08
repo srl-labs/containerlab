@@ -11,10 +11,10 @@ topology:
   nodes:
     r1:
       kind: frr
-      startup-config: 31-frr.conf
+      startup-config: 01-frr.conf
     r2:
       kind: frr
-      startup-config: 31-frr.conf
+      startup-config: 01-frr.conf
     defaults:
       kind: frrouting
       image: quay.io/frrouting/frr:containerlab-10.7.1
