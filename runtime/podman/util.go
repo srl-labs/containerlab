@@ -74,6 +74,7 @@ func (r *PodmanRuntime) createContainerSpec(
 		Stdin:      new(true),
 		Labels:     cfg.Labels,
 		Hostname:   cfg.GetHostname(),
+		UtsNS:      specgen.Namespace{NSMode: specgen.Private},
 		Sysctl:     cfg.Sysctls,
 		Remove:     new(false),
 	}
