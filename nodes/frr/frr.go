@@ -177,12 +177,12 @@ func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 mkdir -p %[1]s
 chmod 700 %[1]s
 rm -f %[2]s
-printf '%%s\n' %[3]q > %[2]s
+printf '%%s\n' "$1" > %[2]s
 chown root:root %[2]s
 chmod 600 %[2]s`,
-		filepath.Dir(authzKeysPath), authzKeysPath, keys)
+		filepath.Dir(authzKeysPath), authzKeysPath)
 
-	cmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-c", script})
+	cmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-c", script, "--", keys})
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {

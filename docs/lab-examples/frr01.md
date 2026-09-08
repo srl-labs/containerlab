@@ -11,6 +11,8 @@
 
 This lab example consists of three FRR routers connected in a ring topology, running OSPF between them. Each router has one PC connected to it, reachable over static routes.
 
+Earlier versions of this lab used FRR containers with the `linux` kind and explicit configuration bind mounts. This version adapts that work to the native `frr` kind, making FRR a first-class citizen with managed configuration and daemon selection.
+
 The routers use the [`frr`](../manual/kinds/frr.md) kind. Each one gets its configuration from a `startup-config` file, which containerlab renders into the node's `/etc/frr/frr.conf`:
 
 ```yaml

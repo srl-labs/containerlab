@@ -8,6 +8,12 @@ kind_display_name: FRRouting
 
 [-{{ kind_display_name }}-](https://frrouting.org) is an open source internet routing protocol suite for Linux. It is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). The `frrouting` kind name is accepted as an alias.
 
+## FRR via the `linux` kind
+
+Earlier containerlab labs ran FRR containers with the [`linux`](linux.md) kind, supplying `frr.conf` and `daemons` through explicit bind mounts. The native `frr` kind builds on that work and makes FRR a first-class citizen in containerlab: it manages configuration files, daemon selection, forwarding, SSH public keys, and saving the running configuration.
+
+To adapt an existing lab, change `kind: linux` to `kind: frr`, replace the bind mount for `/etc/frr/frr.conf` with `startup-config`, and replace the `/etc/frr/daemons` bind mount with `extras.frr.daemons`. Remove any bind for `/etc/frr/vtysh.conf`, since the kind generates it. Use the containerlab image below if you need SSH access. Existing labs can continue using the `linux` kind.
+
 ## Getting -{{ kind_display_name }}- image
 
 FRR publishes a containerlab flavour of its release image, tagged `containerlab-<version>` in the same [`quay.io/frrouting/frr`](https://quay.io/repository/frrouting/frr) repository:
@@ -80,7 +86,7 @@ The hostname is not set in the generated config on purpose. FRR picks up the con
 
 ### Daemons
 
-By default every -{{ kind_display_name }}- daemon is started, so any configuration you write works without further thought. To run only the daemons a lab actually needs, list them under `extras`:
+By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under `extras`:
 
 ```yaml
 topology:
@@ -101,7 +107,7 @@ The list accepts `bgpd`, `ospfd`, `ospf6d`, `ripd`, `ripngd`, `isisd`, `pimd`, `
 
 /// admonition | Daemons and topology size
     type: subtle-note
-Starting all daemons means roughly twenty processes per node. That is not worth thinking about for a handful of routers, but on a large fabric it adds up — name the daemons you need.
+Starting all daemons increases the number of processes and memory usage per node. For larger topologies, list only the daemons the lab needs.
 ///
 
 `extras` can be set on a group or a kind as well as on a single node, so a whole class of routers can share one daemon list. See the [frr01 lab](../../lab-examples/frr01.md) for that.
@@ -113,6 +119,8 @@ Starting all daemons means roughly twenty processes per node. That is not worth 
 ```bash
 containerlab save -t <topology-file>
 ```
+
+The saved file is reused on subsequent deployments while the lab directory exists. To replace it with `startup-config`, set [`enforce-startup-config`](../nodes.md#enforce-startup-config). Destroying the lab with `--cleanup` removes the saved configuration along with the lab directory; copy configurations you want to keep elsewhere first.
 
 ## Host requirements
 

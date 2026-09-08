@@ -7,6 +7,8 @@ IP Addresses
 * **PC2:** 192.168.12.2/24
 * **PC3:** 192.168.13.2/24
 
+This lab originally ran FRR with the `linux` kind and explicit bind mounts. It now adapts that work to make FRR a first-class citizen through the native `frr` kind.
+
 The routers use the [`frr`](https://containerlab.dev/manual/kinds/frr/) kind. Containerlab writes `/etc/frr/frr.conf` from each node's `startup-config`, along with `/etc/frr/daemons` and `/etc/frr/vtysh.conf`, and makes the routers reachable over SSH:
 
 ```bash

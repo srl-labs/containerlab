@@ -5,11 +5,20 @@
 package frr
 
 import (
+	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+	"golang.org/x/crypto/ssh"
+
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -187,5 +196,59 @@ func TestRegisterKindNames(t *testing.T) {
 		if _, err := r.NewNodeOfKind(name); err != nil {
 			t.Errorf("kind %q is not registered: %v", name, err)
 		}
+	}
+}
+
+// Exercise the shell command with multiple keys: Go string quoting must not
+// turn the newline separators into literal backslash-n sequences.
+func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	var want strings.Builder
+
+	for range 2 {
+		pub, _, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		key, err := ssh.NewPublicKey(pub)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		n.sshPubKeys = append(n.sshPubKeys, key)
+		want.Write(ssh.MarshalAuthorizedKey(key))
+	}
+
+	dir := t.TempDir()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			args := append([]string(nil), cmd.GetCmd()...)
+			// Keep the test unprivileged and restrict writes to its temporary directory.
+			args[2] = strings.ReplaceAll(args[2], "/root/.ssh", filepath.Join(dir, ".ssh"))
+			args[2] = strings.ReplaceAll(args[2], "chown root:root", "true")
+
+			out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+			if err != nil {
+				t.Fatalf("SSH key script: %v: %s", err, out)
+			}
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.PostDeploy(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".ssh", "authorized_keys"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(data) != want.String() {
+		t.Fatalf("authorized_keys = %q, want %q", data, want.String())
 	}
 }

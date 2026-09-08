@@ -1292,7 +1292,6 @@
                             "type": "array",
                             "description": "list of FRR routing daemons to enable; when omitted, all daemons are enabled",
                             "markdownDescription": "list of [FRR routing daemons](https://containerlab.dev/manual/kinds/frr/#daemons) to enable; when omitted, all daemons are enabled",
-                            "minItems": 1,
                             "items": {
                                 "type": "string",
                                 "enum": [

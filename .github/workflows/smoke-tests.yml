@@ -54,6 +54,7 @@ jobs:
           - "28*.robot"
           - "29*.robot"
           - "30*.robot"
+          - "31*.robot"
 
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
