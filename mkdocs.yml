@@ -191,6 +191,7 @@ nav:
       - OpenBSD: lab-examples/openbsd01.md
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
+      - Cisco IOL: lab-examples/cisco_iol.md
       - F5 BIG-IP VE: lab-examples/f5bigipve01.md
       - v::n osvbng: lab-examples/osvbng01.md
       - Templated labs:
