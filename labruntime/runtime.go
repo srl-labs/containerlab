@@ -57,6 +57,8 @@ type DeployRequest struct {
 	TopologyDefinition []byte
 	Wait               bool
 	Timeout            time.Duration
+	// MaxWorkers limits concurrent independent operations performed by the runtime.
+	MaxWorkers uint
 	// NoTopologyCR deploys without a controller-owned topology object: the runtime compiles the
 	// topology client-side and manages the individual lab resources directly.
 	NoTopologyCR bool
@@ -76,10 +78,11 @@ type DeployRequest struct {
 }
 
 type DestroyRequest struct {
-	Name      string
-	Namespace string
-	Wait      bool
-	Timeout   time.Duration
+	Name       string
+	Namespace  string
+	Wait       bool
+	Timeout    time.Duration
+	MaxWorkers uint
 }
 
 type InspectRequest struct {

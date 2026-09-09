@@ -359,6 +359,19 @@ func stageStartupConfig(
 		return fmt.Errorf("failed staging startup-config for node %q: %w", nodeName, err)
 	}
 
+	resolvedStartupConfig := filepath.ToSlash(
+		replaceClabPathVariables(startupConfig, nodeName, topologyLabDir),
+	)
+	if resolvedStartupConfig != startupConfig {
+		nodeDefinition := config.Topology.Nodes[nodeName]
+		if nodeDefinition == nil {
+			nodeDefinition = &clabtypes.NodeDefinition{}
+			config.Topology.Nodes[nodeName] = nodeDefinition
+		}
+		nodeDefinition.StartupConfig = resolvedStartupConfig
+		*definitionChanged = true
+	}
+
 	for _, file := range files {
 		if err := addStagedConfigMapData(
 			configMap,
@@ -787,40 +800,65 @@ func (r *Runtime) applyStagedConfigMaps(
 	namespace string,
 	topologyName string,
 	configMaps []stagedConfigMap,
+	maxWorkers uint,
 ) error {
-	for _, staged := range configMaps {
-		configMap := stagedConfigMapObject(namespace, topologyName, staged, nil)
+	if len(configMaps) == 0 {
+		return nil
+	}
 
-		_, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
-			Create(ctx, configMap, metav1.CreateOptions{})
-		if apierrors.IsAlreadyExists(err) {
-			existing, getErr := r.kubeClient.CoreV1().ConfigMaps(namespace).
-				Get(ctx, staged.name, metav1.GetOptions{})
-			if getErr != nil {
-				return fmt.Errorf("failed to get existing staged ConfigMap %s/%s: %w",
-					namespace,
-					staged.name,
-					getErr,
-				)
-			}
-
-			updated := existing.DeepCopy()
-			updated.Labels = mergeDesiredMetadata(existing.Labels, configMap.Labels)
-			updated.Data = configMap.Data
-			updated.BinaryData = configMap.BinaryData
-			err = nil
-			if !stagedConfigMapsConform(existing, updated) {
-				_, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
-					Update(ctx, updated, metav1.UpdateOptions{})
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("failed to apply staged ConfigMap %s/%s: %w",
-				namespace,
-				staged.name,
-				err,
+	workers, clientBurst := r.kubernetesWorkers(maxWorkers)
+	if maxWorkers > uint(clientBurst) {
+		if len(configMaps) > clientBurst {
+			log.Warn(
+				"ConfigMap workers exceed the Kubernetes client burst; requests may be throttled",
+				"workers", maxWorkers,
+				"burst", clientBurst,
 			)
 		}
+	}
+
+	return runWithWorkers(configMaps, workers, func(staged stagedConfigMap) error {
+		return r.applyStagedConfigMap(ctx, namespace, topologyName, staged)
+	})
+}
+
+func (r *Runtime) applyStagedConfigMap(
+	ctx context.Context,
+	namespace string,
+	topologyName string,
+	staged stagedConfigMap,
+) error {
+	configMap := stagedConfigMapObject(namespace, topologyName, staged, nil)
+
+	_, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
+		Create(ctx, configMap, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		existing, getErr := r.kubeClient.CoreV1().ConfigMaps(namespace).
+			Get(ctx, staged.name, metav1.GetOptions{})
+		if getErr != nil {
+			return fmt.Errorf("failed to get existing staged ConfigMap %s/%s: %w",
+				namespace,
+				staged.name,
+				getErr,
+			)
+		}
+
+		updated := existing.DeepCopy()
+		updated.Labels = mergeDesiredMetadata(existing.Labels, configMap.Labels)
+		updated.Data = configMap.Data
+		updated.BinaryData = configMap.BinaryData
+		err = nil
+		if !stagedConfigMapsConform(existing, updated) {
+			_, err = r.kubeClient.CoreV1().ConfigMaps(namespace).
+				Update(ctx, updated, metav1.UpdateOptions{})
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("failed to apply staged ConfigMap %s/%s: %w",
+			namespace,
+			staged.name,
+			err,
+		)
 	}
 
 	return nil

@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,6 +23,8 @@ func (r *Runtime) Deploy(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.LabState, error) {
+	ctx = withKubernetesClientDebugLogs(ctx)
+
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}
@@ -105,7 +108,13 @@ func (r *Runtime) Deploy(
 			_, _ = r.deleteManagedLabNamespace(ctx, req.Name, namespace)
 		}
 	}
-	if err = r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
+	if err = r.applyStagedConfigMaps(
+		ctx,
+		namespace,
+		req.Name,
+		stagedConfigMaps,
+		req.MaxWorkers,
+	); err != nil {
 		cleanupNamespace()
 
 		return nil, err
@@ -191,6 +200,8 @@ func (r *Runtime) Deploy(
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
+	ctx = withKubernetesClientDebugLogs(ctx)
+
 	if req.Name == "" {
 		return fmt.Errorf("topology name is required")
 	}
@@ -204,6 +215,8 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	log.Info("Deleting clabernetes lab resources", "name", req.Name, "namespace", namespace)
 
 	var deleteErrors []error
+	workers, clientBurst := r.kubernetesWorkers(req.MaxWorkers)
+	warnedWorkerBurst := false
 	// Delete the owning Topology first when present so the controller cannot recreate compiler
 	// output while the primitive resources are being removed.
 	err = r.client.Resource(topologyGVR).Namespace(namespace).
@@ -222,39 +235,97 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		{name: "links", gvr: linkGVR},
 		{name: "node profiles", gvr: nodeProfileGVR},
 	} {
+		resource := r.client.Resource(gvr.gvr).Namespace(namespace)
+		err = resource.DeleteCollection(
+			ctx,
+			metav1.DeleteOptions{},
+			metav1.ListOptions{LabelSelector: selector},
+		)
+		if err == nil || apierrors.IsNotFound(err) {
+			continue
+		}
+		if !apierrors.IsForbidden(err) && !apierrors.IsMethodNotSupported(err) {
+			deleteErrors = append(deleteErrors, fmt.Errorf(
+				"failed to delete c9s %s for lab %s/%s: %w",
+				gvr.name, namespace, req.Name, err))
+			continue
+		}
+
 		list, listErr := r.primitiveResourcesForTopology(ctx, gvr.gvr, req.Name, namespace)
 		if listErr != nil {
 			deleteErrors = append(deleteErrors, listErr)
 			continue
 		}
+		names := make([]string, len(list.Items))
 		for idx := range list.Items {
-			err = r.client.Resource(gvr.gvr).Namespace(namespace).
-				Delete(ctx, list.Items[idx].GetName(), metav1.DeleteOptions{})
+			names[idx] = list.Items[idx].GetName()
+		}
+		if !warnedWorkerBurst && req.MaxWorkers > uint(clientBurst) && len(names) > clientBurst {
+			log.Warn(
+				"Delete workers exceed the Kubernetes client burst; requests may be throttled",
+				"workers", req.MaxWorkers,
+				"burst", clientBurst,
+			)
+			warnedWorkerBurst = true
+		}
+		if deleteErr := runWithWorkers(names, workers, func(name string) error {
+			err := resource.Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
-				deleteErrors = append(deleteErrors, fmt.Errorf(
+				return fmt.Errorf(
 					"failed to delete c9s %s %s/%s: %w",
-					gvr.name, namespace, list.Items[idx].GetName(), err))
+					gvr.name, namespace, name, err)
 			}
+			return nil
+		}); deleteErr != nil {
+			deleteErrors = append(deleteErrors, deleteErr)
 		}
 	}
 
-	configMaps, err := r.kubeClient.CoreV1().ConfigMaps(namespace).List(
+	configMapResource := r.kubeClient.CoreV1().ConfigMaps(namespace)
+	err = configMapResource.DeleteCollection(
 		ctx,
+		metav1.DeleteOptions{},
 		metav1.ListOptions{LabelSelector: selector},
 	)
-	if err != nil {
+	switch {
+	case err == nil, apierrors.IsNotFound(err):
+	case !apierrors.IsForbidden(err) && !apierrors.IsMethodNotSupported(err):
 		deleteErrors = append(deleteErrors, fmt.Errorf(
-			"failed to list staged ConfigMaps for c9s lab %s/%s: %w",
+			"failed to delete staged ConfigMaps for c9s lab %s/%s: %w",
 			namespace, req.Name, err))
-	} else {
+	default:
+		configMaps, listErr := configMapResource.List(
+			ctx,
+			metav1.ListOptions{LabelSelector: selector},
+		)
+		if listErr != nil {
+			deleteErrors = append(deleteErrors, fmt.Errorf(
+				"failed to list staged ConfigMaps for c9s lab %s/%s: %w",
+				namespace, req.Name, listErr))
+			break
+		}
+		names := make([]string, len(configMaps.Items))
 		for idx := range configMaps.Items {
-			err = r.kubeClient.CoreV1().ConfigMaps(namespace).
-				Delete(ctx, configMaps.Items[idx].Name, metav1.DeleteOptions{})
+			names[idx] = configMaps.Items[idx].Name
+		}
+		if !warnedWorkerBurst && req.MaxWorkers > uint(clientBurst) && len(names) > clientBurst {
+			log.Warn(
+				"Delete workers exceed the Kubernetes client burst; requests may be throttled",
+				"workers", req.MaxWorkers,
+				"burst", clientBurst,
+			)
+			warnedWorkerBurst = true
+		}
+		if deleteErr := runWithWorkers(names, workers, func(name string) error {
+			err := configMapResource.Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
-				deleteErrors = append(deleteErrors, fmt.Errorf(
+				return fmt.Errorf(
 					"failed to delete staged ConfigMap %s/%s: %w",
-					namespace, configMaps.Items[idx].Name, err))
+					namespace, name, err)
 			}
+			return nil
+		}); deleteErr != nil {
+			deleteErrors = append(deleteErrors, deleteErr)
 		}
 	}
 
@@ -263,7 +334,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	}
 
 	if req.Wait {
-		if err := r.waitDeleted(ctx, req.Name, namespace, req.Timeout); err != nil {
+		if err := r.waitDeleted(ctx, req.Name, namespace, req.Timeout, workers); err != nil {
 			return err
 		}
 	}
@@ -587,6 +658,7 @@ func (r *Runtime) waitDeleted(
 	ctx context.Context,
 	name, namespace string,
 	timeout time.Duration,
+	workers int,
 ) error {
 	waitCtx, cancel := context.WithTimeout(ctx, r.timeoutFor(timeout))
 	defer cancel()
@@ -606,6 +678,7 @@ func (r *Runtime) waitDeleted(
 				return false, nil
 			}
 
+			remaining := false
 			for _, gvr := range []schema.GroupVersionResource{
 				nodeGVR,
 				linkGVR,
@@ -615,11 +688,52 @@ func (r *Runtime) waitDeleted(
 				if err != nil {
 					return false, err
 				}
-				if len(list.Items) != 0 {
-					return false, nil
+				if len(list.Items) == 0 {
+					continue
+				}
+				remaining = true
+				resource := r.client.Resource(gvr).Namespace(namespace)
+				if err := runWithWorkers(list.Items, workers, func(item unstructured.Unstructured) error {
+					err := resource.Delete(ctx, item.GetName(), metav1.DeleteOptions{})
+					if err != nil && !apierrors.IsNotFound(err) {
+						return fmt.Errorf("failed to delete late c9s resource %s/%s: %w",
+							namespace, item.GetName(), err)
+					}
+					return nil
+				}); err != nil {
+					return false, err
 				}
 			}
 
-			return true, nil
+			configMaps, err := r.kubeClient.CoreV1().ConfigMaps(namespace).List(
+				ctx,
+				metav1.ListOptions{
+					LabelSelector: labels.Set{labelTopologyOwner: name}.String(),
+				},
+			)
+			if err != nil {
+				return false, fmt.Errorf(
+					"failed to list staged ConfigMaps for c9s lab %s/%s: %w",
+					namespace,
+					name,
+					err,
+				)
+			}
+			if len(configMaps.Items) != 0 {
+				remaining = true
+				resource := r.kubeClient.CoreV1().ConfigMaps(namespace)
+				if err := runWithWorkers(configMaps.Items, workers, func(item corev1.ConfigMap) error {
+					err := resource.Delete(ctx, item.Name, metav1.DeleteOptions{})
+					if err != nil && !apierrors.IsNotFound(err) {
+						return fmt.Errorf("failed to delete late staged ConfigMap %s/%s: %w",
+							namespace, item.Name, err)
+					}
+					return nil
+				}); err != nil {
+					return false, err
+				}
+			}
+
+			return !remaining, nil
 		})
 }

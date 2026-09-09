@@ -4,26 +4,37 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestRuntimeName(t *testing.T) {
@@ -311,6 +322,7 @@ func TestDeployUsesNamespaceOverrideWithoutManagingIt(t *testing.T) {
 	}
 	_ = getTestPrimitive(t, r, nodeGVR, defaultNamespace, "node1")
 
+	forceDeleteCollectionFallback(r)
 	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
 		Name: "lab1",
 	}); err != nil {
@@ -402,6 +414,7 @@ func TestDestroyPreservesPreexistingLabNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	forceDeleteCollectionFallback(r)
 	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
 		Name: "lab1",
 	}); err != nil {
@@ -413,6 +426,111 @@ func TestDestroyPreservesPreexistingLabNamespace(t *testing.T) {
 		metav1.GetOptions{},
 	); err != nil {
 		t.Fatalf("pre-existing namespace was deleted: %v", err)
+	}
+}
+
+func TestDestroyFallsBackToIndividualDeletesWithoutTouchingOtherLabs(t *testing.T) {
+	t.Parallel()
+
+	node := func(name, owner string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": c9sAPIVersion,
+			"kind":       "Node",
+			"metadata": map[string]any{
+				"name":      name,
+				"namespace": "lab-ns",
+				"labels":    map[string]any{labelTopologyOwner: owner},
+			},
+		}}
+	}
+	configMap := func(name, owner string) *corev1.ConfigMap {
+		return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Name: name, Namespace: "lab-ns", Labels: map[string]string{labelTopologyOwner: owner},
+		}}
+	}
+	r := newTestRuntimeWithKubeObjects(
+		[]*unstructured.Unstructured{
+			node("target-node", "lab1"),
+			node("neighbor-node", "lab2"),
+		},
+		[]k8sruntime.Object{
+			configMap("target-config", "lab1"),
+			configMap("neighbor-config", "lab2"),
+		},
+	)
+	forceDeleteCollectionFallback(r)
+
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name: "lab1", Namespace: "lab-ns", MaxWorkers: 2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+		Get(context.Background(), "target-node", metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("target Node was not deleted: %v", err)
+	}
+	if _, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").
+		Get(context.Background(), "target-config", metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("target ConfigMap was not deleted: %v", err)
+	}
+	if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+		Get(context.Background(), "neighbor-node", metav1.GetOptions{}); err != nil {
+		t.Fatalf("neighbor Node was deleted: %v", err)
+	}
+	if _, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").
+		Get(context.Background(), "neighbor-config", metav1.GetOptions{}); err != nil {
+		t.Fatalf("neighbor ConfigMap was deleted: %v", err)
+	}
+}
+
+func TestDestroyUsesLabelScopedDeleteCollection(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRuntime()
+	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
+		Name: "lab1", Namespace: "lab-ns",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	wantSelector := labels.Set{labelTopologyOwner: "lab1"}.String()
+	deleteCollections := 0
+	for _, action := range append(
+		r.client.(*dynamicfake.FakeDynamicClient).Actions(),
+		r.kubeClient.(*kubefake.Clientset).Actions()...,
+	) {
+		if action.GetVerb() != "delete-collection" {
+			continue
+		}
+		deleteCollections++
+		collectionAction := action.(k8stesting.DeleteCollectionAction)
+		if got := collectionAction.GetListRestrictions().Labels.String(); got != wantSelector {
+			t.Fatalf("delete collection selector = %q, want %q", got, wantSelector)
+		}
+	}
+	if deleteCollections != 4 {
+		t.Fatalf("delete collection requests = %d, want 4", deleteCollections)
+	}
+}
+
+func TestWaitDeletedRemovesLateStagedConfigMaps(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Name:      "lab1-config",
+			Namespace: "lab-ns",
+			Labels:    map[string]string{labelTopologyOwner: "lab1"},
+		}},
+	})
+
+	if err := r.waitDeleted(context.Background(), "lab1", "lab-ns", 3*time.Second, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").
+		Get(context.Background(), "lab1-config", metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("late staged ConfigMap was not deleted: %v", err)
 	}
 }
 
@@ -906,6 +1024,7 @@ func TestManagePrimitiveOnlyLab(t *testing.T) {
 		t.Fatalf("unexpected primitive-only list state: %+v", states)
 	}
 
+	forceDeleteCollectionFallback(r)
 	if err := r.Destroy(context.Background(), clablabruntime.DestroyRequest{
 		Name:      "primitive-lab",
 		Namespace: "lab-ns",
@@ -1686,6 +1805,207 @@ func TestPlanReportsTopologyDiffWithoutMutation(t *testing.T) {
 		NoTopologyCR: true,
 	}); err == nil || !strings.Contains(err.Error(), "owned by a Topology resource") {
 		t.Fatalf("unexpected --no-topology-cr plan error: %v", err)
+	}
+}
+
+func TestRunWithWorkersUsesBoundedConcurrency(t *testing.T) {
+	t.Parallel()
+
+	const extraDeletes = 2
+	names := make([]string, rest.DefaultBurst+extraDeletes)
+	for idx := range names {
+		names[idx] = fmt.Sprintf("resource-%d", idx)
+	}
+
+	started := make(chan struct{}, len(names))
+	release := make(chan struct{})
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
+	var deleteCount atomic.Int32
+	done := make(chan error, 1)
+	go func() {
+		done <- runWithWorkers(names, rest.DefaultBurst, func(string) error {
+			deleteCount.Add(1)
+			started <- struct{}{}
+			<-release
+			return nil
+		})
+	}()
+
+	for range rest.DefaultBurst {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("deletes did not run concurrently")
+		}
+	}
+	select {
+	case <-started:
+		t.Fatalf("more than %d deletes ran concurrently", rest.DefaultBurst)
+	default:
+	}
+	close(release)
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("deletes did not finish")
+	}
+
+	if got := int(deleteCount.Load()); got != len(names) {
+		t.Fatalf("deleted %d resources, want %d", got, len(names))
+	}
+}
+
+func TestKubernetesWorkersHonorsExplicitValue(t *testing.T) {
+	t.Parallel()
+
+	r := &Runtime{}
+	if workers, burst := r.kubernetesWorkers(0); workers != rest.DefaultBurst ||
+		burst != rest.DefaultBurst {
+		t.Fatalf("default workers = %d, burst = %d, want %d", workers, burst, rest.DefaultBurst)
+	}
+
+	requested := uint(rest.DefaultBurst + 2)
+	if workers, burst := r.kubernetesWorkers(requested); workers != int(requested) ||
+		burst != rest.DefaultBurst {
+		t.Fatalf("explicit workers = %d, burst = %d, want %d workers", workers, burst, requested)
+	}
+}
+
+func TestApplyStagedConfigMapsHonorsWorkersAboveClientBurst(t *testing.T) {
+	t.Parallel()
+
+	const extraConfigMaps = 2
+	configMaps := make([]stagedConfigMap, rest.DefaultBurst+extraConfigMaps)
+	for idx := range configMaps {
+		configMaps[idx] = stagedConfigMap{
+			name:       fmt.Sprintf("config-%d", idx),
+			nodeName:   fmt.Sprintf("node-%d", idx),
+			data:       map[string]string{"config": "value"},
+			binaryData: map[string][]byte{},
+		}
+	}
+
+	started := make(chan struct{}, len(configMaps))
+	release := make(chan struct{})
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
+	var requestCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		requestCount.Add(1)
+		started <- struct{}{}
+		<-release
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	defer server.Close()
+
+	kubeClient, err := kubernetes.NewForConfig(&rest.Config{
+		Host:  server.URL,
+		QPS:   1_000,
+		Burst: len(configMaps),
+		ContentConfig: rest.ContentConfig{
+			ContentType:        k8sruntime.ContentTypeJSON,
+			AcceptContentTypes: k8sruntime.ContentTypeJSON,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &Runtime{kubeClient: kubeClient}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- r.applyStagedConfigMaps(
+			context.Background(),
+			"lab-ns",
+			"lab1",
+			configMaps,
+			uint(len(configMaps)),
+		)
+	}()
+
+	for range len(configMaps) {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("ConfigMap creates did not run concurrently")
+		}
+	}
+	close(release)
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("ConfigMap creates did not finish")
+	}
+
+	if got := int(requestCount.Load()); got != len(configMaps) {
+		t.Fatalf("created %d ConfigMaps, want %d", got, len(configMaps))
+	}
+}
+
+func TestStageTopologyLocalFilesResolvesStartupConfigMagicVariables(t *testing.T) {
+	t.Parallel()
+
+	topologyDir := t.TempDir()
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "r1.partial.cfg"),
+		"set / system name r1\n",
+		0o644,
+	)
+	const definition = `name: lab1
+topology:
+  defaults:
+    kind: linux
+    startup-config: configs/__clabNodeName__.partial.cfg
+  nodes:
+    r1: {}
+`
+
+	rendered, configMaps, _, err := stageTopologyLocalFiles(clablabruntime.DeployRequest{
+		Name:               "lab1",
+		TopologyFile:       filepath.Join(topologyDir, "lab.clab.yml"),
+		TopologyDefinition: []byte(definition),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config := &clabRuntimeConfig{}
+	if err := yaml.Unmarshal(rendered, config); err != nil {
+		t.Fatal(err)
+	}
+	if got := config.Topology.Nodes["r1"].StartupConfig; got != "configs/r1.partial.cfg" {
+		t.Fatalf("rendered startup-config = %q, want resolved node path", got)
+	}
+	if len(configMaps) != 1 || len(configMaps[0].mounts) != 1 ||
+		configMaps[0].mounts[0].filePath != "configs/r1.partial.cfg" {
+		t.Fatalf("staged ConfigMaps do not match rendered startup-config: %+v", configMaps)
 	}
 }
 
@@ -2867,6 +3187,21 @@ func TestWaitDeploymentRolloutReturnsOnScaleToZero(t *testing.T) {
 
 func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
 	return newTestRuntimeWithKubeObjects(objects, nil)
+}
+
+func forceDeleteCollectionFallback(r *Runtime) {
+	forbidden := func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+		resource := action.GetResource().GroupResource()
+		return true, nil, apierrors.NewForbidden(
+			resource,
+			"",
+			errors.New("deletecollection is not permitted"),
+		)
+	}
+	r.client.(*dynamicfake.FakeDynamicClient).
+		PrependReactor("delete-collection", "*", forbidden)
+	r.kubeClient.(*kubefake.Clientset).
+		PrependReactor("delete-collection", "*", forbidden)
 }
 
 func newTestRuntimeWithKubeObjects(

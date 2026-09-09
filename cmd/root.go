@@ -222,15 +222,15 @@ var labRuntimeUnsupportedCommands = map[string]struct{}{
 // being accepted and silently ignored by the adapter.
 var labRuntimeUnsupportedFlags = map[string][]string{ //nolint:gochecknoglobals
 	"deploy": {
-		"graph", "ipv4-subnet", "ipv6-subnet", "max-workers", "network", "node-filter",
+		"graph", "ipv4-subnet", "ipv6-subnet", "network", "node-filter",
 		"restore", "restore-all", "skip-labdir-acl", "skip-post-deploy", "export-template",
 	},
 	"destroy": {
-		"graceful", "keep-mgmt-net", "max-workers", "node-filter",
+		"graceful", "keep-mgmt-net", "node-filter",
 	},
 	"redeploy": {
 		"graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
-		"max-workers", "network", "skip-labdir-acl", "skip-post-deploy", "export-template",
+		"network", "skip-labdir-acl", "skip-post-deploy", "export-template",
 	},
 }
 

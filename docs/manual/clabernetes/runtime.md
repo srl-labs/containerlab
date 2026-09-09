@@ -290,6 +290,12 @@ wait early with the controller's message instead of running out the timeout.
 `deploy --reconfigure` first deletes all resources in the existing lab and
 then deploys them again.
 
+`--max-workers` limits concurrent ConfigMap apply requests. Destroy uses
+label-scoped Kubernetes collection deletion; if RBAC or the API does not allow
+that operation, it falls back to individual deletes limited by
+`--max-workers`. Values above the Kubernetes client's burst limit are honored,
+but produce a warning because client-side throttling may reduce their benefit.
+
 /// warning | Node filtering
 `deploy --node-filter` is not supported with the c9s runtime. Clabernetes owns
 reconciliation of the complete set of Node and Link resources. Deploy the full
@@ -793,12 +799,10 @@ Known command differences:
 
 - `deploy --node-filter` and `destroy --node-filter` are rejected; a filtered
   destroy never falls through to whole-lab deletion.
-- Deploy flags `--graph`, `--max-workers`, `--skip-post-deploy`,
-  `--skip-labdir-acl`, `--export-template`, `--restore`, and `--restore-all`
-  are rejected.
-- Destroy flags `--graceful`, `--keep-mgmt-net`, and `--max-workers` are
-  rejected. `--cleanup` removes the local lab directory in addition to the
-  cluster resources.
+- Deploy flags `--graph`, `--skip-post-deploy`, `--skip-labdir-acl`,
+  `--export-template`, `--restore`, and `--restore-all` are rejected.
+- Destroy flags `--graceful` and `--keep-mgmt-net` are rejected. `--cleanup`
+  removes the local lab directory in addition to the cluster resources.
 - Local Docker commands on the outer host are not authoritative for c9s labs.
 - `inspect interfaces` is rejected. Host-side `tc` or netem operations do not
   have the same local namespace access they have with Docker labs.

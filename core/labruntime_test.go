@@ -16,6 +16,19 @@ type failingExecLabRuntime struct {
 	returnCode int
 }
 
+type recordingDestroyLabRuntime struct {
+	clablabruntime.LabRuntime
+	request clablabruntime.DestroyRequest
+}
+
+func (r *recordingDestroyLabRuntime) Destroy(
+	_ context.Context,
+	req clablabruntime.DestroyRequest,
+) error {
+	r.request = req
+	return nil
+}
+
 func (r *failingExecLabRuntime) Inspect(
 	context.Context,
 	clablabruntime.InspectRequest,
@@ -70,6 +83,17 @@ func TestResolveRuntimeNameLowercasesValue(t *testing.T) {
 	}
 }
 
+func TestApplyLabRuntimeDeployOptionsCopiesMaxWorkers(t *testing.T) {
+	t.Parallel()
+
+	req := &clablabruntime.DeployRequest{}
+	applyLabRuntimeDeployOptions(req, &DeployOptions{maxWorkers: 7})
+
+	if req.MaxWorkers != 7 {
+		t.Fatalf("runtime max workers = %d, want 7", req.MaxWorkers)
+	}
+}
+
 func TestDestroyWithLabRuntimeRejectsNodeFilterBeforeDeletion(t *testing.T) {
 	t.Parallel()
 
@@ -82,6 +106,27 @@ func TestDestroyWithLabRuntimeRejectsNodeFilterBeforeDeletion(t *testing.T) {
 	err := c.destroyWithLabRuntime(context.Background(), &DestroyOptions{nodeFilter: []string{"node1"}})
 	if err == nil || !strings.Contains(err.Error(), "no resources were deleted") {
 		t.Fatalf("destroyWithLabRuntime() error = %v, want safe node-filter rejection", err)
+	}
+}
+
+func TestDestroyWithLabRuntimeCopiesMaxWorkers(t *testing.T) {
+	t.Parallel()
+
+	runtime := &recordingDestroyLabRuntime{}
+	c := &CLab{
+		Config:            &Config{Name: "lab1"},
+		LabRuntime:        runtime,
+		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+	}
+
+	if err := c.destroyWithLabRuntime(
+		context.Background(),
+		&DestroyOptions{maxWorkers: 7},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if runtime.request.MaxWorkers != 7 {
+		t.Fatalf("runtime max workers = %d, want 7", runtime.request.MaxWorkers)
 	}
 }
 

@@ -34,9 +34,10 @@ func (c *CLab) deployWithLabRuntime(
 
 	if options != nil && options.reconfigure {
 		err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
-			Name:    c.Config.Name,
-			Wait:    true,
-			Timeout: c.timeout,
+			Name:       c.Config.Name,
+			Wait:       true,
+			Timeout:    c.timeout,
+			MaxWorkers: options.maxWorkers,
 		})
 		if err != nil {
 			return nil, err
@@ -94,6 +95,7 @@ func applyLabRuntimeDeployOptions(req *clablabruntime.DeployRequest, options *De
 	req.ImagePullSecret = options.imagePullSecret
 	req.ExposeType = options.exposeType
 	req.NoPersistence = options.noPersistence
+	req.MaxWorkers = options.maxWorkers
 }
 
 // LabRuntimeManifests renders the remote resources the selected runtime would create for the
@@ -163,9 +165,10 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 	}
 
 	err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
-		Name:    c.Config.Name,
-		Wait:    true,
-		Timeout: c.timeout,
+		Name:       c.Config.Name,
+		Wait:       true,
+		Timeout:    c.timeout,
+		MaxWorkers: opts.maxWorkers,
 	})
 	if err != nil {
 		return err
@@ -228,10 +231,11 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 	var errs []error
 	for _, state := range states {
 		if err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
-			Name:      state.Name,
-			Namespace: state.Namespace,
-			Wait:      true,
-			Timeout:   c.timeout,
+			Name:       state.Name,
+			Namespace:  state.Namespace,
+			Wait:       true,
+			Timeout:    c.timeout,
+			MaxWorkers: opts.maxWorkers,
 		}); err != nil {
 			errs = append(errs, err)
 		}

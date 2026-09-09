@@ -359,7 +359,13 @@ func (r *Runtime) deployTopology(
 		}
 	}
 
-	if err = r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
+	if err = r.applyStagedConfigMaps(
+		ctx,
+		namespace,
+		req.Name,
+		stagedConfigMaps,
+		req.MaxWorkers,
+	); err != nil {
 		if namespaceCreated {
 			_, _ = r.deleteManagedLabNamespace(ctx, req.Name, namespace)
 		}
@@ -411,7 +417,13 @@ func (r *Runtime) reconcileTopology(
 	desired := prepared.topology
 	stagedConfigMaps := prepared.configMaps
 
-	if err := r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
+	if err := r.applyStagedConfigMaps(
+		ctx,
+		namespace,
+		req.Name,
+		stagedConfigMaps,
+		req.MaxWorkers,
+	); err != nil {
 		return nil, err
 	}
 

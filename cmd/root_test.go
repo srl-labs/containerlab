@@ -229,9 +229,10 @@ func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
 		wantErr   bool
 	}{
 		{name: "deploy dry-run supported", command: "deploy", flag: "dry-run", flagValue: "true"},
-		{name: "deploy worker controls rejected", command: "deploy", flag: "max-workers", flagValue: "4", wantErr: true},
+		{name: "deploy worker controls supported", command: "deploy", flag: "max-workers", flagValue: "4"},
 		{name: "deploy node filter rejected", command: "deploy", flag: "node-filter", flagValue: "n1", wantErr: true},
 		{name: "destroy graceful rejected", command: "destroy", flag: "graceful", flagValue: "true", wantErr: true},
+		{name: "destroy worker controls supported", command: "destroy", flag: "max-workers", flagValue: "4"},
 		{name: "destroy node filter rejected", command: "destroy", flag: "node-filter", flagValue: "n1", wantErr: true},
 	}
 
