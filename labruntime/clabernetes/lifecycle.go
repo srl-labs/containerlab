@@ -303,8 +303,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 			names[idx] = configMaps.Items[idx].Name
 		}
 		if !warnedWorkerBurst {
-			warnedWorkerBurst = warnWorkersExceedBurst(
-				"Delete", req.MaxWorkers, clientBurst, len(names))
+			warnWorkersExceedBurst("Delete", req.MaxWorkers, clientBurst, len(names))
 		}
 		if deleteErr := runWithWorkers(names, workers, func(name string) error {
 			err := configMapResource.Delete(ctx, name, metav1.DeleteOptions{})
