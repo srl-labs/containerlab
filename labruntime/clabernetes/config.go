@@ -240,6 +240,8 @@ func kubeClientConfig() (*rest.Config, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to load Kubernetes client config: %w", err)
 	}
+	restConfig.QPS = 1000
+	restConfig.Burst = 2000
 
 	return restConfig, namespace, nil
 }

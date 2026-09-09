@@ -13,7 +13,7 @@ func (r *Runtime) kubernetesWorkers(maxWorkers uint) (workers, clientBurst int) 
 	if r.restConfig != nil && r.restConfig.Burst > 0 {
 		clientBurst = r.restConfig.Burst
 	}
-	workers = clientBurst
+	workers = 150
 	if maxWorkers > 0 {
 		workers = int(maxWorkers)
 	}

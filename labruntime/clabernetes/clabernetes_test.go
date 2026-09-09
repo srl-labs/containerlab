@@ -1871,9 +1871,9 @@ func TestKubernetesWorkersHonorsExplicitValue(t *testing.T) {
 	t.Parallel()
 
 	r := &Runtime{}
-	if workers, burst := r.kubernetesWorkers(0); workers != rest.DefaultBurst ||
+	if workers, burst := r.kubernetesWorkers(0); workers != 150 ||
 		burst != rest.DefaultBurst {
-		t.Fatalf("default workers = %d, burst = %d, want %d", workers, burst, rest.DefaultBurst)
+		t.Fatalf("default workers = %d, burst = %d, want 150 workers and burst %d", workers, burst, rest.DefaultBurst)
 	}
 
 	requested := uint(rest.DefaultBurst + 2)
