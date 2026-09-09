@@ -1,14 +1,19 @@
 package clabernetes
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
+	"github.com/go-logr/logr/funcr"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -62,6 +67,18 @@ type Runtime struct {
 	// empty, lab-scoped operations derive their namespace from the lab name.
 	labNamespaceOverride string
 	timeout              time.Duration
+}
+
+func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
+	verbosity := -1
+	if log.GetLevel() <= log.DebugLevel {
+		verbosity = 3
+	}
+	logger := funcr.New(func(prefix, args string) {
+		log.Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
+	}, funcr.Options{Verbosity: verbosity})
+
+	return klog.NewContext(ctx, logger)
 }
 
 func init() {

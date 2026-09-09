@@ -807,15 +807,7 @@ func (r *Runtime) applyStagedConfigMaps(
 	}
 
 	workers, clientBurst := r.kubernetesWorkers(maxWorkers)
-	if maxWorkers > uint(clientBurst) {
-		if len(configMaps) > clientBurst {
-			log.Warn(
-				"ConfigMap workers exceed the Kubernetes client burst; requests may be throttled",
-				"workers", maxWorkers,
-				"burst", clientBurst,
-			)
-		}
-	}
+	warnWorkersExceedBurst("ConfigMap", maxWorkers, clientBurst, len(configMaps))
 
 	return runWithWorkers(configMaps, workers, func(staged stagedConfigMap) error {
 		return r.applyStagedConfigMap(ctx, namespace, topologyName, staged)
@@ -908,12 +900,15 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 	namespace string,
 	configMaps []stagedConfigMap,
 	nodes map[string]*unstructured.Unstructured,
+	maxWorkers uint,
 ) error {
 	if len(configMaps) == 0 {
 		return nil
 	}
 
-	for _, staged := range configMaps {
+	workers, _ := r.kubernetesWorkers(maxWorkers)
+
+	return runWithWorkers(configMaps, workers, func(staged stagedConfigMap) error {
 		node := nodes[staged.nodeName]
 		if node == nil {
 			return fmt.Errorf("failed to find c9s node %s/%s for staged ConfigMap ownership",
@@ -947,7 +942,7 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 				)
 			}
 
-			continue
+			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("failed to get staged ConfigMap %s/%s for owner update: %w",
@@ -958,7 +953,7 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 		}
 
 		if apiequality.Semantic.DeepEqual(configMap.OwnerReferences, ownerReferences) {
-			continue
+			return nil
 		}
 		configMap.OwnerReferences = ownerReferences
 
@@ -970,9 +965,9 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 				err,
 			)
 		}
-	}
 
-	return nil
+		return nil
+	})
 }
 
 func (r *Runtime) deleteStagedConfigMaps(

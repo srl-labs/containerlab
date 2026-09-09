@@ -499,6 +499,7 @@ func (r *Runtime) awaitTopologyConverged(
 		namespace,
 		stagedConfigMaps,
 		nodesByName,
+		req.MaxWorkers,
 	); err != nil {
 		return err
 	}

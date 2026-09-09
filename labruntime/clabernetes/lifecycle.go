@@ -152,6 +152,7 @@ func (r *Runtime) Deploy(
 		namespace,
 		stagedConfigMaps,
 		appliedNodes,
+		req.MaxWorkers,
 	); err != nil {
 		if !primitiveExists {
 			r.deleteCreatedPrimitiveResources(ctx, namespace, createdResources)
@@ -217,8 +218,8 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	var deleteErrors []error
 	workers, clientBurst := r.kubernetesWorkers(req.MaxWorkers)
 	warnedWorkerBurst := false
-	// Delete the owning Topology first when present so the controller cannot recreate compiler
-	// output while the primitive resources are being removed.
+	// Delete the owning Topology first. An already-running reconciliation may still create
+	// resources afterward; waitAndSweepDeleted removes those late arrivals.
 	err = r.client.Resource(topologyGVR).Namespace(namespace).
 		Delete(ctx, req.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -227,15 +228,12 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 			namespace, req.Name, err))
 	}
 
-	for _, gvr := range []struct {
-		name string
-		gvr  schema.GroupVersionResource
-	}{
-		{name: "nodes", gvr: nodeGVR},
-		{name: "links", gvr: linkGVR},
-		{name: "node profiles", gvr: nodeProfileGVR},
+	for _, group := range []primitiveResourceGroup{
+		{gvr: linkGVR, kind: "Link"},
+		{gvr: nodeGVR, kind: "Node"},
+		{gvr: nodeProfileGVR, kind: "NodeProfile"},
 	} {
-		resource := r.client.Resource(gvr.gvr).Namespace(namespace)
+		resource := r.client.Resource(group.gvr).Namespace(namespace)
 		err = resource.DeleteCollection(
 			ctx,
 			metav1.DeleteOptions{},
@@ -246,12 +244,12 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		}
 		if !apierrors.IsForbidden(err) && !apierrors.IsMethodNotSupported(err) {
 			deleteErrors = append(deleteErrors, fmt.Errorf(
-				"failed to delete c9s %s for lab %s/%s: %w",
-				gvr.name, namespace, req.Name, err))
+				"failed to delete c9s %s resources for lab %s/%s: %w",
+				group.kind, namespace, req.Name, err))
 			continue
 		}
 
-		list, listErr := r.primitiveResourcesForTopology(ctx, gvr.gvr, req.Name, namespace)
+		list, listErr := r.primitiveResourcesForTopology(ctx, group.gvr, req.Name, namespace)
 		if listErr != nil {
 			deleteErrors = append(deleteErrors, listErr)
 			continue
@@ -260,20 +258,16 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		for idx := range list.Items {
 			names[idx] = list.Items[idx].GetName()
 		}
-		if !warnedWorkerBurst && req.MaxWorkers > uint(clientBurst) && len(names) > clientBurst {
-			log.Warn(
-				"Delete workers exceed the Kubernetes client burst; requests may be throttled",
-				"workers", req.MaxWorkers,
-				"burst", clientBurst,
-			)
-			warnedWorkerBurst = true
+		if !warnedWorkerBurst {
+			warnedWorkerBurst = warnWorkersExceedBurst(
+				"Delete", req.MaxWorkers, clientBurst, len(names))
 		}
 		if deleteErr := runWithWorkers(names, workers, func(name string) error {
 			err := resource.Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
 				return fmt.Errorf(
 					"failed to delete c9s %s %s/%s: %w",
-					gvr.name, namespace, name, err)
+					group.kind, namespace, name, err)
 			}
 			return nil
 		}); deleteErr != nil {
@@ -308,13 +302,9 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		for idx := range configMaps.Items {
 			names[idx] = configMaps.Items[idx].Name
 		}
-		if !warnedWorkerBurst && req.MaxWorkers > uint(clientBurst) && len(names) > clientBurst {
-			log.Warn(
-				"Delete workers exceed the Kubernetes client burst; requests may be throttled",
-				"workers", req.MaxWorkers,
-				"burst", clientBurst,
-			)
-			warnedWorkerBurst = true
+		if !warnedWorkerBurst {
+			warnedWorkerBurst = warnWorkersExceedBurst(
+				"Delete", req.MaxWorkers, clientBurst, len(names))
 		}
 		if deleteErr := runWithWorkers(names, workers, func(name string) error {
 			err := configMapResource.Delete(ctx, name, metav1.DeleteOptions{})
@@ -334,7 +324,9 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	}
 
 	if req.Wait {
-		if err := r.waitDeleted(ctx, req.Name, namespace, req.Timeout, workers); err != nil {
+		if err := r.waitAndSweepDeleted(
+			ctx, req.Name, namespace, req.Timeout, workers,
+		); err != nil {
 			return err
 		}
 	}
@@ -654,7 +646,7 @@ func contextDeadlineIsImminent(ctx context.Context) bool {
 	return ok && time.Until(deadline) <= pollInterval
 }
 
-func (r *Runtime) waitDeleted(
+func (r *Runtime) waitAndSweepDeleted(
 	ctx context.Context,
 	name, namespace string,
 	timeout time.Duration,

@@ -1,28 +1,12 @@
 package clabernetes
 
 import (
-	"context"
 	"errors"
-	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/go-logr/logr/funcr"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 )
-
-func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
-	verbosity := -1
-	if log.GetLevel() <= log.DebugLevel {
-		verbosity = 3
-	}
-	logger := funcr.New(func(prefix, args string) {
-		log.Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
-	}, funcr.Options{Verbosity: verbosity})
-
-	return klog.NewContext(ctx, logger)
-}
 
 func (r *Runtime) kubernetesWorkers(maxWorkers uint) (workers, clientBurst int) {
 	clientBurst = rest.DefaultBurst
@@ -35,6 +19,19 @@ func (r *Runtime) kubernetesWorkers(maxWorkers uint) (workers, clientBurst int) 
 	}
 
 	return workers, clientBurst
+}
+
+func warnWorkersExceedBurst(operation string, workers uint, burst, itemCount int) bool {
+	if workers <= uint(burst) || itemCount <= burst {
+		return false
+	}
+	log.Warn(
+		operation+" workers exceed the Kubernetes client burst; requests may be throttled",
+		"workers", workers,
+		"burst", burst,
+	)
+
+	return true
 }
 
 func runWithWorkers[T any](items []T, workers int, fn func(T) error) error {

@@ -514,7 +514,7 @@ func TestDestroyUsesLabelScopedDeleteCollection(t *testing.T) {
 	}
 }
 
-func TestWaitDeletedRemovesLateStagedConfigMaps(t *testing.T) {
+func TestWaitAndSweepDeletedRemovesLateStagedConfigMaps(t *testing.T) {
 	t.Parallel()
 
 	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{
@@ -525,7 +525,9 @@ func TestWaitDeletedRemovesLateStagedConfigMaps(t *testing.T) {
 		}},
 	})
 
-	if err := r.waitDeleted(context.Background(), "lab1", "lab-ns", 3*time.Second, 1); err != nil {
+	if err := r.waitAndSweepDeleted(
+		context.Background(), "lab1", "lab-ns", 3*time.Second, 1,
+	); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").
