@@ -723,48 +723,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	// so that the two MTUs match.
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
-	// prepare the endpoints
-	const ethernetSplitParts = 3
-
-	const ethernetMTUOverhead = 14
-
-	for _, e := range n.Endpoints {
-		ifName := e.GetIfaceName()
-		if ifName == mgmt0InterfaceName {
-			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
-				tplData.MgmtMTU = m
-				tplData.MgmtIPMTU = m - ethernetMTUOverhead
-			}
-
-			continue
-		}
-
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
-
-		iface := tplIFace{}
-
-		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
-		if len(ifNameParts) == ethernetSplitParts {
-			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
-			iface.HasBreakout = true
-		} else {
-			iface.FullName = iface.BaseName
-		}
-
-		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
-			iface.Mtu = m
-		}
-
-		if a := e.GetIPv4Addr(); a.IsValid() {
-			iface.IPv4 = a.String()
-		}
-
-		if a := e.GetIPv6Addr(); a.IsValid() {
-			iface.IPv6 = a.String()
-		}
-
-		tplData.IFaces[ifName] = iface
-	}
+	n.populateInterfaceConfig(&tplData)
 
 	buf := new(bytes.Buffer)
 
@@ -808,6 +767,57 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	)
 
 	return nil
+}
+
+// populateInterfaceConfig adds endpoint settings to the default configuration.
+func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) {
+	const ethernetSplitParts = 3
+
+	const ethernetMTUOverhead = 14
+
+	for _, e := range n.Endpoints {
+		// Restored runtime endpoints may have no topology link or configured MTU.
+		mtu := clabconstants.DefaultLinkMTU
+		if link := e.GetLink(); link != nil {
+			mtu = link.GetMTU()
+		}
+
+		ifName := e.GetIfaceName()
+		if ifName == mgmt0InterfaceName {
+			if mtu != clabconstants.DefaultLinkMTU {
+				tplData.MgmtMTU = mtu
+				tplData.MgmtIPMTU = mtu - ethernetMTUOverhead
+			}
+
+			continue
+		}
+
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
+
+		iface := tplIFace{}
+
+		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
+		if len(ifNameParts) == ethernetSplitParts {
+			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
+			iface.HasBreakout = true
+		} else {
+			iface.FullName = iface.BaseName
+		}
+
+		if mtu != clabconstants.DefaultLinkMTU {
+			iface.Mtu = mtu
+		}
+
+		if a := e.GetIPv4Addr(); a.IsValid() {
+			iface.IPv4 = a.String()
+		}
+
+		if a := e.GetIPv6Addr(); a.IsValid() {
+			iface.IPv6 = a.String()
+		}
+
+		tplData.IFaces[ifName] = iface
+	}
 }
 
 // addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via
