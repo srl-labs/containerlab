@@ -74,15 +74,13 @@ type clabernetesRenderTopology struct {
 }
 
 type stagedConfigMap struct {
-	name     string
-	nodeName string
+	name string
 	// data holds text files as plain strings and binaryData everything else. Kubernetes
 	// serializes binaryData as base64, so keeping text out of it is what makes an emitted or
 	// inspected ConfigMap readable and editable; the c9s controller reads either field.
-	data          map[string]string
-	binaryData    map[string][]byte
-	keyByFilePath map[string]string
-	mounts        []stagedConfigMapMount
+	data       map[string]string
+	binaryData map[string][]byte
+	mounts     []stagedConfigMapMount
 }
 
 // content returns the staged bytes for a ConfigMap key from whichever field holds them.
@@ -133,8 +131,7 @@ func stageTopologyLocalFiles(
 		return req.TopologyDefinition, nil, naming, nil
 	}
 
-	extraConfigMaps := map[string]*stagedConfigMap{}
-	startupConfigMaps := map[string]*stagedConfigMap{}
+	configMaps := map[string]*stagedConfigMap{}
 	// Always render parsed links through the c9s brief-link boundary so an extended link's
 	// behavior does not depend on whether some unrelated field changed the definition.
 	definitionChanged := len(config.Topology.Links) > 0
@@ -159,7 +156,7 @@ func stageTopologyLocalFiles(
 				nodeName,
 				topologyFileDir,
 				topologyLabDir,
-				startupConfigMaps,
+				configMaps,
 				&definitionChanged,
 			); err != nil {
 				return nil, nil, "", err
@@ -171,7 +168,7 @@ func stageTopologyLocalFiles(
 				nodeName,
 				topologyFileDir,
 				topologyLabDir,
-				extraConfigMaps,
+				configMaps,
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -182,7 +179,7 @@ func stageTopologyLocalFiles(
 				nodeName,
 				topologyFileDir,
 				topologyLabDir,
-				extraConfigMaps,
+				configMaps,
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -193,7 +190,7 @@ func stageTopologyLocalFiles(
 				nodeName,
 				topologyFileDir,
 				topologyLabDir,
-				extraConfigMaps,
+				configMaps,
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -223,7 +220,7 @@ func stageTopologyLocalFiles(
 		topologyDefinition = updatedDefinition
 	}
 
-	stagedConfigMaps := collectStagedConfigMaps(startupConfigMaps, extraConfigMaps)
+	stagedConfigMaps := collectStagedConfigMaps(configMaps)
 	renameStagedConfigMapNodes(stagedConfigMaps, renames)
 
 	return topologyDefinition, stagedConfigMaps, naming, nil
@@ -330,12 +327,6 @@ func stageStartupConfig(
 		return nil
 	}
 
-	configMap := getOrCreateStagedConfigMap(
-		configMaps,
-		nodeName,
-		safeKubernetesName(topologyName, nodeName, "startup-config"),
-	)
-
 	if strings.Contains(startupConfig, "\n") {
 		nodeDefinition := config.Topology.Nodes[nodeName]
 		if nodeDefinition == nil {
@@ -345,10 +336,12 @@ func stageStartupConfig(
 		nodeDefinition.StartupConfig = inlineStartupConfigMountPath
 		*definitionChanged = true
 
-		return addStagedConfigMapData(
-			configMap,
+		return stageConfigMapFile(
+			configMaps,
+			topologyName,
+			"inline-startup-config/"+nodeName,
+			nodeName,
 			inlineStartupConfigMountPath,
-			"startup-config",
 			fileModeRead,
 			[]byte(startupConfig),
 		)
@@ -373,13 +366,7 @@ func stageStartupConfig(
 	}
 
 	for _, file := range files {
-		if err := addStagedConfigMapData(
-			configMap,
-			file.filePath,
-			"startup-config",
-			file.mode,
-			file.content,
-		); err != nil {
+		if err := stageLocalFile(configMaps, topologyName, nodeName, file); err != nil {
 			return err
 		}
 	}
@@ -400,14 +387,9 @@ func stageLicenseFile(
 		return nil
 	}
 
-	configMap := getOrCreateStagedConfigMap(
+	return stageSourcePathIntoConfigMaps(
 		configMaps,
-		nodeName,
-		safeKubernetesName(topologyName, nodeName, "files"),
-	)
-
-	return stageSourcePathIntoConfigMap(
-		configMap,
+		topologyName,
 		license,
 		nodeName,
 		topologyFileDir,
@@ -431,12 +413,6 @@ func stageBindFiles(
 		return nil
 	}
 
-	configMap := getOrCreateStagedConfigMap(
-		configMaps,
-		nodeName,
-		safeKubernetesName(topologyName, nodeName, "files"),
-	)
-
 	for _, bind := range binds {
 		parsedBind, err := clabtypes.NewBindFromString(bind)
 		if err != nil {
@@ -446,8 +422,9 @@ func stageBindFiles(
 			continue
 		}
 
-		if err := stageSourcePathIntoConfigMap(
-			configMap,
+		if err := stageSourcePathIntoConfigMaps(
+			configMaps,
+			topologyName,
 			parsedBind.Src(),
 			nodeName,
 			topologyFileDir,
@@ -492,14 +469,9 @@ func stageAdditionalNodeFiles(
 				continue
 			}
 
-			configMap := getOrCreateStagedConfigMap(
+			if err := stageSourcePathIntoConfigMaps(
 				configMaps,
-				nodeName,
-				safeKubernetesName(topologyName, nodeName, "files"),
-			)
-
-			if err := stageSourcePathIntoConfigMap(
-				configMap,
+				topologyName,
 				sourcePath,
 				nodeName,
 				topologyFileDir,
@@ -519,8 +491,9 @@ func stageAdditionalNodeFiles(
 	return nil
 }
 
-func stageSourcePathIntoConfigMap(
-	configMap *stagedConfigMap,
+func stageSourcePathIntoConfigMaps(
+	configMaps map[string]*stagedConfigMap,
+	topologyName,
 	sourcePath,
 	nodeName,
 	topologyFileDir,
@@ -537,14 +510,7 @@ func stageSourcePathIntoConfigMap(
 	}
 
 	for _, file := range files {
-		configMapKey := uniqueConfigMapKey(configMap, file.filePath)
-		if err := addStagedConfigMapData(
-			configMap,
-			file.filePath,
-			configMapKey,
-			file.mode,
-			file.content,
-		); err != nil {
+		if err := stageLocalFile(configMaps, topologyName, nodeName, file); err != nil {
 			return err
 		}
 	}
@@ -665,77 +631,73 @@ func replaceClabPathVariables(sourcePath, nodeName, topologyLabDir string) strin
 	return replacer.Replace(sourcePath)
 }
 
-func getOrCreateStagedConfigMap(
+func stageLocalFile(
 	configMaps map[string]*stagedConfigMap,
-	nodeName,
-	name string,
-) *stagedConfigMap {
-	configMap, ok := configMaps[nodeName]
-	if ok {
-		return configMap
-	}
-
-	configMap = &stagedConfigMap{
-		name:          name,
-		nodeName:      nodeName,
-		data:          map[string]string{},
-		binaryData:    map[string][]byte{},
-		keyByFilePath: map[string]string{},
-	}
-	configMaps[nodeName] = configMap
-
-	return configMap
+	topologyName,
+	nodeName string,
+	file stagedLocalFile,
+) error {
+	return stageConfigMapFile(
+		configMaps,
+		topologyName,
+		file.filePath,
+		nodeName,
+		file.filePath,
+		file.mode,
+		file.content,
+	)
 }
 
-func addStagedConfigMapData(
-	configMap *stagedConfigMap,
+func stageConfigMapFile(
+	configMaps map[string]*stagedConfigMap,
+	topologyName,
+	identity,
+	nodeName,
 	filePath,
-	configMapKey,
 	mode string,
 	content []byte,
 ) error {
-	if existingKey, ok := configMap.keyByFilePath[filePath]; ok {
-		if existing, _ := configMap.content(existingKey); !bytes.Equal(existing, content) {
+	identity = filepath.ToSlash(filepath.Clean(identity))
+	configMap, ok := configMaps[identity]
+	if ok {
+		if existing, _ := configMap.content("file"); !bytes.Equal(existing, content) {
 			return fmt.Errorf("staged file path %q has conflicting content", filePath)
 		}
-
-		return nil
-	}
-
-	if isTextContent(content) {
-		configMap.data[configMapKey] = string(content)
 	} else {
-		configMap.binaryData[configMapKey] = content
+		configMap = &stagedConfigMap{
+			name:       stagedFileConfigMapName(topologyName, identity),
+			data:       map[string]string{},
+			binaryData: map[string][]byte{},
+		}
+		if isTextContent(content) {
+			configMap.data["file"] = string(content)
+		} else {
+			configMap.binaryData["file"] = content
+		}
+		configMaps[identity] = configMap
 	}
-	configMap.keyByFilePath[filePath] = configMapKey
+
+	for _, mount := range configMap.mounts {
+		if mount.nodeName == nodeName && mount.filePath == filePath {
+			return nil
+		}
+	}
+
 	configMap.mounts = append(configMap.mounts, stagedConfigMapMount{
-		nodeName:      configMap.nodeName,
+		nodeName:      nodeName,
 		filePath:      filePath,
 		configMapName: configMap.name,
-		configMapPath: configMapKey,
+		configMapPath: "file",
 		mode:          mode,
 	})
 
 	return nil
 }
 
-func uniqueConfigMapKey(configMap *stagedConfigMap, filePath string) string {
-	configMapKey := safeConfigMapKey(filePath)
-	if _, exists := configMap.content(configMapKey); !exists {
-		return configMapKey
-	}
+func stagedFileConfigMapName(topologyName, filePath string) string {
+	digest := sha256.Sum256([]byte(filepath.ToSlash(filepath.Clean(filePath))))
 
-	digest := sha256.Sum256([]byte(filePath))
-	for idx := 0; ; idx++ {
-		candidate := safeKubernetesName(
-			configMapKey,
-			hex.EncodeToString(digest[:])[0:7],
-			fmt.Sprintf("%d", idx),
-		)
-		if _, exists := configMap.content(candidate); !exists {
-			return candidate
-		}
-	}
+	return safeKubernetesName(topologyName, "file", hex.EncodeToString(digest[:])[:16])
 }
 
 func collectStagedConfigMaps(configMapGroups ...map[string]*stagedConfigMap) []stagedConfigMap {
@@ -887,7 +849,6 @@ func stagedConfigMapObject(
 			Labels: map[string]string{
 				labelApp:           clabernetesAppValue,
 				labelTopologyOwner: topologyName,
-				labelTopologyNode:  staged.nodeName,
 			},
 		},
 		Data:       data,
@@ -909,18 +870,31 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 	workers, _ := r.kubernetesWorkers(maxWorkers)
 
 	return runWithWorkers(configMaps, workers, func(staged stagedConfigMap) error {
-		node := nodes[staged.nodeName]
-		if node == nil {
-			return fmt.Errorf("failed to find c9s node %s/%s for staged ConfigMap ownership",
-				namespace, staged.nodeName)
+		nodeNames := make(map[string]struct{}, len(staged.mounts))
+		for _, mount := range staged.mounts {
+			nodeNames[mount.nodeName] = struct{}{}
 		}
-		ownerReferences := []metav1.OwnerReference{
-			{
+		sortedNodeNames := make([]string, 0, len(nodeNames))
+		for nodeName := range nodeNames {
+			sortedNodeNames = append(sortedNodeNames, nodeName)
+		}
+		sort.Strings(sortedNodeNames)
+
+		ownerReferences := make([]metav1.OwnerReference, 0, len(sortedNodeNames))
+		topologyName := ""
+		for _, nodeName := range sortedNodeNames {
+			node := nodes[nodeName]
+			if node == nil {
+				return fmt.Errorf("failed to find c9s node %s/%s for staged ConfigMap ownership",
+					namespace, nodeName)
+			}
+			topologyName = node.GetLabels()[labelTopologyOwner]
+			ownerReferences = append(ownerReferences, metav1.OwnerReference{
 				APIVersion: c9sAPIVersion,
 				Kind:       "Node",
 				Name:       node.GetName(),
 				UID:        node.GetUID(),
-			},
+			})
 		}
 
 		configMap, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
@@ -928,7 +902,7 @@ func (r *Runtime) setStagedConfigMapNodeOwnerReferences(
 		if apierrors.IsNotFound(err) {
 			configMap = stagedConfigMapObject(
 				namespace,
-				node.GetLabels()[labelTopologyOwner],
+				topologyName,
 				staged,
 				ownerReferences,
 			)
@@ -1021,17 +995,6 @@ func (r *Runtime) deleteStaleConfigMaps(
 	}
 
 	return nil
-}
-
-func safeConfigMapKey(filePath string) string {
-	parts := strings.FieldsFunc(filepath.ToSlash(filePath), func(r rune) bool {
-		return r == '/' || r == '\\'
-	})
-	if len(parts) == 0 {
-		return "file"
-	}
-
-	return safeKubernetesName(parts...)
 }
 
 func safeKubernetesName(parts ...string) string {

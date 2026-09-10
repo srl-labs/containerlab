@@ -74,6 +74,7 @@ func assertManifestIsApplyInput(t *testing.T, manifest clablabruntime.Manifest) 
 func TestManifestsTopologyBundle(t *testing.T) {
 	t.Parallel()
 
+	configMapName := stagedFileConfigMapName("lab1", "configs/leaf1.cfg")
 	r := newTestRuntime()
 	manifests, err := r.Manifests(context.Background(), manifestsTestRequest(t))
 	if err != nil {
@@ -82,7 +83,7 @@ func TestManifestsTopologyBundle(t *testing.T) {
 
 	want := []string{
 		"Namespace/c9s-lab1",
-		"ConfigMap/lab1-leaf1-startup-config",
+		"ConfigMap/" + configMapName,
 		"Topology/lab1",
 	}
 	if got := manifestKinds(manifests); !apiequality.Semantic.DeepEqual(got, want) {
@@ -108,12 +109,12 @@ func TestManifestsTopologyBundle(t *testing.T) {
 		t.Fatalf("configmap namespace = %q, want c9s-lab1", configMap.Namespace)
 	}
 	configMapLabels, _, _ := unstructured.NestedStringMap(configMap.Object, "metadata", "labels")
-	if configMapLabels[labelTopologyOwner] != "lab1" || configMapLabels[labelTopologyNode] != "leaf1" {
+	if configMapLabels[labelTopologyOwner] != "lab1" || configMapLabels[labelTopologyNode] != "" {
 		t.Fatalf("unexpected configmap labels: %v", configMapLabels)
 	}
 	// A text file is emitted as plain data, not base64 binaryData, so the manifest is editable.
 	data, _, _ := unstructured.NestedStringMap(configMap.Object, "data")
-	if data["startup-config"] != "set / system name leaf1\n" {
+	if data["file"] != "set / system name leaf1\n" {
 		t.Fatalf("configmap data = %v, want plain startup-config", data)
 	}
 	if _, found := configMap.Object["binaryData"]; found {
@@ -135,8 +136,8 @@ func TestManifestsTopologyBundle(t *testing.T) {
 		t.Fatalf("topology leaf1 filesFromConfigMap = %v, want one entry", files)
 	}
 	file, _ := files[0].(map[string]any)
-	if file["configMapName"] != "lab1-leaf1-startup-config" {
-		t.Fatalf("topology references ConfigMap %v, want lab1-leaf1-startup-config", file)
+	if file["configMapName"] != configMapName || file["configMapPath"] != "file" {
+		t.Fatalf("topology references ConfigMap %v, want %s/file", file, configMapName)
 	}
 }
 
@@ -146,6 +147,7 @@ func TestManifestsPrimitiveBundle(t *testing.T) {
 	req := manifestsTestRequest(t)
 	req.Namespace = "lab-ns"
 	req.NoTopologyCR = true
+	configMapName := stagedFileConfigMapName("lab1", "configs/leaf1.cfg")
 
 	r := newTestRuntime()
 	manifests, err := r.Manifests(context.Background(), req)
@@ -155,7 +157,7 @@ func TestManifestsPrimitiveBundle(t *testing.T) {
 
 	// A namespace override must pre-exist, so the bundle does not create it.
 	want := []string{
-		"ConfigMap/lab1-leaf1-startup-config",
+		"ConfigMap/" + configMapName,
 		"NodeProfile/lab1",
 		"Link/lab1-leaf1-eth1-client1-eth1",
 		"Node/client1",
@@ -232,7 +234,12 @@ func TestManifestsMatchDeployedResources(t *testing.T) {
 			emittedLabels, deployedTopology.GetLabels())
 	}
 
-	deployedConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-leaf1-startup-config")
+	deployedConfigMap := getTestConfigMap(
+		t,
+		r,
+		"lab-ns",
+		stagedFileConfigMapName("lab1", "configs/leaf1.cfg"),
+	)
 	emittedConfigMap := manifests[0]
 	emittedData, _, _ := unstructured.NestedStringMap(emittedConfigMap.Object, "data")
 	if !apiequality.Semantic.DeepEqual(emittedData, deployedConfigMap.Data) {
@@ -326,20 +333,23 @@ topology:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(manifests) != 2 || manifests[0].Kind != "ConfigMap" {
-		t.Fatalf("manifests = %v, want the files ConfigMap first", manifestKinds(manifests))
+	if len(manifests) != 3 || manifests[0].Kind != "ConfigMap" ||
+		manifests[1].Kind != "ConfigMap" {
+		t.Fatalf("manifests = %v, want one ConfigMap per file first", manifestKinds(manifests))
 	}
 
-	configMap := manifests[0]
-	data, _, _ := unstructured.NestedStringMap(configMap.Object, "data")
-	if data["configs-hello-txt"] != "hello\tworld \n" {
+	configMaps := make(map[string]clablabruntime.Manifest, 2)
+	for _, manifest := range manifests[:2] {
+		configMaps[manifest.Name] = manifest
+	}
+	textConfigMap := configMaps[stagedFileConfigMapName("lab1", "configs/hello.txt")]
+	data, _, _ := unstructured.NestedStringMap(textConfigMap.Object, "data")
+	if data["file"] != "hello\tworld \n" {
 		t.Fatalf("text file data = %v, want it staged verbatim", data)
 	}
-	if _, found := data["configs-blob-bin"]; found {
-		t.Fatalf("binary file was staged as text data: %v", data)
-	}
-	binaryData, _, _ := unstructured.NestedStringMap(configMap.Object, "binaryData")
-	if binaryData["configs-blob-bin"] != base64.StdEncoding.EncodeToString([]byte(binaryContent)) {
+	binaryConfigMap := configMaps[stagedFileConfigMapName("lab1", "configs/blob.bin")]
+	binaryData, _, _ := unstructured.NestedStringMap(binaryConfigMap.Object, "binaryData")
+	if binaryData["file"] != base64.StdEncoding.EncodeToString([]byte(binaryContent)) {
 		t.Fatalf("binary file binaryData = %v, want base64 of the file", binaryData)
 	}
 
@@ -347,10 +357,15 @@ topology:
 	if _, err = r.Deploy(context.Background(), req); err != nil {
 		t.Fatal(err)
 	}
-	deployed := getTestConfigMap(t, r, "lab-ns", "lab1-client1-files")
-	if deployed.Data["configs-hello-txt"] != "hello\tworld \n" ||
-		string(deployed.BinaryData["configs-blob-bin"]) != binaryContent {
-		t.Fatalf("deployed configmap data = %v binaryData = %v",
-			deployed.Data, deployed.BinaryData)
+	deployedText := getTestConfigMap(
+		t, r, "lab-ns", stagedFileConfigMapName("lab1", "configs/hello.txt"),
+	)
+	deployedBinary := getTestConfigMap(
+		t, r, "lab-ns", stagedFileConfigMapName("lab1", "configs/blob.bin"),
+	)
+	if deployedText.Data["file"] != "hello\tworld \n" ||
+		string(deployedBinary.BinaryData["file"]) != binaryContent {
+		t.Fatalf("deployed text = %v binary = %v",
+			deployedText.Data, deployedBinary.BinaryData)
 	}
 }

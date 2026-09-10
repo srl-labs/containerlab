@@ -109,18 +109,14 @@ func renameBriefLinkEndpoints(links []*clablinks.LinkBriefRaw, renames map[strin
 }
 
 // renameStagedConfigMapNodes points the staged file projections at the sanitized node names. The
-// ConfigMaps themselves are already named through safeKubernetesName, but the node each mount and
-// ownership reference belongs to has to match the Node object c9s creates.
+// ConfigMaps themselves are shared by source file, but each mount and ownership reference has to
+// match the Node object c9s creates.
 func renameStagedConfigMapNodes(configMaps []stagedConfigMap, renames map[string]string) {
 	if len(renames) == 0 {
 		return
 	}
 
 	for idx := range configMaps {
-		if sanitized, renamed := renames[configMaps[idx].nodeName]; renamed {
-			configMaps[idx].nodeName = sanitized
-		}
-
 		for mountIdx := range configMaps[idx].mounts {
 			mount := &configMaps[idx].mounts[mountIdx]
 			if sanitized, renamed := renames[mount.nodeName]; renamed {

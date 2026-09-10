@@ -1891,7 +1891,6 @@ func TestApplyStagedConfigMapsHonorsWorkersAboveClientBurst(t *testing.T) {
 	for idx := range configMaps {
 		configMaps[idx] = stagedConfigMap{
 			name:       fmt.Sprintf("config-%d", idx),
-			nodeName:   fmt.Sprintf("node-%d", idx),
 			data:       map[string]string{"config": "value"},
 			binaryData: map[string][]byte{},
 		}
@@ -2076,83 +2075,100 @@ topology:
 		t.Fatalf("unexpected deploy state: %+v", state)
 	}
 
-	// Text files are staged as plain ConfigMap data so they stay readable in the cluster and
-	// in emitted manifests; binaryData is reserved for content that is not valid text.
-	clientConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-client2-files")
-	if got := clientConfigMap.Data["configs-client2-iperf-sh"]; got != "#!/bin/sh\n" {
-		t.Fatalf("unexpected client2 staged file content: %q", got)
+	files := map[string]struct {
+		nodeName string
+		content  string
+		mode     string
+	}{
+		"configs/client2/iperf.sh":          {"client2", "#!/bin/sh\n", "execute"},
+		"configs/client2.env":               {"client2", "MODE=test\n", "read"},
+		"configs/agent.yml":                 {"client2", "name: agent\n", "read"},
+		"configs/flash.cfg":                 {"client2", "hostname ceos\n", "read"},
+		"configs/prometheus/prometheus.yml": {"prometheus", "global: {}\n", "read"},
+		"configs/fabric/leaf1.cfg":          {"leaf1", "set / system name leaf1\n", "read"},
 	}
-	for key, want := range map[string]string{
-		"configs-client2-env": "MODE=test\n",
-		"configs-agent-yml":   "name: agent\n",
-		"configs-flash-cfg":   "hostname ceos\n",
-	} {
-		if got := clientConfigMap.Data[key]; got != want {
-			t.Fatalf("staged %s content = %q, want %q", key, got, want)
+	for filePath, want := range files {
+		configMapName := stagedFileConfigMapName("lab1", filePath)
+		configMap := getTestConfigMap(t, r, "lab-ns", configMapName)
+		if got := configMap.Data["file"]; got != want.content {
+			t.Fatalf("staged %s content = %q, want %q", filePath, got, want.content)
 		}
-	}
-	if len(clientConfigMap.BinaryData) != 0 {
-		t.Fatalf("text files were staged as binaryData: %v", clientConfigMap.BinaryData)
-	}
+		if len(configMap.BinaryData) != 0 {
+			t.Fatalf("text file %s was staged as binaryData: %v", filePath, configMap.BinaryData)
+		}
 
-	prometheusConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-prometheus-files")
-	if got := prometheusConfigMap.Data["configs-prometheus-prometheus-yml"]; got != "global: {}\n" {
-		t.Fatalf("unexpected prometheus staged file content: %q", got)
-	}
-
-	startupConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-leaf1-startup-config")
-	if got := startupConfigMap.Data["startup-config"]; got != "set / system name leaf1\n" {
-		t.Fatalf("unexpected startup config content: %q", got)
-	}
-
-	assertFileMount(
-		t,
-		getTestPrimitive(t, r, nodeGVR, "lab-ns", "client2"),
-		"configs/client2/iperf.sh",
-		"lab1-client2-files",
-		"configs-client2-iperf-sh",
-		"execute",
-	)
-	for _, filePath := range []string{
-		"configs/client2.env",
-		"configs/agent.yml",
-		"configs/flash.cfg",
-	} {
 		assertFileMount(
 			t,
-			getTestPrimitive(t, r, nodeGVR, "lab-ns", "client2"),
+			getTestPrimitive(t, r, nodeGVR, "lab-ns", want.nodeName),
 			filePath,
-			"lab1-client2-files",
-			safeConfigMapKey(filePath),
-			"read",
+			configMapName,
+			"file",
+			want.mode,
 		)
-	}
-	assertFileMount(
-		t,
-		getTestPrimitive(t, r, nodeGVR, "lab-ns", "prometheus"),
-		"configs/prometheus/prometheus.yml",
-		"lab1-prometheus-files",
-		"configs-prometheus-prometheus-yml",
-		"read",
-	)
-	assertFileMount(
-		t,
-		getTestPrimitive(t, r, nodeGVR, "lab-ns", "leaf1"),
-		"configs/fabric/leaf1.cfg",
-		"lab1-leaf1-startup-config",
-		"startup-config",
-		"read",
-	)
-
-	for _, configMap := range []*corev1.ConfigMap{
-		clientConfigMap,
-		prometheusConfigMap,
-		startupConfigMap,
-	} {
 		if len(configMap.OwnerReferences) != 1 || configMap.OwnerReferences[0].Kind != "Node" {
 			t.Fatalf("ConfigMap %s owner references = %+v, want one Node owner",
 				configMap.Name, configMap.OwnerReferences)
 		}
+	}
+}
+
+func TestDeploySharesConfigMapForFileUsedByMultipleNodes(t *testing.T) {
+	t.Parallel()
+
+	topologyDir := t.TempDir()
+	writeFile(t, filepath.Join(topologyDir, "license.txt"), "shared license\n", 0o644)
+
+	const definition = `name: lab1
+topology:
+  defaults:
+    kind: linux
+    license: license.txt
+  nodes:
+    node1: {}
+    node2: {}
+`
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, definition, 0o644)
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	configMaps, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").
+		List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configMaps.Items) != 1 {
+		t.Fatalf("ConfigMaps = %d, want one shared file ConfigMap", len(configMaps.Items))
+	}
+
+	configMap := &configMaps.Items[0]
+	if configMap.Name != stagedFileConfigMapName("lab1", "license.txt") ||
+		configMap.Data["file"] != "shared license\n" {
+		t.Fatalf("unexpected shared ConfigMap: %+v", configMap)
+	}
+	if len(configMap.OwnerReferences) != 2 {
+		t.Fatalf("owner references = %+v, want both consuming Nodes", configMap.OwnerReferences)
+	}
+
+	for _, nodeName := range []string{"node1", "node2"} {
+		assertFileMount(
+			t,
+			getTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName),
+			"license.txt",
+			configMap.Name,
+			"file",
+			"read",
+		)
 	}
 }
 
@@ -2242,12 +2258,17 @@ topology:
 		t,
 		getTestPrimitive(t, r, nodeGVR, "lab-ns", "r1"),
 		"configs/R1/init.sh",
-		"lab1-r1-files",
-		safeConfigMapKey("configs/R1/init.sh"),
+		stagedFileConfigMapName("lab1", "configs/R1/init.sh"),
+		"file",
 		"read",
 	)
 
-	configMap := getTestConfigMap(t, r, "lab-ns", "lab1-r1-files")
+	configMap := getTestConfigMap(
+		t,
+		r,
+		"lab-ns",
+		stagedFileConfigMapName("lab1", "configs/R1/init.sh"),
+	)
 	if len(configMap.OwnerReferences) != 1 || configMap.OwnerReferences[0].Name != "r1" {
 		t.Fatalf(
 			"ConfigMap owner references = %+v, want the sanitized node",
@@ -2632,7 +2653,8 @@ func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
 	if _, err := r.Deploy(context.Background(), req); err != nil {
 		t.Fatal(err)
 	}
-	_ = getTestConfigMap(t, r, "lab-ns", "lab1-node1-files")
+	configMapName := stagedFileConfigMapName("lab1", "configs/node1/startup.sh")
+	_ = getTestConfigMap(t, r, "lab-ns", configMapName)
 
 	req.TopologyDefinition = []byte(updatedDefinition)
 	if _, err := r.Deploy(context.Background(), req); err != nil {
@@ -2640,7 +2662,7 @@ func TestDeployReconcileDeletesStaleStagedConfigMaps(t *testing.T) {
 	}
 	_, err := r.kubeClient.CoreV1().ConfigMaps("lab-ns").Get(
 		context.Background(),
-		"lab1-node1-files",
+		configMapName,
 		metav1.GetOptions{},
 	)
 	if !apierrors.IsNotFound(err) {
