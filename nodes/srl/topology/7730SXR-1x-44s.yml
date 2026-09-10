@@ -7,7 +7,7 @@ modular: false
 chassis_configuration:
   "chassis_type": 51
   "base_mac": "{{ .MAC }}"
-  "cpm_card_type": 177
+  "cpm_card_type": 2
 
 slot_configuration:
   1:
