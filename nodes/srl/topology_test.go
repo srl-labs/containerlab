@@ -306,6 +306,22 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 	}
 }
 
+func TestResolveSRLTopologyRejectsNullComponent(t *testing.T) {
+	var def clabtypes.NodeDefinition
+	if err := yaml.UnmarshalStrict([]byte("components: [null]\n"), &def); err != nil {
+		t.Fatalf("unexpected YAML error: %v", err)
+	}
+
+	_, err := resolveSRLTopology(&clabtypes.NodeConfig{
+		NodeType:   "ixr-10e",
+		Components: def.Components,
+	})
+	const want = `component 1 for srl type "ixr-10e" must not be null`
+	if err == nil || err.Error() != want {
+		t.Fatalf("error = %v, want %q", err, want)
+	}
+}
+
 func TestGenerateSRLTopologyFile(t *testing.T) {
 	cfg := &clabtypes.NodeConfig{
 		NodeType: "ixr-10e",

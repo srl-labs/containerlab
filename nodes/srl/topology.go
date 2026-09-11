@@ -116,6 +116,10 @@ func resolveSRLTopology(cfg *clabtypes.NodeConfig) (srlTopology, error) {
 	resolved.Slots = map[int]srlSlot{}
 
 	for i, component := range cfg.Components {
+		if component == nil {
+			return srlTopology{}, fmt.Errorf("component %d for srl type %q must not be empty", i+1, cfg.NodeType)
+		}
+
 		slot, err := srlComponentSlot(component.Slot)
 		if err != nil {
 			return srlTopology{}, err
