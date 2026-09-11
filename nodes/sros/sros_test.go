@@ -2,6 +2,7 @@ package sros
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -22,66 +25,6 @@ import (
 func TestSrosLinkApplyMode(t *testing.T) {
 	if got := (&sros{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
-	}
-}
-
-func TestComponentSorting(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []*clabtypes.Component
-		expected []string // expected slot order
-	}{
-		{
-			name: "random mix",
-			input: []*clabtypes.Component{
-				{Slot: "3"},
-				{Slot: "b"},
-				{Slot: "1"},
-				{Slot: "A"},
-				{Slot: "2"},
-			},
-			expected: []string{"1", "2", "3", "b", "A"},
-		},
-		{
-			name: "iom/xcm only",
-			input: []*clabtypes.Component{
-				{Slot: "3"},
-				{Slot: "1"},
-				{Slot: "2"},
-				{Slot: "10"},
-			},
-			expected: []string{"1", "2", "3", "10"},
-		},
-		{
-			name: "cpm only",
-			input: []*clabtypes.Component{
-				{Slot: "b"},
-				{Slot: "A"},
-			},
-			expected: []string{"b", "A"},
-		},
-	}
-
-	for _, c := range tests {
-		t.Run(c.name, func(t *testing.T) {
-			n := &sros{}
-			n.Cfg = &clabtypes.NodeConfig{
-				Components: c.input,
-			}
-
-			n.sortComponents()
-
-			if len(n.Cfg.Components) != len(c.expected) {
-				t.Fatalf("expected %d components, got %d", len(c.expected), len(n.Cfg.Components))
-			}
-
-			for i, expectedSlot := range c.expected {
-				actualSlot := n.Cfg.Components[i].Slot
-				if actualSlot != expectedSlot {
-					t.Errorf("expected slot %q, got %q", expectedSlot, actualSlot)
-				}
-			}
-		})
 	}
 }
 
@@ -569,4 +512,429 @@ func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sr
 		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 	}
 	return n
+}
+
+func TestDistributedComponentsUseNetnsContainer(t *testing.T) {
+	components := []*clabtypes.Component{
+		{Slot: slotAName},
+		{Slot: "2"},
+		{Slot: slotBName},
+		{Slot: "1"},
+	}
+	n := newSrosInitTestNode("sr-14s", components)
+	n.Cfg.Image = "nokia_srsim:test"
+	n.Cfg.RestartPolicy = "unless-stopped"
+	n.Cfg.MgmtIPv4Address = "172.20.20.10"
+	n.Cfg.Labels = map[string]string{clabconstants.Containerlab: "test"}
+
+	require.NoError(t, n.Init(n.Cfg))
+	require.NotNil(t, n.netnsNode)
+	assert.Equal(t, "n1-netns", n.netnsNode.Config().ShortName)
+	assert.Equal(t, "clab-test-n1-netns", n.netnsNode.Config().LongName)
+	assert.Equal(t, n.Cfg.Image, n.netnsNode.Config().Image)
+	assert.Equal(t, "unless-stopped", n.netnsNode.Config().RestartPolicy)
+	assert.Equal(t, "true", n.netnsNode.Config().Labels[clabconstants.InternalNode])
+	assert.Equal(t, "/bin/sh", n.netnsNode.Config().Entrypoint)
+	assert.Equal(
+		t,
+		`-c "trap 'exit 0' TERM INT; sleep infinity & wait $!"`,
+		n.netnsNode.Config().Cmd,
+	)
+	assert.Equal(t, "srsim-netns", n.netnsNode.Config().Labels[clabconstants.NodeType])
+	assert.Empty(t, n.netnsNode.Config().Labels[clabconstants.ToolType])
+	assert.Equal(t, n.Cfg.ShortName, n.netnsNode.Config().Labels[clabconstants.RootNodeName])
+	assert.Equal(t, n.Cfg.MgmtIPv4Address, n.netnsNode.Config().MgmtIPv4Address)
+	assert.Equal(t, n.Cfg.Sysctls, n.netnsNode.Config().Sysctls)
+	assert.Empty(t, n.netnsNode.Config().Env)
+	assert.Empty(t, n.netnsNode.Config().Binds)
+
+	require.Len(t, n.componentNodes, len(components))
+	for i, component := range n.componentNodes {
+		assert.Equal(t, components[i].Slot, component.Config().Env[envNokiaSrosSlot])
+		assert.Equal(t, "container:n1-netns", component.Config().NetworkMode)
+		assert.Equal(t, n.Cfg.MgmtIPv4Address, component.Config().MgmtIPv4Address)
+		assert.Nil(t, component.Config().DNS)
+		assert.Nil(t, component.Config().PortBindings)
+		assert.Equal(t, n.Cfg.Sysctls, component.Config().Sysctls)
+	}
+}
+
+func TestDistributedHolderOnlyRemainsDiscoverableForDestroy(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		{Slot: slotAName},
+		{Slot: "1"},
+	})
+
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
+
+	holder := clabruntime.GenericContainer{
+		Names:  []string{n.netnsNode.Config().LongName},
+		Labels: n.netnsNode.Config().Labels,
+	}
+	mockRuntime.EXPECT().ListContainers(ctx, []*clabtypes.GenericFilter{
+		{FilterType: "name", Match: "clab-test-n1-a"},
+	}).Return(nil, nil)
+	mockRuntime.EXPECT().ListContainers(ctx, []*clabtypes.GenericFilter{
+		{FilterType: "name", Match: n.netnsNode.Config().LongName},
+	}).Return([]clabruntime.GenericContainer{holder}, nil)
+
+	got, err := n.GetContainers(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []clabruntime.GenericContainer{holder}, got)
+
+	mockRuntime.EXPECT().
+		GetContainerStatus(ctx, "clab-test-n1-a").
+		Return(clabruntime.NotFound).
+		AnyTimes()
+	mockRuntime.EXPECT().
+		GetContainerStatus(ctx, "clab-test-n1-1").
+		Return(clabruntime.NotFound).
+		AnyTimes()
+	mockRuntime.EXPECT().
+		GetContainerStatus(ctx, n.netnsNode.Config().LongName).
+		Return(clabruntime.Running)
+	mockRuntime.EXPECT().DeleteContainer(ctx, n.netnsNode.Config().LongName).Return(nil)
+
+	require.NoError(t, n.Delete(ctx))
+}
+
+func TestDistributedDeleteAttemptsHolderAfterComponentError(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		{Slot: slotAName},
+		{Slot: "1"},
+	})
+
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
+
+	component := clabmocksmocknodes.NewMockNode(ctrl)
+	n.componentNodes = []clabnodes.Node{component}
+
+	deleteErr := errors.New("component deletion failed")
+	component.EXPECT().Delete(ctx).Return(deleteErr)
+	component.EXPECT().GetContainerStatus(ctx).Return(clabruntime.NotFound)
+	mockRuntime.EXPECT().
+		GetContainerStatus(ctx, n.netnsNode.Config().LongName).
+		Return(clabruntime.Running)
+	mockRuntime.EXPECT().DeleteContainer(ctx, n.netnsNode.Config().LongName).Return(nil)
+
+	require.ErrorIs(t, n.Delete(ctx), deleteErr)
+}
+
+func TestEnsureNetnsRunning(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("already running", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+			{Slot: slotAName}, {Slot: "1"},
+		})
+		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
+		runtime.EXPECT().GetContainerStatus(ctx, n.netnsNode.Config().LongName).
+			Return(clabruntime.Running)
+
+		require.NoError(t, n.ensureNetnsRunning(ctx))
+	})
+
+	t.Run("starts stopped holder", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+			{Slot: slotAName}, {Slot: "1"},
+		})
+		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
+		runtime.EXPECT().GetContainerStatus(ctx, n.netnsNode.Config().LongName).
+			Return(clabruntime.Stopped).Times(2)
+		runtime.EXPECT().
+			StartContainer(ctx, n.netnsNode.Config().LongName, gomock.Any()).
+			Return(nil, nil)
+
+		require.NoError(t, n.ensureNetnsRunning(ctx))
+	})
+
+	t.Run("missing holder requires recreate", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+			{Slot: slotAName}, {Slot: "1"},
+		})
+		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
+		runtime.EXPECT().GetContainerStatus(ctx, n.netnsNode.Config().LongName).
+			Return(clabruntime.NotFound)
+
+		err := n.ensureNetnsRunning(ctx)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "recreate the node")
+	})
+}
+
+func TestComponentMgmtEnv(t *testing.T) {
+	dualStack := MgmtIP{
+		IPv4: "172.20.20.10", IPv4pLen: 24, IPv4Gw: "172.20.20.1",
+		IPv6: "3fff:172:20:20::10", IPv6pLen: 64, IPv6Gw: "3fff:172:20:20::1",
+	}
+	tests := []struct {
+		name string
+		ips  MgmtIP
+		env  map[string]string
+		want map[string]string
+	}{
+		{
+			name: "dual stack runtime allocation", ips: dualStack,
+			want: map[string]string{
+				envSrosIPv4Active: "172.20.20.10/24", envSrosIPv6Active: "3fff:172:20:20::10/64",
+				envSrosStaticRoutePrefix + "1": "0.0.0.0/0@172.20.20.1",
+				envSrosStaticRoutePrefix + "2": "::/0@3fff:172:20:20::1",
+			},
+		},
+		{
+			name: "IPv4 without gateway", ips: MgmtIP{IPv4: "192.0.2.10", IPv4pLen: 27},
+			want: map[string]string{envSrosIPv4Active: "192.0.2.10/27"},
+		},
+		{
+			name: "IPv6 only",
+			ips:  MgmtIP{IPv6: "2001:db8::10", IPv6pLen: 80, IPv6Gw: "2001:db8::1"},
+			want: map[string]string{
+				envSrosIPv6Active:              "2001:db8::10/80",
+				envSrosStaticRoutePrefix + "2": "::/0@2001:db8::1",
+			},
+		},
+		{name: "no management addresses"},
+		{
+			name: "explicit IPv4 opts out of both families", ips: dualStack,
+			env:  map[string]string{envSrosIPv4Active: "192.0.2.2/24"},
+			want: map[string]string{envSrosIPv4Active: "192.0.2.2/24"},
+		},
+		{
+			name: "explicit IPv6", ips: dualStack,
+			env:  map[string]string{envSrosIPv6Active: "2001:db8::2/64"},
+			want: map[string]string{envSrosIPv6Active: "2001:db8::2/64"},
+		},
+		{
+			name: "explicit route", ips: dualStack,
+			env:  map[string]string{envSrosStaticRoutePrefix + "1": "192.0.2.0/24@172.20.20.9"},
+			want: map[string]string{envSrosStaticRoutePrefix + "1": "192.0.2.0/24@172.20.20.9"},
+		},
+		{
+			name: "empty explicit route still opts out", ips: dualStack,
+			env:  map[string]string{envSrosStaticRoutePrefix + "CUSTOM": ""},
+			want: map[string]string{envSrosStaticRoutePrefix + "CUSTOM": ""},
+		},
+		{
+			name: "custom management interface", ips: dualStack,
+			env:  map[string]string{"NOKIA_SROS_MGMT_IF": "eth9"},
+			want: map[string]string{"NOKIA_SROS_MGMT_IF": "eth9"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+				{Slot: slotAName, Env: tt.env}, {Slot: slotBName}, {Slot: "1"},
+			})
+			require.NoError(t, n.Init(n.Cfg))
+			n.setComponentMgmtEnv(tt.ips)
+			got := map[string]string{}
+			for key, value := range n.componentNodes[0].Config().Env {
+				isAddress := key == envSrosIPv4Active || key == envSrosIPv6Active
+				isRoute := strings.HasPrefix(key, envSrosStaticRoutePrefix)
+				if isAddress || isRoute || key == "NOKIA_SROS_MGMT_IF" {
+					got[key] = value
+				}
+			}
+			if tt.want == nil {
+				assert.Empty(t, got)
+			} else {
+				assert.Equal(t, tt.want, got)
+			}
+			// A per-CPM override must not suppress automatic configuration for B.
+			if tt.ips.IPv4 != "" {
+				assert.Equal(t, fmt.Sprintf("%s/%d", tt.ips.IPv4, tt.ips.IPv4pLen),
+					n.componentNodes[1].Config().Env[envSrosIPv4Active])
+			}
+			assert.NotContains(t, n.componentNodes[2].Config().Env, envSrosIPv4Active)
+			assert.NotContains(t, n.componentNodes[2].Config().Env, envSrosIPv6Active)
+		})
+	}
+}
+
+func TestComponentMgmtEnvOnlyCPMSlots(t *testing.T) {
+	for _, slot := range []string{"A", "B", "a", "b", "1", "10", "", "C", "invalid"} {
+		t.Run(slot, func(t *testing.T) {
+			n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+				{Slot: slotAName}, {Slot: "1"},
+			})
+			require.NoError(t, n.Init(n.Cfg))
+			env := n.componentNodes[0].Config().Env
+			env[envNokiaSrosSlot] = slot
+
+			n.setComponentMgmtEnv(MgmtIP{
+				IPv4: "192.0.2.10", IPv4pLen: 24, IPv4Gw: "192.0.2.1",
+				IPv6: "2001:db8::10", IPv6pLen: 64, IPv6Gw: "2001:db8::1",
+			})
+
+			wantMgmt := slot == "A" || slot == "B" || slot == "a" || slot == "b"
+			for _, key := range []string{
+				envSrosIPv4Active, envSrosIPv6Active,
+				envSrosStaticRoutePrefix + "1", envSrosStaticRoutePrefix + "2",
+			} {
+				_, present := env[key]
+				assert.Equal(t, wantMgmt, present, key)
+			}
+		})
+	}
+}
+
+func TestDistributedNetnsLookupAndMgmtIPs(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	n := newSrosInitTestNode("sr-2s", []*clabtypes.Component{
+		{Slot: slotAName},
+		{Slot: "1"},
+	})
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
+
+	runtime.EXPECT().GetNSPath(ctx, "clab-test-n1-netns").Return("/proc/123/ns/net", nil)
+	nsPath, err := n.GetNSPath(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "/proc/123/ns/net", nsPath)
+
+	runtime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{{
+			ID: "holder-id",
+			NetworkSettings: clabruntime.GenericMgmtIPs{
+				IPv4addr: "172.20.20.10",
+				IPv4pLen: 24,
+				IPv4Gw:   "172.20.20.1",
+				IPv6addr: "3fff:172:20:20::10",
+				IPv6pLen: 64,
+				IPv6Gw:   "3fff:172:20:20::1",
+			},
+		}}, nil)
+
+	ips, err := n.distNodeMgmtIPs()
+	require.NoError(t, err)
+	assert.Equal(t, "172.20.20.10", ips.IPv4)
+	assert.Equal(t, "3fff:172:20:20::10", ips.IPv6)
+	assert.Equal(t, "holder-id", ips.ContainerID)
+	assert.Equal(t, "172.20.20.1", ips.IPv4Gw)
+	assert.Equal(t, "3fff:172:20:20::1", ips.IPv6Gw)
+}
+
+func TestNamespaceNodeUsesDefaultLifecycle(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		{Slot: slotAName}, {Slot: "1"},
+	})
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
+
+	holder := n.netnsNode
+	require.IsType(t, &namespaceNode{}, holder)
+	require.Same(t, mockRuntime, holder.GetRuntime())
+	mockRuntime.EXPECT().CreateContainer(ctx, holder.Config()).Return("holder-id", nil)
+	mockRuntime.EXPECT().StartContainer(ctx, "holder-id", gomock.Any()).Return(nil, nil)
+	require.NoError(t, holder.Deploy(ctx, nil))
+
+	mockRuntime.EXPECT().GetNSPath(ctx, holder.Config().LongName).Return("/proc/123/ns/net", nil)
+	nsPath, err := n.GetNSPath(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "/proc/123/ns/net", nsPath)
+
+	mockRuntime.EXPECT().
+		GetContainerStatus(ctx, holder.Config().LongName).
+		Return(clabruntime.Running)
+	mockRuntime.EXPECT().DeleteContainer(ctx, holder.Config().LongName).Return(nil)
+	require.NoError(t, holder.Delete(ctx))
+}
+
+func TestNamespaceNodeOnlyForDistributedComponents(t *testing.T) {
+	tests := []struct {
+		name       string
+		nodeType   string
+		components []*clabtypes.Component
+		env        map[string]string
+		wantHolder bool
+	}{
+		{name: "integrated", nodeType: "sr-1"},
+		{
+			name: "integrated component override", nodeType: "sr-1",
+			components: []*clabtypes.Component{{Slot: slotAName}},
+		},
+		{
+			name: "explicit distributed card", nodeType: "sr-14s",
+			env: map[string]string{envNokiaSrosSlot: slotAName},
+		},
+		{
+			name: "distributed components", nodeType: "sr-14s",
+			components: []*clabtypes.Component{{Slot: slotAName}, {Slot: "1"}},
+			wantHolder: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := newSrosInitTestNode(tt.nodeType, tt.components)
+			if tt.env != nil {
+				n.Cfg.Env = tt.env
+			}
+			require.NoError(t, n.Init(n.Cfg))
+			if tt.wantHolder {
+				require.NotNil(t, n.netnsNode)
+			} else {
+				require.Nil(t, n.netnsNode)
+			}
+		})
+	}
+}
+
+func TestWithoutComponentsDoesNotUseNamespaceHolder(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		nodeType   string
+		slot       string
+		components []*clabtypes.Component
+	}{
+		{name: "integrated without components", nodeType: "sr-1"},
+		{name: "integrated empty components", nodeType: "sr-1", components: []*clabtypes.Component{}},
+		{name: "explicit CPM A", nodeType: "sr-14s", slot: "A"},
+		{name: "explicit CPM B", nodeType: "sr-14s", slot: "B"},
+		{name: "explicit line card", nodeType: "sr-14s", slot: "1"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+			n := newSrosInitTestNode(tt.nodeType, tt.components)
+			if tt.slot != "" {
+				n.Cfg.Env[envNokiaSrosSlot] = tt.slot
+			}
+			require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
+			require.Nil(t, n.netnsNode)
+			require.Empty(t, n.componentNodes)
+			assert.Empty(t, n.Cfg.NetworkMode)
+
+			// Only the SR-SIM container may be created, started, queried or deleted.
+			// Any additional runtime call for a holder fails the mock expectations.
+			runtime.EXPECT().CreateContainer(ctx, n.Cfg).Return("srsim-id", nil)
+			runtime.EXPECT().StartContainer(ctx, "srsim-id", gomock.Any()).Return(nil, nil)
+			require.NoError(t, n.Deploy(ctx, nil))
+			runtime.EXPECT().GetNSPath(ctx, n.Cfg.LongName).Return("/proc/123/ns/net", nil)
+			nsPath, err := n.GetNSPath(ctx)
+			require.NoError(t, err)
+			assert.Equal(t, "/proc/123/ns/net", nsPath)
+			runtime.EXPECT().GetContainerStatus(ctx, n.Cfg.LongName).Return(clabruntime.Running)
+			runtime.EXPECT().DeleteContainer(ctx, n.Cfg.LongName).Return(nil)
+			require.NoError(t, n.Delete(ctx))
+			require.Nil(t, n.netnsNode)
+		})
+	}
 }
