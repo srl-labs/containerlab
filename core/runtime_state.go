@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -104,6 +105,19 @@ func (c *CLab) runtimeNodeGroups(
 // NeedsInitialDeploy reports whether the lab has no runtime state yet, i.e. whether
 // Deploy would perform a fresh deployment instead of reconciling a running lab.
 func (c *CLab) NeedsInitialDeploy(ctx context.Context) (bool, error) {
+	if c.LabRuntime != nil {
+		checker, ok := c.LabRuntime.(clablabruntime.LabExistenceChecker)
+		if !ok {
+			return false, fmt.Errorf(
+				"lab runtime %q cannot determine whether the lab already exists",
+				c.globalRuntimeName,
+			)
+		}
+		exists, err := checker.LabExists(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})
+
+		return !exists, err
+	}
+
 	currentNodes, err := c.runtimeNodeGroups(ctx)
 	if err != nil {
 		return false, err

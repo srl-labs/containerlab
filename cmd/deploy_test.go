@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 )
 
 func TestApplyIsDeployAlias(t *testing.T) {
@@ -32,10 +33,95 @@ func TestApplyIsDeployAlias(t *testing.T) {
 		t.Fatal("deploy command is missing the apply alias")
 	}
 
-	for _, flagName := range []string{"dry-run", "max-workers", "skip-post-deploy", "export-template"} {
+	for _, flagName := range []string{
+		"dry-run",
+		"max-workers",
+		"skip-post-deploy",
+		"export-template",
+		"image-pull-secret",
+		"expose-type",
+	} {
 		if deploy.Flags().Lookup(flagName) == nil {
 			t.Fatalf("deploy command missing %q flag", flagName)
 		}
+	}
+}
+
+func TestDeployExposeTypeFlag(t *testing.T) {
+	optionsInstance = nil
+
+	cmd, err := Entrypoint()
+	if err != nil {
+		t.Fatalf("failed to create command: %v", err)
+	}
+
+	for _, commandName := range []string{"deploy", "redeploy"} {
+		command := findCommand(cmd, commandName)
+		if command == nil {
+			t.Fatalf("%s command is not registered", commandName)
+		}
+		flag := command.Flags().Lookup("expose-type")
+		if flag == nil {
+			t.Fatalf("%s command missing expose-type flag", commandName)
+		}
+		if flag.DefValue != "" {
+			t.Fatalf("%s expose-type default = %q, want c9s CRD default", commandName, flag.DefValue)
+		}
+	}
+}
+
+func TestDeployImagePullSecretFlagDefault(t *testing.T) {
+	optionsInstance = nil
+
+	cmd, err := Entrypoint()
+	if err != nil {
+		t.Fatalf("failed to create command: %v", err)
+	}
+
+	deploy := findCommand(cmd, "deploy")
+	if deploy == nil {
+		t.Fatal("deploy command is not registered")
+	}
+
+	flag := deploy.Flags().Lookup("image-pull-secret")
+	if flag == nil {
+		t.Fatal("deploy command missing image-pull-secret flag")
+	}
+	if flag.DefValue != "" {
+		t.Fatalf("image-pull-secret default = %q, want no implicit pull secret", flag.DefValue)
+	}
+
+	redeploy := findCommand(cmd, "redeploy")
+	if redeploy == nil {
+		t.Fatal("redeploy command is not registered")
+	}
+	if redeploy.Flags().Lookup("image-pull-secret") == nil {
+		t.Fatal("redeploy command missing image-pull-secret flag")
+	}
+}
+
+func TestPostDeployVersionDisplaySkipsLabRuntimes(t *testing.T) {
+	tests := []struct {
+		name    string
+		runtime string
+		want    bool
+	}{
+		{name: "default runtime", want: true},
+		{name: "docker runtime", runtime: "docker", want: true},
+		{name: "clabernetes runtime", runtime: clablabruntime.ClabernetesRuntimeName, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldDisplayPostDeployVersion(tt.runtime); got != tt.want {
+				t.Fatalf(
+					"shouldDisplayPostDeployVersion(%q) = %t, want %t",
+					tt.runtime,
+					got,
+					tt.want,
+				)
+			}
+		})
 	}
 }
 

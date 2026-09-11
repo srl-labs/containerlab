@@ -3,10 +3,12 @@ package cmd
 import (
 	"net"
 	"os"
+	"sync/atomic"
 	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 )
@@ -14,6 +16,7 @@ import (
 const (
 	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
 	defaultTimeout             = 120 * time.Second
+	defaultLabRuntimeTimeout   = 10 * time.Minute
 	defaultToolsServerPort     = 8080
 	defaultToolsAPIServerPort  = 8090
 	defaultToolsApiSSHBasePort = 2223
@@ -240,6 +243,7 @@ type GlobalOptions struct {
 	TopologyFile     string
 	VarsFiles        []string
 	TopologyName     string
+	Namespace        string
 	Timeout          time.Duration
 	Runtime          string
 	GracefulShutdown bool
@@ -247,8 +251,9 @@ type GlobalOptions struct {
 	DebugCount       int
 
 	// special flag that should only be set by deploy, informs the context handler to destroy
-	// (or not) when root context is canceled
-	CleanOnCancel bool
+	// (or not) when root context is canceled. The signal handler goroutine reads it while
+	// deploy is running, so it is atomic.
+	CleanOnCancel atomic.Bool
 
 	// special flag that is only set on deploy,
 	// if true, the topology file backup is created at /tmp/.clab/bak
@@ -264,6 +269,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 				Debug:            o.DebugCount > 0,
 				Timeout:          o.Timeout,
 				GracefulShutdown: o.GracefulShutdown,
+				LabNamespace:     o.Namespace,
 			},
 		),
 		clabcore.WithDebug(o.DebugCount > 0),
@@ -279,7 +285,8 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithTopologyName(o.TopologyName))
 	}
 
-	if o.TopologyFile == "" && o.TopologyName != "" {
+	if o.TopologyFile == "" && o.TopologyName != "" &&
+		!clablabruntime.IsLabRuntimeName(o.Runtime) {
 		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 
@@ -320,6 +327,11 @@ type DeployOptions struct {
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
 	ExportRenderedTopology   string
+	NoTopologyCR             bool
+	ImagePullSecret          string
+	ExposeType               string
+	NoPersistence            bool
+	EmitCRs                  bool
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {

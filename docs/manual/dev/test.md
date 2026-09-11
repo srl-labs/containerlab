@@ -41,7 +41,12 @@ CLAB_BIN=$(pwd)/bin/containerlab ./tests/rf-run.sh <runtime> <test suite>
 ```
 
 /// note
-The test runner script requires you to specify the runtime as its first argument. The runtime can be either `docker` or `podman`. Containerlab primarily uses Docker as the default runtime, hence the number of tests written for docker outnumber the podman tests.
+The test runner script requires you to specify the runtime as its first
+argument. The runtime can be `docker`, `podman`, or `c9s`. Containerlab
+primarily uses Docker as the default runtime, hence the number of tests written
+for Docker outnumber the Podman and Clabernetes tests. When `c9s` is
+selected, the runner automatically includes only Robot tests tagged
+`clabernetes`.
 ///
 
 #### Selecting the test suite
@@ -63,6 +68,26 @@ CLAB_BIN=$(pwd)/bin/containerlab ./tests/rf-run.sh docker tests/01-smoke/01-basi
 /// note
 Selecting a specific test case in a test suite is not supported, since test suites are written in a way that test cases depend on previous ones.
 ///
+
+#### Running Clabernetes tests
+
+The c9s/Clabernetes Robot tests require the same Kubernetes prerequisites as
+the `containerlab --runtime c9s` command: a reachable cluster,
+Clabernetes CRDs and manager installed, and RBAC (including namespace
+management when automatic per-lab namespaces are used) for the selected
+kubeconfig.
+
+To run all currently supported Clabernetes Robot tests:
+
+```bash
+CLAB_BIN=$(pwd)/bin/containerlab ./tests/rf-run.sh c9s tests
+```
+
+or with the existing Makefile target:
+
+```bash
+make robot-test runtime=c9s
+```
 
 #### Inspecting the test results
 

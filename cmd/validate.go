@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -30,6 +31,19 @@ func validateFn(o *Options) error {
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
+	}
+
+	// Lab runtimes intentionally do not instantiate native node implementations, so the node
+	// count below says nothing about them -- the runtime's own compiler is the validation.
+	if c.LabRuntime != nil && c.Config.Name != "" {
+		if err := c.ValidateLabRuntimeTopology(context.Background()); err != nil {
+			return err
+		}
+
+		log.Info("Topology is valid for lab runtime", "name", c.Config.Name,
+			"runtime", o.Global.Runtime)
+
+		return nil
 	}
 
 	if c.Config.Name == "" || len(c.Nodes) == 0 {
