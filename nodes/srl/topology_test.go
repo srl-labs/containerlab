@@ -316,6 +316,7 @@ func TestResolveSRLTopologyRejectsNullComponent(t *testing.T) {
 		NodeType:   "ixr-10e",
 		Components: def.Components,
 	})
+
 	const want = `component 1 for srl type "ixr-10e" must not be empty`
 	if err == nil || err.Error() != want {
 		t.Fatalf("error = %v, want %q", err, want)
