@@ -191,10 +191,14 @@ func listContainers(
 		}
 	}
 
-	// hide internal containers (ie. SR-SIM netns holder)
-	return slices.DeleteFunc(containers, func(c clabruntime.GenericContainer) bool {
-		return c.Labels[clabconstants.InternalNode] == "true"
-	}), nil
+	// hide internal containers (ie. SR-SIM netns holder) only for non-all inspect.
+	if !o.Destroy.All {
+		containers = slices.DeleteFunc(containers, func(c clabruntime.GenericContainer) bool {
+			return c.Labels[clabconstants.InternalNode] == "true"
+		})
+	}
+
+	return containers, nil
 }
 
 func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWriter.Row {
@@ -431,7 +435,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 
 	// Gather summary details of each container
 	for idx := range containers {
-		if containers[idx].Labels[clabconstants.InternalNode] == "true" {
+		if !o.Destroy.All && containers[idx].Labels[clabconstants.InternalNode] == "true" {
 			continue
 		}
 		absPath := containers[idx].Labels[clabconstants.TopoFile]
