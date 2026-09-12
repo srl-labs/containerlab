@@ -1063,6 +1063,14 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 		ListContainers(gomock.Any(), gomock.Any()).
 		Return([]clabruntime.GenericContainer{
 			{
+				Names: []string{"clab-lab-sros-netns"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "sros-netns",
+					clabconstants.RootNodeName: "sros",
+					clabconstants.InternalNode: "true",
+				},
+			},
+			{
 				Names: []string{"clab-lab-sros-a"},
 				Labels: map[string]string{
 					clabconstants.NodeName:     "sros-a",
@@ -1090,8 +1098,19 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	if !group.distributed {
 		t.Fatal("expected distributed group marker")
 	}
-	if got := len(group.containers); got != 2 {
-		t.Fatalf("expected 2 component containers, got %d", got)
+	if got := len(group.containers); got != 3 {
+		t.Fatalf("expected 2 components and their internal holder, got %d", got)
+	}
+	gomock.InOrder(
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-a").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-1").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-netns").Return(nil),
+	)
+	if err := c.deleteApplyNodes(context.Background(), &applyPlan{
+		currentNodes:   currentNodes,
+		deletedNodeSet: map[string]struct{}{"sros": {}},
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
