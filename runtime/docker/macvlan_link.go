@@ -1,11 +1,13 @@
 package docker
 
 import (
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
 	"net/netip"
+	"time"
 
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -48,6 +50,7 @@ func macvlanHostAlias(networkID string) string {
 }
 
 func (h macvlanHost) ensure(
+	ctx context.Context,
 	networkID string,
 	parent netlink.Link,
 	ip netip.Addr,
@@ -106,23 +109,32 @@ func (h macvlanHost) ensure(
 
 	// Leave an owned, partially configured interface on failure. A retry can
 	// complete it; deleting it could disrupt another lab deploying concurrently.
-	if err := h.ensureAddress(link, ip); err != nil {
-		return err
-	}
 	if err := h.links.LinkSetUp(link); err != nil {
 		return fmt.Errorf("bring host interface %q up: %w", name, err)
+	}
+	if err := h.ensureAddress(ctx, link, ip); err != nil {
+		return err
 	}
 	return h.ensureRoute(link, ip, prefix)
 }
 
-func (h macvlanHost) ensureAddress(link netlink.Link, ip netip.Addr) error {
-	addrs, err := h.links.AddrList(nil, netlink.FAMILY_V4)
+func (h macvlanHost) ensureAddress(ctx context.Context, link netlink.Link, ip netip.Addr) error {
+	addrs, err := h.links.AddrList(nil, macvlanFamily(ip))
 	if err != nil {
 		return fmt.Errorf("list host interface addresses: %w", err)
 	}
-	want := &netlink.Addr{IPNet: &net.IPNet{IP: net.IP(ip.AsSlice()), Mask: net.CIDRMask(32, 32)}}
+	want := &netlink.Addr{
+		IPNet: &net.IPNet{IP: net.IP(ip.AsSlice()), Mask: net.CIDRMask(ip.BitLen(), ip.BitLen())},
+	}
+	if ip.Is6() {
+		want.Flags = unix.IFA_F_NOPREFIXROUTE
+	}
 	found := false
 	for _, addr := range addrs {
+		// IPv6 interfaces acquire a link-local address automatically.
+		if ip.Is6() && addr.IP.IsLinkLocalUnicast() {
+			continue
+		}
 		if addr.LinkIndex != link.Attrs().Index {
 			if addr.IP.Equal(want.IP) {
 				return fmt.Errorf(
@@ -144,23 +156,69 @@ func (h macvlanHost) ensureAddress(link netlink.Link, ip netip.Addr) error {
 		}
 	}
 	if found {
-		return nil
+		return h.waitAddressReady(ctx, link, ip)
 	}
 	if err := h.links.AddrAdd(link, want); err != nil {
 		if errors.Is(err, unix.EEXIST) {
 			// A concurrent deploy may have added it. Inspect once instead of
 			// treating any EEXIST (including conflicting addresses) as success.
-			addrs, listErr := h.links.AddrList(link, netlink.FAMILY_V4)
+			addrs, listErr := h.links.AddrList(link, macvlanFamily(ip))
 			if listErr != nil {
 				return fmt.Errorf("re-inspect host interface addresses: %w", listErr)
 			}
-			if len(addrs) == 1 && addrs[0].Equal(*want) {
-				return nil
+			for _, addr := range addrs {
+				if addr.Equal(*want) {
+					return h.waitAddressReady(ctx, link, ip)
+				}
 			}
 		}
 		return fmt.Errorf("assign host address %s: %w", ip, err)
 	}
-	return nil
+	return h.waitAddressReady(ctx, link, ip)
+}
+
+func macvlanFamily(ip netip.Addr) int {
+	if ip.Is4() {
+		return netlink.FAMILY_V4
+	}
+	return netlink.FAMILY_V6
+}
+
+// IPv6 source addresses cannot be used by routes until duplicate address
+// detection completes. Preserve DAD rather than bypassing duplicate detection.
+func (h macvlanHost) waitAddressReady(ctx context.Context, link netlink.Link, ip netip.Addr) error {
+	if ip.Is4() {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		addrs, err := h.links.AddrList(link, netlink.FAMILY_V6)
+		if err != nil {
+			return fmt.Errorf("inspect IPv6 host address: %w", err)
+		}
+		for _, addr := range addrs {
+			if !addr.IP.Equal(net.IP(ip.AsSlice())) {
+				continue
+			}
+			if addr.Flags&unix.IFA_F_DADFAILED != 0 {
+				return fmt.Errorf(
+					"duplicate address detection failed for macvlan host address %s",
+					ip,
+				)
+			}
+			if addr.Flags&unix.IFA_F_TENTATIVE == 0 {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("waiting for IPv6 host address %s: %w", ip, ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 func (h macvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.Prefix) error {
@@ -168,13 +226,17 @@ func (h macvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.
 		LinkIndex: link.Attrs().Index,
 		Dst: &net.IPNet{
 			IP:   net.IP(prefix.Addr().AsSlice()),
-			Mask: net.CIDRMask(prefix.Bits(), 32),
+			Mask: net.CIDRMask(prefix.Bits(), ip.BitLen()),
 		},
 		Src:      net.IP(ip.AsSlice()),
 		Scope:    netlink.SCOPE_LINK,
 		Table:    unix.RT_TABLE_MAIN,
 		Protocol: unix.RTPROT_STATIC,
 		Type:     unix.RTN_UNICAST,
+	}
+	if ip.Is6() {
+		// Linux represents IPv6 on-link routes with universe scope.
+		want.Scope = netlink.SCOPE_UNIVERSE
 	}
 	found, err := h.checkRoute(want)
 	if err != nil || found {
@@ -196,7 +258,11 @@ func (h macvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.
 }
 
 func (h macvlanHost) checkRoute(want *netlink.Route) (bool, error) {
-	routes, err := h.links.RouteList(nil, netlink.FAMILY_V4)
+	family := netlink.FAMILY_V4
+	if want.Dst.IP.To4() == nil {
+		family = netlink.FAMILY_V6
+	}
+	routes, err := h.links.RouteList(nil, family)
 	if err != nil {
 		return false, fmt.Errorf("list host routes: %w", err)
 	}

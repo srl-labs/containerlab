@@ -10,6 +10,21 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func TestInitMacvlanManagementNetwork(t *testing.T) {
+	for _, subnet := range []string{"", "192.0.2.0/24"} {
+		c := &CLab{Config: &Config{Mgmt: &clabtypes.MgmtNet{
+			Driver: "macvlan", MacvlanParent: "eth0", IPv4Subnet: subnet,
+		}}}
+		err := c.initMgmtNetwork()
+		if (err != nil) != (subnet == "") {
+			t.Fatalf("initMgmtNetwork(%q) error = %v", subnet, err)
+		}
+		if c.Config.Mgmt.IPv4Subnet != subnet || c.Config.Mgmt.IPv6Subnet != "" {
+			t.Fatalf("bridge subnet defaults applied to macvlan: %+v", c.Config.Mgmt)
+		}
+	}
+}
+
 func TestSkipMgmtNetwork(t *testing.T) {
 	withNodes := func(nodes map[string]*clabtypes.NodeDefinition) *clabtypes.Topology {
 		topo := clabtypes.NewTopology()

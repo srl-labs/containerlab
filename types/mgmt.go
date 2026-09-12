@@ -104,17 +104,12 @@ func validateMacvlanSubnet(subnet, gateway, ipRange string, ipv4 bool) error {
 	return nil
 }
 
-// MacvlanHostAddress returns the reserved IPv4 address and the destination for
-// the host route. The interface itself uses /32 to avoid an implicit subnet route.
+// MacvlanHostAddress returns the reserved address and destination for the host
+// route. The interface uses /32 for IPv4 or /128 for IPv6.
 func (m *MgmtNet) MacvlanHostAddress() (netip.Addr, netip.Prefix, error) {
-	subnet, err := netip.ParsePrefix(m.IPv4Subnet)
-	if err != nil || !subnet.Addr().Is4() {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux requires an explicit IPv4 subnet",
-		)
-	}
-	route := subnet.Masked()
 	var ip netip.Addr
+	var route netip.Prefix
+	var err error
 	if strings.Contains(m.MacvlanAux, "/") {
 		var aux netip.Prefix
 		aux, err = netip.ParsePrefix(m.MacvlanAux)
@@ -122,38 +117,43 @@ func (m *MgmtNet) MacvlanHostAddress() (netip.Addr, netip.Prefix, error) {
 	} else {
 		ip, err = netip.ParseAddr(m.MacvlanAux)
 	}
-	if err != nil || !ip.Is4() || !ip.IsGlobalUnicast() || !subnet.Contains(ip) {
+	if err != nil || !ip.IsGlobalUnicast() || ip.Is4In6() || ip.Zone() != "" {
 		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux %q must be an IPv4 address within %s",
-			m.MacvlanAux,
-			subnet,
-		)
+			"mgmt.macvlan-aux %q must be a unicast IPv4 or IPv6 address", m.MacvlanAux)
+	}
+	subnetText, gatewayText := m.IPv6Subnet, m.IPv6Gw
+	if ip.Is4() {
+		subnetText, gatewayText = m.IPv4Subnet, m.IPv4Gw
+	}
+	subnet, err := netip.ParsePrefix(subnetText)
+	if err != nil || subnet.Addr().BitLen() != ip.BitLen() || !subnet.Contains(ip) {
+		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
+			"mgmt.macvlan-aux %s requires a containing subnet of the same address family", ip)
+	}
+	if !route.IsValid() {
+		route = subnet.Masked()
 	}
 	if route.Bits() < subnet.Bits() {
 		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux route %s must be contained in %s",
-			route,
-			subnet,
-		)
+			"mgmt.macvlan-aux route %s must be contained in %s", route, subnet)
 	}
-	if route.Bits() == 32 {
+	if route.Bits() == ip.BitLen() {
 		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux /32 would route only the host address, not any containers",
+			"Invalid mask length for mgmt.macvlan-aux /%d",
+			ip.BitLen(),
 		)
 	}
 	// Docker reserves the subnet's first usable address as the default gateway.
 	gateway := subnet.Masked().Addr().Next()
-	if m.IPv4Gw != "" {
-		gateway, err = netip.ParseAddr(m.IPv4Gw)
+	if gatewayText != "" {
+		gateway, err = netip.ParseAddr(gatewayText)
 		if err != nil {
-			return netip.Addr{}, netip.Prefix{}, fmt.Errorf("invalid IPv4 gateway: %w", err)
+			return netip.Addr{}, netip.Prefix{}, fmt.Errorf("invalid gateway: %w", err)
 		}
 	}
-	if ip == gateway || ip == subnet.Masked().Addr() || !subnet.Contains(ip.Next()) {
+	if ip == gateway || ip == subnet.Masked().Addr() || (ip.Is4() && !subnet.Contains(ip.Next())) {
 		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux %s conflicts with the gateway or subnet boundary",
-			ip,
-		)
+			"mgmt.macvlan-aux %s conflicts with the gateway or a reserved subnet address", ip)
 	}
 	return ip, route, nil
 }

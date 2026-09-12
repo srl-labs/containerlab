@@ -56,7 +56,7 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := host.ensure(nres.ID, parent, ip, route); err != nil {
+		if err := host.ensure(nctx, nres.ID, parent, ip, route); err != nil {
 			return fmt.Errorf("configure macvlan host connectivity for %q: %w", d.mgmt.Network, err)
 		}
 	}
@@ -92,22 +92,28 @@ func macvlanNetworkOptions(m *clabtypes.MgmtNet) (networkapi.CreateOptions, erro
 		pool := networkapi.IPAMConfig{
 			Subnet: m.IPv4Subnet, Gateway: m.IPv4Gw, IPRange: m.IPv4Range,
 		}
-		if m.MacvlanAux != "" {
-			ip, route, err := m.MacvlanHostAddress()
-			if err != nil {
-				return networkapi.CreateOptions{}, err
-			}
-			pool.AuxAddress = map[string]string{"host": ip.String()}
-			// Record the route prefix as well as the IP, so labs sharing a network
-			// cannot silently configure different host routes for the same address.
-			opts.Labels[macvlanAuxLabel] = netip.PrefixFrom(ip, route.Bits()).String()
-		}
+
 		opts.IPAM.Config = append(opts.IPAM.Config, pool)
 	}
 	if m.IPv6Subnet != "" {
 		opts.IPAM.Config = append(opts.IPAM.Config, networkapi.IPAMConfig{
 			Subnet: m.IPv6Subnet, Gateway: m.IPv6Gw, IPRange: m.IPv6Range,
 		})
+	}
+	if m.MacvlanAux != "" {
+		ip, route, err := m.MacvlanHostAddress()
+		if err != nil {
+			return networkapi.CreateOptions{}, err
+		}
+		for i := range opts.IPAM.Config {
+			pool := &opts.IPAM.Config[i]
+			prefix, err := netip.ParsePrefix(pool.Subnet)
+			if err == nil && prefix.Contains(ip) {
+				pool.AuxAddress = map[string]string{"host": ip.String()}
+			}
+		}
+		// Include the route prefix so sharing labs agree on host connectivity.
+		opts.Labels[macvlanAuxLabel] = netip.PrefixFrom(ip, route.Bits()).String()
 	}
 	return opts, nil
 }
