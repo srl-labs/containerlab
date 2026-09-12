@@ -2096,7 +2096,9 @@
                 },
                 "macvlan-parent": {
                     "type": "string",
-                    "description": "Parent interface for macvlan network"
+                    "minLength": 1,
+                    "maxLength": 15,
+                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
                 },
                 "macvlan-mode": {
                     "type": "string",
@@ -2106,11 +2108,14 @@
                         "private",
                         "passthru"
                     ],
-                    "description": "Macvlan mode (bridge, vepa, private, or passthru)"
+                    "default": "bridge",
+                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
                 },
                 "macvlan-aux": {
                     "type": "string",
-                    "description": "Auxiliary IP address for host macvlan interface"
+                    "minLength": 1,
+                    "description": "Reserved IPv4 or IPv6 host address, optionally with a prefix limiting the host route within the matching subnet",
+                    "markdownDescription": "[Host connectivity](https://containerlab.dev/manual/network/#macvlan-management-networks): IPv4 or IPv6 address or CIDR; requires macvlan bridge mode"
                 },
                 "external-access": {
                     "type": "boolean",
