@@ -153,6 +153,10 @@ var (
 	InterfaceRegexp = regexp.MustCompile(
 		`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`,
 	)
+	// normalizedInterfaceRegexp validates names after AddEndpoint maps interface aliases.
+	normalizedInterfaceRegexp = regexp.MustCompile(
+		`^(?:e[1-9]\d*-[1-9]\d*(?:-[1-9]\d*)?|` + mgmt0InterfaceName + `)$`,
+	)
 	InterfaceHelp = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
@@ -685,7 +689,7 @@ type tplIFace struct {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
+func (n *srl) addDefaultConfig(ctx context.Context) error {
 	b, err := n.banner()
 	if err != nil {
 		return err
@@ -723,7 +727,9 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	// so that the two MTUs match.
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
-	n.populateInterfaceConfig(&tplData)
+	if err := n.populateInterfaceConfig(&tplData); err != nil {
+		return err
+	}
 
 	buf := new(bytes.Buffer)
 
@@ -769,20 +775,30 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	return nil
 }
 
-// populateInterfaceConfig adds endpoint settings to the default configuration.
-func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) {
+// populateInterfaceConfig adds endpoint settings to the default configuration,
+// returning an error for interface names that cannot be mapped to SR Linux interfaces.
+func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) error {
 	const ethernetSplitParts = 3
 
 	const ethernetMTUOverhead = 14
 
 	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+
+		// Runtime-discovered endpoints bypass topology interface-name validation.
+		if !normalizedInterfaceRegexp.MatchString(ifName) {
+			return fmt.Errorf(
+				"invalid SR Linux interface %q: expected mgmt0, eL-P or eL-P-C (L, P, C >= 1)",
+				ifName,
+			)
+		}
+
 		// Restored runtime endpoints may have no topology link or configured MTU.
 		mtu := clabconstants.DefaultLinkMTU
 		if link := e.GetLink(); link != nil {
 			mtu = link.GetMTU()
 		}
 
-		ifName := e.GetIfaceName()
 		if ifName == mgmt0InterfaceName {
 			if mtu != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = mtu
@@ -792,7 +808,7 @@ func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) {
 			continue
 		}
 
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
+		ifNameParts := strings.SplitN(strings.TrimPrefix(ifName, "e"), "-", ethernetSplitParts)
 
 		iface := tplIFace{}
 
@@ -818,6 +834,8 @@ func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) {
 
 		tplData.IFaces[ifName] = iface
 	}
+
+	return nil
 }
 
 // addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via
@@ -1041,8 +1059,6 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *srl) CheckInterfaceName() error {
-	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
 	err := n.CheckInterfaceOverlap()
@@ -1051,7 +1067,7 @@ func (n *srl) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
+		if !normalizedInterfaceRegexp.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf(
 				"nokia sr linux interface name %q doesn't match the required pattern: %s",
 				e.GetIfaceName(),
