@@ -41,6 +41,9 @@ func (c *CLab) lifecycleNodes(nodeNames []string) ([]clabnodes.Node, error) {
 
 func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
 	for _, nodeName := range sortedStringSet(plan.parkedNodeSet) {
+		if _, recreated := plan.recreatedNodeSet[nodeName]; !recreated {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue

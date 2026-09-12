@@ -10,6 +10,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
 )
 
 // Endpoint is the interface that all endpoint types implement.
@@ -228,8 +230,34 @@ func (e *EndpointGeneric) Activate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return netlink.LinkSetUp(link)
+		return activateLink(link)
 	})
+}
+
+// activateLink brings a link up in the default link mode. Some network OSes
+// leave restored veths in dormant link mode. netlink.LinkSetUp only changes
+// IFF_UP, so the stale mode would otherwise survive the restore.
+func activateLink(link netlink.Link) error {
+	req := nl.NewNetlinkRequest(unix.RTM_NEWLINK, unix.NLM_F_ACK)
+	req.AddData(newActivateLinkMessage(link.Attrs().Index))
+	req.AddData(newDefaultLinkModeAttr())
+
+	_, err := req.Execute(unix.NETLINK_ROUTE, 0)
+	return err
+}
+
+func newActivateLinkMessage(index int) *nl.IfInfomsg {
+	msg := nl.NewIfInfomsg(unix.AF_UNSPEC)
+	msg.Change = unix.IFF_UP
+	msg.Flags = unix.IFF_UP
+	msg.Index = int32(index)
+	return msg
+}
+
+func newDefaultLinkModeAttr() *nl.RtAttr {
+	// IF_LINK_MODE_DEFAULT is zero. x/sys exposes IFLA_LINKMODE but not the
+	// values of the link-mode enum.
+	return nl.NewRtAttr(unix.IFLA_LINKMODE, []byte{0})
 }
 
 func ensureOwnershipAltName(ctx context.Context, e Endpoint) error {

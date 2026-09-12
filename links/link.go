@@ -38,6 +38,7 @@ const (
 )
 
 var linkAddAltName = netlink.LinkAddAltName
+var linkDelAltName = netlink.LinkDelAltName
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
@@ -680,6 +681,25 @@ func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 		return fmt.Errorf("failed to add containerlab ownership altname: %w", err)
 	}
 
+	return nil
+}
+
+func replaceOwnershipAltName(link netlink.Link, nodeName, oldIfaceName, newIfaceName string) error {
+	oldName := ownershipAltNameFor(nodeName, oldIfaceName)
+	newName := ownershipAltNameFor(nodeName, newIfaceName)
+	if oldName == newName {
+		return nil
+	}
+
+	if err := linkDelAltName(link, oldName); err != nil && !isAltNameNotSupportedErr(err) {
+		return fmt.Errorf("failed to remove containerlab ownership altname: %w", err)
+	}
+	if err := linkAddAltName(link, newName); err != nil {
+		if isAltNameNotSupportedErr(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to add containerlab ownership altname: %w", err)
+	}
 	return nil
 }
 
