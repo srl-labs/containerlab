@@ -17,4 +17,5 @@ const (
 	GitBranch        = "clab-git-branch"
 	GitHash          = "clab-git-hash"
 	InternalNode     = "clab-internal-node"
+	MacvlanAux       = "containerlab-macvlan-aux"
 )

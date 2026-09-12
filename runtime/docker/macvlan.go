@@ -13,8 +13,6 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-const macvlanAuxLabel = "containerlab-macvlan-aux"
-
 func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -113,7 +111,7 @@ func macvlanNetworkOptions(m *clabtypes.MgmtNet) (networkapi.CreateOptions, erro
 			}
 		}
 		// Include the route prefix so sharing labs agree on host connectivity.
-		opts.Labels[macvlanAuxLabel] = netip.PrefixFrom(ip, route.Bits()).String()
+		opts.Labels[clabconstants.MacvlanAux] = netip.PrefixFrom(ip, route.Bits()).String()
 	}
 	return opts, nil
 }
@@ -136,11 +134,11 @@ func validateMacvlanNetwork(n *networkapi.Inspect, want networkapi.CreateOptions
 			return err
 		}
 	}
-	if aux := want.Labels[macvlanAuxLabel]; aux != "" {
+	if aux := want.Labels[clabconstants.MacvlanAux]; aux != "" {
 		if _, owned := n.Labels[clabconstants.Containerlab]; !owned {
 			return fmt.Errorf("macvlan-aux requires a network created by containerlab")
 		}
-		if n.Labels[macvlanAuxLabel] != aux {
+		if n.Labels[clabconstants.MacvlanAux] != aux {
 			return fmt.Errorf(
 				"macvlan-aux differs from the network's host configuration; use the same address and prefix",
 			)

@@ -437,7 +437,7 @@ func TestMacvlanNetworkReuseValidation(t *testing.T) {
 		{"gateway", func(n *networkapi.Inspect) { n.IPAM.Config[0].Gateway = "192.0.2.2" }},
 		{"pool", func(n *networkapi.Inspect) { n.IPAM.Config[0].IPRange = "192.0.2.0/25" }},
 		{"reservation", func(n *networkapi.Inspect) { n.IPAM.Config[0].AuxAddress = nil }},
-		{"host route", func(n *networkapi.Inspect) { n.Labels[macvlanAuxLabel] = "192.0.2.129/24" }},
+		{"host route", func(n *networkapi.Inspect) { n.Labels[clabconstants.MacvlanAux] = "192.0.2.129/24" }},
 		{"external ownership", func(n *networkapi.Inspect) { delete(n.Labels, clabconstants.Containerlab) }},
 	} {
 		for _, concurrent := range []bool{false, true} {
