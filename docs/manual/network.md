@@ -44,7 +44,7 @@ As seen from the topology definition file, the lab consists of the two SR Linux 
 
 The diagram above shows that these two nodes are not only interconnected between themselves, but also connected to a bridge interface on the lab host. This is driven by the containerlab default management network settings.
 
-### default settings
+### Default settings
 
 When no information about the management network is provided within the topo definition file, containerlab will do the following
 
@@ -116,11 +116,11 @@ PING 172.20.20.3 (172.20.20.3) 56(84) bytes of data.
 !!!note
     If you run multiple labs without changing the default management settings, the containers of those labs will end up connecting to the same management network with their management interface.
 
-### host mode networking
+### Host mode networking
 
 In addition to the bridge-based management network containerlab supports launching nodes in [host networking mode](https://docs.docker.com/network/host/). In this mode containers are attached to the host network namespace. Host mode is enabled with [network-mode](nodes.md#network-mode) node setting.
 
-### configuring management network
+### Configuring management network
 
 Most of the time there is no need to change the defaults for management network configuration, but sometimes it is needed. For example, it might be that the default network ranges are overlapping with the existing addressing scheme on the lab host, or it might be desirable to have predefined management IP addresses.
 
@@ -140,7 +140,7 @@ topology:
 
 With these settings in place, the container will get their IP addresses from the specified ranges accordingly.
 
-#### user-defined addresses
+#### User-defined addresses
 
 By default, container runtime will assign the management IP addresses for the containers. But sometimes, it's helpful to have user-defined addressing in the management network.
 
@@ -167,7 +167,7 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
     2. IPv4/6 addresses set on a node level must be from the management network range.
     3. IPv6 addresses are truncated by Docker[^1], therefore do not use bytes 5 through 8 of the IPv6 network range.
 
-#### auto-assigned addresses
+#### Auto-assigned addresses
 
 The default network addresses chosen by containerlab - 172.20.20.0/24 and 3fff:172:20:20::/64 - may clash with the existing addressing scheme on the lab host. With the [user-defined addresses](#user-defined-addresses) discussed above, users can avoid such conflicts, but this requires manual changes to the lab topology file and may not be convenient.
 
@@ -193,7 +193,7 @@ mgmt:
 
 This will result in every interface connected to that network to inherit this MTU value.
 
-#### network name
+#### Network name
 
 The default container network name is `clab`. To customize this name, users should specify a new value within the `network` element:
 
@@ -202,7 +202,7 @@ mgmt:
   network: myNetworkName
 ```
 
-#### default docker network
+#### Default Docker network
 
 To make clab nodes start in the default docker network `bridge`, which uses the `docker0` bridge interface, users need to mention this explicitly in the configuration:
 
@@ -213,7 +213,7 @@ mgmt:
 
 Since `bridge` network is created by default by docker, using its name in the configuration will make nodes to connect to this network.
 
-#### bridge name
+#### Bridge name
 
 By default, containerlab will create a linux bridge backing the management docker network with the following name `br-<network-id>`. The network-id part is coming from the docker network ID that docker manages.
 
@@ -256,7 +256,7 @@ mgmt:
 
 With this approach, users can prevent IP address overlap with nodes deployed on the same management network by other orchestration systems.
 
-#### access from external hosts
+#### Access from external hosts
 
 Containerlab will attempt to enable external management access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual iptables/nftables rules to be installed.
 
@@ -328,7 +328,7 @@ Containerlab will throw an error "missing DOCKER-USER iptables chain" when this 
 When docker is correctly installed, additional iptables chains will become available and the error will not appear.
 ///
 
-### bridge network driver options
+### Bridge network driver options
 
 By default, containerlab will create the management bridge with default driver options[^2], however, for special networking setups required in some cases, this can be overridden in the `driver-opts` section of the `mgmt` block.
 
@@ -345,7 +345,7 @@ mgmt:
 
 All driver options can be overridden, even those set by containerlab.
 
-### local-only networking
+### Local-only networking
 
 The default management bridge driver options are configured to allow external network access from the containers through the management interface, including internet. In order to prevent unintentional internet or external network access, ip masquerading needs to be disabled on the management interface bridge:
 
@@ -358,7 +358,7 @@ mgmt:
 
 This allows for bidirectional communication between the host and containers, as well as between containers, while preventing access to the host's external network.
 
-### skipping the management network
+### Skipping the management network
 
 When every node in a topology runs with [`network-mode: none`](nodes.md#network-mode) the default `clab` docker network is created but never used, and an empty `CLAB-<lab>` marker block is appended to `/etc/hosts`. Set `skip-when-unused: true` under `mgmt` to suppress both:
 
@@ -376,7 +376,7 @@ topology:
 
 Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
 
-### connection details
+### Connection details
 
 When containerlab needs to create the management network, it asks the docker daemon to do this. Docker will fulfill the request and will create a network with the underlying linux bridge interface backing it. The bridge interface name is generated by the docker daemon, but it is easy to find it:
 
