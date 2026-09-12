@@ -129,6 +129,12 @@ func validateMacvlanNetwork(n *networkapi.Inspect, want networkapi.CreateOptions
 			return fmt.Errorf("driver option %q is %q, requested %q", key, actual, value)
 		}
 	}
+	if len(n.IPAM.Config) != len(want.IPAM.Config) {
+		return fmt.Errorf("subnet count differs from the requested network")
+	}
+	if want.Labels[clabconstants.MacvlanAux] == "" && n.Labels[clabconstants.MacvlanAux] != "" {
+		return fmt.Errorf("existing network has macvlan-aux configured")
+	}
 	for _, pool := range want.IPAM.Config {
 		if err := validateMacvlanPool(n.IPAM.Config, pool); err != nil {
 			return err

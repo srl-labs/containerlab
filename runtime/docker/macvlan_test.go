@@ -434,6 +434,9 @@ func TestMacvlanNetworkReuseValidation(t *testing.T) {
 		{"parent", func(n *networkapi.Inspect) { n.Options["parent"] = "eth1" }},
 		{"mode", func(n *networkapi.Inspect) { n.Options["macvlan_mode"] = "private" }},
 		{"subnet", func(n *networkapi.Inspect) { n.IPAM.Config[0].Subnet = "198.51.100.0/24" }},
+		{"extra subnet", func(n *networkapi.Inspect) {
+			n.IPAM.Config = append(n.IPAM.Config, networkapi.IPAMConfig{Subnet: "fd00::/64"})
+		}},
 		{"gateway", func(n *networkapi.Inspect) { n.IPAM.Config[0].Gateway = "192.0.2.2" }},
 		{"pool", func(n *networkapi.Inspect) { n.IPAM.Config[0].IPRange = "192.0.2.0/25" }},
 		{"reservation", func(n *networkapi.Inspect) { n.IPAM.Config[0].AuxAddress = nil }},
@@ -656,5 +659,24 @@ func TestMacvlanIPv6RouteConflict(t *testing.T) {
 	)
 	if err == nil || f.routeAdds != 0 {
 		t.Fatal("accepted conflicting IPv6 route")
+	}
+}
+
+func TestMacvlanNetworkReuseRejectsRemovedAux(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	f := newFakeMacvlanNetlink()
+	rt.macvlanNetlink = f
+	ctx := context.Background()
+	if err := rt.CreateNet(ctx); err != nil {
+		t.Fatal(err)
+	}
+	rt.mgmt.MacvlanAux = ""
+	if err := rt.CreateNet(ctx); err == nil {
+		t.Fatal("reused network with unwanted host connectivity")
+	}
+	if fake.creates.Load() != 1 || fake.removes.Load() != 0 || f.deletes != 0 {
+		t.Fatal("changed network while rejecting incompatible settings")
 	}
 }
