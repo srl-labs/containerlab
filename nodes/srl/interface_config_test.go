@@ -29,12 +29,21 @@ func TestPopulateInterfaceConfig(t *testing.T) {
 				}
 				link := clablinks.NewLinkVEth()
 				link.MTU = tc.mtu
-				n.Endpoints = append(n.Endpoints, clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n, name, link)))
+				n.Endpoints = append(
+					n.Endpoints,
+					clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n, name, link)),
+				)
 			}
 			data := srlTemplateData{IFaces: map[string]tplIFace{}, MgmtIPMTU: 1500}
 			n.populateInterfaceConfig(&data)
 			if data.MgmtMTU != tc.wantMTU || data.MgmtIPMTU != tc.wantMgmtIPMTU {
-				t.Fatalf("management MTUs = %d/%d, want %d/%d", data.MgmtMTU, data.MgmtIPMTU, tc.wantMTU, tc.wantMgmtIPMTU)
+				t.Fatalf(
+					"management MTUs = %d/%d, want %d/%d",
+					data.MgmtMTU,
+					data.MgmtIPMTU,
+					tc.wantMTU,
+					tc.wantMgmtIPMTU,
+				)
 			}
 			if len(data.IFaces) != 2 {
 				t.Fatalf("data interfaces = %d, want 2", len(data.IFaces))
@@ -42,7 +51,13 @@ func TestPopulateInterfaceConfig(t *testing.T) {
 			for name, wantFullName := range map[string]string{"e1-1": "ethernet-1/1", "e1-2-1": "ethernet-1/2/1"} {
 				iface := data.IFaces[name]
 				if iface.FullName != wantFullName || iface.Mtu != tc.wantMTU {
-					t.Errorf("interface %s = %+v, want name %s and MTU %d", name, iface, wantFullName, tc.wantMTU)
+					t.Errorf(
+						"interface %s = %+v, want name %s and MTU %d",
+						name,
+						iface,
+						wantFullName,
+						tc.wantMTU,
+					)
 				}
 			}
 		})
