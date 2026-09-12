@@ -1,0 +1,35 @@
+# Multinode Cisco IOL L2 example — site B. Counterpart of multinode-site-a.clab.yml; see
+# that file for the full description. The vxlan-stitch link mirrors site A
+# with `remote` pointing back at site A's host.
+#
+# CLAB_IOL_PID_OFFSET shifts this site's auto-assigned IOL application IDs
+# so the switch derives MAC addresses and an STP bridge ID that don't
+# overlap with site A. Any offset works as long as the two sites differ.
+name: iol-site-b
+
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:L2-17.12.01
+      type: l2
+      env:
+        CLAB_IOL_PID_OFFSET: "64" # site B's application IDs start at 65
+
+  nodes:
+    sw:
+      kind: cisco_iol
+    pc:
+      kind: linux
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip address add 10.30.0.2/24 dev eth1
+
+  links:
+    - endpoints: ["pc:eth1", "sw:Ethernet0/1"]
+    - type: vxlan-stitch
+      endpoint:
+        node: sw
+        interface: eth2 # Ethernet0/2
+      remote: 10.99.0.1 # site A host's IP address
+      vni: 100
+      dst-port: 14789

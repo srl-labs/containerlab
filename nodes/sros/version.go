@@ -25,6 +25,11 @@ const (
 	// vrnetlabVersionLabel is set on vrnetlab-built images; nokia_srsim kind must not use such
 	// images.
 	vrnetlabVersionLabel = "vrnetlab-version"
+
+	// srosDefaultVersion is the default version of SR OS
+	// that is used if the version is not found in the image labels
+	// or image layers.
+	srosDefaultVersion = "25.7.R1"
 )
 
 // SrosVersion represents an SR OS version as a set of fields.

@@ -1,5 +1,8 @@
 ---
 comments: true
+tags:
+  - Packet capture
+  - Networking
 ---
 
 # Packet capture & Wireshark
@@ -21,7 +24,6 @@ Consider the following lab topology which highlights the typical points of packe
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:13,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Since containerlab leverages Linux network devices, users can use any tool to sniff packets. Let's see how one can use either or a combination of the following well-known packet capturing tools: `tcpdump`, `tshark` and `wireshark`.
 
@@ -249,7 +251,7 @@ In the examples below the wireshark will be used as a sniffing tool and the foll
 - `$clab_host` - address of the containerlab host
 - `clab-pcap-srl`, `clab-pcap-ceos`, `clab-pcap-linux` - container names of the SRL, cEOS and Linux nodes accordingly.
 
-///tab | SR Linux [1], [4]
+///tab | SR Linux (1, 4)
 SR Linux linecard interfaces are named as `e<linecard_num>-<port_num>` which translates to `ethernet-<linecard_num>/<port_num>` name inside the NOS itself.  
 So to capture from `ethernet-1/1` interface the following command should be used:
 
@@ -268,7 +270,7 @@ ssh $clab_host \
 ```
 
 ///
-///tab | cEOS [2]
+///tab | cEOS (2)
 Similarly to SR Linux example, to capture the data interface of cEOS is no different. Just pick the right interface:
 
 ```bash
@@ -278,7 +280,7 @@ ssh $clab_host \
 ```
 
 ///
-///tab | Linux container [3]
+///tab | Linux container (3)
 A bare linux container is no different, its interfaces are named `ethX` where `eth0` is the interface connected to the containerlab management network.  
 So to capture from the first data link we will use `eth1` interface:
 
@@ -289,7 +291,7 @@ ssh $clab_host \
 ```
 
 ///
-/// tab | management bridge [5]
+/// tab | management bridge (5)
 It is also possible to listen for all management traffic that traverses the containerlab's management network. To do that you firstly need to [find out the name of the linux bridge](network.md#connection-details) and then capture from it:
 
 ```bash
@@ -316,7 +318,6 @@ ip netns exec $netns_name ip link
 
 [edgeshark-docs]: https://edgeshark.siemens.io/#/
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 [^1]: Install `tshark` if you don't have it, or edit the script to use `tcpdump` instead.
 [^2]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.

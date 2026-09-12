@@ -55,7 +55,9 @@ func CheckAndGetRootPrivs() error {
 
 			log.Debug("Group membership check passed")
 		} else {
-			log.Debug("Containerlab admin group 'clab_admins' does not exist, skipping group membership check")
+			log.Debug(
+				"Containerlab admin group 'clab_admins' does not exist, skipping group membership check",
+			)
 		}
 
 		err = obtainRootPrivs()

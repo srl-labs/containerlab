@@ -20,6 +20,7 @@ topology:
         - cat /etc/os-release
       cpu: 1.5
       memory: 1G
+      cgroup-parent: containerlab-smoke.slice
       healthcheck:
         test:
           - CMD-SHELL

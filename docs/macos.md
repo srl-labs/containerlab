@@ -249,4 +249,3 @@ We are still polishing the DevPod integration, especially the integration with W
 [^3]: The same principles apply to Docker Desktop on Windows
 [^4]: Follows the devcontainer [specification](https://containers.dev/)
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

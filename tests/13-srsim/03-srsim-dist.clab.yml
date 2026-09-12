@@ -3,8 +3,8 @@ name: sr03
 topology:
   kinds:
     nokia_srsim:
-      license: /opt/nokia/sros/license-sros25.txt
-      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+      license: /opt/nokia/sros/license.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
   nodes:
     l1:
       kind: linux
@@ -19,7 +19,7 @@ topology:
       type: ixr-s
       certificate:
         issue: true
-      env: 
+      env:
         NOKIA_SROS_SLOT: A
       startup-config: |
         /configure port 1/1/1 ethernet mode hybrid
@@ -31,7 +31,7 @@ topology:
       kind: nokia_srsim
       type: ixr-s
       network-mode: container:sros-a
-      env: 
+      env:
         NOKIA_SROS_SLOT: 1
   links:
     - endpoints: ["l1:eth1", "sros-1:1/1/1"]

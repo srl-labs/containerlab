@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/log"
 	gotc "github.com/florianl/go-tc"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -209,8 +211,18 @@ func containerFromEvent(
 	}
 
 	if attributes != nil {
-		if lab := attributes[clabconstants.Containerlab]; lab != "" {
-			container.Labels = map[string]string{clabconstants.Containerlab: lab}
+		for _, key := range []string{
+			clabconstants.Containerlab,
+			clabconstants.NodeName,
+			clabconstants.RootNodeName,
+		} {
+			if v := attributes[key]; v != "" {
+				if container.Labels == nil {
+					container.Labels = map[string]string{}
+				}
+
+				container.Labels[key] = v
+			}
 		}
 	}
 
@@ -497,6 +509,8 @@ func interfaceAttributes(
 		attributes["name"] = name
 	}
 
+	overlayToolsInterface(container, attributes)
+
 	// Add netem attributes if present
 	if snapshot.HasNetem {
 		if snapshot.Delay != "" {
@@ -522,6 +536,44 @@ func interfaceAttributes(
 	}
 
 	return attributes
+}
+
+// overlayToolsInterface rewrites attributes to the host-side stitch interface
+// when one exists, matching `inspect interfaces`.
+func overlayToolsInterface(
+	container *clabruntime.GenericContainer,
+	attributes map[string]string,
+) {
+	if container == nil {
+		return
+	}
+
+	lab, node := clabcore.TopoIdentity(container.Labels)
+	if lab == "" || node == "" {
+		return
+	}
+
+	topoName := attributes["alias"]
+	if topoName == "" {
+		topoName = attributes["ifname"]
+	}
+
+	tools, ok := clablinks.ToolsInterface(lab, node, topoName)
+	if !ok {
+		return
+	}
+
+	snapshot := snapshotFromLink(tools)
+	attributes["ifname"] = snapshot.Name
+	attributes["alias"] = topoName
+	attributes["index"] = strconv.Itoa(snapshot.Index)
+	attributes["mtu"] = strconv.Itoa(snapshot.MTU)
+	attributes["state"] = snapshot.OperState
+	attributes["type"] = snapshot.Type
+
+	if snapshot.MAC != "" {
+		attributes["mac"] = snapshot.MAC
+	}
 }
 
 func (r *netlinkRegistry) emitInterfaceEvent(

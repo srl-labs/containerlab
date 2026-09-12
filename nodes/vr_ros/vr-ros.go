@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -163,24 +164,21 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 // from the exported RouterOS configuration to avoid including containerlab management IP settings.
 func (n *vrRos) filterManagementInterfaceConfig(config string) string {
 	lines := strings.Split(config, "\n")
-	var filteredLines []string
+	filteredLines := make([]string, 0, len(lines))
+	inIPAddrSection := false
 
 	for _, line := range lines {
-		// Skip lines related to ether1 IP address configuration
-		if strings.Contains(line, "/ip address") {
-			// Mark that we're in the IP address section
-			filteredLines = append(filteredLines, line)
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "/") {
+			inIPAddrSection = trimmedLine == "/ip address"
+		}
+
+		if inIPAddrSection &&
+			strings.HasPrefix(trimmedLine, "add address=") &&
+			slices.Contains(strings.Fields(trimmedLine), "interface=ether1") {
 			continue
 		}
 
-		// Skip IP address entries for ether1 interface
-		if strings.Contains(line, "interface=ether1") &&
-			(strings.Contains(line, "add address=") || strings.Contains(line, "add ")) {
-			// Skip this line as it's ether1 IP configuration
-			continue
-		}
-
-		// Keep all other lines
 		filteredLines = append(filteredLines, line)
 	}
 

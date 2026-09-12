@@ -131,6 +131,15 @@ echo "System Security Configuration"
                         exit
 {{ end }}
                     exit
+{{ if .SSHPubKeysED25519 }}
+                    ed25519
+{{ range $index, $key := .SSHPubKeysED25519 }}
+                        ed25519-key {{ subtract 32 $index }} create
+                            key-value {{ $key }}
+                        exit
+{{ end }}
+                    exit
+{{ end }}
                 exit
                 console
                     member "administrative"

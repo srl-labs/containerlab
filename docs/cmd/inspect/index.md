@@ -1,3 +1,8 @@
+---
+tags:
+  - Command
+---
+
 # Inspect command
 
 ### Description

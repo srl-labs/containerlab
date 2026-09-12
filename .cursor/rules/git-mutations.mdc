@@ -1,0 +1,10 @@
+---
+description: Require explicit user authorization for Git mutations
+alwaysApply: true
+---
+
+# Git mutation policy
+
+- Never automatically commit, amend, push, force-push, or create/update a pull request.
+- Leave ordinary fixes as working-tree changes unless the user explicitly requests the specific Git or GitHub action.
+- A request to implement or fix code alone does not authorize a commit or push.

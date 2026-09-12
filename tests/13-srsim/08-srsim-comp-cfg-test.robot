@@ -25,6 +25,27 @@ Deploy ${lab-name} lab
 Wait for 45s
     Sleep    45s    Let everything fully provision & come up
 
+Check SR-1 card configuration
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr1 --path /configure/card[slot-number=1]/card-type
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    iom-1
+
+Check SR-1 MDA 1 configuration
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr1 --path /configure/card[slot-number=1]/mda[mda-slot=1]/mda-type
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me6-100gb-qsfp28
+
+Check SR-1 MDA 2 configuration
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr1 --path /configure/card[slot-number=1]/mda[mda-slot=2]/mda-type
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me12-100gb-qsfp28
+
 Check SR-2S power shelf configuration
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr2s --path /configure/chassis[chassis-class=*][chassis-number=*]/power-shelf[power-shelf-id=*]/power-shelf-type

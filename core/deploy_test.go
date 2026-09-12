@@ -1,0 +1,514 @@
+// Copyright 2026 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
+package core
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
+	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
+)
+
+func TestWaitForNodeDeployErrorPrecedence(t *testing.T) {
+	nodeErr := errors.New("node failed")
+
+	t.Run("parent cancellation takes precedence", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		nodeFailCh := make(chan error, 1)
+		nodeFailCh <- nodeErr
+
+		err := waitForNodeDeploy(ctx, &sync.WaitGroup{}, nodeFailCh)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("waitForNodeDeploy() error = %v, want context.Canceled", err)
+		}
+		if errors.Is(err, nodeErr) {
+			t.Fatalf("waitForNodeDeploy() returned node error after cancellation: %v", err)
+		}
+	})
+
+	t.Run("internal failure preserves node error", func(t *testing.T) {
+		nodeFailCh := make(chan error, 1)
+		nodeFailCh <- nodeErr
+
+		err := waitForNodeDeploy(context.Background(), &sync.WaitGroup{}, nodeFailCh)
+		if !errors.Is(err, nodeErr) {
+			t.Fatalf("waitForNodeDeploy() error = %v, want node error", err)
+		}
+	})
+}
+
+func TestCheckReconcileDeployOptionsRejectsManagementNetworkOverrides(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		option ClabOption
+	}{
+		{name: "network name", option: WithManagementNetworkName("other")},
+		{name: "IPv4 subnet", option: WithManagementIpv4Subnet("10.0.0.0/24")},
+		{name: "IPv6 subnet", option: WithManagementIpv6Subnet("2001:db8::/64")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			c, err := NewContainerLab(tt.option)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c.Config.Name = "lab"
+
+			err = c.checkReconcileDeployOptions(&DeployOptions{})
+			if err == nil || !strings.Contains(err.Error(), "management network overrides") {
+				t.Fatalf("expected management network override error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestCheckReconcileDeployOptionsAllowsTopologyManagementNetwork(t *testing.T) {
+	t.Parallel()
+
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Config.Name = "lab"
+	c.Config.Mgmt.Network = "from-topology"
+	c.Config.Mgmt.IPv4Subnet = "10.0.0.0/24"
+	c.Config.Mgmt.IPv6Subnet = "2001:db8::/64"
+
+	if err := c.checkReconcileDeployOptions(&DeployOptions{}); err != nil {
+		t.Fatalf("topology management settings must not be treated as overrides: %v", err)
+	}
+}
+
+func TestWaitForApplyNetworkModeTargetNoTarget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "n1"}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{"n1": node}}
+
+	if err := c.waitForApplyNetworkModeTarget(context.Background(), "n1"); err != nil {
+		t.Fatalf("unexpected error for node without a network-mode target: %v", err)
+	}
+}
+
+func TestWaitForApplyNetworkModeTargetInternalTargetAlreadyRunning(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "target",
+		LongName:  "clab-lab-target",
+	}).AnyTimes()
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+	mockRuntime.EXPECT().GetContainerStatus(gomock.Any(), "clab-lab-target").
+		Return(clabruntime.Running)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	if err := c.waitForApplyNetworkModeTarget(context.Background(), "sidecar"); err != nil {
+		t.Fatalf("unexpected error waiting for an already-running target: %v", err)
+	}
+}
+
+func TestWaitForApplyNetworkModeTargetExternalTargetDelegates(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:not-in-topology",
+	}).AnyTimes()
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	mockRuntime.EXPECT().GetContainerStatus(gomock.Any(), "not-in-topology").
+		Return(clabruntime.Running)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"sidecar": sidecar},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	if err := c.waitForApplyNetworkModeTarget(context.Background(), "sidecar"); err != nil {
+		t.Fatalf(
+			"expected external target not managed by this topology to be waited on like fresh "+
+				"deploy does, got: %v",
+			err,
+		)
+	}
+}
+
+// TestDeployNodesWaitsForNetworkModeTargetWithSingleWorker locks in the fix
+// for a real deadlock: with a single worker and the dependent node queued
+// before its network-mode target, waiting for the target inside the
+// worker's own loop would block the only worker able to create that
+// target. The wait must happen outside the worker pool.
+func TestDeployNodesWaitsForNetworkModeTargetWithSingleWorker(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+
+	var targetDeployed atomic.Bool
+
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "target",
+		LongName:  "clab-lab-target",
+	}).AnyTimes()
+	target.EXPECT().GetShortName().Return("target").AnyTimes()
+	target.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+	target.EXPECT().Deploy(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *clabnodes.DeployParams) error {
+			targetDeployed.Store(true)
+			return nil
+		},
+	)
+	target.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+	sidecar.EXPECT().GetShortName().Return("sidecar").AnyTimes()
+	sidecar.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, *clabnodes.PreDeployParams) error {
+			if !targetDeployed.Load() {
+				t.Error("sidecar was deployed before its network-mode target")
+			}
+			return nil
+		},
+	)
+	sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+	sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	// The dependent is listed before its target on purpose, with exactly
+	// one worker, so a naive in-worker wait would deadlock here.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeployNodesEmptyNodeNames(t *testing.T) {
+	t.Parallel()
+
+	if err := (&CLab{}).DeployNodes(context.Background(), nil, 0); err != nil {
+		t.Fatalf("expected nil for empty node list, got: %v", err)
+	}
+}
+
+func TestDeployNodesPropagatesTargetFailure(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+	target.EXPECT().GetShortName().Return("target")
+	failure := errors.New("target pre-deploy failed")
+	target.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(failure)
+	sidecar.EXPECT().
+		Config().
+		Return(&clabtypes.NodeConfig{NetworkMode: "container:target"}).
+		AnyTimes()
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
+	if !errors.Is(err, failure) || errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want the target failure without waiting for a timeout", err)
+	}
+	if !strings.Contains(err.Error(), `node "sidecar" depends on failed node "target"`) {
+		t.Fatalf("error must identify the blocked dependent: %v", err)
+	}
+}
+
+func TestDeployNodesUnblocksNamespaceChainWithoutPolling(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	c := &CLab{Config: &Config{Name: "lab"}, Nodes: map[string]clabnodes.Node{}}
+	var calls []any
+	for _, name := range []string{"target", "sidecar", "leaf"} {
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		cfg := &clabtypes.NodeConfig{ShortName: name}
+		switch name {
+		case "sidecar":
+			cfg.NetworkMode = "container:target"
+		case "leaf":
+			cfg.NetworkMode = "container:sidecar"
+		}
+		node.EXPECT().Config().Return(cfg).AnyTimes()
+		node.EXPECT().GetShortName().Return(name)
+		calls = append(calls, node.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil))
+		node.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+		node.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+		c.Nodes[name] = node
+	}
+	gomock.InOrder(calls...)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	// No runtime is configured: internal task dependencies must use completion
+	// signals, even with a chain submitted in reverse order and only one worker.
+	if err := c.DeployNodes(ctx, []string{"leaf", "sidecar", "target"}, 1); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeployNodesRejectsNamespaceCycleBeforeDeployment(t *testing.T) {
+	t.Parallel()
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"a": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:b"}},
+		"b": &networkModeTestNode{cfg: &clabtypes.NodeConfig{NetworkMode: "container:a"}},
+	}}
+	if err := c.DeployNodes(context.Background(), []string{"a", "b"}, 1); err == nil {
+		t.Fatal("expected cyclic dependency error")
+	}
+}
+
+func TestDeployApplyNodesStartsNamespaceTarget(t *testing.T) {
+	t.Parallel()
+	for _, startSidecar := range []bool{false, true} {
+		t.Run(fmt.Sprintf("start-sidecar=%v", startSidecar), func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			target := clabmocksmocknodes.NewMockNode(ctrl)
+			sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+			runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+			var running atomic.Bool
+			target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				LongName: "clab-lab-target",
+			}).AnyTimes()
+			target.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
+				running.Store(true)
+				return nil
+			})
+			sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				NetworkMode: "container:target",
+			}).AnyTimes()
+			if startSidecar {
+				sidecar.EXPECT().Start(gomock.Any()).DoAndReturn(func(context.Context) error {
+					if !running.Load() {
+						t.Error("sidecar started before its target")
+					}
+					return nil
+				})
+			} else {
+				sidecar.EXPECT().GetShortName().Return("sidecar")
+				sidecar.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(context.Context, *clabnodes.PreDeployParams) error {
+						if !running.Load() {
+							t.Error("sidecar created before its target started")
+						}
+						return nil
+					},
+				)
+				sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+				sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+			}
+
+			c := &CLab{
+				Config: &Config{Name: "lab"},
+				Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+				Runtimes: map[string]clabruntime.ContainerRuntime{
+					clabruntimedocker.RuntimeName: runtime,
+				},
+				globalRuntimeName: clabruntimedocker.RuntimeName,
+			}
+			plan := newApplyPlan(nil, nil)
+			plan.startNodeSet["target"] = struct{}{}
+			if startSidecar {
+				plan.startNodeSet["sidecar"] = struct{}{}
+			} else {
+				plan.addedNodeSet["sidecar"] = struct{}{}
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := c.deployApplyNodes(ctx, plan, 1); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDeployNodesUnknownNode(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{}}
+	err := c.DeployNodes(context.Background(), []string{"ghost"}, 1)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error, got: %v", err)
+	}
+}
+
+func TestDeployNodesReturnsErrorWhenWaitFails(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:external-target",
+	}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"sidecar": sidecar},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	// Pre-cancel the context so WaitForContainerRunning returns immediately with an error.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := c.DeployNodes(ctx, []string{"sidecar"}, 1)
+	if err == nil {
+		t.Fatal("expected error when context is canceled while waiting for network-mode target")
+	}
+}
+
+func TestWaitForApplyNetworkModeTargetUnknownNode(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{}}
+	if err := c.waitForApplyNetworkModeTarget(context.Background(), "nonexistent"); err != nil {
+		t.Fatalf("expected nil for node not in c.Nodes, got: %v", err)
+	}
+}
+
+func TestWaitForApplyNetworkModeTargetNilRuntime(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	target := clabmocksmocknodes.NewMockNode(ctrl)
+	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+
+	target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "target",
+		LongName:  "clab-lab-target",
+	}).AnyTimes()
+	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "sidecar",
+		NetworkMode: "container:target",
+	}).AnyTimes()
+
+	// No runtimes configured → globalRuntime() returns nil.
+	c := &CLab{Nodes: map[string]clabnodes.Node{"target": target, "sidecar": sidecar}}
+
+	err := c.waitForApplyNetworkModeTarget(context.Background(), "sidecar")
+	if err == nil || !strings.Contains(err.Error(), "container runtime is not initialized") {
+		t.Fatalf("expected runtime-not-initialized error, got: %v", err)
+	}
+}
+
+func TestCertificateAuthoritySetupUsesEnvironmentCAWithoutSettings(t *testing.T) {
+	tempDir := t.TempDir()
+	topoFile := filepath.Join(tempDir, "topology.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: env-ca\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.TopoPaths.SetTopologyFilePath(topoFile); err != nil {
+		t.Fatal(err)
+	}
+	c.Config.Name = "env-ca"
+	if err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	externalCA, err := clabcert.NewCA().GenerateCACert(&clabcert.CACSRInput{
+		CommonName: "CA-FROM-ENV",
+		Country:    "US",
+		Expiry:     time.Hour,
+		KeySize:    1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certFile := filepath.Join(tempDir, "ca.pem")
+	keyFile := filepath.Join(tempDir, "ca.key")
+	if err := externalCA.Write(certFile, keyFile, ""); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CLAB_CA_CERT_FILE", certFile)
+	t.Setenv("CLAB_CA_KEY_FILE", keyFile)
+
+	if err := c.certificateAuthoritySetup(); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := c.TopoPaths.CaCertAbsFilename(); got != certFile {
+		t.Fatalf("CA certificate path = %q, want %q", got, certFile)
+	}
+	loadedCA, err := c.Cert.LoadCaCert()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(loadedCA.Cert, externalCA.Cert) {
+		t.Fatal("certificateAuthoritySetup did not load the CA certificate from CLAB_CA_CERT_FILE")
+	}
+}

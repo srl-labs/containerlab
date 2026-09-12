@@ -99,10 +99,18 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 				file1 := filepath.Join(tmpDir, "file1.pub")
 				file2 := filepath.Join(tmpDir, "file2.pub")
 
-				if err := os.WriteFile(file1, []byte(validKey1+" test1@example.com\n"), 0644); err != nil {
+				if err := os.WriteFile(
+					file1,
+					[]byte(validKey1+" test1@example.com\n"),
+					0644,
+				); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
-				if err := os.WriteFile(file2, []byte(validKey2+" test2@example.com\n"), 0644); err != nil {
+				if err := os.WriteFile(
+					file2,
+					[]byte(validKey2+" test2@example.com\n"),
+					0644,
+				); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 

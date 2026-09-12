@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: nokia_srlinux
 kind_display_name: Nokia SR Linux
+tags:
+  - Kind
+  - Container kind
 ---
 # -{{ kind_display_name }}-
 
@@ -173,17 +176,61 @@ For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that 
 
 The Nokia 7215 IXS model range consists of `ixs-a1` platform.
 
-The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`.
+The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`, `ixr-h6`.
 
 Nokia 7250 IXR chassis-based systems have types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x1b`, `ixr-x3b`, `ixr-x4`[^5].
 
 Nokia 7730 SXR routers have types `sxr-1x-44s`, `sxr-1d-32d`, `sxr-1-32d`.
 
-> The 7250 IXR and 7730 SXR platforms require a license file. Check with your Nokia representative for eligibility.
-
 If the type is not set in the clab file, the `ixr-d2l` type will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
+
+### Modular chassis
+
+The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavors. The card is chosen with a `components` block, where `type` names the line card:
+
+```yaml
+name: srl_modular
+topology:
+  nodes:
+    srl1:
+      kind: -{{ kind_code_name }}-
+      type: ixr-10e
+      components:
+        - slot: 1
+          type: imm3-36-800g-osfp
+```
+
+Each chassis accepts the following line cards. The system and CPM columns are what the node reports once booted; the CPM follows from the line card and is not selectable.
+
+| Type      | System              | Line card                  | CPM               |
+| --------- | ------------------- | -------------------------- | ----------------- |
+| `ixr-6e`  | 7250 IXR-6e-gen2cp  | `imm36-400g-qsfpdd`        | `cpm4-ixr`        |
+| `ixr-6e`  | 7250 IXR-6e-gen2cp  | `imm60-100g-qsfp28`        | `cpm4-ixr`        |
+| `ixr-6e`  | 7250 IXR-6e-gen2cp  | `imm2-36-400g-sync-qsfpdd` | `cpm4-t-sync-ixr` |
+| `ixr-6e`  | 7250 IXR-6e-gen3    | `imm3-36-800g-qsfpdd`      | `cpm4-ixr`        |
+| `ixr-6e`  | 7250 IXR-6e-gen3    | `imm3-36-800g-osfp`        | `cpm4-ixr`        |
+| `ixr-10e` | 7250 IXR-10e-gen2cp | `imm36-400g-qsfpdd`        | `cpm4-ixr`        |
+| `ixr-10e` | 7250 IXR-10e-gen2cp | `imm60-100g-qsfp28`        | `cpm4-ixr`        |
+| `ixr-10e` | 7250 IXR-10e-gen2cp | `imm2-36-400g-sync-qsfpdd` | `cpm4-t-sync-ixr` |
+| `ixr-10e` | 7250 IXR-10e-gen3   | `imm3-36-800g-qsfpdd`      | `cpm4-ixr`        |
+| `ixr-10e` | 7250 IXR-10e-gen3   | `imm3-36-800g-osfp`        | `cpm4-ixr`        |
+| `ixr-18e` | 7250 IXR-18e-gen3   | `imm3-18-800g-qsfpdd`      | `cpm4-ixr`        |
+| `ixr-18e` | 7250 IXR-18e-gen3   | `imm3-36-800g-sync-qsfpdd` | `cpm5-t-ixr`      |
+| `ixr-18e` | 7250 IXR-18e-gen3   | `imm3-36-800g-osfp`        | `cpm4-ixr`        |
+
+A line card is only valid for the chassis it is listed against. Line cards will set the generation of the chassis based on a pre-existing topology mapping. Multiple generation cards cannot share a chassis.
+
+When no `components` block is given, `ixr-6e` and `ixr-10e` boot with `imm36-400g-qsfpdd` and `ixr-18e` with `imm3-18-800g-qsfpdd`.
+
+/// warning
+Containerlab renders every declared line card into the generated topology file, but deploying a node with more than one line card is not supported yet.
+///
+
+/// note | Legacy per-flavor types
+Every combination in the table above is also reachable as a dedicated type, such as `ixr-10e-gen3-osfp`. These types are kept for backwards compatibility; prefer `components`. The full list is in the [JSON schema file](https://github.com/srl-labs/containerlab/blob/main/schemas/clab.schema.json).
+///
 
 ### Node configuration
 

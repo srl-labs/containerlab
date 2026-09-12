@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/log"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
@@ -137,15 +138,21 @@ func (c *CLab) ListContainerInterfaces(
 		len(interfaces),
 	)
 
+	lab, node := TopoIdentity(container.Labels)
+
 	for _, iface := range interfaces {
-		ifaceDetails := clabtypes.ContainerInterfaceDetails{}
-		ifaceDetails.InterfaceName = iface.Attrs().Name
-		ifaceDetails.InterfaceAlias = iface.Attrs().Alias
-		ifaceDetails.InterfaceMTU = iface.Attrs().MTU
-		ifaceDetails.InterfaceMAC = iface.Attrs().HardwareAddr.String()
-		ifaceDetails.InterfaceIndex = iface.Attrs().Index
-		ifaceDetails.InterfaceType = iface.Type()
-		ifaceDetails.InterfaceState = iface.Attrs().OperState.String()
+		reported, alias := reportedInterface(iface, lab, node)
+		attrs := reported.Attrs()
+
+		ifaceDetails := clabtypes.ContainerInterfaceDetails{
+			InterfaceName:  attrs.Name,
+			InterfaceAlias: alias,
+			InterfaceMTU:   attrs.MTU,
+			InterfaceMAC:   attrs.HardwareAddr.String(),
+			InterfaceIndex: attrs.Index,
+			InterfaceType:  reported.Type(),
+			InterfaceState: attrs.OperState.String(),
+		}
 		log.Debugf("Interface info: %+v", ifaceDetails)
 
 		containerInterfaces.Interfaces = append(containerInterfaces.Interfaces, &ifaceDetails)
@@ -154,6 +161,23 @@ func (c *CLab) ListContainerInterfaces(
 	log.Debugf("Fetched %v interfaces for %v", len(interfaces), containerInterfaces.ContainerName)
 
 	return &containerInterfaces, nil
+}
+
+// reportedInterface substitutes the host-side stitch interface for iface when
+// one exists, keeping the topology name as alias so the swap is transparent.
+func reportedInterface(iface netlink.Link, lab, node string) (netlink.Link, string) {
+	alias := iface.Attrs().Alias
+
+	topoName := alias
+	if topoName == "" {
+		topoName = iface.Attrs().Name
+	}
+
+	if tools, ok := clablinks.ToolsInterface(lab, node, topoName); ok {
+		return tools, topoName
+	}
+
+	return iface, alias
 }
 
 // ListContainersInterfaces list interfaces of all given containers.

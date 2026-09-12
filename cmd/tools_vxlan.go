@@ -175,14 +175,9 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 		VxlanIfaceNameOverwrite: o.ToolsVxlan.Link,
 	}
 
-	link, err := vxlraw.Resolve(rp)
+	vxl, err := vxlraw.ResolveStitched(rp)
 	if err != nil {
 		return err
-	}
-
-	vxl, ok := link.(*clablinks.VxlanStitched)
-	if !ok {
-		return fmt.Errorf("not a VxlanStitched link")
 	}
 
 	err = vxl.DeployWithExistingVeth(ctx)

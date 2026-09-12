@@ -1,5 +1,6 @@
 ---
 comments: true
+comments_anchor: true
 hide:
   - navigation
 ---
@@ -16,7 +17,9 @@ Growing the number of supported NOSes is a task that can't be done by a single p
 
 Everybody is welcome to join and chat with our community members about all things containerlab!
 
-<center>[:fontawesome-brands-discord: Join Containerlab Discord Server](https://discord.gg/vAyddtaEV9){ .md-button .md-button--primary }</center>
+<div style="text-align: center" markdown="1">
+[:fontawesome-brands-discord: Join Containerlab Discord Server](https://discord.gg/vAyddtaEV9){ .md-button .md-button--primary }
+</div>
 
 ### IRC
 
@@ -191,6 +194,12 @@ This section logs the most notable blogs, streams, and and demos delivered by co
 Do you have a blog around containerlab that you want to share with the community? Please let us know by mentioning it in the [Comments](#__comments) section at the bottom of this page.
 ///
 
+### Multi-vendor lessons from running 11 NOSes
+
+<small>:material-text: [Blog](https://www.netpilot.io/blog/containerlab-multi-vendor-lessons) by [NetPilot Team](https://www.netpilot.io) · :material-calendar: 2026-08-24</small>
+
+The team at NetPilot runs containerlab as the sandbox layer behind their AI lab agent and collected the lessons from bringing 11 NOSes onto it: vrnetlab image-naming contracts, "running is not ready" readiness probing, interface-alias mapping (with an upstream fix), pagination and first-boot dialog handling, and per-kind resource budgeting.
+
 ### Creating custom Containerlab node kinds
 
 <small>:material-text: [Blog](https://torbjorn.dev/blog/creating-clab-node-kinds/) by [Torbjørn Bang](https://www.linkedin.com/in/torbjornbang/) · :material-calendar: 2025-10-26</small>
@@ -342,6 +351,8 @@ In a [subsequent post](https://networkcloudandeverything.com/configuring-srlinux
 Create and then destroy a cloud environment ready to Containerlab with pre-loaded topology files, which just work if you use FRR and SR Linux. If you need to run Arista's cEOS, see: [Getting cEOS image](https://github.com/nleiva/aws-testbed/blob/main/lab/get_arista_ceos.md).
 
 This post describes the benefits of running any temporary workload in the cloud to then focus on Containerlab, so skip to the “Network testing challenges” section if you want to get to the meat of it. More details on the labs included at [Network Labs](https://github.com/nleiva/aws-testbed/tree/main/lab#network-labs).
+
+<span id="__comments"></span>
 
 [rdodin-twitter]: https://twitter.com/ntdvps
 [rdodin-linkedin]: https://linkedin.com/in/rdodin

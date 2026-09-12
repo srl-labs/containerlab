@@ -10,7 +10,7 @@ The repository is organized as follows:
 - `bin`: Directory where the built containerlab binary is placed.
 - `cmd`: Contains the main command-line interface code for containerlab written with Cobra framework.
 - `core`: Contains the core logic of containerlab, including lab management, topology parsing, and other functionalities.
-- `docs`: Contains the documentation for containerlab, written with mkdocs-material framework.
+- `docs`: Contains the documentation for containerlab, built with the Zensical static site generator.
 - `nodes`: Contains the definitions and implementations of different types of network nodes that can be used in labs.
 - `links`: Contains the logic for managing links between nodes in the lab.
 - `tests`: Contains unit and integration tests for containerlab.
@@ -18,7 +18,7 @@ The repository is organized as follows:
 
 ## Documentation
 
-Documentation is written with mkdocs-material framework and is present in the `docs` directory. To serve the documentation locally, use:
+Documentation is built with the Zensical static site generator (the successor to mkdocs-material, by the same team) and is present in the `docs` directory. Zensical is installed via the `docs` uv dependency group and still reads the existing `mkdocs.yml` configuration. To serve the documentation locally, use:
 
 ```bash
 make serve-docs

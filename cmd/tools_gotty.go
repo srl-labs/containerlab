@@ -258,6 +258,7 @@ func NewGoTTYNode(
 			Labels:     labels,
 			User:       "root",
 			Group:      strconv.Itoa(gid), // gid is set to current user's gid to ensure
+			Privileged: true,
 			PortBindings: nat.PortMap{
 				nat.Port(portStr): []nat.PortBinding{
 					{

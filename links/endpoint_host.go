@@ -19,15 +19,17 @@ func (e *EndpointHost) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointHost) Verify(ctx context.Context, _ *VerifyLinkParams) error {
+func (e *EndpointHost) Verify(ctx context.Context, p *VerifyLinkParams) error {
 	var errs []error
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = CheckEndpointDoesNotExistYet(ctx, e)
-	if err != nil {
-		errs = append(errs, err)
+	if p == nil || !p.AllowExistingEndpoint {
+		err = CheckEndpointDoesNotExistYet(ctx, e)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
@@ -37,12 +39,4 @@ func (e *EndpointHost) Verify(ctx context.Context, _ *VerifyLinkParams) error {
 
 func (e *EndpointHost) IsNodeless() bool {
 	return true
-}
-
-func (e *EndpointHost) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
-
-func (e *EndpointHost) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
 }

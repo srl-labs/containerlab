@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var topologyTestSet = map[string]struct {
@@ -19,14 +18,14 @@ var topologyTestSet = map[string]struct {
 					Kind:       "nokia_srlinux",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: clabutils.Pointer(true),
+					AutoRemove: new(true),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: clabutils.Pointer(true),
+						Issue: new(true),
 					},
 				},
 			},
@@ -36,14 +35,14 @@ var topologyTestSet = map[string]struct {
 				Kind:       "nokia_srlinux",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: clabutils.Pointer(true),
+				AutoRemove: new(true),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(true),
+					Issue: new(true),
 				},
 				Env:    map[string]string{},
 				Labels: map[string]string{},
@@ -83,14 +82,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: clabutils.Pointer(true),
+					AutoRemove: new(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: clabutils.Pointer(true),
+						Issue: new(true),
 					},
 				},
 			},
@@ -104,7 +103,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: clabutils.Pointer(false),
+					AutoRemove: new(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -145,14 +144,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: clabutils.Pointer(false),
+				AutoRemove: new(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(true),
+					Issue: new(true),
 				},
 			},
 		},
@@ -166,6 +165,10 @@ var topologyTestSet = map[string]struct {
 				Binds: []string{
 					"x:z",
 					"m:n", // overridden by node
+				},
+				Volumes: []string{
+					"default-vol:/app/default",
+					"shared-vol:/app/shared", // overriden by node
 				},
 			},
 			Kinds: map[string]*NodeDefinition{
@@ -184,6 +187,10 @@ var topologyTestSet = map[string]struct {
 					Binds: []string{
 						"a:b",
 						"c:d",
+					},
+					Volumes: []string{
+						"kind-vol:/app/kind",
+						"db-vol:/app/data",
 					},
 					Ports: []string{
 						"80:8080",
@@ -211,6 +218,10 @@ var topologyTestSet = map[string]struct {
 						"e:f",
 						"newm:n",
 					},
+					Volumes: []string{
+						"node-vol:/app/node",
+						"override-vol:/app/shared", // overrides defaults
+					},
 				},
 			},
 		},
@@ -236,6 +247,13 @@ var topologyTestSet = map[string]struct {
 					"x:z",
 					"newm:n",
 				},
+				Volumes: []string{
+					"node-vol:/app/node",
+					"kind-vol:/app/kind",
+					"db-vol:/app/data",
+					"default-vol:/app/default",
+					"override-vol:/app/shared",
+				},
 				Ports: []string{
 					"80:8080",
 				},
@@ -255,7 +273,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(false),
+					Issue: new(false),
 				},
 			},
 		},
@@ -333,14 +351,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: clabutils.Pointer(false),
+				AutoRemove: new(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(false),
+					Issue: new(false),
 				},
 			},
 		},
@@ -378,14 +396,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: clabutils.Pointer(true),
+					AutoRemove: new(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: clabutils.Pointer(true),
+						Issue: new(true),
 					},
 				},
 			},
@@ -399,7 +417,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: clabutils.Pointer(false),
+					AutoRemove: new(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -440,14 +458,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: clabutils.Pointer(false),
+				AutoRemove: new(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(true),
+					Issue: new(true),
 				},
 			},
 		},
@@ -553,7 +571,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(false),
+					Issue: new(false),
 				},
 			},
 		},
@@ -657,7 +675,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(false),
+					Issue: new(false),
 				},
 			},
 		},
@@ -685,7 +703,7 @@ var topologyTestSet = map[string]struct {
 				Labels: map[string]string{},
 				DNS:    &DNSConfig{},
 				Certificate: &CertificateConfig{
-					Issue: clabutils.Pointer(false),
+					Issue: new(false),
 				},
 			},
 		},
@@ -835,6 +853,44 @@ func TestGetNodePosition(t *testing.T) {
 	}
 }
 
+func TestGetNodeHostname(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{Hostname: "default-host"},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {Hostname: "kind-host"},
+		},
+		Groups: map[string]*NodeDefinition{
+			"apps": {Hostname: "group-host"},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node-default": {},
+			"node-kind":    {Kind: "linux"},
+			"node-group":   {Kind: "linux", Group: "apps"},
+			"node-explicit": {
+				Kind: "linux", Group: "apps", Hostname: "node-host",
+			},
+		},
+	}
+
+	tests := []struct {
+		name string
+		want string
+	}{
+		{name: "node-default", want: "default-host"},
+		{name: "node-kind", want: "kind-host"},
+		{name: "node-group", want: "group-host"},
+		{name: "node-explicit", want: "node-host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := topology.GetNodeHostname(tt.name); got != tt.want {
+				t.Fatalf("GetNodeHostname(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetNodeCmd(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
@@ -890,6 +946,133 @@ func TestGetNodeBinds(t *testing.T) {
 				"Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s",
 				binds,
 				item.want["node1"].Binds,
+				diff,
+			)
+		}
+	}
+}
+
+func TestGetNodeVolumes(t *testing.T) {
+	for _, item := range topologyTestSet {
+		volumes, _ := item.input.GetNodeVolumes("node1")
+
+		// sort the slices so we can compare them
+		slices.Sort(volumes)
+		slices.Sort(item.want["node1"].Volumes)
+
+		if d := cmp.Diff(volumes, item.want["node1"].Volumes); d != "" {
+			t.Fatalf(
+				"Volumes resolve failed.\nGot: %q\nWant: %q\nDiff\n%s",
+				volumes,
+				item.want["node1"].Volumes,
+				d,
+			)
+		}
+	}
+}
+
+func TestGetNodeVolumesInheritance(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{
+			Volumes: []string{"default:/default"},
+		},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {
+				Volumes: []string{"kind:/kind"},
+			},
+		},
+		Groups: map[string]*NodeDefinition{
+			"app": {
+				Volumes: []string{"group:/group"},
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Kind:  "linux",
+				Group: "app",
+				Volumes: []string{
+					"node:/node",
+				},
+			},
+		},
+	}
+
+	volumes, err := topology.GetNodeVolumes("node1")
+	if err != nil {
+		t.Fatalf("GetNodeVolumes() unexpected error: %v", err)
+	}
+	wantVolumes := []string{
+		"default:/default",
+		"kind:/kind",
+		"group:/group",
+		"node:/node",
+	}
+	slices.Sort(wantVolumes)
+	if diff := cmp.Diff(wantVolumes, volumes); diff != "" {
+		t.Fatalf("GetNodeVolumes() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGetNodeBindsRejectsAnonymousVolumeSyntax(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Binds: []string{"/data"},
+			},
+		},
+	}
+
+	_, err := topology.GetNodeBinds("node1")
+	if err == nil {
+		t.Fatal("GetNodeBinds() accepted anonymous volume syntax in binds")
+	}
+}
+
+func TestGetNodeVolumesHandlesNilNodeDefinition(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": nil,
+		},
+	}
+
+	volumes, err := topology.GetNodeVolumes("node1")
+	if err != nil {
+		t.Fatalf("GetNodeVolumes() unexpected error: %v", err)
+	}
+	if volumes != nil {
+		t.Fatalf("GetNodeVolumes() = %v, want nil", volumes)
+	}
+}
+
+func TestGetNodeBindsDeterministicOrder(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Binds: []string{
+					"z-source:/etc/z.conf",
+					"a-source:/etc/a.conf",
+					"m-source:/etc/m.conf",
+				},
+			},
+		},
+	}
+	want := []string{
+		"a-source:/etc/a.conf",
+		"m-source:/etc/m.conf",
+		"z-source:/etc/z.conf",
+	}
+
+	for range 100 {
+		got, err := topology.GetNodeBinds("node1")
+		if err != nil {
+			t.Fatalf("GetNodeBinds() unexpected error: %v", err)
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Fatalf(
+				"GetNodeBinds() returned binds in a non-deterministic order (-want +got):\n%s",
 				diff,
 			)
 		}
@@ -981,10 +1164,13 @@ func TestGetNodeCertificateConfig(t *testing.T) {
 // TestGetNodeCredentials tests the credential resolution hierarchy.
 func TestGetNodeCredentials(t *testing.T) {
 	tests := map[string]struct {
-		topo         *Topology
-		nodeName     string
-		wantUsername string
-		wantPassword string
+		topo                *Topology
+		nodeName            string
+		wantUsername        string
+		wantPassword        string
+		wantIdentityFile    string
+		checkCredentialsSrc bool
+		wantCredentialsSrc  CredentialTopologySource
 	}{
 		"node_overrides_kind": {
 			topo: &Topology{
@@ -1139,12 +1325,91 @@ func TestGetNodeCredentials(t *testing.T) {
 			wantUsername: "node-user-only",
 			wantPassword: "",
 		},
+		"defaults_identity_file_applies_to_node": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{
+						Username:     "default-user",
+						IdentityFile: "/keys/default",
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:         "node1",
+			wantUsername:     "default-user",
+			wantIdentityFile: "/keys/default",
+		},
+		"node_identity_file_overrides_defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{IdentityFile: "/keys/default"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {
+						Kind:        "srl",
+						Credentials: NodeCredentials{IdentityFile: "/keys/node"},
+					},
+				},
+			},
+			nodeName:         "node1",
+			wantIdentityFile: "/keys/node",
+		},
+		"node_identity_file_resolves_independently_of_username_password": {
+			// A node that sets only identity-file must still pick up its own identity-file, while
+			// username/password continue to resolve on their own precedence chain (here: the kind).
+			// The identity-file source must not hijack the username/password winning level used by
+			// inventory generation.
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {
+						Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"},
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {
+						Kind:        "srl",
+						Credentials: NodeCredentials{IdentityFile: "/keys/node"},
+					},
+				},
+			},
+			nodeName:         "node1",
+			wantUsername:     "kind-user",
+			wantPassword:     "kind-pass",
+			wantIdentityFile: "/keys/node",
+		},
+		"defaults_identity_only_does_not_change_credentials_source": {
+			// defaults sets only identity-file; the kind supplies username/password. The
+			// credentials
+			// source must remain the kind so inventory generation keeps emitting the kind creds.
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{IdentityFile: "/keys/default"},
+				},
+				Kinds: map[string]*NodeDefinition{
+					"srl": {
+						Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"},
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:            "node1",
+			wantUsername:        "kind-user",
+			wantPassword:        "kind-pass",
+			wantIdentityFile:    "/keys/default",
+			checkCredentialsSrc: true,
+			wantCredentialsSrc:  CredentialTopologyKind,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			gotUsername := tc.topo.GetNodeUsername(tc.nodeName)
 			gotPassword := tc.topo.GetNodePassword(tc.nodeName)
+			gotIdentityFile := tc.topo.GetNodeIdentityFile(tc.nodeName)
 
 			if gotUsername != tc.wantUsername {
 				t.Errorf("username: got %q, want %q", gotUsername, tc.wantUsername)
@@ -1152,6 +1417,18 @@ func TestGetNodeCredentials(t *testing.T) {
 
 			if gotPassword != tc.wantPassword {
 				t.Errorf("password: got %q, want %q", gotPassword, tc.wantPassword)
+			}
+
+			if gotIdentityFile != tc.wantIdentityFile {
+				t.Errorf("identity-file: got %q, want %q", gotIdentityFile, tc.wantIdentityFile)
+			}
+
+			if tc.checkCredentialsSrc {
+				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(
+					tc.nodeName,
+				); gotSrc != tc.wantCredentialsSrc {
+					t.Errorf("credentials source: got %v, want %v", gotSrc, tc.wantCredentialsSrc)
+				}
 			}
 		})
 	}
@@ -1270,5 +1547,146 @@ func TestGetNodeCredentialTopologySource(t *testing.T) {
 				t.Errorf("credentials source: got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestGetNodeRuntimeOptions(t *testing.T) {
+	defaultPrivileged := false
+	kindPrivileged := true
+	nodePrivileged := false
+
+	topo := &Topology{
+		Defaults: &NodeDefinition{
+			Privileged:   &defaultPrivileged,
+			CgroupnsMode: "private",
+			PidMode:      "host",
+			Tmpfs:        map[string]string{"/run": "rw"},
+			SecurityOpts: []string{"label=disable"},
+		},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {
+				Privileged:   &kindPrivileged,
+				CgroupnsMode: "host",
+				Tmpfs:        map[string]string{"/run/lock": "rw"},
+				SecurityOpts: []string{"seccomp=unconfined"},
+			},
+		},
+		Groups: map[string]*NodeDefinition{
+			"systemd": {
+				PidMode: "container:infra",
+				Tmpfs:   map[string]string{"/tmp": "rw,nosuid"},
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Kind:         "linux",
+				Group:        "systemd",
+				Privileged:   &nodePrivileged,
+				CgroupnsMode: "host",
+				Tmpfs:        map[string]string{"/run": "rw,nosuid,nodev"},
+				SecurityOpts: []string{"apparmor=unconfined"},
+			},
+			"node2": {
+				Kind: "linux",
+			},
+			"node3": {},
+		},
+	}
+
+	if got := topo.GetNodePrivileged("node1", true); got {
+		t.Fatalf("node1 privileged = %v, want false", got)
+	}
+
+	if got := topo.GetNodePrivileged("node2", true); !got {
+		t.Fatalf("node2 privileged = %v, want true", got)
+	}
+
+	if got := topo.GetNodePrivileged("node3", true); got {
+		t.Fatalf("node3 privileged = %v, want false", got)
+	}
+
+	if got := topo.GetNodeCgroupnsMode("node1"); got != "host" {
+		t.Fatalf("node1 cgroupns-mode = %q, want host", got)
+	}
+
+	if got := topo.GetNodePidMode("node1"); got != "container:infra" {
+		t.Fatalf("node1 pid-mode = %q, want container:infra", got)
+	}
+
+	wantTmpfs := map[string]string{
+		"/run":      "rw,nosuid,nodev",
+		"/run/lock": "rw",
+		"/tmp":      "rw,nosuid",
+	}
+	if diff := cmp.Diff(wantTmpfs, topo.GetNodeTmpfs("node1")); diff != "" {
+		t.Fatalf("node1 tmpfs mismatch (-want +got):\n%s", diff)
+	}
+
+	wantSecurityOpts := []string{
+		"label=disable",
+		"seccomp=unconfined",
+		"apparmor=unconfined",
+	}
+	if diff := cmp.Diff(wantSecurityOpts, topo.GetNodeSecurityOpts("node1")); diff != "" {
+		t.Fatalf("node1 security-opts mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGetNodeCgroupParent(t *testing.T) {
+	topo := &Topology{
+		Defaults: &NodeDefinition{CgroupParent: "/defaults"},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {CgroupParent: "/kind"},
+		},
+		Groups: map[string]*NodeDefinition{
+			"leaves":      {CgroupParent: "/group"},
+			"empty-group": {},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"direct":        {Kind: "linux", Group: "leaves", CgroupParent: "/node"},
+			"from-group":    {Kind: "linux", Group: "leaves"},
+			"from-kind":     {Kind: "linux", Group: "empty-group"},
+			"from-defaults": {},
+			"omitted":       {},
+		},
+	}
+
+	tests := map[string]string{
+		"direct":        "/node",
+		"from-group":    "/group",
+		"from-kind":     "/kind",
+		"from-defaults": "/defaults",
+	}
+	for nodeName, want := range tests {
+		if got := topo.GetNodeCgroupParent(nodeName); got != want {
+			t.Errorf("%s cgroup-parent = %q, want %q", nodeName, got, want)
+		}
+	}
+
+	// Empty values are treated as omitted and therefore do not mask inherited values.
+	topo.Nodes["from-group"].CgroupParent = ""
+	if got := topo.GetNodeCgroupParent("from-group"); got != "/group" {
+		t.Errorf("empty node cgroup-parent = %q, want inherited /group", got)
+	}
+
+	emptyTopo := NewTopology()
+	emptyTopo.Nodes["omitted"] = &NodeDefinition{}
+	if got := emptyTopo.GetNodeCgroupParent("omitted"); got != "" {
+		t.Errorf("omitted cgroup-parent = %q, want empty runtime default", got)
+	}
+}
+
+func TestGetNodePrivilegedDefault(t *testing.T) {
+	topo := &Topology{
+		Nodes: map[string]*NodeDefinition{
+			"node1": {Kind: "linux"},
+		},
+	}
+
+	if got := topo.GetNodePrivileged("node1", true); !got {
+		t.Fatalf("privileged = %v, want true", got)
+	}
+	if got := topo.GetNodePrivileged("node1", false); got {
+		t.Fatalf("privileged with kind default = %v, want false", got)
 	}
 }

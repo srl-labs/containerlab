@@ -38,15 +38,14 @@ func (b *Bridge) Deploy(ctx context.Context, endpoint Endpoint) error {
 		if err != nil {
 			return err
 		}
-		// bring the link up
-		err = netlink.LinkSetUp(netlinkLink)
-		if err != nil {
-			return err
-		}
-		return nil
+		return SetNameMACAndUpInterface(netlinkLink, b.endpoint)(nn)
 	})
 
 	return err
+}
+
+func (*Bridge) PostDeploy(context.Context) error {
+	return nil
 }
 
 // Remove removes the link.
@@ -74,6 +73,10 @@ func (b *Bridge) GetType() LinkType {
 // GetEndpoints returns the endpoints of the link.
 func (b *Bridge) GetEndpoints() []Endpoint {
 	return []Endpoint{b.endpoint}
+}
+
+func (b *Bridge) GetRuntimeEndpoints() []Endpoint {
+	return b.GetEndpoints()
 }
 
 // GetMTU returns the Link MTU.

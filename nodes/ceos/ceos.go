@@ -127,7 +127,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	// create TLS certificates for the node by default.
 	// The cert, key and CA files are mounted into the container
 	// and can be validated with `show management security ssl certificate`.
-	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
+	n.Cfg.Certificate.Issue = new(true)
 
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")
@@ -171,6 +171,10 @@ func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
 	return n.ceosPostDeploy(ctx)
+}
+
+func (n *ceos) LinkApplyMode(ctx context.Context) clabnodes.LinkApplyMode {
+	return n.ImageLinkApplyMode(ctx, clabnodes.LinkApplyModeRestart)
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {

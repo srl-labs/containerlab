@@ -311,6 +311,7 @@ type DeployOptions struct {
 	ManagementIPv4Subnet     net.IPNet
 	ManagementIPv6Subnet     net.IPNet
 	Reconfigure              bool
+	DryRun                   bool
 	MaxWorkers               uint
 	SkipPostDeploy           bool
 	SkipLabDirectoryFileACLs bool

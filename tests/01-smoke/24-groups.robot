@@ -71,6 +71,23 @@ Verify Mem and CPU limits are set
     # memory=1G
     Should Contain    ${output}    1000000000
 
+Verify cgroup parent is set
+    [Documentation]    Check that the resolved cgroup parent reaches Docker and the effective host cgroup
+    Skip If    '${runtime}' != 'docker'
+    ${output} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{.HostConfig.CgroupParent}}'
+    Log    ${output}
+    Should Be Equal As Strings    ${output}    containerlab-smoke.slice
+    ${rc}    ${pid} =    Run And Return Rc And Output
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{.State.Pid}}'
+    Should Be Equal As Integers    ${rc}    0
+    ${pid} =    Strip String    ${pid}
+    ${rc}    ${cgroup} =    Run And Return Rc And Output
+    ...    sudo cat /proc/${pid}/cgroup
+    Should Be Equal As Integers    ${rc}    0
+    Log    ${cgroup}
+    Should Contain    ${cgroup}    containerlab-smoke.slice
+
 Verify DNS-Server Config
     [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'

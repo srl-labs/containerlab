@@ -130,6 +130,8 @@ type NodeConfig struct {
 	ShortName string `json:"shortname,omitempty"`
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
+	// Hostname is the runtime hostname. An empty value falls back to ShortName.
+	Hostname string `json:"hostname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
 	// LabDir is a directory related to the node, it contains config items and/or other persistent
 	// state
@@ -150,6 +152,9 @@ type NodeConfig struct {
 	// when set to true will auto-remove a stopped/failed container
 	AutoRemove    bool   `json:"auto-remove,omitempty"`
 	RestartPolicy string `json:"restart-policy,omitempty"`
+	// user-provided override for how `containerlab apply` handles dataplane link
+	// changes for this node: live, restart or recreate. Empty means the kind decides.
+	LinkApplyMode LinkApplyMode `json:"link-apply-mode,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
@@ -167,10 +172,24 @@ type NodeConfig struct {
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Volume mounts strings (name:dest:options).
+	Volumes []string `json:"volumes,omitempty"`
 	// Devices to map in the container
 	Devices []string `json:"devices,omitempty"`
 	// Capabilities required by the container (if not run in privileged mode)
 	CapAdd []string `json:"cap-add,omitempty"`
+	// Run the container in privileged mode.
+	Privileged bool `json:"privileged,omitempty"`
+	// Cgroup namespace mode for the container.
+	CgroupnsMode string `json:"cgroupns-mode,omitempty"`
+	// Parent cgroup for the container.
+	CgroupParent string `json:"cgroup-parent,omitempty"`
+	// PID namespace mode for the container.
+	PidMode string `json:"pidmode,omitempty"`
+	// Tmpfs mounts to add to the container, keyed by destination path.
+	Tmpfs map[string]string `json:"tmpfs,omitempty"`
+	// Security options to apply to the container runtime.
+	SecurityOpts []string `json:"security-opts,omitempty"`
 	// Size of the shared memory allocated to the container
 	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
@@ -182,7 +201,6 @@ type NodeConfig struct {
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
-	PidMode     string `json:"pidmode,omitempty"`
 	// MgmtNet is the name of the docker network this node is connected to with its first interface
 	MgmtNet string `json:"mgmt-net,omitempty"`
 	// MgmtIntf can be used to be rendered by the default node template
@@ -232,7 +250,15 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
-	Tmpfs               map[string]string `json:"tmpfs,omitempty"`
+}
+
+// GetHostname returns the configured runtime hostname or the topology node name.
+func (n *NodeConfig) GetHostname() string {
+	if n.Hostname != "" {
+		return n.Hostname
+	}
+
+	return n.ShortName
 }
 
 type GenericFilter struct {
@@ -271,6 +297,16 @@ type Extras struct {
 	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
 	// k8s-kind node specific options
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
+	// frr node specific options
+	FRR *FRRExtras `yaml:"frr,omitempty"`
+}
+
+// FRRExtras represents the frr-specific extra options.
+type FRRExtras struct {
+	// Daemons is the list of FRR routing daemons to enable. When empty, all
+	// daemons known to the kind are enabled. The always-on daemons (zebra,
+	// staticd, mgmtd, watchfrr) need not be listed.
+	Daemons []string `yaml:"daemons,omitempty"`
 }
 
 // K8sKindExtras represents the k8s-kind-specific extra options.

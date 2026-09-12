@@ -115,7 +115,10 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		if strings.Contains(execResult.GetStdErrString(), "ssh: unrecognized service") {
 			log.Debug(`Caught "ssh: unrecognized service" error, ignoring`)
 		} else {
-			return fmt.Errorf("crpd post-deploy sshd restart failed: %s", execResult.GetStdErrString())
+			return fmt.Errorf(
+				"crpd post-deploy sshd restart failed: %s",
+				execResult.GetStdErrString(),
+			)
 		}
 	}
 

@@ -288,7 +288,10 @@ func sshDownloadConfig(src string, fetchErr error) (*url.URL, *ssh.ClientConfig,
 			log.Error(err)
 		} else {
 			agentClient := agent.NewClient(conn)
-			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeysCallback(agentClient.Signers))
+			clientConfig.Auth = append(
+				clientConfig.Auth,
+				ssh.PublicKeysCallback(agentClient.Signers),
+			)
 		}
 	}
 

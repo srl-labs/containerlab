@@ -3,9 +3,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
 )
 
 // pullResult tracks the status of an ongoing image pull operation.
@@ -17,6 +19,11 @@ type pullResult struct {
 // pullImagesForNodes concurrently pulls images for all nodes, avoiding duplicate pulls for the
 // same image.
 func (c *CLab) pullImagesForNodes(ctx context.Context) error {
+	reporter, stop := clabutilsprogress.New(os.Stderr)
+	defer stop()
+
+	ctx = clabutilsprogress.NewContext(ctx, reporter)
+
 	errCh := make(chan error, len(c.Nodes))
 
 	var wg sync.WaitGroup

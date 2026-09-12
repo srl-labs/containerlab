@@ -190,7 +190,7 @@ If the chosen platform is chassis-based, the SR-SIM deployment needs to be done 
 
 ### Integrated
 
-We call non-chassis-based systems like SR-1, SR-1s integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
+We call non-chassis-based systems like SR-1, SR-1s and supported IXR pizza-box systems integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
 
 Besides setting the `type` to drive the platform selection, users can then modify some of the default settings on a per-node basis using the `components` configuration on the node, or the environment variables.
 
@@ -240,6 +240,10 @@ topology:
 ```
 
 ///
+
+For known SR/IXR integrated nodes, containerlab's default model-driven configuration also provisions the default card and MDA configuration. The built-in defaults cover `sr-1`, `sr-1s`, `ixr-r6`, `ixr-e2`, `ixr-e2c`, `ixr-e2n`, `ixr-e2n-s`, `ixr-e3c`, `ixr-e3x` and `ixr-ec`. If the hardware is overridden with `components` or SR-SIM environment variables, the generated SR OS card/MDA configuration follows those overrides.
+
+Integrated nodes accept at most one `components` entry because they still run as a single container. The component slot can be omitted or set to `A`; `ixr-r6` also accepts a single `B` slot override.
 
 ### Distributed
 
@@ -300,7 +304,7 @@ topology:
       kind: nokia_srsim
       type: sr-7
       components:
-        - slot: A # containers will be attached to this Linux NS
+        - slot: A
         - slot: B
         - slot: 1
           type: iom5-e # maps to NOKIA_SROS_CARD
@@ -332,7 +336,7 @@ topology:
       kind: nokia_srsim
       type: sr-2s
       components:
-        - slot: A # containers will be attached to this Linux NS
+        - slot: A
           sfm: sfm-2s
         - slot: 1
           type: xcm-2s # maps to NOKIA_SROS_CARD
@@ -382,18 +386,18 @@ topology:
 
 When a distributed SR-SIM node is defined using `components`, we need to take into account the following:
 
-1. The component order gets sorted[^5] upon deployment of the lab. Individual containers will be attached to the namespace of the 1st element in the sorted `components` list: CPM-1 in the above examples.
+1. Component containers are attached to an internal namespace pause container.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
 
 ##### Configuration for components
 
-When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration.
+When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration. The same generated configuration mechanism is used for the built-in SR/IXR integrated defaults.
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
-You can disable this config generation behavior by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
+You can disable this config generation behavior by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the node, or on the base node for a distributed chassis.
 
 ```yaml hl_lines="6-7"
 topology:
@@ -595,13 +599,13 @@ topology:
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^7].
+Nokia SR OS nodes come up with a default configuration where the management interfaces such as NETCONF, SNMP, and gNMI are provisioned. For known SR/IXR integrated nodes, and for distributed nodes using generated component configuration, the default model-driven configuration also provisions supported card and MDA hardware. Supported node types additionally receive power-supply configuration[^7].
 
 ### User-defined config
 
 SR-SIM nodes are launched with a basic configuration that provisions the management interfaces, and adds SSH keys.  This initial configuration is applied after boot along with some partial startup config, when present.
 
-Since this configuration is intended to provide the bare minimum to make the node operational, users will usually want to apply their own configuration to enable the line cards, add features or configure interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
+Since this configuration is intended to provide the bare minimum to make the node operational, users will usually want to apply their own configuration to add features or configure interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
 
 /// tip
 Configuration text can contain Go template logic as well as make use of [environment variables](../topo-def-file.md#environment-variables) allowing for runtime customization of the configuration.
@@ -892,9 +896,8 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^2]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
 [^3]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
 [^4]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
-[^5]: The sort order has numeric defined slots come first, in order of lowest value to highest, and then alphabetically named slots (CPM) come last. See the [sorting test](https://github.com/srl-labs/containerlab/pull/2834/files#diff-ae18606243948313f0fc2df17b8a4eefd16cfcbccfe15219a1ca649712494c6eR16-R24) for more info.
 [^6]: Power configuration is only applied for sr-1s, 1se, 2s, 2se, 7s and 14s nodes. See [sros.go](https://github.com/srl-labs/containerlab/pull/2827/files#diff-ae71218e629cf2763a2702c67297cb2ade467276acff8f39973caf1a09731d94R142-R175) for more info.
-[^7]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
+[^7]: Full startup configs and classic/mixed configuration mode do not receive generated component configuration. In those cases users must provision cards, MDAs and power supplies manually when required.
 [^8]: `~` is the home directory of the user that runs containerlab.
 [^9]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
 [^10]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)

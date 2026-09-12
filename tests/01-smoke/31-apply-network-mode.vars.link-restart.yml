@@ -1,0 +1,6 @@
+driftW1: true
+addSidecar1: true
+addTogether: true
+removeW2: false
+addLink: true
+linkApplyMode: restart

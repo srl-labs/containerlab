@@ -8,6 +8,7 @@ import (
 // DeployOptions represents the options for deploying a lab.
 type DeployOptions struct {
 	reconfigure          bool     // reconfigure indicates whether to reconfigure the lab.
+	dryRun               bool     // dryRun reports planned changes without applying them.
 	skipPostDeploy       bool     // skipPostDeploy indicates whether to skip post-deployment steps.
 	graph                bool     // graph indicates whether to generate a graph of the lab.
 	maxWorkers           uint     // maxWorkers is the maximum number of workers for node creation.
@@ -36,6 +37,18 @@ func (d *DeployOptions) SetReconfigure(b bool) *DeployOptions {
 // Reconfigure returns the reconfigure option value.
 func (d *DeployOptions) Reconfigure() bool {
 	return d.reconfigure
+}
+
+// SetDryRun sets the dryRun option and returns the updated DeployOptions instance.
+func (d *DeployOptions) SetDryRun(b bool) *DeployOptions {
+	d.dryRun = b
+
+	return d
+}
+
+// DryRun returns the dryRun option value.
+func (d *DeployOptions) DryRun() bool {
+	return d.dryRun
 }
 
 // SetSkipPostDeploy sets the skipPostDeploy option and returns the updated DeployOptions instance.

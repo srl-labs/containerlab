@@ -1,0 +1,12 @@
+{% include "partials/actions.html" %}
+{# Zensical auto-injects an <h1> from the page title when the page has no
+  heading of its own. The home page (empty page.url) intentionally has none,
+  so skip the injection there to avoid an unwanted "Index" heading. #}
+  {% if "\u003ch1" not in page.content and page.url %}
+  <h1 id="__skip">{{ page.title | d(config.site_name, true)}}</h1>
+  {% endif %}
+  {{ page.content }}
+  {% include "partials/tags.html" %}
+  {% include "partials/source-file.html" %}
+  {% include "partials/feedback.html" %}
+  {% include "partials/comments.html" %}

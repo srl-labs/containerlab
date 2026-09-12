@@ -47,6 +47,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vJunos-switch](https://containerlab.dev/manual/kinds/vr-vjunosswitch/)
 * [Juniper vJunosEvolved](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
+* [Cisco XRd vRouter](https://containerlab.dev/manual/kinds/cisco_xrd_vrouter/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
 * [Cisco c8000v](https://containerlab.dev/manual/kinds/vr-c8000v/)
 * [Cisco SD-WAN](https://containerlab.dev/manual/kinds/cisco_sdwan/)

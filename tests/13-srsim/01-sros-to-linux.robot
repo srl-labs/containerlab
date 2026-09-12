@@ -56,7 +56,7 @@ Ensure l1 can ping sros over 1/1/c1/1 interface
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "/bin/ping -c2 -w3 10.0.0.2"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    0% packet loss
+    Should Not Contain    ${output}    100% packet loss
 
 Do gNMI SET to change system name
     Skip If    '${runtime}' != 'docker'

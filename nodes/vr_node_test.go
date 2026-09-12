@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,6 +10,12 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
+
+func TestVRNodeLinkApplyMode(t *testing.T) {
+	if got := (&VRNode{}).LinkApplyMode(context.Background()); got != LinkApplyModeRecreate {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
+	}
+}
 
 func TestVMInterfaceAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
