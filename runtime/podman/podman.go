@@ -89,6 +89,10 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 
 // CreateNet used to create a new bridge for clab mgmt network.
 func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
+	if r.mgmt.Driver == "macvlan" {
+		return fmt.Errorf("macvlan management networks are not implemented for Podman runtime")
+	}
+
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err

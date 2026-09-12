@@ -70,6 +70,13 @@ type MgmtNet struct {
 	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
+
+	Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	// Macvlan specific options.
+	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    string `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
 }
 
 // Interface compliance.

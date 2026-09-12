@@ -77,10 +77,11 @@ func init() {
 }
 
 type DockerRuntime struct {
-	config  clabruntime.RuntimeConfig
-	Client  *dockerC.Client
-	mgmt    *clabtypes.MgmtNet
-	version string
+	config         clabruntime.RuntimeConfig
+	Client         *dockerC.Client
+	mgmt           *clabtypes.MgmtNet
+	version        string
+	macvlanNetlink macvlanNetlink
 }
 
 func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
@@ -127,6 +128,9 @@ func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
+	if n.Driver == "macvlan" {
+		return
+	}
 	// return if MTU value was set by a user via config file
 	if n.MTU != 0 {
 		return
@@ -190,6 +194,13 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 
 // CreateNet creates a docker network or reusing if it exists.
 func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
+	if err := d.mgmt.Validate(); err != nil {
+		return err
+	}
+	if d.mgmt.Driver == "macvlan" {
+		return d.createMacvlanNetwork(ctx)
+	}
+
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -205,6 +216,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			return err
 		}
 	case err == nil:
+		if d.mgmt.Driver != "" && d.mgmt.Driver != netResource.Driver {
+			return fmt.Errorf("network %q uses driver %q, requested %q",
+				d.mgmt.Network, netResource.Driver, d.mgmt.Driver)
+		}
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
 		if err != nil {
@@ -474,7 +489,7 @@ func getMgmtBridgeIPs(
 		}
 	}
 
-	// didnt find any gateways, fallthrough to returning the error
+	// didn't find any gateways, fallthrough to returning the error
 	if v4 == "" && v6 == "" {
 		if bridgeName == "" {
 			return "", "", nil
@@ -543,7 +558,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// DeleteNet deletes a docker bridge.
+// DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
 	if network == "bridge" || d.config.KeepMgmtNet {
@@ -554,6 +569,9 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	nres, err := d.Client.NetworkInspect(nctx, network, networkapi.InspectOptions{})
+	if cerrdefs.IsNotFound(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -576,13 +594,18 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		}
 		return nil
 	}
-	err = d.Client.NetworkRemove(nctx, network)
-	if err != nil {
+
+	// Remove the Docker network first: active endpoints or a concurrent attach
+	// must prevent removal of the host interface shared by all labs on this network.
+	if err = d.Client.NetworkRemove(nctx, nres.ID); err != nil && !cerrdefs.IsNotFound(err) {
 		return err
 	}
 
-	err = d.deleteMgmtNetworkFwdRule()
-	if err != nil {
+	if nres.Driver == "macvlan" {
+		return d.macvlanHost().remove(nres.ID)
+	}
+
+	if err = d.deleteMgmtNetworkFwdRule(); err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}
 

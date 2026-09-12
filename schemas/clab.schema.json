@@ -2086,6 +2086,37 @@
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
                 },
+                "driver": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "macvlan"
+                    ],
+                    "description": "Network driver type (bridge or macvlan)"
+                },
+                "macvlan-parent": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 15,
+                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
+                },
+                "macvlan-mode": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "vepa",
+                        "private",
+                        "passthru"
+                    ],
+                    "default": "bridge",
+                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
+                },
+                "macvlan-aux": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Reserved IPv4 or IPv6 host address, optionally with a prefix limiting the host route within the matching subnet",
+                    "markdownDescription": "[Host connectivity](https://containerlab.dev/manual/network/#macvlan-management-networks): IPv4 or IPv6 address or CIDR; requires macvlan bridge mode"
+                },
                 "external-access": {
                     "type": "boolean",
                     "description": "controls whether the management network has external access or not",

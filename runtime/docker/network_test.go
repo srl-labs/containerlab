@@ -27,13 +27,15 @@ import (
 // Conflict and NetworkInspect serves the stored network. This mirrors the
 // daemon's response when two callers race to create the same network.
 type fakeDockerNetworkServer struct {
-	t       *testing.T
-	netName string
-	mu      sync.Mutex
-	created bool
-	info    networkapi.Inspect
-	creates atomic.Int32
-	removes atomic.Int32
+	t              *testing.T
+	netName        string
+	mu             sync.Mutex
+	created        bool
+	info           networkapi.Inspect
+	creates        atomic.Int32
+	removes        atomic.Int32
+	createConflict bool
+	removeStatus   int
 }
 
 func (f *fakeDockerNetworkServer) handler() http.Handler {
@@ -57,7 +59,8 @@ func (f *fakeDockerNetworkServer) handler() http.Handler {
 			}
 
 			f.mu.Lock()
-			if f.created {
+			if f.created || f.createConflict {
+				f.created = true
 				f.mu.Unlock()
 				writeJSON(w, http.StatusConflict, map[string]string{
 					"message": "network with name " + f.netName + " already exists",
@@ -66,12 +69,17 @@ func (f *fakeDockerNetworkServer) handler() http.Handler {
 			}
 
 			f.info = networkapi.Inspect{
-				ID:     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-				Name:   req.Name,
-				Driver: "bridge",
-				Options: map[string]string{
-					bridgeNameOption: "br-fake",
-				},
+				ID:      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+				Name:    req.Name,
+				Driver:  req.Driver,
+				Options: req.Options,
+				Labels:  req.Labels,
+			}
+			if req.IPAM != nil {
+				f.info.IPAM = *req.IPAM
+			}
+			if req.Driver == "bridge" {
+				f.info.Options[bridgeNameOption] = "br-fake"
 			}
 			f.created = true
 			f.mu.Unlock()
@@ -95,6 +103,17 @@ func (f *fakeDockerNetworkServer) handler() http.Handler {
 
 		case r.Method == http.MethodDelete && strings.HasPrefix(path, "/networks/"):
 			f.removes.Add(1)
+			if f.removeStatus != 0 {
+				writeJSON(
+					w,
+					f.removeStatus,
+					map[string]string{"message": "network has active endpoints"},
+				)
+				return
+			}
+			f.mu.Lock()
+			f.created = false
+			f.mu.Unlock()
 			w.WriteHeader(http.StatusNoContent)
 
 		default:
