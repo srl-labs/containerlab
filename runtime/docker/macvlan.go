@@ -76,9 +76,6 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 }
 
 func macvlanNetworkOptions(m *clabtypes.MgmtNet) (networkapi.CreateOptions, error) {
-	if err := m.Validate(); err != nil {
-		return networkapi.CreateOptions{}, err
-	}
 	opts := networkapi.CreateOptions{
 		Driver:     "macvlan",
 		EnableIPv6: new(m.IPv6Subnet != ""),
