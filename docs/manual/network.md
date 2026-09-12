@@ -176,7 +176,7 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
     2. IPv4/6 addresses set on a node level must be from the management network range.
     3. IPv6 addresses are truncated by Docker[^1], therefore do not use bytes 5 through 8 of the IPv6 network range.
 
-#### IP addressing
+#### IP range
 
 By specifying `ipv4-range/ipv6-range` under the management network the range from which IP addresses are allocated for a management subnet can be limited.
 
