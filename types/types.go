@@ -71,11 +71,12 @@ type MgmtNet struct {
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 
+	Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
+
 	// Macvlan specific options.
-	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"` // Parent interface for macvlan
-	MacvlanMode   string `json:"macvlan-mode,omitempty"   yaml:"macvlan-mode,omitempty"`   // bridge, vepa, passthru, private
-	Driver        string `json:"driver,omitempty"         yaml:"driver,omitempty"`         // "bridge" or "macvlan"
-	MacvlanAux    string `json:"macvlan-aux,omitempty"    yaml:"macvlan-aux,omitempty"`    // Reserved IP Address for containerlab host connectivity
+	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    string `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
 }
 
 // Interface compliance.
@@ -314,24 +315,12 @@ type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
 }
 
-func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	clone := &K8sKindExtras{
-		Deploy: k.Deploy.Copy(),
-	}
-	return clone
-}
-
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
 // It is aligned with the `kind create cluster` command options, but exposes
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
 	KubeconfigPath *string `yaml:"kubeconfig,omitempty"`
 	Wait           *string `yaml:"wait,omitempty"`
-}
-
-func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	clone := *k
-	return &clone
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -391,11 +380,6 @@ func (p *GenericPortBinding) String() string {
 	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
 
 	return result
-}
-
-func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	clone := *p
-	return &clone
 }
 
 type LabData struct {
