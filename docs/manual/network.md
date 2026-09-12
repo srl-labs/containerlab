@@ -67,21 +67,27 @@ With these defaults in place, the two containers from this lab will get connecte
 # addressing information is available once the lab deployment completes
 ❯ containerlab deploy -t srl02.clab.yml
 # deployment log omitted for brevity
-+---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| # |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
-| 2 | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/80 |
-+---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
+╭─────────────────┬───────────────────────┬─────────┬───────────────────╮
+│       Name      │       Kind/Image      │  State  │   IPv4/6 Address  │
+├─────────────────┼───────────────────────┼─────────┼───────────────────┤
+│ clab-srl02-srl1 │ nokia_srlinux         │ running │ 172.20.20.3       │
+│                 │ ghcr.io/nokia/srlinux │         │ 3fff:172:20:20::3 │
+├─────────────────┼───────────────────────┼─────────┼───────────────────┤
+│ clab-srl02-srl2 │ nokia_srlinux         │ running │ 172.20.20.2       │
+│                 │ ghcr.io/nokia/srlinux │         │ 3fff:172:20:20::2 │
+╰─────────────────┴───────────────────────┴─────────┴───────────────────╯
 
 # addresses can also be fetched afterwards with `inspect` command
 ❯ containerlab inspect -a
-+---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| # | Lab Name |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | srl02    | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
-| 2 | srl02    | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/80 |
-+---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
+╭────────────────┬──────────┬─────────────────┬───────────────────────┬─────────┬───────────────────╮
+│    Topology    │ Lab Name │       Name      │       Kind/Image      │  State  │   IPv4/6 Address  │
+├────────────────┼──────────┼─────────────────┼───────────────────────┼─────────┼───────────────────┤
+│ srl02.clab.yml │ srl02    │ clab-srl02-srl1 │ nokia_srlinux         │ running │ 172.20.20.3       │
+│                │          │                 │ ghcr.io/nokia/srlinux │         │ 3fff:172:20:20::3 │
+│                │          ├─────────────────┼───────────────────────┼─────────┼───────────────────┤
+│                │          │ clab-srl02-srl2 │ nokia_srlinux         │ running │ 172.20.20.2       │
+│                │          │                 │ ghcr.io/nokia/srlinux │         │ 3fff:172:20:20::2 │
+╰────────────────┴──────────┴─────────────────┴───────────────────────┴─────────┴───────────────────╯
 ```
 
 The output above shows that srl1 container has been assigned `172.20.20.3/24 / 3fff:172:20:20::3/80` IPv4/6 address. We can ensure this by querying the srl1 management interfaces address info:
