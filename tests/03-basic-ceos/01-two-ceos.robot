@@ -58,6 +58,14 @@ Ensure MGMT VRF is present
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
 
+Ensure Management0 inherits runtime-assigned IPv4
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show ip interface brief'"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Management0
+    Should Contain    ${output}    ${n1-mgmt-ip}
+
 Ensure n1 is reachable over ssh
     Login via SSH with username and password
     ...    address=${n1-mgmt-ip}
