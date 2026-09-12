@@ -55,7 +55,7 @@ require (
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/kind v0.32.0
+	sigs.k8s.io/kind v0.33.0
 )
 
 require (
