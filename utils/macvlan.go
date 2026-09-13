@@ -59,10 +59,13 @@ func (h MacvlanHost) Ensure(
 		return fmt.Errorf("look up host interface %q: %w", name, err)
 	}
 	if err != nil {
+		hash := sha256.Sum256([]byte(networkID))
+		mac := net.HardwareAddr(hash[:6])
+		mac[0] = (mac[0] & 0xfe) | 0x02
 		link = &netlink.Macvlan{
 			LinkAttrs: netlink.LinkAttrs{
 				Name: name, ParentIndex: parent.Attrs().Index,
-				MTU: parent.Attrs().MTU,
+				MTU: parent.Attrs().MTU, HardwareAddr: mac,
 			},
 			Mode: netlink.MACVLAN_MODE_BRIDGE,
 		}

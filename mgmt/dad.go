@@ -194,8 +194,9 @@ func newMacvlanProbe(parentName string) (*macvlanProbe, error) {
 	}
 	link := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        fmt.Sprintf("cd-%x", nonce),
-			ParentIndex: parent.Attrs().Index,
+			Name:         fmt.Sprintf("cd-%x", nonce),
+			ParentIndex:  parent.Attrs().Index,
+			HardwareAddr: append(net.HardwareAddr{0x02}, nonce[:]...),
 		},
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
