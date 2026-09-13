@@ -151,7 +151,7 @@ mgmt:
 
 #### User-defined addresses
 
-By default, container runtime will assign the management IP addresses for the containers. But sometimes, it's helpful to have user-defined addressing in the management network.
+By default, containerlab will assign the management IP addresses for the nodes. While containerlab assigns these in a deterministic nature, it's sometimes helpful to have user-defined addressing in the management network.
 
 For such cases, users can define the desired IPv4/6 addresses on a per-node basis:
 
@@ -188,7 +188,60 @@ mgmt:
 ```
 
 1. The subnet **must** be specified for IP ranges to work. For an existing bridge network, a different IP range setting has no effect. An incompatible range on an existing macvlan network is rejected.
-2. The container runtime will assign IP addresses from the `10.20.30.128/25` subnet excluding `10.20.30.0/25`.
+2. The IPAM provider allocates addresses from `10.20.30.128/25`, excluding `10.20.30.0/25`.
+
+#### IPAM
+
+In the management network, the IPAM provider is what allocates IP addresses to the nodes in the topology. There are two providers:
+
+- Containerlab (default).
+- Runtime. Delegates to Docker/Podman IPAM.
+
+The below example sets the IPAM provider to the container runtime.
+
+```yaml
+mgmt:
+  ipam:
+    provider: runtime
+```
+
+##### Address allocation
+
+When allocating addresses to nodes, the containerlab provider attempts to do so in a determinsitc manner so that subsequent redeployments of the topology shall result in the same IP addressing for all nodes in the topology.
+
+It is important to understand the persistent nature of the automatic IP addressing is best-effort, and may not always hold true. Allocation is determined based on a hash of the node name, hence changing the node name could result in a different IP address being allocated.
+
+Upon deployment the allocations are saved in the topology state file so nodes hold the same IP addressing upon reconciliation of the topology.
+
+##### Duplicate address detection
+
+Duplicate address detection is enabled by default and ensures allocations by the containerlab IPAM provider are not duplicate on the network. This has no effect on the `runtime` provider.
+
+For the default bridge management network driver, the duplicate address checks are similar to Docker whereby addresses in the local route table, dns addresses etc. are checked to ensure the allocation is unique.
+
+For the MACVLAN driver on `mode: bridge`, since the containers are reachable from the same L2 segment as the host; the duplicate address detection will first check the local ARP/ND cache and send an ARP and/or IPv6 neighbour solicitation out the defined parent interface to ensure the allocated IP address is unqiue on the network segment.
+
+Given the below example, the ARP/ND packets will be sent out the `enp2s0` interface.
+
+```yaml
+mgmt:
+  driver: macvlan
+  macvlan-parent: enp2s0
+```
+
+/// note | Scalability of DAD with MACVLAN driver
+As per the DAD process containerlab will send packets out the parent interface then wait for 3 seconds. If no reply is received then the adderess can be used.
+
+While this process does happen concurrently as the topology scales to 1000+ nodes the checks could add extra time to the lab deployment, and it may be worth disabling the DAD checks.
+///
+
+See below to disable DAD:
+
+```yaml
+mgmt:
+  ipam:
+    dad: false
+```
 
 ### Drivers
 
@@ -210,6 +263,8 @@ To address this issue, containerlab provides a way to automatically assign the m
 mgmt:
   ipv4-subnet: auto
   ipv6-subnet: auto
+  ipam:
+    provider: runtime
 ```
 
 With this setting in place, containerlab will rely on the container runtime to assign the management network addresses that is not conflicting with the existing addressing scheme on the lab host.
