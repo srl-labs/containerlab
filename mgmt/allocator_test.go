@@ -1,6 +1,7 @@
 package mgmt
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -194,7 +196,11 @@ func TestAllocationRejectsHostAddress(t *testing.T) {
 			n.MgmtIPv4Address = "127.0.0.1"
 		}
 		err := AllocateManagementIPs(context.Background(), m, []*clabtypes.NodeConfig{n})
-		if err == nil || !strings.Contains(err.Error(), "duplicate address") {
+		if explicit {
+			if err != nil || n.MgmtIPv4Address != "127.0.0.1" {
+				t.Fatalf("static address changed or failed: %v", err)
+			}
+		} else if err == nil || !strings.Contains(err.Error(), "duplicate address") {
 			t.Fatalf("missed local conflict: %v", err)
 		}
 		if !explicit && n.MgmtIPv4Address != "" {
@@ -299,7 +305,10 @@ func TestAllocationDADExhaustionAndStaticConflict(t *testing.T) {
 				return ErrDuplicateAddress
 			},
 		)
-		if !errors.Is(err, ErrDuplicateAddress) {
+		if explicit && err != nil {
+			t.Fatalf("static conflict should warn: %v", err)
+		}
+		if !explicit && !errors.Is(err, ErrDuplicateAddress) {
 			t.Fatalf("expected conflict, got %v", err)
 		}
 		if explicit {
@@ -544,5 +553,42 @@ func TestMacvlanAllocationConcurrentChecks(t *testing.T) {
 				used[n.MgmtIPv4Address] = true
 			}
 		})
+	}
+}
+
+func TestStaticManagementAddressDADWarning(t *testing.T) {
+	for _, driver := range []string{"bridge", "macvlan"} {
+		for _, dad := range []*bool{nil, new(true), new(false)} {
+			t.Run(fmt.Sprintf("%s/%v", driver, dad), func(t *testing.T) {
+				var output bytes.Buffer
+				previous := log.Default()
+				log.SetDefault(log.New(&output))
+				t.Cleanup(func() { log.SetDefault(previous) })
+				m := &clabtypes.MgmtNet{Driver: driver, MacvlanMode: "bridge",
+					IPv4Subnet: "192.0.2.0/24", IPv6Subnet: "2001:db8::/64",
+					IPAM: clabtypes.MgmtIPAM{DAD: dad}}
+				n := &clabtypes.NodeConfig{ShortName: "static", MgmtIPv4Address: "192.0.2.5", MgmtIPv6Address: "2001:db8::5"}
+				var calls atomic.Int32
+				err := allocateManagementIPs(context.Background(), m, []*clabtypes.NodeConfig{n},
+					func(context.Context, *clabtypes.MgmtNet, netip.Addr) error {
+						calls.Add(1)
+						return ErrDuplicateAddress
+					})
+				if err != nil || n.MgmtIPv4Address != "192.0.2.5" || n.MgmtIPv6Address != "2001:db8::5" {
+					t.Fatalf("static addresses changed or failed: %+v, %v", n, err)
+				}
+				if !m.IPAM.DADEnabled() {
+					if calls.Load() != 0 || output.Len() != 0 {
+						t.Fatal("disabled DAD checked or warned")
+					}
+					return
+				}
+				if calls.Load() != 2 || strings.Count(output.String(), "Duplicate static management address") != 2 ||
+					!strings.Contains(output.String(), "static") || !strings.Contains(output.String(), "192.0.2.5") ||
+					!strings.Contains(output.String(), "2001:db8::5") {
+					t.Fatalf("missing dual-stack checks or warnings: calls=%d, log=%s", calls.Load(), output.String())
+				}
+			})
+		}
 	}
 }

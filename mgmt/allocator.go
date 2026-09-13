@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -139,8 +140,10 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 				!strings.HasPrefix(n.NetworkMode, "container:")
 		}
 		// Runtime reservations are authoritative even when wire/local DAD is disabled.
+		runtimeReserved := make(map[netip.Addr]bool, len(reservedAddresses))
 		for _, ip := range reservedAddresses {
 			if prefix.Contains(ip) {
+				runtimeReserved[ip] = true
 				allocator.ReservePrefix(netip.PrefixFrom(ip, ip.BitLen()))
 			}
 		}
@@ -200,6 +203,10 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 				continue
 			}
 			if err := allocator.Reserve(ip); err != nil {
+				if runtimeReserved[ip] && m.IPAM.DADEnabled() {
+					log.Warn("Static management address is already reserved by the runtime",
+						"node", n.ShortName, "address", ip)
+				}
 				return fmt.Errorf("node %s: %w", n.ShortName, err)
 			}
 			explicit = append(explicit, ip)
@@ -212,7 +219,8 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 		for i, ok := range accepted {
 			if !ok {
 				err, _ := probeErrors.Load(explicit[i])
-				return fmt.Errorf("node %s management address %s: %w", explicitNodes[i].ShortName, explicit[i], err.(error))
+				log.Warn("Duplicate static management address; retaining configured address",
+					"node", explicitNodes[i].ShortName, "address", explicit[i], "error", err.(error))
 			}
 		}
 		// Reserve all retained preferences before allocating for new nodes.
