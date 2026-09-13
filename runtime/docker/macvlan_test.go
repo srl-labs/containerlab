@@ -728,3 +728,74 @@ func TestMacvlanHostProbeBeforeAssignment(t *testing.T) {
 		})
 	}
 }
+
+func TestMacvlanParentSubnetDiscovery(t *testing.T) {
+	for _, tc := range []struct {
+		name                       string
+		addresses                  []string
+		v4, v6, gateway, pool, aux string
+		want4, want6, wantErr      string
+	}{
+		{name: "IPv4", addresses: []string{"192.0.2.10/24"}, want4: "192.0.2.0/24"},
+		{name: "IPv6", addresses: []string{"2001:db8::10/64", "fe80::1/64"}, want6: "2001:db8::/64"},
+		{name: "dual stack", addresses: []string{"192.0.2.10/24", "2001:db8::10/64"}, want4: "192.0.2.0/24", want6: "2001:db8::/64"},
+		{name: "same subnet", addresses: []string{"192.0.2.10/24", "192.0.2.20/24"}, want4: "192.0.2.0/24"},
+		{name: "IPv4 point to point", addresses: []string{"192.0.2.0/31"}, wantErr: "at least four"},
+		{name: "IPv4 host", addresses: []string{"192.0.2.1/32"}, wantErr: "at least four"},
+		{name: "IPv6 point to point", addresses: []string{"2001:db8::/127"}, wantErr: "at least four"},
+		{name: "IPv6 host", addresses: []string{"2001:db8::1/128"}, wantErr: "at least four"},
+		{name: "ambiguous IPv4", addresses: []string{"192.0.2.10/24", "198.51.100.10/24"}, wantErr: "multiple subnets"},
+		{name: "ambiguous IPv6", addresses: []string{"2001:db8::10/64", "2001:db8:1::10/64"}, wantErr: "multiple subnets"},
+		{name: "no addresses", wantErr: "no usable IP subnet"},
+		{name: "link local only", addresses: []string{"fe80::1/64", "169.254.1.1/16"}, wantErr: "no usable IP subnet"},
+		{name: "explicit overrides parent", addresses: []string{"192.0.2.1/32", "2001:db8::1/128"}, v4: "198.51.100.0/24", v6: "2001:db8:1::/64", want4: "198.51.100.0/24", want6: "2001:db8:1::/64"},
+		{name: "infer missing IPv6", addresses: []string{"2001:db8::10/64"}, v4: "192.0.2.0/24", want4: "192.0.2.0/24", want6: "2001:db8::/64"},
+		{name: "wrong gateway", addresses: []string{"192.0.2.10/24"}, gateway: "198.51.100.1", wantErr: "gateway"},
+		{name: "wrong pool", addresses: []string{"192.0.2.10/24"}, pool: "198.51.100.0/25", wantErr: "IP range"},
+		{name: "wrong auxiliary", addresses: []string{"192.0.2.10/24"}, aux: "198.51.100.5", wantErr: "containing subnet"},
+		{name: "IPv6 auxiliary", addresses: []string{"2001:db8::10/64"}, aux: "2001:db8::20/96", want6: "2001:db8::/64"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+			defer cleanup()
+			f := newFakeMacvlanNetlink()
+			rt.macvlanNetlink = f
+			for _, value := range tc.addresses {
+				addr, err := netlink.ParseAddr(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				addr.LinkIndex = f.links["eth0"].Attrs().Index
+				f.addrs = append(f.addrs, *addr)
+			}
+			rt.mgmt = &clabtypes.MgmtNet{Network: "macvlan-test", Driver: "macvlan", MacvlanParent: "eth0",
+				IPv4Subnet: tc.v4, IPv6Subnet: tc.v6, IPv4Gw: tc.gateway, IPv4Range: tc.pool, MacvlanAux: tc.aux,
+				IPAM: clabtypes.MgmtIPAM{DAD: new(false)}}
+			err := rt.CreateNet(context.Background())
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("error = %v, want %s", err, tc.wantErr)
+				}
+				if fake.creates.Load() != 0 || f.adds != 0 {
+					t.Fatal("invalid discovery mutated networking")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if rt.mgmt.IPv4Subnet != tc.want4 || rt.mgmt.IPv6Subnet != tc.want6 {
+				t.Fatalf("subnets = %s, %s", rt.mgmt.IPv4Subnet, rt.mgmt.IPv6Subnet)
+			}
+			if fake.creates.Load() != 1 {
+				t.Fatal("network was not created")
+			}
+			if err := rt.CreateNet(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if fake.creates.Load() != 1 {
+				t.Fatal("existing network was recreated")
+			}
+		})
+	}
+}

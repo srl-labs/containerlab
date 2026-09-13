@@ -488,9 +488,9 @@ The other modes have different kernel and upstream switching requirements; [auxi
 
 ##### IP Addressing
 
-Explicit IPv4/v6 addressing is required for the management-network when using the Macvlan driver.
+By default the IPv4/v6 addressing is gleaned from the defined parent interface if the subnet is valid for addressing nodes in the topology (ie. not a /31).
 
-Define the [allocation range](#ip-range) and subnet appropriately to match the physical network.
+You can also optionally define the subnet. The [allocation range](#ip-range) and subnet should be defined appropriately to match the physical network.
 
 ```yaml
 mgmt:

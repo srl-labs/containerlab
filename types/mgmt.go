@@ -48,14 +48,15 @@ func (m *MgmtNet) Validate() error {
 			return fmt.Errorf("mgmt.driver-opts.%s conflicts with the macvlan configuration", key)
 		}
 	}
-	if m.IPv4Subnet == "" && m.IPv6Subnet == "" {
-		return fmt.Errorf("macvlan networks require an explicit ipv4-subnet or ipv6-subnet")
+	if m.IPv4Subnet != "" {
+		if err := validateMacvlanSubnet(m.IPv4Subnet, m.IPv4Gw, m.IPv4Range, true); err != nil {
+			return fmt.Errorf("macvlan IPv4 configuration: %w", err)
+		}
 	}
-	if err := validateMacvlanSubnet(m.IPv4Subnet, m.IPv4Gw, m.IPv4Range, true); err != nil {
-		return fmt.Errorf("macvlan IPv4 configuration: %w", err)
-	}
-	if err := validateMacvlanSubnet(m.IPv6Subnet, m.IPv6Gw, m.IPv6Range, false); err != nil {
-		return fmt.Errorf("macvlan IPv6 configuration: %w", err)
+	if m.IPv6Subnet != "" {
+		if err := validateMacvlanSubnet(m.IPv6Subnet, m.IPv6Gw, m.IPv6Range, false); err != nil {
+			return fmt.Errorf("macvlan IPv6 configuration: %w", err)
+		}
 	}
 	if m.MacvlanAux != "" {
 		if m.EffectiveMacvlanMode() != "bridge" {
@@ -63,7 +64,16 @@ func (m *MgmtNet) Validate() error {
 				"mgmt.macvlan-aux requires macvlan-mode: bridge for host connectivity",
 			)
 		}
-		_, _, err := m.MacvlanHostAddress()
+
+		aux, err := netip.ParseAddr(m.MacvlanAux)
+		if prefix, prefixErr := netip.ParsePrefix(m.MacvlanAux); prefixErr == nil {
+			aux, err = prefix.Addr(), nil
+		}
+		if err == nil && aux.IsGlobalUnicast() && !aux.Is4In6() && aux.Zone() == "" &&
+			((aux.Is4() && m.IPv4Subnet == "") || (aux.Is6() && m.IPv6Subnet == "")) {
+			return nil
+		}
+		_, _, err = m.MacvlanHostAddress()
 		return err
 	}
 	return nil

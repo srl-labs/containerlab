@@ -16,7 +16,7 @@ func TestInitMacvlanManagementNetwork(t *testing.T) {
 			Driver: "macvlan", MacvlanParent: "eth0", IPv4Subnet: subnet,
 		}}}
 		err := c.initMgmtNetwork()
-		if (err != nil) != (subnet == "") {
+		if err != nil {
 			t.Fatalf("initMgmtNetwork(%q) error = %v", subnet, err)
 		}
 		if c.Config.Mgmt.IPv4Subnet != subnet || c.Config.Mgmt.IPv6Subnet != "" {

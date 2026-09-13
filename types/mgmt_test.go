@@ -66,7 +66,7 @@ func TestMacvlanManagementValidation(t *testing.T) {
 		{name: "missing driver", change: func(m *MgmtNet) { m.Driver = "" }, wantErr: true},
 		{name: "unknown driver", change: func(m *MgmtNet) { m.Driver = "ipvlan" }, wantErr: true},
 		{name: "missing parent", change: func(m *MgmtNet) { m.MacvlanParent = "" }, wantErr: true},
-		{name: "missing subnet", change: func(m *MgmtNet) { m.IPv4Subnet = "" }, wantErr: true},
+		{name: "infer subnet", change: func(m *MgmtNet) { m.IPv4Subnet = "" }},
 		{name: "auto subnet", change: func(m *MgmtNet) { m.IPv4Subnet = "auto" }, wantErr: true},
 		{
 			name:    "wrong subnet family",
@@ -118,9 +118,8 @@ func TestMacvlanManagementValidation(t *testing.T) {
 		},
 		{name: "invalid aux", change: func(m *MgmtNet) { m.MacvlanAux = "bad" }, wantErr: true},
 		{
-			name:    "IPv6 aux",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "2001:db8::10/64" },
-			wantErr: true,
+			name:   "IPv6 aux with inferred subnet",
+			change: func(m *MgmtNet) { m.MacvlanAux = "2001:db8::10/64" },
 		},
 		{
 			name:    "aux outside subnet",
@@ -182,13 +181,14 @@ func TestMacvlanHostAddress(t *testing.T) {
 func TestMacvlanIPv6HostAddress(t *testing.T) {
 	for _, tc := range []struct {
 		name, aux, subnet, gw, route string
+		deferValidation              bool
 		wantErr                      bool
 	}{
 		{name: "plain", aux: "2001:db8::2", subnet: "2001:db8::/64", route: "2001:db8::/64"},
 		{name: "narrow route", aux: "2001:db8::8000:2/97", subnet: "2001:db8::/64", route: "2001:db8::8000:0/97"},
 		{name: "ULA", aux: "fd00::2", subnet: "fd00::/64", route: "fd00::/64"},
 		{name: "last address is not broadcast", aux: "2001:db8::ffff", subnet: "2001:db8::/112", route: "2001:db8::/112"},
-		{name: "missing IPv6 subnet", aux: "2001:db8::2", wantErr: true},
+		{name: "missing IPv6 subnet", aux: "2001:db8::2", wantErr: true, deferValidation: true},
 		{name: "outside subnet", aux: "2001:db8:1::2", subnet: "2001:db8::/64", wantErr: true},
 		{name: "wide route", aux: "2001:db8::2/48", subnet: "2001:db8::/64", wantErr: true},
 		{name: "host-only route", aux: "2001:db8::2/128", subnet: "2001:db8::/64", wantErr: true},
@@ -208,7 +208,7 @@ func TestMacvlanIPv6HostAddress(t *testing.T) {
 				IPv6Gw:        tc.gw,
 				MacvlanAux:    tc.aux,
 			}
-			if err := m.Validate(); (err != nil) != tc.wantErr {
+			if err := m.Validate(); (err != nil) != (tc.wantErr && !tc.deferValidation) {
 				t.Fatalf("Validate() = %v", err)
 			}
 			ip, route, err := m.MacvlanHostAddress()

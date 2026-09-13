@@ -3,31 +3,33 @@ package docker
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/netip"
 
 	"github.com/charmbracelet/log"
 	cerrdefs "github.com/containerd/errdefs"
 	networkapi "github.com/docker/docker/api/types/network"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	"github.com/srl-labs/containerlab/mgmt"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
+
+func (d *DockerRuntime) macvlanHost() clabutils.MacvlanHost {
+	return mgmt.NewMacvlanHost(d.mgmt, d.macvlanNetlink)
+}
 
 func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	opts, err := macvlanNetworkOptions(d.mgmt)
+	host := d.macvlanHost()
+	parent, err := mgmt.PrepareMacvlanParent(d.mgmt, host.Links)
 	if err != nil {
 		return err
 	}
-	host := d.macvlanHost()
-	parent, err := host.Links.LinkByName(d.mgmt.MacvlanParent)
+	opts, err := macvlanNetworkOptions(d.mgmt)
 	if err != nil {
-		return fmt.Errorf("macvlan parent %q: %w", d.mgmt.MacvlanParent, err)
-	}
-	if parent.Attrs().Flags&net.FlagUp == 0 {
-		log.Warn("Macvlan parent interface is down", "interface", d.mgmt.MacvlanParent)
+		return err
 	}
 
 	nres, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
@@ -49,14 +51,8 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		return fmt.Errorf("cannot reuse network %q: %w", d.mgmt.Network, err)
 	}
 
-	if d.mgmt.MacvlanAux != "" {
-		ip, route, err := d.mgmt.MacvlanHostAddress()
-		if err != nil {
-			return err
-		}
-		if err := host.Ensure(nctx, nres.ID, parent, ip, route); err != nil {
-			return fmt.Errorf("configure macvlan host connectivity for %q: %w", d.mgmt.Network, err)
-		}
+	if err := mgmt.EnsureMacvlanHost(nctx, d.mgmt, host, parent, nres.ID); err != nil {
+		return err
 	}
 	d.mgmt.Bridge = ""
 	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
