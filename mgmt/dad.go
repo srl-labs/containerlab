@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -14,10 +13,13 @@ import (
 	"time"
 
 	"github.com/docker/docker/libnetwork/resolvconf"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/afpacket"
+	"github.com/gopacket/gopacket/layers"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils/ipam"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
+	"golang.org/x/net/bpf"
 )
 
 // ErrDuplicateAddress indicates an occupied candidate; allocation may retry another address.
@@ -173,7 +175,7 @@ func (d *dadChecker) addNeighbours(neighbours []netlink.Neigh, interfaces map[in
 // macvlanProbe reuses one temporary interface for an allocation pass.
 type macvlanProbe struct {
 	link      netlink.Link
-	fd        int
+	socket    *afpacket.TPacket
 	mac       net.HardwareAddr
 	scheduler *dadScheduler
 	rxMu      sync.Mutex
@@ -199,7 +201,7 @@ func newMacvlanProbe(parentName string) (*macvlanProbe, error) {
 	if err = netlink.LinkAdd(link); err != nil {
 		return nil, fmt.Errorf("create DAD interface: %w", err)
 	}
-	p := &macvlanProbe{link: link, fd: -1}
+	p := &macvlanProbe{link: link}
 	if err = netlink.LinkSetUp(link); err != nil {
 		return nil, errors.Join(err, p.Close())
 	}
@@ -223,8 +225,8 @@ func (p *macvlanProbe) Close() error {
 		err = p.scheduler.Close()
 		p.receiver.Wait()
 	}
-	if p.fd >= 0 {
-		err = errors.Join(err, unix.Close(p.fd))
+	if p.socket != nil {
+		p.socket.Close()
 	}
 	if p.link != nil {
 		err = errors.Join(err, netlink.LinkDel(p.link))
@@ -267,7 +269,7 @@ func CheckDuplicateAddresses(
 
 // ProbeAddress checks an address on a caller-owned auxiliary interface.
 func ProbeAddress(ctx context.Context, link *netlink.LinkAttrs, ip netip.Addr) error {
-	p := &macvlanProbe{link: &netlink.GenericLink{LinkAttrs: *link}, fd: -1}
+	p := &macvlanProbe{link: &netlink.GenericLink{LinkAttrs: *link}}
 	if err := p.start(); err != nil {
 		p.link = nil
 		return errors.Join(err, p.Close())
@@ -279,54 +281,58 @@ func ProbeAddress(ctx context.Context, link *netlink.LinkAttrs, ip netip.Addr) e
 }
 
 func (p *macvlanProbe) start() error {
-	protocol := int(binary.NativeEndian.Uint16([]byte{0, unix.ETH_P_ALL}))
-	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_RAW|unix.SOCK_CLOEXEC|unix.SOCK_NONBLOCK, protocol)
+	link := p.link.Attrs()
+	p.mac = append(net.HardwareAddr(nil), link.HardwareAddr...)
+
+	socket, err := afpacket.NewTPacket(
+		afpacket.OptInterface(link.Name),
+		afpacket.OptTPacketVersion(afpacket.TPacketVersion2),
+		afpacket.OptPollTimeout(0),
+		afpacket.OptFrameSize(4096),
+		afpacket.OptBlockSize(1<<20),
+		afpacket.OptNumBlocks(4),
+	)
 	if err != nil {
 		return fmt.Errorf("open DAD socket: %w", err)
 	}
-	p.fd = fd
-	link := p.link.Attrs()
-	p.mac = append(net.HardwareAddr(nil), link.HardwareAddr...)
-	if err := unix.Bind(fd, &unix.SockaddrLinklayer{Ifindex: link.Index, Protocol: uint16(protocol)}); err != nil {
+	p.socket = socket
+	if err := socket.SetPromiscuous(true); err != nil {
 		return err
 	}
-	if err := unix.SetsockoptPacketMreq(fd, unix.SOL_PACKET, unix.PACKET_ADD_MEMBERSHIP,
-		&unix.PacketMreq{Ifindex: int32(link.Index), Type: unix.PACKET_MR_ALLMULTI}); err != nil {
+	filter, err := bpf.Assemble([]bpf.Instruction{
+		bpf.LoadAbsolute{Off: 12, Size: 2},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeARP), SkipTrue: 3},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeIPv6), SkipFalse: 3},
+		bpf.LoadAbsolute{Off: 20, Size: 1},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.IPProtocolICMPv6), SkipFalse: 1},
+		bpf.RetConstant{Val: 2048},
+		bpf.RetConstant{Val: 0},
+	})
+	if err != nil {
 		return err
 	}
-	// Filter before packets enter the socket queue: ARP or direct ICMPv6 only.
-	filter := []unix.SockFilter{
-		{Code: unix.BPF_LD | unix.BPF_H | unix.BPF_ABS, K: 12},
-		{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: 0x0806, Jt: 3},
-		{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: 0x86dd, Jf: 3},
-		{Code: unix.BPF_LD | unix.BPF_B | unix.BPF_ABS, K: 20},
-		{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: 58, Jf: 1},
-		{Code: unix.BPF_RET | unix.BPF_K, K: 2048},
-		{Code: unix.BPF_RET | unix.BPF_K, K: 0},
-	}
-	if err := unix.SetsockoptSockFprog(fd, unix.SOL_SOCKET, unix.SO_ATTACH_FILTER, &unix.SockFprog{Len: uint16(len(filter)), Filter: &filter[0]}); err != nil {
-		return err
-	}
-	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_RCVBUF, 4<<20); err != nil {
+	if err := socket.SetBPF(filter); err != nil {
 		return err
 	}
 	p.scheduler = newDADScheduler(func(ip netip.Addr) error {
-		return unix.Sendto(fd, dadProbe(link.HardwareAddr, ip), 0, &unix.SockaddrLinklayer{Ifindex: link.Index, Protocol: uint16(protocol), Halen: 6})
+		frame, err := dadProbe(p.mac, ip)
+		if err != nil {
+			return err
+		}
+		return socket.WritePacketData(frame)
 	}, p.drain, time.Second/1000, time.Second)
 	p.receiver.Go(func() {
-		for p.scheduler.ctx.Err() == nil {
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		for {
 			if err := p.drain(); err != nil {
 				p.scheduler.cancel(err)
 				return
 			}
-			fds := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}
-			if _, err := unix.Poll(fds, 100); err != nil && !errors.Is(err, unix.EINTR) {
-				p.scheduler.cancel(err)
+			select {
+			case <-p.scheduler.ctx.Done():
 				return
-			}
-			if fds[0].Revents&(unix.POLLERR|unix.POLLHUP|unix.POLLNVAL) != 0 {
-				p.scheduler.cancel(fmt.Errorf("DAD receive socket failed"))
-				return
+			case <-ticker.C:
 			}
 		}
 	})
@@ -336,113 +342,104 @@ func (p *macvlanProbe) start() error {
 func (p *macvlanProbe) drain() error {
 	p.rxMu.Lock()
 	defer p.rxMu.Unlock()
-	var buf [2048]byte
 	for count := 0; count < 4096; count++ {
 		if err := context.Cause(p.scheduler.ctx); err != nil {
 			return err
 		}
-		n, from, err := unix.Recvfrom(p.fd, buf[:], unix.MSG_DONTWAIT)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if errors.Is(err, unix.EAGAIN) {
-			stats, err := unix.GetsockoptTpacketStats(p.fd, unix.SOL_PACKET, unix.PACKET_STATISTICS)
+		frame, info, err := p.socket.ZeroCopyReadPacketData()
+		if errors.Is(err, afpacket.ErrTimeout) {
+			stats, _, err := p.socket.SocketStats()
 			if err != nil {
 				return err
 			}
-			if stats.Drops > 0 {
-				return fmt.Errorf("DAD receive queue dropped %d packets", stats.Drops)
+			if stats.Drops() > 0 {
+				return fmt.Errorf("DAD receive queue dropped %d packets", stats.Drops())
 			}
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		if from, ok := from.(*unix.SockaddrLinklayer); ok && from.Pkttype == unix.PACKET_OUTGOING {
+		if info.CaptureLength != info.Length {
 			continue
 		}
-		if ip, ok := dadConflictAddress(buf[:n], p.mac); ok {
-			p.scheduler.conflict(ip, fmt.Errorf("%w detected (peer MAC %s)", ErrDuplicateAddress, net.HardwareAddr(buf[6:12])))
+		if ip, ok := dadConflictAddress(frame, p.mac); ok {
+			p.scheduler.conflict(ip, fmt.Errorf("%w detected", ErrDuplicateAddress))
 		}
 	}
 	return fmt.Errorf("DAD receive queue overloaded")
 }
 
-func dadProbe(mac net.HardwareAddr, ip netip.Addr) []byte {
+func dadProbe(mac net.HardwareAddr, ip netip.Addr) ([]byte, error) {
+	ethernet := &layers.Ethernet{SrcMAC: mac, DstMAC: net.HardwareAddr{255, 255, 255, 255, 255, 255}, EthernetType: layers.EthernetTypeARP}
+	buffer := gopacket.NewSerializeBuffer()
+	options := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	if ip.Is4() {
-		b := make([]byte, 42)
-		copy(b, []byte{255, 255, 255, 255, 255, 255})
-		copy(b[6:12], mac)
-		copy(b[12:22], []byte{8, 6, 0, 1, 8, 0, 6, 4, 0, 1})
-		copy(b[22:28], mac)
-		copy(b[38:42], ip.AsSlice())
-		return b
+		arp := &layers.ARP{
+			AddrType: layers.LinkTypeEthernet, Protocol: layers.EthernetTypeIPv4, Operation: layers.ARPRequest,
+			SourceHwAddress: mac, SourceProtAddress: net.IPv4zero.To4(),
+			DstHwAddress: make([]byte, 6), DstProtAddress: ip.AsSlice(),
+		}
+		err := gopacket.SerializeLayers(buffer, options, ethernet, arp)
+		return buffer.Bytes(), err
 	}
-	b := make([]byte, 78)
 	target := ip.As16()
-	copy(b[:6], []byte{0x33, 0x33, 0xff, target[13], target[14], target[15]})
-	copy(b[6:12], mac)
-	copy(b[12:14], []byte{0x86, 0xdd})
-	b[14] = 0x60
-	b[19] = 24
-	b[20] = 58
-	b[21] = 255
-	copy(
-		b[38:54],
-		[]byte{0xff, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xff, target[13], target[14], target[15]},
-	)
-	b[54] = 135
-	copy(b[62:78], target[:])
-	binary.BigEndian.PutUint16(b[56:58], dadChecksum(b[22:54], b[54:]))
-	return b
-}
-
-func dadChecksum(addresses, payload []byte) uint16 {
-	sum := uint32(len(payload) + 58)
-	for _, part := range [][]byte{addresses, payload} {
-		for i := 0; i+1 < len(part); i += 2 {
-			sum += uint32(binary.BigEndian.Uint16(part[i : i+2]))
-		}
-		if len(part)%2 != 0 {
-			sum += uint32(part[len(part)-1]) << 8
-		}
+	destination := net.ParseIP("ff02::1:ff00:0").To16()
+	copy(destination[13:], target[13:])
+	ethernet.EthernetType = layers.EthernetTypeIPv6
+	ethernet.DstMAC = net.HardwareAddr{0x33, 0x33, 0xff, target[13], target[14], target[15]}
+	ipv6 := &layers.IPv6{Version: 6, HopLimit: 255, NextHeader: layers.IPProtocolICMPv6, SrcIP: net.IPv6zero, DstIP: destination}
+	icmp := &layers.ICMPv6{TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeNeighborSolicitation, 0)}
+	if err := icmp.SetNetworkLayerForChecksum(ipv6); err != nil {
+		return nil, err
 	}
-	for sum>>16 != 0 {
-		sum = (sum & 0xffff) + (sum >> 16)
-	}
-	return ^uint16(sum)
+	err := gopacket.SerializeLayers(buffer, options, ethernet, ipv6, icmp, &layers.ICMPv6NeighborSolicitation{TargetAddress: ip.AsSlice()})
+	return buffer.Bytes(), err
 }
 
 // dadConflictAddress extracts the address claimed or probed by a peer.
 // Frames from the local MAC are ignored.
-func dadConflictAddress(b []byte, mac net.HardwareAddr) (netip.Addr, bool) {
-	if len(b) < 14 || bytes.Equal(b[6:12], mac) {
+func dadConflictAddress(frame []byte, mac net.HardwareAddr) (netip.Addr, bool) {
+	packet := gopacket.NewPacket(frame, layers.LayerTypeEthernet, gopacket.NoCopy)
+	if packet.ErrorLayer() != nil || packet.Metadata().Truncated {
 		return netip.Addr{}, false
 	}
-	if b[12] == 8 && b[13] == 6 {
-		if len(b) < 42 || !bytes.Equal(b[12:20], []byte{8, 6, 0, 1, 8, 0, 6, 4}) ||
-			(binary.BigEndian.Uint16(b[20:22]) != 1 && binary.BigEndian.Uint16(b[20:22]) != 2) {
+	ethernet, ok := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	if !ok || bytes.Equal(ethernet.SrcMAC, mac) {
+		return netip.Addr{}, false
+	}
+	if ethernet.EthernetType == layers.EthernetTypeARP {
+		arp, ok := packet.Layer(layers.LayerTypeARP).(*layers.ARP)
+		if !ok || arp.AddrType != layers.LinkTypeEthernet || arp.Protocol != layers.EthernetTypeIPv4 ||
+			arp.HwAddressSize != 6 || arp.ProtAddressSize != 4 || (arp.Operation != layers.ARPRequest && arp.Operation != layers.ARPReply) {
 			return netip.Addr{}, false
 		}
-		sender := netip.AddrFrom4([4]byte(b[28:32]))
-		if sender.IsUnspecified() && binary.BigEndian.Uint16(b[20:22]) == 1 {
-			return netip.AddrFrom4([4]byte(b[38:42])), true
+		sender, ok := netip.AddrFromSlice(arp.SourceProtAddress)
+		if ok && sender.IsUnspecified() && arp.Operation == layers.ARPRequest {
+			return netip.AddrFromSlice(arp.DstProtAddress)
 		}
-		return sender, true
+		return sender, ok
 	}
-	if len(b) < 78 || b[12] != 0x86 || b[13] != 0xdd || b[14]>>4 != 6 || b[20] != 58 || b[21] != 255 || b[55] != 0 {
+	ipv6, ok := packet.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+	if !ok || ethernet.EthernetType != layers.EthernetTypeIPv6 || ipv6.Version != 6 ||
+		ipv6.NextHeader != layers.IPProtocolICMPv6 || ipv6.HopLimit != 255 {
 		return netip.Addr{}, false
 	}
-	length := int(binary.BigEndian.Uint16(b[18:20]))
-	if length < 24 || len(b) < 54+length || dadChecksum(b[22:54], b[54:54+length]) != 0 {
+	icmp, ok := packet.Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6)
+	if !ok || icmp.TypeCode.Code() != 0 {
 		return netip.Addr{}, false
 	}
-	if b[54] != 136 && !(b[54] == 135 && bytes.Equal(b[22:38], make([]byte, 16))) {
+	if err := icmp.SetNetworkLayerForChecksum(ipv6); err != nil {
 		return netip.Addr{}, false
 	}
-	return netip.AddrFrom16([16]byte(b[62:78])), true
-}
-func dadConflict(b []byte, mac net.HardwareAddr, ip netip.Addr) bool {
-	target, ok := dadConflictAddress(b, mac)
-	return ok && target == ip
+	if err, result := icmp.VerifyChecksum(); err != nil || !result.Valid {
+		return netip.Addr{}, false
+	}
+	if advertisement, ok := packet.Layer(layers.LayerTypeICMPv6NeighborAdvertisement).(*layers.ICMPv6NeighborAdvertisement); ok {
+		return netip.AddrFromSlice(advertisement.TargetAddress)
+	}
+	if solicitation, ok := packet.Layer(layers.LayerTypeICMPv6NeighborSolicitation).(*layers.ICMPv6NeighborSolicitation); ok && ipv6.SrcIP.IsUnspecified() {
+		return netip.AddrFromSlice(solicitation.TargetAddress)
+	}
+	return netip.Addr{}, false
 }
