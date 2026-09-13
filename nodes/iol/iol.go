@@ -90,6 +90,8 @@ type iol struct {
 	bootCfg           string
 	interfaces        []IOLInterface
 	firstBoot         bool
+	bootstrapNone     bool
+	bootstrapCfgFile  string
 }
 
 func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -133,6 +135,18 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	default:
 		return fmt.Errorf("invalid node type '%s'. Valid types are: %s",
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
+	}
+
+	// CLAB_IOL_BOOTSTRAP_CONFIG replaces the baseline config with a file, or disables it with "none".
+	if v, ok := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; ok && v != "" {
+		switch {
+		case strings.EqualFold(v, "none"):
+			n.bootstrapNone = true
+		case clabutils.FileExists(v):
+			n.bootstrapCfgFile = v
+		default:
+			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", v)
+		}
 	}
 
 	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
@@ -183,8 +197,8 @@ func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 
 	n.GenBootConfig(ctx)
 
-	// Must update mgmt IP if not first boot
-	if !n.firstBoot {
+	// Must update mgmt IP if not first boot, unless the node boots without a baseline config
+	if !n.firstBoot && !n.bootstrapNone {
 		return n.UpdateMgmtIntf(ctx)
 	}
 
@@ -271,6 +285,18 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 func (n *iol) GenBootConfig(_ context.Context) error {
 	n.bootCfg = cfgTemplate
 
+	switch {
+	case n.bootstrapNone:
+		n.bootCfg = "{{ .PartialCfg }}"
+	case n.bootstrapCfgFile != "":
+		cfg, err := os.ReadFile(n.bootstrapCfgFile)
+		if err != nil {
+			return err
+		}
+
+		n.bootCfg = string(cfg)
+	}
+
 	if n.Cfg.StartupConfig != "" {
 		cfg, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -295,7 +321,22 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
 		DataIFaces:         n.interfaces,
-		PartialCfg:         n.partialStartupCfg,
+	}
+
+	// render the partial startup config so template variables work in partials too
+	if n.partialStartupCfg != "" {
+		partialTpl, err := template.New("clab-iol-partial-config").Funcs(
+			clabutils.CreateFuncs()).Parse(n.partialStartupCfg)
+		if err != nil {
+			return err
+		}
+
+		buf := new(bytes.Buffer)
+		if err := partialTpl.Execute(buf, tpl); err != nil {
+			return err
+		}
+
+		tpl.PartialCfg = buf.String()
 	}
 
 	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
