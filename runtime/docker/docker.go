@@ -319,6 +319,12 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		return err
 	}
 
+	// default docker bridge rejects user-specified endpoint addresses (ie. clab ipam generated addr)
+	if d.mgmt.Network == defaultDockerNetwork && d.mgmt.IPAM.Provider != clabtypes.IPAMProviderRuntime {
+		log.Info("Using runtime IPAM for default bridge network")
+		d.mgmt.IPAM.Provider = clabtypes.IPAMProviderRuntime
+	}
+
 	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
 	d.mgmt.IPv4Range, d.mgmt.IPv6Range = "", ""
 	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw = "", ""

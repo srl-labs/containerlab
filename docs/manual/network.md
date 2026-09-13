@@ -292,6 +292,12 @@ mgmt:
 
 Since `bridge` network is created by default by docker, using its name in the configuration will make nodes to connect to this network.
 
+/// note | IPAM
+Docker's built-in `bridge` network will always uses runtime IPAM since Docker rejects user-specified IP addresses on that network.
+
+Explicity setting the provider to be `containerlab` has no effect, hence DAD is also not handled by Containerlab in this case.
+///
+
 ##### Bridge name
 
 By default, containerlab will create a linux bridge backing the management docker network with the following name `br-<network-id>`. The network-id part is coming from the docker network ID that docker manages.
