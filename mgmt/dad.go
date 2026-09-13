@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/docker/docker/libnetwork/resolvconf"
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/afpacket"
@@ -237,7 +238,9 @@ func (p *macvlanProbe) Check(ctx context.Context, ip netip.Addr) error {
 	if !ip.IsValid() || ip.Is4In6() || !ip.IsGlobalUnicast() {
 		return fmt.Errorf("invalid DAD address %s", ip)
 	}
-	return p.scheduler.Check(ctx, ip)
+	err := p.scheduler.Check(ctx, ip)
+	log.Debug("DAD check completed", "mac", p.mac, "address", ip, "error", err)
+	return err
 }
 
 // CheckDuplicateAddresses probes a batch using a single temporary interface.
@@ -283,6 +286,8 @@ func ProbeAddress(ctx context.Context, link *netlink.LinkAttrs, ip netip.Addr) e
 func (p *macvlanProbe) start() error {
 	link := p.link.Attrs()
 	p.mac = append(net.HardwareAddr(nil), link.HardwareAddr...)
+	log.Debug("Opening DAD socket", "interface", link.Name, "index", link.Index,
+		"parent-index", link.ParentIndex, "mac", p.mac, "flags", link.Flags)
 
 	socket, err := afpacket.NewTPacket(
 		afpacket.OptInterface(link.Name),
@@ -319,7 +324,12 @@ func (p *macvlanProbe) start() error {
 		if err != nil {
 			return err
 		}
-		return socket.WritePacketData(frame)
+		err = socket.WritePacketData(frame)
+		if log.GetLevel() == log.DebugLevel {
+			log.Debug("DAD probe sent", "interface", link.Name, "address", ip,
+				"frame", fmt.Sprintf("%x", frame), "error", err)
+		}
+		return err
 	}, p.drain, time.Second/1000, time.Second)
 	p.receiver.Go(func() {
 		ticker := time.NewTicker(10 * time.Millisecond)
@@ -360,11 +370,20 @@ func (p *macvlanProbe) drain() error {
 		if err != nil {
 			return err
 		}
+		if log.GetLevel() == log.DebugLevel {
+			log.Debug("DAD frame received", "mac", p.mac,
+				"captured-length", info.CaptureLength, "wire-length", info.Length,
+				"frame", fmt.Sprintf("%x", frame))
+		}
 		if info.CaptureLength != info.Length {
+			log.Debug("Ignoring truncated DAD frame")
 			continue
 		}
 		if ip, ok := dadConflictAddress(frame, p.mac); ok {
+			log.Debug("DAD conflict received", "mac", p.mac, "address", ip)
 			p.scheduler.conflict(ip, fmt.Errorf("%w detected", ErrDuplicateAddress))
+		} else {
+			log.Debug("Ignoring DAD frame without a valid peer address")
 		}
 	}
 	return fmt.Errorf("DAD receive queue overloaded")
