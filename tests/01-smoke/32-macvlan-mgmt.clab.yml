@@ -1,0 +1,24 @@
+name: 32-macvlan-mgmt
+
+mgmt:
+  network: clab-smoke32
+  driver: macvlan
+  macvlan-parent: clab-smoke32
+  macvlan-aux: 198.18.32.129/25
+  ipv4-subnet: 198.18.32.0/24
+  ipv4-gw: 198.18.32.1
+  ipv4-range: 198.18.32.128/25
+  ipv6-subnet: fd00:32::/64
+  ipv6-gw: fd00:32::1
+  ipv6-range: fd00:32::/120
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    dynamic:
+    static:
+      mgmt-ipv4: 198.18.32.140
+      mgmt-ipv6: fd00:32::20
