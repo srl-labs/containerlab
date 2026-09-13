@@ -111,6 +111,22 @@ At minimum you will see all numerically-lower indexed interfaces in the CLI comp
 **Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.**
 ///
 
+### Management interface
+
+By default the containerlab reserves an interface on the router for containerlab management access. This interface is bound to the container network behind the scenes and cannot be used to create link connections to other devices inside of the containerlab topology. By default and for simplicity, this interface is set to `Ethernet0/0`.
+
+The interface used for containerlab management can be changed by using the `CLAB_IOL_MGMT_INTF` environment variable. Setting it at the kind level applies it to all IOL nodes of the topology:
+
+```yaml
+topology:
+  kinds:
+    cisco_iol:
+      env:
+        CLAB_IOL_MGMT_INTF: Ethernet3/3
+```
+
+With the example above the management VRF, addressing and default routes move to `Ethernet3/3`, links on `Ethernet3/3` are rejected instead of `Ethernet0/0`, and `Ethernet0/0` becomes a regular data-plane interface. When an interface is defined in this variable, Containerlab will ensure that preceding interfaces are created to accomodate the management. For example, if `Ethernet3/3` is defined, 4 slots will be allocated for devices resulting in 16 interfaces [Eth0/0, ... Eth3/2, Eth3/3].
+
 Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
 
 ```
