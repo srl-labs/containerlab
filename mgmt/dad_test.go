@@ -237,3 +237,74 @@ func TestDADRejectsInvalidIPv6Headers(t *testing.T) {
 		})
 	}
 }
+
+func TestDADRejectsInvalidARPHeaders(t *testing.T) {
+	local, peer := net.HardwareAddr{2, 0, 0, 0, 0, 1}, net.HardwareAddr{2, 0, 0, 0, 0, 2}
+	ip := netip.MustParseAddr("192.0.2.2")
+	for _, tc := range []struct {
+		name   string
+		offset int
+		value  byte
+	}{
+		{"hardware type", 15, 2},
+		{"protocol", 16, 0x86},
+		{"hardware address length", 18, 5},
+		{"protocol address length", 19, 3},
+		{"operation", 21, 3},
+		{"ethernet type", 12, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			frame, err := dadProbe(peer, ip)
+			if err != nil {
+				t.Fatal(err)
+			}
+			frame[tc.offset] = tc.value
+			if address, ok := dadConflictAddress(frame, local); ok {
+				t.Fatalf("invalid ARP claimed %s", address)
+			}
+		})
+	}
+}
+
+func TestDADDistinguishesAddressClaimsFromQueries(t *testing.T) {
+	local, peer := net.HardwareAddr{2, 0, 0, 0, 0, 1}, net.HardwareAddr{2, 0, 0, 0, 0, 2}
+	for _, address := range []string{"192.0.2.2", "2001:db8::2"} {
+		t.Run(address, func(t *testing.T) {
+			target := netip.MustParseAddr(address)
+			sender := target.Next()
+			frame, err := dadProbe(peer, target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			packet := gopacket.NewPacket(frame, layers.LayerTypeEthernet, gopacket.Default)
+			ethernet := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+			buffer := gopacket.NewSerializeBuffer()
+			options := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+			if target.Is4() {
+				arp := packet.Layer(layers.LayerTypeARP).(*layers.ARP)
+				arp.SourceProtAddress = sender.AsSlice()
+				err = gopacket.SerializeLayers(buffer, options, ethernet, arp)
+			} else {
+				ipv6 := packet.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+				ipv6.SrcIP = sender.AsSlice()
+				icmp := packet.Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6)
+				if err := icmp.SetNetworkLayerForChecksum(ipv6); err != nil {
+					t.Fatal(err)
+				}
+				solicitation := packet.Layer(layers.LayerTypeICMPv6NeighborSolicitation).(*layers.ICMPv6NeighborSolicitation)
+				err = gopacket.SerializeLayers(buffer, options, ethernet, ipv6, icmp, solicitation)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			claimed, ok := dadConflictAddress(buffer.Bytes(), local)
+			if target.Is4() {
+				if !ok || claimed != sender {
+					t.Fatalf("ARP request claimed %s (%t), want sender %s", claimed, ok, sender)
+				}
+			} else if ok {
+				t.Fatalf("ordinary neighbour solicitation claimed %s", claimed)
+			}
+		})
+	}
+}

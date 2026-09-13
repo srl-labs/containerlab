@@ -59,6 +59,8 @@ Auxiliary interface provides host connectivity
     Should Not Be Equal    ${aux}    ${parent}
     ${output} =    Command Should Succeed    ip -d link show ${aux}
     Should Contain    ${output}    macvlan mode bridge
+    ${assignment} =    Command Should Succeed    cat /sys/class/net/${aux}/addr_assign_type
+    Should Be Equal As Integers    ${assignment}    3
     Set Suite Variable    ${aux-interface}    ${aux}
     Command Should Succeed    ping -I 198.18.32.129 -c 1 -W 2 ${preferred-v4}
 
