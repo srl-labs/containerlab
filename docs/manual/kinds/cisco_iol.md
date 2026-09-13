@@ -162,7 +162,7 @@ topology:
 
 The partial startup configuration is appended to the default startup configuration. This is useful to preconfigure certain things like loopback interfaces or IGP, while also taking advantage of the startup configuration that containerlab applies by default for management interface IP addressing and SSH access.
 
-The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`
+The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`. Templating also supported with partial configs.
 
 ```yaml
 name: iol_partial_startup_cfg
@@ -172,6 +172,25 @@ topology:
       kind: cisco_iol
       startup-config: configuration.txt.partial
 ```
+
+#### Custom baseline configuration
+
+The default startup configuration that containerlab applies (management addressing, management VRF, SSH) can be replaced or disabled with the `CLAB_IOL_BOOTSTRAP_CONFIG` environment variable, without giving up partial startup configurations. This is useful you need to manage advanced configuration sets for labs or set up custom management:
+
+```yaml
+topology:
+  kinds:
+    cisco_iol:
+      env:
+        CLAB_IOL_BOOTSTRAP_CONFIG: my-baseline.cfg # replaces the default startup configuration
+  nodes:
+    r1:
+      startup-config: r1.partial.cfg # layered on top of my-baseline.cfg
+```
+
+The file replaces the [default startup configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl) and is rendered with the same template variables; include `{{ .PartialCfg }}` where partial startup configurations should be inserted. The path is resolved relative to the directory containerlab is invoked from, or use an absolute path.
+
+Setting `CLAB_IOL_BOOTSTRAP_CONFIG: none` disables the baseline entirely: the node boots with only its partial startup configuration, or with no configuration at all. In that case containerlab also skips the management interface address update on subsequent boots.
 
 #### Link addressing
 
