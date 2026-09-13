@@ -8,16 +8,17 @@ Suite Teardown      Cleanup
 
 
 *** Variables ***
-${runtime}          docker
-${topo}             ${CURDIR}/32-macvlan-mgmt.clab.yml
-${inferred-topo}    ${CURDIR}/32-macvlan-mgmt-inferred.clab.yml
-${network}          clab-smoke32
-${parent}           clab-smoke32
-${peer-ns}          clab-smoke32-peer
-${dynamic-node}     clab-32-macvlan-mgmt-dynamic
-${static-node}      clab-32-macvlan-mgmt-static
-${parent-created}   ${False}
-${peer-created}     ${False}
+${runtime}                     docker
+${topo}                        ${CURDIR}/32-macvlan-mgmt.clab.yml
+${inferred-topo}               ${CURDIR}/32-macvlan-mgmt-inferred.clab.yml
+${network}                     clab-smoke32
+${parent}                      clab-smoke32
+${peer-ns}                     clab-smoke32-peer
+${dynamic-node}                clab-32-macvlan-mgmt-dynamic
+${static-node}                 clab-32-macvlan-mgmt-static
+${parent-created}              ${False}
+${peer-created}                ${False}
+${replacement-verified}        ${False}
 
 
 *** Test Cases ***
@@ -64,26 +65,28 @@ Auxiliary interface provides host connectivity
 DAD replaces preferred addresses occupied by an external peer
     Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo}
     Interface Should Not Exist    ${aux-interface}
-    Command Should Succeed    sudo ip netns add ${peer-ns}
-    Set Suite Variable    ${peer-created}    ${True}
-    Command Should Succeed    sudo ip link add smoke32-peer link ${parent} type macvlan mode bridge
-    Command Should Succeed    sudo ip link set smoke32-peer netns ${peer-ns}
-    Command Should Succeed    sudo ip -n ${peer-ns} link set lo up
-    Command Should Succeed    sudo ip -n ${peer-ns} addr add ${preferred-v4}/24 dev smoke32-peer
-    Command Should Succeed    sudo ip -n ${peer-ns} -6 addr add ${preferred-v6}/64 dev smoke32-peer nodad
-    Command Should Succeed    sudo ip -n ${peer-ns} link set smoke32-peer up
-    Command Should Succeed    ${CLAB_BIN} --runtime docker deploy -t ${topo}
-    ${ipv4}    ${ipv6} =    Node Addresses    ${dynamic-node}    ${network}
-    Should Not Be Equal    ${ipv4}    ${preferred-v4}
-    Should Not Be Equal    ${ipv6}    ${preferred-v6}
-    Command Should Succeed    docker exec ${dynamic-node} ping -c 1 -W 2 ${preferred-v4}
-    Command Should Succeed    docker exec ${dynamic-node} ping -6 -c 1 -W 2 ${preferred-v6}
-    Set Suite Variable    ${preferred-v4}    ${ipv4}
-    Set Suite Variable    ${preferred-v6}    ${ipv6}
-    Command Should Succeed    sudo ip netns del ${peer-ns}
-    Set Suite Variable    ${peer-created}    ${False}
+    TRY
+        Command Should Succeed    sudo ip -n ${peer-ns} addr add ${preferred-v4}/24 dev eth0
+        Command Should Succeed    sudo ip -n ${peer-ns} -6 addr add ${preferred-v6}/64 dev eth0 nodad
+        Log DAD Peer State
+        Command Should Succeed    ${CLAB_BIN} --debug --runtime docker deploy -t ${topo}
+        Log DAD Peer State
+        ${ipv4}    ${ipv6} =    Node Addresses    ${dynamic-node}    ${network}
+        Should Not Be Equal    ${ipv4}    ${preferred-v4}
+        Should Not Be Equal    ${ipv6}    ${preferred-v6}
+        Wait Until Keyword Succeeds    10s    1s
+        ...    Command Should Succeed    docker exec ${dynamic-node} ping -c 1 -W 1 ${preferred-v4}
+        Wait Until Keyword Succeeds    10s    1s
+        ...    Command Should Succeed    docker exec ${dynamic-node} ping -6 -c 1 -W 1 ${preferred-v6}
+        Set Suite Variable    ${preferred-v4}    ${ipv4}
+        Set Suite Variable    ${preferred-v6}    ${ipv6}
+        Set Suite Variable    ${replacement-verified}    ${True}
+    FINALLY
+        Command Should Succeed    sudo ip -n ${peer-ns} addr flush dev eth0 scope global
+    END
 
 Redeployment retains the replacement addresses after the conflict disappears
+    Skip If    not ${replacement-verified}    DAD replacement did not complete successfully.
     Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo}
     Network Should Not Exist    ${network}
     Command Should Succeed    ${CLAB_BIN} --runtime docker deploy -t ${topo}
@@ -94,6 +97,8 @@ Redeployment retains the replacement addresses after the conflict disappears
     Network Should Not Exist    ${network}
 
 Runtime IPAM infers IPv4 and IPv6 subnets from the parent
+    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo} --cleanup
+    Network Should Not Exist    ${network}
     Command Should Succeed    ${CLAB_BIN} --runtime docker deploy -t ${inferred-topo}
     ${info} =    Inspect Network    clab-smoke32-inferred
     ${subnets} =    Evaluate    [pool['Subnet'] for pool in $info['IPAM']['Config']]
@@ -107,39 +112,55 @@ Runtime IPAM infers IPv4 and IPv6 subnets from the parent
     Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
 
 Reject inferred IPv4 /31 before creating the network
-    Command Should Succeed    sudo ip addr flush dev ${parent}
+    Command Should Succeed    sudo ip addr flush dev ${parent} scope global
     Command Should Succeed    sudo ip addr add 198.18.32.0/31 dev ${parent}
     Inferred Deployment Should Fail
 
 Reject inferred IPv6 /127 before creating the network
-    Command Should Succeed    sudo ip addr flush dev ${parent}
+    Command Should Succeed    sudo ip addr flush dev ${parent} scope global
     Command Should Succeed    sudo ip -6 addr add fd00:32::1/127 dev ${parent} nodad
     Inferred Deployment Should Fail
 
 
 *** Keywords ***
+Log DAD Peer State
+    Command Should Succeed    uname -r
+    Command Should Succeed    sudo ip -n ${peer-ns} -d -s addr show dev eth0
+    Command Should Succeed    sudo ip -n ${peer-ns} -4 route show table local
+    Command Should Succeed
+    ...    sudo ip netns exec ${peer-ns} sysctl net.ipv4.conf.all.arp_ignore net.ipv4.conf.eth0.arp_ignore net.ipv4.conf.all.arp_filter net.ipv4.conf.eth0.arp_filter
+
 Setup
     Skip If    '${runtime}' != 'docker'    MACVLAN management requires Docker.
-    Command Should Succeed    sudo ip link add ${parent} type dummy
+    Command Should Succeed    sudo ip netns add ${peer-ns}
+    Set Suite Variable    ${peer-created}    ${True}
+    Command Should Succeed    sudo ip link add ${parent} type veth peer name eth0 netns ${peer-ns}
     Set Suite Variable    ${parent-created}    ${True}
+    Command Should Succeed    sudo ip -n ${peer-ns} link set lo up
+    ${sysctls} =    Catenate
+    ...    net.ipv4.conf.all.arp_ignore=0 net.ipv4.conf.eth0.arp_ignore=0
+    ...    net.ipv4.conf.all.arp_filter=0 net.ipv4.conf.eth0.arp_filter=0
+    ...    net.ipv4.conf.all.rp_filter=0 net.ipv4.conf.eth0.rp_filter=0
+    ...    net.ipv6.conf.eth0.disable_ipv6=0
+    Command Should Succeed    sudo ip netns exec ${peer-ns} sysctl -w ${sysctls}
+    Command Should Succeed    sudo ip -n ${peer-ns} link set eth0 mtu 1400 up
     Command Should Succeed    sudo ip link set ${parent} mtu 1400 up
     Command Should Succeed    sudo ip addr add 198.18.32.1/24 dev ${parent}
     Command Should Succeed    sudo ip -6 addr add fd00:32::1/64 dev ${parent} nodad
 
 Cleanup
-    IF    not ${parent-created}
-        RETURN
+    IF    ${parent-created}
+        Run Keyword And Continue On Failure
+        ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo} --cleanup
+        Run Keyword And Continue On Failure
+        ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
+        Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
+        Run Keyword And Continue On Failure    Network Should Not Exist    ${network}
+        Run Keyword And Continue On Failure    Network Should Not Exist    clab-smoke32-inferred
     END
-    Run Keyword And Continue On Failure
-    ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo} --cleanup
-    Run Keyword And Continue On Failure
-    ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
     IF    ${peer-created}
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip netns del ${peer-ns}
     END
-    Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
-    Network Should Not Exist    ${network}
-    Network Should Not Exist    clab-smoke32-inferred
 
 Command Should Succeed
     [Arguments]    ${command}
@@ -155,12 +176,12 @@ Inspect Network
     RETURN    ${info}
 
 Node Addresses
-    [Arguments]    ${node}    ${name}    ${provider}=containerlab
+    [Arguments]    ${node}    ${name}    ${addressing}=explicit
     ${output} =    Command Should Succeed    docker inspect ${node}
     ${info} =    Evaluate    json.loads($output)[0]    modules=json
     Should Be True    ${info}[State][Running]
     ${endpoint} =    Set Variable    ${info}[NetworkSettings][Networks][${name}]
-    IF    '${provider}' == 'containerlab'
+    IF    '${addressing}' == 'explicit'
         Should Be Equal    ${endpoint}[IPAMConfig][IPv4Address]    ${endpoint}[IPAddress]
         Should Be Equal    ${endpoint}[IPAMConfig][IPv6Address]    ${endpoint}[GlobalIPv6Address]
     ELSE
