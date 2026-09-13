@@ -7,6 +7,7 @@ type DestroyOption func(o *DestroyOptions)
 type DestroyOptions struct {
 	maxWorkers     uint
 	keepMgmtNet    bool
+	keepLinks      bool
 	graceful       bool
 	all            bool
 	terminalPrompt bool
@@ -15,6 +16,13 @@ type DestroyOptions struct {
 	// varsFiles is topology template vars from CLI (--vars), used when destroying all labs
 	// so each topology can be loaded with the same vars (e.g. templated topologies).
 	varsFiles []string
+}
+
+// WithDestroyKeepLinks preserves data-plane links for nodes selected by a node filter.
+func WithDestroyKeepLinks() DestroyOption {
+	return func(o *DestroyOptions) {
+		o.keepLinks = true
+	}
 }
 
 // NewDestroyOptions returns a new destroy options object.
