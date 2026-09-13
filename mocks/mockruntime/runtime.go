@@ -12,6 +12,7 @@ package mockruntime
 import (
 	context "context"
 	io "io"
+	netip "net/netip"
 	reflect "reflect"
 
 	exec "github.com/srl-labs/containerlab/exec"
@@ -347,6 +348,21 @@ func (m *MockContainerRuntime) Mgmt() *types.MgmtNet {
 func (mr *MockContainerRuntimeMockRecorder) Mgmt() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mgmt", reflect.TypeOf((*MockContainerRuntime)(nil).Mgmt))
+}
+
+// NetworkAddresses mocks base method.
+func (m *MockContainerRuntime) NetworkAddresses(arg0 context.Context, arg1 []netip.Prefix) ([]runtime.NetworkAddress, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkAddresses", arg0, arg1)
+	ret0, _ := ret[0].([]runtime.NetworkAddress)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NetworkAddresses indicates an expected call of NetworkAddresses.
+func (mr *MockContainerRuntimeMockRecorder) NetworkAddresses(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkAddresses", reflect.TypeOf((*MockContainerRuntime)(nil).NetworkAddresses), arg0, arg1)
 }
 
 // PauseContainer mocks base method.

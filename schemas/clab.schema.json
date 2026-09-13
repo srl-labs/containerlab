@@ -2094,6 +2094,23 @@
                     ],
                     "description": "Network driver type (bridge or macvlan)"
                 },
+                "ipam": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "enum": ["containerlab", "runtime"],
+                            "default": "containerlab",
+                            "description": "Management IP allocation provider; runtime delegates to Docker or Podman"
+                        },
+                        "dad": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Duplicate Address Detection for allocated addresses. For Containerlab provider only. Checks using ARP/v6-ND DAD on the parent interface for macvlan mgmt net driver."
+                        }
+                    }
+                },
                 "macvlan-parent": {
                     "type": "string",
                     "minLength": 1,

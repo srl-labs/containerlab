@@ -22,7 +22,7 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		return err
 	}
 	host := d.macvlanHost()
-	parent, err := host.links.LinkByName(d.mgmt.MacvlanParent)
+	parent, err := host.Links.LinkByName(d.mgmt.MacvlanParent)
 	if err != nil {
 		return fmt.Errorf("macvlan parent %q: %w", d.mgmt.MacvlanParent, err)
 	}
@@ -54,22 +54,27 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := host.ensure(nctx, nres.ID, parent, ip, route); err != nil {
+		if err := host.Ensure(nctx, nres.ID, parent, ip, route); err != nil {
 			return fmt.Errorf("configure macvlan host connectivity for %q: %w", d.mgmt.Network, err)
 		}
 	}
 	d.mgmt.Bridge = ""
+	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
+	d.mgmt.IPv4Range, d.mgmt.IPv6Range = "", ""
+	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw = "", ""
+
 	for _, pool := range nres.IPAM.Config {
-		gateway, err := netip.ParseAddr(pool.Gateway)
+		prefix, err := netip.ParsePrefix(pool.Subnet)
 		if err != nil {
 			continue
 		}
-		if gateway.Is4() {
-			d.mgmt.IPv4Gw = gateway.String()
+		if prefix.Addr().Is4() {
+			d.mgmt.IPv4Subnet, d.mgmt.IPv4Range, d.mgmt.IPv4Gw = pool.Subnet, pool.IPRange, pool.Gateway
 		} else {
-			d.mgmt.IPv6Gw = gateway.String()
+			d.mgmt.IPv6Subnet, d.mgmt.IPv6Range, d.mgmt.IPv6Gw = pool.Subnet, pool.IPRange, pool.Gateway
 		}
 	}
+
 	return nil
 }
 

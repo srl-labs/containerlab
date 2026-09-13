@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/netip"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -29,6 +30,9 @@ type ContainerRuntime interface {
 	WithKeepMgmtNet()
 	// Create container (bridge) network
 	CreateNet(context.Context) error
+	// NetworkAddresses snapshots occupied addresses from networks whose pools
+	// overlap the requested subnets. Disjoint networks must not be inspected.
+	NetworkAddresses(context.Context, []netip.Prefix) ([]NetworkAddress, error)
 	// Delete container (bridge) network
 	DeleteNet(context.Context) error
 	// Pull container image if not present
@@ -93,6 +97,13 @@ type ContainerRuntime interface {
 	// destination path.
 	// The path must be a file, and the the destination directory must exist inside the container
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
+}
+
+// NetworkAddress is a runtime-owned endpoint or infrastructure reservation.
+type NetworkAddress struct {
+	NetworkName string
+	ContainerID string
+	Address     netip.Addr
 }
 
 // ContainerStatus summarizes container lifecycle as seen by the runtime.

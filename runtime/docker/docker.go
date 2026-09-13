@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -81,7 +82,7 @@ type DockerRuntime struct {
 	Client         *dockerC.Client
 	mgmt           *clabtypes.MgmtNet
 	version        string
-	macvlanNetlink macvlanNetlink
+	macvlanNetlink clabutils.MacvlanNetlink
 }
 
 func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
@@ -192,6 +193,85 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	}
 }
 
+// NetworkAddresses returns occupied addresses in the requested subnets.
+// Only networks with overlapping IPAM pools are inspected.
+func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix) ([]clabruntime.NetworkAddress, error) {
+	if len(subnets) == 0 {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancel()
+	networks, err := d.Client.NetworkList(ctx, networkapi.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list Docker network pools: %w", err)
+	}
+	var addresses []clabruntime.NetworkAddress
+	for _, network := range networks {
+		matches := false
+		for _, pool := range network.IPAM.Config {
+			if pool.Subnet == "" {
+				continue
+			}
+			prefix, err := netip.ParsePrefix(pool.Subnet)
+			if err != nil {
+				return nil, fmt.Errorf("network %s subnet: %w", network.Name, err)
+			}
+			for _, subnet := range subnets {
+				if prefix.Overlaps(subnet) {
+					matches = true
+				}
+			}
+		}
+		if !matches {
+			continue
+		}
+		details, err := d.Client.NetworkInspect(ctx, network.ID, networkapi.InspectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("inspect occupied addresses on Docker network %s: %w", network.Name, err)
+		}
+		// Endpoint addresses include a prefix length; gateways and aux entries do not.
+		add := func(value, containerID string) error {
+			if value == "" {
+				return nil
+			}
+			ip, err := netip.ParseAddr(value)
+			if err != nil {
+				prefix, prefixErr := netip.ParsePrefix(value)
+				if prefixErr != nil {
+					return fmt.Errorf("network %s address %q: %w", details.Name, value, prefixErr)
+				}
+				ip = prefix.Addr()
+			}
+			ip = ip.Unmap()
+			for _, subnet := range subnets {
+				if subnet.Contains(ip) {
+					addresses = append(addresses, clabruntime.NetworkAddress{NetworkName: details.Name, ContainerID: containerID, Address: ip})
+					break
+				}
+			}
+			return nil
+		}
+		for _, pool := range details.IPAM.Config {
+			if err := add(pool.Gateway, ""); err != nil {
+				return nil, err
+			}
+			for _, value := range pool.AuxAddress {
+				if err := add(value, ""); err != nil {
+					return nil, err
+				}
+			}
+		}
+		for id, endpoint := range details.Containers {
+			for _, value := range []string{endpoint.IPv4Address, endpoint.IPv6Address} {
+				if err := add(value, id); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return addresses, nil
+}
+
 // CreateNet creates a docker network or reusing if it exists.
 func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	if err := d.mgmt.Validate(); err != nil {
@@ -232,6 +312,27 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 	if bridgeName == "" || d.mgmt.Bridge == "" {
 		d.mgmt.Bridge = bridgeName
+	}
+
+	netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	if err != nil {
+		return err
+	}
+
+	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
+	d.mgmt.IPv4Range, d.mgmt.IPv6Range = "", ""
+	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw = "", ""
+
+	for _, pool := range netResource.IPAM.Config {
+		prefix, err := netip.ParsePrefix(pool.Subnet)
+		if err != nil {
+			continue
+		}
+		if prefix.Addr().Is4() {
+			d.mgmt.IPv4Subnet, d.mgmt.IPv4Range, d.mgmt.IPv4Gw = pool.Subnet, pool.IPRange, pool.Gateway
+		} else {
+			d.mgmt.IPv6Subnet, d.mgmt.IPv6Range, d.mgmt.IPv6Gw = pool.Subnet, pool.IPRange, pool.Gateway
+		}
 	}
 
 	// get management bridge v4/6 addresses and save it under mgmt struct
@@ -602,7 +703,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 
 	if nres.Driver == "macvlan" {
-		return d.macvlanHost().remove(nres.ID)
+		return d.macvlanHost().Remove(nres.ID)
 	}
 
 	if err = d.deleteMgmtNetworkFwdRule(); err != nil {

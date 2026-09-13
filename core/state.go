@@ -3,7 +3,11 @@ package core
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"gopkg.in/yaml.v2"
 
@@ -11,7 +15,12 @@ import (
 )
 
 type LabState struct {
-	Topology *clabtypes.Topology `yaml:"topology"`
+	Topology *clabtypes.Topology     `yaml:"topology"`
+	Nodes    map[string]LabNodeState `yaml:"nodes,omitempty"`
+}
+
+type LabNodeState struct {
+	IPAM *clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
 }
 
 // WriteState saves the topology to the state file.
@@ -19,6 +28,8 @@ func (c *CLab) WriteState() error {
 	state := &LabState{
 		Topology: c.Config.Topology,
 	}
+
+	c.WriteNodeState(state)
 
 	data, err := yaml.Marshal(state)
 	if err != nil {
@@ -29,15 +40,91 @@ func (c *CLab) WriteState() error {
 	content := append([]byte(header), data...)
 
 	statePath := c.TopoPaths.StateFile()
-	if err := os.WriteFile(statePath, content, 0644); err != nil {
-		return fmt.Errorf("failed to write state file %s: %w", statePath, err)
+	temp, err := os.CreateTemp(filepath.Dir(statePath), ".state.clab-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create state file: %w", err)
+	}
+	defer os.Remove(temp.Name())
+	if err := temp.Chmod(0644); err != nil {
+		temp.Close()
+		return err
+	}
+	if _, err := temp.Write(content); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Sync(); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(temp.Name(), statePath); err != nil {
+		return fmt.Errorf("replace state file %s: %w", statePath, err)
 	}
 
 	return nil
 }
 
-// LoadState reads the NodeConfigs from labdir/.state.clab.yaml.
+func (c *CLab) WriteNodeState(state *LabState) {
+	state.Nodes = make(map[string]LabNodeState)
+	c.WriteLabIPAMState(state)
+}
+
+// Only for containerlab IPAM provider.
+// Runtime provider we needn't keep any state.
+func (c *CLab) WriteLabIPAMState(state *LabState) {
+	if c.Config.Mgmt == nil || c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+		return
+	}
+	previous, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to preserve previous allocation preferences", "error", err)
+	}
+	for name, node := range c.Nodes {
+		cfg := node.Config()
+		if cfg.NetworkMode == "host" || cfg.NetworkMode == "none" ||
+			strings.HasPrefix(cfg.NetworkMode, "container:") {
+			continue
+		}
+		addresses := clabtypes.NodeAddresses{}
+		if previous != nil && previous.Nodes[name].IPAM != nil {
+			addresses = *previous.Nodes[name].IPAM
+		}
+		if cfg.MgmtIPv4Address != "" {
+			addresses.IPv4 = cfg.MgmtIPv4Address
+		}
+		if cfg.MgmtIPv6Address != "" {
+			addresses.IPv6 = cfg.MgmtIPv6Address
+		}
+		if c.Config.Mgmt.IPv4Subnet == "" {
+			addresses.IPv4 = ""
+		}
+		if c.Config.Mgmt.IPv6Subnet == "" {
+			addresses.IPv6 = ""
+		}
+		if c.Config.Topology != nil {
+			if def := c.Config.Topology.Nodes[name]; def != nil {
+				if def.MgmtIPv4 != "" {
+					addresses.IPv4 = ""
+				}
+				if def.MgmtIPv6 != "" {
+					addresses.IPv6 = ""
+				}
+			}
+		}
+		if addresses.IPv4 != "" || addresses.IPv6 != "" {
+			state.Nodes[name] = LabNodeState{IPAM: &addresses}
+		}
+	}
+}
+
+// LoadState reads the desired topology and optional allocation preferences from the labdir.
 func (c *CLab) LoadState() (*LabState, error) {
+	if c.TopoPaths == nil {
+		return nil, nil
+	}
 	statePath := c.TopoPaths.StateFile()
 
 	data, err := os.ReadFile(statePath)

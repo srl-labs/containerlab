@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	clabutils "github.com/srl-labs/containerlab/utils"
+
 	"github.com/vishvananda/netlink"
 )
 
@@ -41,11 +43,11 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	host := macvlanHost{links: links}
+	host := clabutils.MacvlanHost{Links: links}
 	networkID := fmt.Sprintf("kernel-test-%d", os.Getpid())
-	t.Cleanup(func() { _ = host.remove(networkID) })
+	t.Cleanup(func() { _ = host.Remove(networkID) })
 	for range 2 {
-		if err := host.ensure(
+		if err := host.Ensure(
 			context.Background(),
 			networkID,
 			parentBefore,
@@ -55,11 +57,11 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 			t.Fatal(err)
 		}
 	}
-	link, err := links.LinkByName(macvlanHostName(networkID))
+	link, err := links.LinkByName(clabutils.MacvlanHostName(networkID))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if link.Attrs().Alias != macvlanHostAlias(networkID) ||
+	if link.Attrs().Alias != clabutils.MacvlanHostAlias(networkID) ||
 		link.Attrs().MTU != parentBefore.Attrs().MTU {
 		t.Fatalf("incorrect host link attributes: %+v", link.Attrs())
 	}
@@ -96,13 +98,13 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 	if err := links.LinkSetDown(link); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.ensure(context.Background(), networkID, parentBefore, ip, prefix); err != nil {
+	if err := host.Ensure(context.Background(), networkID, parentBefore, ip, prefix); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.remove(networkID); err != nil {
+	if err := host.Remove(networkID); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.remove(networkID); err != nil {
+	if err := host.Remove(networkID); err != nil {
 		t.Fatal(err)
 	}
 	routes, err = links.RouteList(nil, macvlanFamily(ip))
@@ -119,4 +121,11 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 		parentAfter.Attrs().Flags != parentBefore.Attrs().Flags {
 		t.Fatalf("parent state changed: %v, error = %v", parentAfter, err)
 	}
+}
+
+func macvlanFamily(ip netip.Addr) int {
+	if ip.Is4() {
+		return netlink.FAMILY_V4
+	}
+	return netlink.FAMILY_V6
 }

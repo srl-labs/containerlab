@@ -8,6 +8,9 @@ import (
 
 // Validate checks management driver options without accessing the runtime or host.
 func (m *MgmtNet) Validate() error {
+	if m.IPAM.Provider != "" && m.IPAM.Provider != IPAMProviderRuntime && m.IPAM.Provider != IPAMProviderContainerlab {
+		return fmt.Errorf("unsupported mgmt.ipam.provider %q", m.IPAM.Provider)
+	}
 	switch m.Driver {
 	case "", "bridge":
 		if m.MacvlanParent != "" || m.MacvlanMode != "" || m.MacvlanAux != "" {

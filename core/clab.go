@@ -228,6 +228,10 @@ func (c *CLab) initMgmtNetwork() error {
 		*c.Config.Mgmt.ExternalAccess = true
 	}
 
+	if c.Config.Mgmt.IPAM.Provider == "" {
+		c.Config.Mgmt.IPAM.Provider = clabtypes.IPAMProviderContainerlab
+	}
+
 	if err := c.Config.Mgmt.Validate(); err != nil {
 		return err
 	}

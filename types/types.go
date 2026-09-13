@@ -73,6 +73,8 @@ type MgmtNet struct {
 
 	Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
 
+	IPAM MgmtIPAM `json:"ipam,omitempty" yaml:"ipam,omitempty"`
+
 	// Macvlan specific options.
 	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
 	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
