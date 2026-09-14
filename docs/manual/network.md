@@ -527,11 +527,23 @@ mgmt:
   macvlan-aux: 192.0.2.129/26  #(1)!
 ```
 
-1. Containerlab assigns the auxiliary address with a `/32` (IPv4) or `/128` (IPv6) mask and adds a route through the host interface:
+1. Containerlab assigns the auxiliary address with a `/32` (IPv4) or `/128` (IPv6) mask and adds a /26 route through the host interface:
 
 - A plain address, such as `192.0.2.129`, routes the entire `ipv4-subnet` through the host interface.
 
 - An address with a prefix, such as `192.0.2.129/26`, routes only `192.0.2.128/26`. Use this to reach the container pool while preserving the host's route to the rest of the LAN. Container addresses outside that prefix are not covered by the host route.
+
+###### Auto mode
+
+The `auto` keyword can be used when the IPAM provider is set to `containerlab`. It is not supported for the `runtime` IPAM provider.
+
+In auto mode, the behaviour is as follows:
+
+- Containerlab will intelligently select the auxilliary address and correspondings subnet for the route to be created on the host.
+
+- IPv6 is preferred with a fallback to IPv4 when the management network is not v6 enabled.
+
+- When `ipv4-range`/`ipv6-range` is used, the host route is created according to that.
 
 ### Skipping the management network
 

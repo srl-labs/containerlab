@@ -24,6 +24,15 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 	defer cancel()
 
 	host := d.macvlanHost()
+	nres, inspectErr := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	if inspectErr != nil && !cerrdefs.IsNotFound(inspectErr) {
+		return fmt.Errorf("inspect macvlan network %q: %w", d.mgmt.Network, inspectErr)
+	}
+	if inspectErr == nil && d.mgmt.MacvlanAux == "auto" {
+		if aux := nres.Labels[clabconstants.MacvlanAux]; aux != "" {
+			d.mgmt.MacvlanAux = aux
+		}
+	}
 	parent, err := mgmt.PrepareMacvlanParent(d.mgmt, host.Links)
 	if err != nil {
 		return err
@@ -33,8 +42,7 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		return err
 	}
 
-	nres, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	if cerrdefs.IsNotFound(err) {
+	if cerrdefs.IsNotFound(inspectErr) {
 		log.Info("Creating docker network", "name", d.mgmt.Network, "driver", "macvlan",
 			"parent", d.mgmt.MacvlanParent)
 		_, err = d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)

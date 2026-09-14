@@ -435,6 +435,54 @@ func TestCreateMacvlanNetwork(t *testing.T) {
 	}
 }
 
+func TestCreateMacvlanNetworkAutoAux(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	rt.mgmt.MacvlanAux = "auto"
+	f := newFakeMacvlanNetlink()
+	rt.macvlanNetlink = f
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	ip, route, err := rt.mgmt.MacvlanHostAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if route != netip.MustParsePrefix(rt.mgmt.IPv4Range) ||
+		fake.info.IPAM.Config[0].AuxAddress["host"] != ip.String() ||
+		fake.info.Labels[clabconstants.MacvlanAux] != rt.mgmt.MacvlanAux {
+		t.Fatalf("automatic auxiliary configuration was not persisted: %+v", fake.info)
+	}
+}
+
+func TestReuseMacvlanNetworkAutoAux(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	opts, err := macvlanNetworkOptions(rt.mgmt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake.info = networkapi.Inspect{
+		ID:      "network-id",
+		Driver:  "macvlan",
+		Options: opts.Options,
+		IPAM:    *opts.IPAM,
+		Labels:  opts.Labels,
+	}
+	fake.created = true
+	rt.mgmt.MacvlanAux = "auto"
+	f := newFakeMacvlanNetlink()
+	rt.macvlanNetlink = f
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if rt.mgmt.MacvlanAux != "192.0.2.129/26" || fake.creates.Load() != 0 {
+		t.Fatalf("existing automatic auxiliary configuration was not reused: %+v", rt.mgmt)
+	}
+}
+
 func TestMacvlanNetworkReuseValidation(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

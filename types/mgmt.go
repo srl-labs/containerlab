@@ -65,6 +65,14 @@ func (m *MgmtNet) Validate() error {
 			)
 		}
 
+		if m.MacvlanAux == "auto" {
+			if m.IPAM.Provider != IPAMProviderContainerlab {
+				return fmt.Errorf("mgmt.macvlan-aux auto requires the containerlab IPAM provider")
+			} else {
+				return nil
+			}
+		}
+
 		aux, err := netip.ParseAddr(m.MacvlanAux)
 		if prefix, prefixErr := netip.ParsePrefix(m.MacvlanAux); prefixErr == nil {
 			aux, err = prefix.Addr(), nil

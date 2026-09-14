@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/netip"
 	"reflect"
 	"strings"
 	"testing"
@@ -261,6 +262,45 @@ func (f parentNetlink) LinkByName(string) (netlink.Link, error) {
 	return f.parent, f.lookupErr
 }
 
+func TestResolveMacvlanAux(t *testing.T) {
+	dualStack := &clabtypes.MgmtNet{
+		Network:    "test",
+		IPv4Subnet: "192.0.2.0/24",
+		IPv4Range:  "192.0.2.128/26",
+		IPv6Subnet: "2001:db8::/64",
+		IPv6Range:  "2001:db8::100/120",
+		MacvlanAux: "auto",
+	}
+	if err := resolveMacvlanAux(dualStack); err != nil {
+		t.Fatal(err)
+	}
+	ip, route, err := dualStack.MacvlanHostAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ip.Is6() || route != netip.MustParsePrefix("2001:db8::100/120") {
+		t.Fatalf("automatic auxiliary address = %s route %s; want IPv6 allocation range", ip, route)
+	}
+
+	ipv4 := &clabtypes.MgmtNet{
+		Network:    "test",
+		IPv4Subnet: "192.0.2.0/24",
+		IPv4Range:  "192.0.2.128/26",
+		MacvlanAux: "auto",
+	}
+	if err := resolveMacvlanAux(ipv4); err != nil {
+		t.Fatal(err)
+	}
+	first := ipv4.MacvlanAux
+	ipv4.MacvlanAux = "auto"
+	if err := resolveMacvlanAux(ipv4); err != nil {
+		t.Fatal(err)
+	}
+	if ipv4.MacvlanAux != first {
+		t.Fatalf("automatic auxiliary address changed: %q, then %q", first, ipv4.MacvlanAux)
+	}
+}
+
 func TestPrepareMacvlanParent(t *testing.T) {
 	parent := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent"}}
 	failure := errors.New("parent unavailable")
@@ -299,17 +339,20 @@ func TestPrepareMacvlanParentRejectsConflictingAuxRoute(t *testing.T) {
 		routes: []netlink.Route{{LinkIndex: parent.Attrs().Index, Dst: dst}},
 	}
 	for _, tc := range []struct {
-		aux     string
-		failure bool
+		aux, ipRange string
+		failure      bool
 	}{
-		{"192.0.2.129", true},
-		{"192.0.2.129/26", false},
+		{"192.0.2.129", "", true},
+		{"192.0.2.129/26", "", false},
+		{"auto", "", true},
+		{"auto", "192.0.2.128/26", false},
 	} {
-		t.Run(tc.aux, func(t *testing.T) {
+		t.Run(tc.aux+"/"+tc.ipRange, func(t *testing.T) {
 			m := &clabtypes.MgmtNet{
 				Driver:        "macvlan",
 				MacvlanParent: "parent",
 				IPv4Subnet:    "192.0.2.0/24",
+				IPv4Range:     tc.ipRange,
 				MacvlanAux:    tc.aux,
 			}
 			_, err := PrepareMacvlanParent(m, links)

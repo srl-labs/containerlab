@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/utils/ipam"
 	"github.com/vishvananda/netlink"
 )
 
@@ -129,6 +130,9 @@ func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanHostNetl
 	if resolved.IPv4Subnet == "" && resolved.IPv6Subnet == "" {
 		return fmt.Errorf("macvlan parent %q has no usable IP subnet; configure mgmt.ipv4-subnet or mgmt.ipv6-subnet explicitly", parent.Attrs().Name)
 	}
+	if err := resolveMacvlanAux(&resolved); err != nil {
+		return err
+	}
 	if err := resolved.Validate(); err != nil {
 		return err
 	}
@@ -138,6 +142,50 @@ func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanHostNetl
 		}
 	}
 	m.IPv4Subnet, m.IPv6Subnet = resolved.IPv4Subnet, resolved.IPv6Subnet
+	m.MacvlanAux = resolved.MacvlanAux
+	return nil
+}
+
+func resolveMacvlanAux(m *clabtypes.MgmtNet) error {
+	if m.MacvlanAux != "auto" {
+		return nil
+	}
+	subnet, pool, gateway := m.IPv4Subnet, m.IPv4Range, m.IPv4Gw
+	if m.IPv6Subnet != "" {
+		subnet, pool, gateway = m.IPv6Subnet, m.IPv6Range, m.IPv6Gw
+	}
+	prefix, err := netip.ParsePrefix(subnet)
+	if err != nil {
+		return fmt.Errorf("resolve automatic macvlan auxiliary subnet %q: %w", subnet, err)
+	}
+	route := prefix
+	if pool != "" {
+		route, err = netip.ParsePrefix(pool)
+		if err != nil {
+			return fmt.Errorf("resolve automatic macvlan auxiliary range %q: %w", pool, err)
+		}
+	}
+	gatewayAddress := prefix.Masked().Addr().Next()
+	if gateway != "" {
+		gatewayAddress, err = netip.ParseAddr(gateway)
+		if err != nil {
+			return fmt.Errorf("resolve automatic macvlan auxiliary gateway %q: %w", gateway, err)
+		}
+	}
+	allocator, err := ipam.NewIPAllocator(prefix, route, []netip.Addr{gatewayAddress})
+	if err != nil {
+		return err
+	}
+	addresses, err := allocator.AllocateBatch(
+		context.Background(),
+		[]string{"macvlan-aux:" + m.Network},
+		1,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("allocate automatic macvlan auxiliary address: %w", err)
+	}
+	m.MacvlanAux = netip.PrefixFrom(addresses[0], route.Bits()).String()
 	return nil
 }
 

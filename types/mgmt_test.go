@@ -117,6 +117,20 @@ func TestMacvlanManagementValidation(t *testing.T) {
 			change:  func(m *MgmtNet) { m.MacvlanMode = "private"; m.MacvlanAux = "192.0.2.10" },
 			wantErr: true,
 		},
+		{name: "automatic aux", change: func(m *MgmtNet) { m.MacvlanAux = "auto" }},
+		{
+			name: "automatic aux with runtime IPAM",
+			change: func(m *MgmtNet) {
+				m.MacvlanAux = "auto"
+				m.IPAM.Provider = IPAMProviderRuntime
+			},
+			wantErr: true,
+		},
+		{
+			name:    "automatic aux in private mode",
+			change:  func(m *MgmtNet) { m.MacvlanMode = "private"; m.MacvlanAux = "auto" },
+			wantErr: true,
+		},
 		{
 			name:    "parent override",
 			change:  func(m *MgmtNet) { m.DriverOpts = map[string]string{"parent": "eth1"} },
