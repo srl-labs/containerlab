@@ -15,6 +15,28 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func allocateManagementIPsForTest(
+	ctx context.Context,
+	m *clabtypes.MgmtNet,
+	nodes []*clabtypes.NodeConfig,
+	check func(context.Context, *clabtypes.MgmtNet, netip.Addr) error,
+	options ...clabtypes.AllocationOptions,
+) error {
+	var option clabtypes.AllocationOptions
+	if len(options) != 0 {
+		option = options[0]
+	}
+	drafts, err := allocateManagementIPs(ctx, m, nodes, check, option)
+	if err != nil {
+		return err
+	}
+	for i := range nodes {
+		nodes[i].MgmtIPv4Address = drafts[i].MgmtIPv4Address
+		nodes[i].MgmtIPv6Address = drafts[i].MgmtIPv6Address
+	}
+	return nil
+}
+
 func TestAllocateIPs(t *testing.T) {
 	m := &clabtypes.MgmtNet{
 		IPAM:       clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab},
@@ -30,6 +52,7 @@ func TestAllocateIPs(t *testing.T) {
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{b, a},
+		clabtypes.AllocationOptions{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +61,7 @@ func TestAllocateIPs(t *testing.T) {
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{a2, b2},
+		clabtypes.AllocationOptions{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +97,7 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 	for _, name := range []string{"a", "b", "c", "d"} {
 		nodes = append(nodes, &clabtypes.NodeConfig{ShortName: name})
 	}
-	if err := AllocateManagementIPs(context.Background(), m, nodes); err != nil {
+	if err := AllocateManagementIPs(context.Background(), m, nodes, clabtypes.AllocationOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if nodes[0].MgmtIPv4Address != "192.0.2.2" ||
@@ -88,12 +112,14 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 	if err := AllocateManagementIPs(context.Background(),
 		m,
 		append(nodes, &clabtypes.NodeConfig{ShortName: "overflow"}),
+		clabtypes.AllocationOptions{},
 	); err == nil {
 		t.Fatal("expected exhaustion")
 	}
 	if err := AllocateManagementIPs(context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{{ShortName: "a", MgmtIPv4Address: "192.0.2.1"}},
+		clabtypes.AllocationOptions{},
 	); err == nil {
 		t.Fatal("accepted gateway")
 	}
@@ -103,6 +129,7 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 			{ShortName: "a", MgmtIPv4Address: "192.0.2.2"},
 			{ShortName: "b", MgmtIPv4Address: "192.0.2.2"},
 		},
+		clabtypes.AllocationOptions{},
 	); err == nil {
 		t.Fatal("accepted duplicate")
 	}
@@ -120,6 +147,7 @@ func TestManagementIPAMProvider(t *testing.T) {
 				context.Background(),
 				m,
 				[]*clabtypes.NodeConfig{n},
+				clabtypes.AllocationOptions{},
 			); err != nil {
 				t.Fatal(err)
 			}
@@ -145,7 +173,7 @@ func TestAllocationDADBeforeCommit(t *testing.T) {
 			}
 			conflict := errors.New("probe failed")
 			calls := 0
-			err := allocateManagementIPs(
+			err := allocateManagementIPsForTest(
 				context.Background(),
 				m,
 				[]*clabtypes.NodeConfig{n},
@@ -178,7 +206,7 @@ func TestAllocationDADProviderAndDisable(t *testing.T) {
 				IPAM:       clabtypes.MgmtIPAM{Provider: provider, DAD: dad},
 			}
 			calls := 0
-			err := allocateManagementIPs(
+			err := allocateManagementIPsForTest(
 				context.Background(),
 				m,
 				[]*clabtypes.NodeConfig{{ShortName: "node"}},
@@ -209,7 +237,8 @@ func TestAllocationRejectsHostAddress(t *testing.T) {
 		if explicit {
 			n.MgmtIPv4Address = "127.0.0.1"
 		}
-		err := AllocateManagementIPs(context.Background(), m, []*clabtypes.NodeConfig{n})
+		err := AllocateManagementIPs(
+			context.Background(), m, []*clabtypes.NodeConfig{n}, clabtypes.AllocationOptions{})
 		if explicit {
 			if err != nil || n.MgmtIPv4Address != "127.0.0.1" {
 				t.Fatalf("static address changed or failed: %v", err)
@@ -234,7 +263,7 @@ func TestAllocationPreservesExistingAddresses(t *testing.T) {
 	added := &clabtypes.NodeConfig{ShortName: "added"}
 	existing := netip.MustParseAddr("192.0.2.129")
 	calls := 0
-	err := allocateManagementIPs(
+	err := allocateManagementIPsForTest(
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{retained, added},
@@ -268,7 +297,7 @@ func TestAllocationDADPrefersFreeAddress(t *testing.T) {
 			n := &clabtypes.NodeConfig{ShortName: "node"}
 			seen := map[netip.Addr]bool{}
 			var accepted netip.Addr
-			err := allocateManagementIPs(
+			err := allocateManagementIPsForTest(
 				context.Background(),
 				m,
 				[]*clabtypes.NodeConfig{n},
@@ -310,7 +339,7 @@ func TestAllocationDADExhaustionAndStaticConflict(t *testing.T) {
 			n.MgmtIPv4Address = "192.0.2.2"
 		}
 		calls := 0
-		err := allocateManagementIPs(
+		err := allocateManagementIPsForTest(
 			context.Background(),
 			m,
 			[]*clabtypes.NodeConfig{n},
@@ -340,7 +369,7 @@ func TestAllocationDADExhaustionAndStaticConflict(t *testing.T) {
 	}
 	n := &clabtypes.NodeConfig{ShortName: "node", MgmtIPv4Address: "192.0.2.2"}
 	calls := 0
-	if err := allocateManagementIPs(
+	if err := allocateManagementIPsForTest(
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{n},
@@ -363,7 +392,7 @@ func TestAllocationDADCancellationDuringRetry(t *testing.T) {
 	m := &clabtypes.MgmtNet{Driver: "macvlan", MacvlanMode: "private", IPv6Subnet: "2001:db8::/64"}
 	n := &clabtypes.NodeConfig{ShortName: "node"}
 	calls := 0
-	err := allocateManagementIPs(
+	err := allocateManagementIPsForTest(
 		ctx,
 		m,
 		[]*clabtypes.NodeConfig{n},
@@ -387,7 +416,7 @@ func TestAllocationUsesLocalDADForNonMacvlan(t *testing.T) {
 		}
 		n := &clabtypes.NodeConfig{ShortName: "node"}
 		calls := 0
-		err := allocateManagementIPs(
+		err := allocateManagementIPsForTest(
 			context.Background(),
 			m,
 			[]*clabtypes.NodeConfig{n},
@@ -407,7 +436,7 @@ func TestAllocationSkipsWholeReservedSubnet(t *testing.T) {
 	n := &clabtypes.NodeConfig{ShortName: "node"}
 	checks := 0
 	var blocked netip.Prefix
-	err := allocateManagementIPs(
+	err := allocateManagementIPsForTest(
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{n},
@@ -444,7 +473,7 @@ func TestPreferredAllocationPreferences(t *testing.T) {
 			m := &clabtypes.MgmtNet{IPv4Subnet: "192.0.2.0/29"}
 			n := &clabtypes.NodeConfig{ShortName: "node", MgmtIPv4Address: tc.explicit}
 			var checked []netip.Addr
-			err := allocateManagementIPs(
+			err := allocateManagementIPsForTest(
 				context.Background(),
 				m,
 				[]*clabtypes.NodeConfig{n},
@@ -486,7 +515,7 @@ func TestPreferredIPv6AndRuntimeOwnership(t *testing.T) {
 	n := &clabtypes.NodeConfig{ShortName: "node"}
 	live := netip.MustParseAddr("2001:db8::3")
 	checks := 0
-	err := allocateManagementIPs(
+	err := allocateManagementIPsForTest(
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{n},
@@ -500,7 +529,7 @@ func TestPreferredIPv6AndRuntimeOwnership(t *testing.T) {
 		t.Fatalf("runtime ownership did not win: %v, %+v", err, n)
 	}
 	n.MgmtIPv6Address = ""
-	err = allocateManagementIPs(
+	err = allocateManagementIPsForTest(
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{n},
@@ -519,6 +548,7 @@ func TestPreferredAddressReservedBeforeNewNodes(t *testing.T) {
 		context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{newNode},
+		clabtypes.AllocationOptions{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -546,7 +576,7 @@ func TestStaticAndPreferredAddressesShareDADBatch(t *testing.T) {
 	}
 	var calls atomic.Int32
 	gate := make(chan struct{})
-	err := allocateManagementIPs(
+	err := allocateManagementIPsForTest(
 		ctx,
 		m,
 		nodes,
@@ -592,7 +622,7 @@ func TestMacvlanAllocationConcurrentChecks(t *testing.T) {
 			}
 			var active, peak, calls atomic.Int32
 			gate := make(chan struct{})
-			err := allocateManagementIPs(ctx, m, nodes, func(ctx context.Context, _ *clabtypes.MgmtNet, _ netip.Addr) error {
+			err := allocateManagementIPsForTest(ctx, m, nodes, func(ctx context.Context, _ *clabtypes.MgmtNet, _ netip.Addr) error {
 				count := active.Add(1)
 				defer active.Add(-1)
 				for old := peak.Load(); count > old; old = peak.Load() {
@@ -640,7 +670,7 @@ func TestStaticManagementAddressDADWarning(t *testing.T) {
 					IPAM: clabtypes.MgmtIPAM{DAD: dad}}
 				n := &clabtypes.NodeConfig{ShortName: "static", MgmtIPv4Address: "192.0.2.5", MgmtIPv6Address: "2001:db8::5"}
 				var calls atomic.Int32
-				err := allocateManagementIPs(context.Background(), m, []*clabtypes.NodeConfig{n},
+				err := allocateManagementIPsForTest(context.Background(), m, []*clabtypes.NodeConfig{n},
 					func(context.Context, *clabtypes.MgmtNet, netip.Addr) error {
 						calls.Add(1)
 						return ErrDuplicateAddress

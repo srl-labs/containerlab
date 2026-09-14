@@ -55,21 +55,7 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context) error {
 		return err
 	}
 	d.mgmt.Bridge = ""
-	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
-	d.mgmt.IPv4Range, d.mgmt.IPv6Range = "", ""
-	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw = "", ""
-
-	for _, pool := range nres.IPAM.Config {
-		prefix, err := netip.ParsePrefix(pool.Subnet)
-		if err != nil {
-			continue
-		}
-		if prefix.Addr().Is4() {
-			d.mgmt.IPv4Subnet, d.mgmt.IPv4Range, d.mgmt.IPv4Gw = pool.Subnet, pool.IPRange, pool.Gateway
-		} else {
-			d.mgmt.IPv6Subnet, d.mgmt.IPv6Range, d.mgmt.IPv6Gw = pool.Subnet, pool.IPRange, pool.Gateway
-		}
-	}
+	setMgmtIPAMFromDockerPools(d.mgmt, nres.IPAM.Config, true)
 
 	return nil
 }

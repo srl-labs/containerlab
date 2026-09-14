@@ -22,19 +22,13 @@ func AllocateManagementIPs(
 	ctx context.Context,
 	m *clabtypes.MgmtNet,
 	nodes []*clabtypes.NodeConfig,
-	options ...clabtypes.AllocationOptions,
+	options clabtypes.AllocationOptions,
 ) error {
 	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return nil
 	}
 	checker := &dadChecker{}
-	// Keep node configs unchanged if closing the shared probe interface fails.
-	drafts := make([]*clabtypes.NodeConfig, len(nodes))
-	for i, node := range nodes {
-		copy := *node
-		drafts[i] = &copy
-	}
-	err := allocateManagementIPs(ctx, m, drafts, checker.Check, options...)
+	drafts, err := allocateManagementIPs(ctx, m, nodes, checker.Check, options)
 	if err == nil {
 		err = setManagementIPConfig(m, drafts)
 	}
@@ -98,34 +92,23 @@ func eligibleForManagementIPAM(n *clabtypes.NodeConfig) bool {
 
 func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*clabtypes.NodeConfig,
 	check func(context.Context, *clabtypes.MgmtNet, netip.Addr) error,
-	options ...clabtypes.AllocationOptions,
-) error {
+	options clabtypes.AllocationOptions,
+) ([]*clabtypes.NodeConfig, error) {
 
 	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
-		return nil
+		return nodes, nil
 	}
 
 	if err := ctx.Err(); err != nil {
-		return err
-	}
-	var existing []clabtypes.ExistingAddress
-	var reservedAddresses []netip.Addr
-	preferred := make(map[string]clabtypes.NodeAddresses)
-	for _, option := range options {
-		existing = append(existing, option.Existing...)
-		reservedAddresses = append(reservedAddresses, option.Reserved...)
-		for name, addresses := range option.Preferred {
-			preferred[name] = addresses
-		}
+		return nil, err
 	}
 	// Commit generated addresses only after every candidate passes validation and DAD.
-	originals := append([]*clabtypes.NodeConfig(nil), nodes...)
-	nodes = make([]*clabtypes.NodeConfig, len(originals))
-	for i, node := range originals {
+	drafts := make([]*clabtypes.NodeConfig, len(nodes))
+	for i, node := range nodes {
 		copy := *node
-		nodes[i] = &copy
+		drafts[i] = &copy
 	}
-	drafts := append([]*clabtypes.NodeConfig(nil), nodes...)
+	nodes = append([]*clabtypes.NodeConfig(nil), drafts...)
 	byName := make(map[string]*clabtypes.NodeConfig, len(nodes))
 	for _, node := range nodes {
 		byName[node.ShortName] = node
@@ -184,15 +167,15 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			return &n.MgmtIPv6Address
 		}
 		// Runtime reservations are authoritative even when wire/local DAD is disabled.
-		runtimeReserved := make(map[netip.Addr]bool, len(reservedAddresses))
-		for _, ip := range reservedAddresses {
+		runtimeReserved := make(map[netip.Addr]bool, len(options.Reserved))
+		for _, ip := range options.Reserved {
 			if prefix.Contains(ip) {
 				runtimeReserved[ip] = true
 				allocator.ReservePrefix(netip.PrefixFrom(ip, ip.BitLen()))
 			}
 		}
 		owned := make(map[netip.Addr]string)
-		for _, current := range existing {
+		for _, current := range options.Existing {
 			if !prefix.Contains(current.Address) {
 				continue
 			}
@@ -264,9 +247,9 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			if !eligibleForManagementIPAM(n) || *address(n) != "" {
 				continue
 			}
-			preference := preferred[n.ShortName].IPv6
+			preference := options.Preferred[n.ShortName].IPv6
 			if v4 {
-				preference = preferred[n.ShortName].IPv4
+				preference = options.Preferred[n.ShortName].IPv4
 			}
 			ip, err := netip.ParseAddr(preference)
 			if err != nil || !allocation.Contains(ip) {
@@ -322,21 +305,17 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			group.Go(func() error { return allocateFamily(familyCtx, v4) })
 		}
 		if err := group.Wait(); err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		for _, v4 := range []bool{true, false} {
 			if err := allocateFamily(ctx, v4); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
-	for i, original := range originals {
-		original.MgmtIPv4Address = drafts[i].MgmtIPv4Address
-		original.MgmtIPv6Address = drafts[i].MgmtIPv6Address
-	}
-	return nil
+	return drafts, nil
 }

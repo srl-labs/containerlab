@@ -321,6 +321,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+		netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		if err != nil {
+			return err
+		}
 	case err == nil:
 		if d.mgmt.Driver != "" && d.mgmt.Driver != netResource.Driver {
 			return fmt.Errorf("network %q uses driver %q, requested %q",
@@ -340,32 +344,13 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		d.mgmt.Bridge = bridgeName
 	}
 
-	netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	if err != nil {
-		return err
-	}
-
 	// default docker bridge rejects user-specified endpoint addresses (ie. clab ipam generated addr)
 	if d.mgmt.Network == defaultDockerNetwork && d.mgmt.IPAM.Provider != clabtypes.IPAMProviderRuntime {
 		log.Info("Using runtime IPAM for default bridge network")
 		d.mgmt.IPAM.Provider = clabtypes.IPAMProviderRuntime
 	}
 
-	d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet = "", ""
-	d.mgmt.IPv4Range, d.mgmt.IPv6Range = "", ""
-	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw = "", ""
-
-	for _, pool := range netResource.IPAM.Config {
-		prefix, err := netip.ParsePrefix(pool.Subnet)
-		if err != nil {
-			continue
-		}
-		if prefix.Addr().Is4() {
-			d.mgmt.IPv4Subnet, d.mgmt.IPv4Range, d.mgmt.IPv4Gw = pool.Subnet, pool.IPRange, pool.Gateway
-		} else {
-			d.mgmt.IPv6Subnet, d.mgmt.IPv6Range, d.mgmt.IPv6Gw = pool.Subnet, pool.IPRange, pool.Gateway
-		}
-	}
+	setMgmtIPAMFromDockerPools(d.mgmt, netResource.IPAM.Config, false)
 
 	// get management bridge v4/6 addresses and save it under mgmt struct
 	// so that nodes can use this information prior to being deployed
@@ -379,6 +364,32 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
 	return d.postCreateNetActions()
+}
+
+func setMgmtIPAMFromDockerPools(
+	m *clabtypes.MgmtNet,
+	pools []networkapi.IPAMConfig,
+	includeGateways bool,
+) {
+	m.IPv4Subnet, m.IPv6Subnet = "", ""
+	m.IPv4Range, m.IPv6Range = "", ""
+	m.IPv4Gw, m.IPv6Gw = "", ""
+
+	for _, pool := range pools {
+		prefix, err := netip.ParsePrefix(pool.Subnet)
+		if err != nil {
+			continue
+		}
+		gateway := ""
+		if includeGateways {
+			gateway = pool.Gateway
+		}
+		if prefix.Addr().Is4() {
+			m.IPv4Subnet, m.IPv4Range, m.IPv4Gw = pool.Subnet, pool.IPRange, gateway
+		} else {
+			m.IPv6Subnet, m.IPv6Range, m.IPv6Gw = pool.Subnet, pool.IPRange, gateway
+		}
+	}
 }
 
 // skipcq: GO-R1005

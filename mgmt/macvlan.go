@@ -123,7 +123,7 @@ func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink,
 		if family.otherExplicit && !family.requested {
 			continue
 		}
-		subnet, err := MacvlanParentSubnet(links, parent, family.id)
+		subnet, err := macvlanParentSubnet(links, parent, family.id)
 		if err != nil {
 			return err
 		}
@@ -148,9 +148,9 @@ func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink,
 	return nil
 }
 
-// MacvlanParentSubnet returns the parent's single usable subnet for a family.
+// macvlanParentSubnet returns the parent's single usable subnet for a family.
 // No global-unicast address returns an invalid prefix without an error.
-func MacvlanParentSubnet(links clabutils.MacvlanNetlink, parent netlink.Link, family int) (netip.Prefix, error) {
+func macvlanParentSubnet(links clabutils.MacvlanNetlink, parent netlink.Link, family int) (netip.Prefix, error) {
 	addresses, err := links.AddrList(parent, family)
 	if err != nil {
 		return netip.Prefix{}, fmt.Errorf("read macvlan parent %q addresses: %w", parent.Attrs().Name, err)

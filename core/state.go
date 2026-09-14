@@ -16,10 +16,10 @@ import (
 
 type LabState struct {
 	Topology *clabtypes.Topology     `yaml:"topology"`
-	Nodes    map[string]LabNodeState `yaml:"nodes,omitempty"`
+	Nodes    map[string]labNodeState `yaml:"nodes,omitempty"`
 }
 
-type LabNodeState struct {
+type labNodeState struct {
 	IPAM *clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
 }
 
@@ -29,7 +29,7 @@ func (c *CLab) WriteState() error {
 		Topology: c.Config.Topology,
 	}
 
-	c.WriteNodeState(state)
+	c.writeIPAMState(state)
 
 	data, err := yaml.Marshal(state)
 	if err != nil {
@@ -67,14 +67,8 @@ func (c *CLab) WriteState() error {
 	return nil
 }
 
-func (c *CLab) WriteNodeState(state *LabState) {
-	state.Nodes = make(map[string]LabNodeState)
-	c.WriteLabIPAMState(state)
-}
-
-// Only for containerlab IPAM provider.
-// Runtime provider we needn't keep any state.
-func (c *CLab) WriteLabIPAMState(state *LabState) {
+func (c *CLab) writeIPAMState(state *LabState) {
+	state.Nodes = make(map[string]labNodeState)
 	if c.Config.Mgmt == nil || c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return
 	}
@@ -115,7 +109,7 @@ func (c *CLab) WriteLabIPAMState(state *LabState) {
 			}
 		}
 		if addresses.IPv4 != "" || addresses.IPv6 != "" {
-			state.Nodes[name] = LabNodeState{IPAM: &addresses}
+			state.Nodes[name] = labNodeState{IPAM: &addresses}
 		}
 	}
 }

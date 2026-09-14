@@ -185,42 +185,35 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		}
 		log.Debugf("Create network response was: %+v", resp)
 	}
-	if r.mgmt.IPAM.Provider == types.IPAMProviderRuntime {
-		if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
-			details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
-			if err != nil {
-				return err
-			}
-			r.mgmt.Bridge = details.NetworkInterface
-		}
-	} else {
-		// Allocation requires the subnet and gateway of the created or reused network.
+	if r.mgmt.Bridge == "" || r.mgmt.IPAM.Provider != types.IPAMProviderRuntime {
 		details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
 		if err != nil {
 			return err
 		}
-
 		if r.mgmt.Bridge == "" {
 			r.mgmt.Bridge = details.NetworkInterface
 		}
 
-		r.mgmt.IPv4Subnet, r.mgmt.IPv6Subnet = "", ""
-		r.mgmt.IPv4Gw, r.mgmt.IPv6Gw = "", ""
+		if r.mgmt.IPAM.Provider != types.IPAMProviderRuntime {
+			// Allocation requires the subnet and gateway of the created or reused network.
+			r.mgmt.IPv4Subnet, r.mgmt.IPv6Subnet = "", ""
+			r.mgmt.IPv4Gw, r.mgmt.IPv6Gw = "", ""
 
-		for _, subnet := range details.Subnets {
-			gateway := ""
-			if subnet.Gateway != nil {
-				gateway = subnet.Gateway.String()
-			}
-			if subnet.Subnet.IP.To4() != nil {
-				r.mgmt.IPv4Subnet, r.mgmt.IPv4Gw = subnet.Subnet.String(), gateway
-			} else {
-				r.mgmt.IPv6Subnet, r.mgmt.IPv6Gw = subnet.Subnet.String(), gateway
+			for _, subnet := range details.Subnets {
+				gateway := ""
+				if subnet.Gateway != nil {
+					gateway = subnet.Gateway.String()
+				}
+				if subnet.Subnet.IP.To4() != nil {
+					r.mgmt.IPv4Subnet, r.mgmt.IPv4Gw = subnet.Subnet.String(), gateway
+				} else {
+					r.mgmt.IPv6Subnet, r.mgmt.IPv6Gw = subnet.Subnet.String(), gateway
+				}
 			}
 		}
 	}
 
-	return err
+	return nil
 }
 
 // DeleteNet deletes a clab mgmt bridge.

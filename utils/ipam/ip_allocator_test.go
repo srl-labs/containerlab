@@ -8,6 +8,19 @@ import (
 	"testing"
 )
 
+func allocateOne(
+	a *IPAllocator,
+	ctx context.Context,
+	key string,
+	accept func(netip.Addr) bool,
+) (netip.Addr, error) {
+	addresses, err := a.AllocateBatch(ctx, []string{key}, 1, accept)
+	if err != nil {
+		return netip.Addr{}, err
+	}
+	return addresses[0], nil
+}
+
 func TestIPAllocator(t *testing.T) {
 	for _, subnet := range []string{"192.0.2.0/30", "2001:db8::/126"} {
 		t.Run(subnet, func(t *testing.T) {
@@ -16,7 +29,7 @@ func TestIPAllocator(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ip, err := a.Allocate(context.Background(), "node", nil)
+			ip, err := allocateOne(a, context.Background(), "node", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,16 +43,16 @@ func TestIPAllocator(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			again, err := b.Allocate(context.Background(), "node", nil)
+			again, err := allocateOne(b, context.Background(), "node", nil)
 			if err != nil || ip != again {
 				t.Fatalf("unstable allocation: %s %v", again, err)
 			}
 			if !ip.Is4() {
-				if _, err := a.Allocate(context.Background(), "other", nil); err != nil {
+				if _, err := allocateOne(a, context.Background(), "other", nil); err != nil {
 					t.Fatal(err)
 				}
 			}
-			if _, err := a.Allocate(context.Background(), "full", nil); err == nil {
+			if _, err := allocateOne(a, context.Background(), "full", nil); err == nil {
 				t.Fatal("expected exhaustion")
 			}
 		})
@@ -61,7 +74,7 @@ func TestIPAllocatorInvalidPools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Allocate(context.Background(), "full", nil); err == nil {
+	if _, err := allocateOne(a, context.Background(), "full", nil); err == nil {
 		t.Fatal("allocated subnet boundary")
 	}
 }
@@ -74,7 +87,7 @@ func TestIPAllocatorBoolCallback(t *testing.T) {
 			t.Fatal(err)
 		}
 		seen := map[netip.Addr]bool{}
-		ip, err := a.Allocate(context.Background(), "node", func(ip netip.Addr) bool {
+		ip, err := allocateOne(a, context.Background(), "node", func(ip netip.Addr) bool {
 			if seen[ip] {
 				t.Fatalf("repeated rejected candidate %s", ip)
 			}
@@ -84,7 +97,7 @@ func TestIPAllocatorBoolCallback(t *testing.T) {
 		if err != nil || !seen[ip] || len(seen) != 3 {
 			t.Fatalf("callback allocation: %s %v", ip, err)
 		}
-		if _, err := a.Allocate(context.Background(), "full", func(netip.Addr) bool { return false }); err == nil {
+		if _, err := allocateOne(a, context.Background(), "full", func(netip.Addr) bool { return false }); err == nil {
 			t.Fatal("expected exhaustion")
 		}
 	}
@@ -100,7 +113,7 @@ func TestIPAllocatorCallbackCancellation(t *testing.T) {
 	defer cancel(nil)
 	failure := errors.New("probe failed")
 	calls := 0
-	_, err = a.Allocate(ctx, "node", func(netip.Addr) bool { calls++; cancel(failure); return false })
+	_, err = allocateOne(a, ctx, "node", func(netip.Addr) bool { calls++; cancel(failure); return false })
 	if !errors.Is(err, failure) || calls != 1 {
 		t.Fatalf("failed to abort retry: %v, %d calls", err, calls)
 	}

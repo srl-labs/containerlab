@@ -102,16 +102,6 @@ func (a *IPAllocator) candidate(key string) (netip.Addr, error) {
 	return ip, nil
 }
 
-// Allocate tries candidates until accept returns true. Nil accepts any candidate.
-// Rejected addresses remain reserved. Context cancellation aborts the search.
-func (a *IPAllocator) Allocate(ctx context.Context, key string, accept func(netip.Addr) bool) (netip.Addr, error) {
-	addresses, err := a.AllocateBatch(ctx, []string{key}, 1, accept)
-	if err != nil {
-		return netip.Addr{}, err
-	}
-	return addresses[0], nil
-}
-
 // AllocateBatch reserves candidates in key order before checking them concurrently.
 // Only rejected candidates are retried, in their original order. Each candidate
 // search is bounded by address width; total work also depends on rejection count.

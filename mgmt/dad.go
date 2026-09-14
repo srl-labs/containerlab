@@ -18,7 +18,6 @@ import (
 	"github.com/gopacket/gopacket/afpacket"
 	"github.com/gopacket/gopacket/layers"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils/ipam"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/bpf"
 )
@@ -251,33 +250,6 @@ func (p *macvlanProbe) Check(ctx context.Context, ip netip.Addr) error {
 	}
 	err := p.scheduler.Check(ctx, ip)
 	log.Debug("DAD check completed", "mac", p.mac, "address", ip, "error", err)
-	return err
-}
-
-// CheckDuplicateAddresses probes a batch using a single temporary interface.
-func CheckDuplicateAddresses(
-	ctx context.Context,
-	parentName string,
-	addresses []netip.Addr,
-) (err error) {
-	p, err := newMacvlanProbe(parentName)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if cleanupErr := p.Close(); cleanupErr != nil {
-			err = fmt.Errorf("remove DAD interface (probe result: %v): %w", err, cleanupErr)
-		}
-	}()
-	ctx, cancel := context.WithCancelCause(ctx)
-	defer cancel(nil)
-	_, err = ipam.CheckIPAddresses(ctx, addresses, len(addresses), func(ip netip.Addr) bool {
-		if err := p.Check(ctx, ip); err != nil {
-			cancel(fmt.Errorf("management address %s: %w", ip, err))
-			return false
-		}
-		return true
-	})
 	return err
 }
 

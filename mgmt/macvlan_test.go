@@ -58,7 +58,7 @@ func TestMacvlanParentSubnet(t *testing.T) {
 				}
 				f.addresses = append(f.addresses, *addr)
 			}
-			got, err := MacvlanParentSubnet(f, parent, tc.family)
+			got, err := macvlanParentSubnet(f, parent, tc.family)
 			if tc.failure != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.failure) {
 					t.Fatalf("got %v, want %s", err, tc.failure)
@@ -78,7 +78,7 @@ func TestMacvlanParentSubnet(t *testing.T) {
 		})
 	}
 	failure := errors.New("read failed")
-	if _, err := MacvlanParentSubnet(parentNetlink{err: failure}, parent, netlink.FAMILY_V4); !errors.Is(err, failure) {
+	if _, err := macvlanParentSubnet(parentNetlink{err: failure}, parent, netlink.FAMILY_V4); !errors.Is(err, failure) {
 		t.Fatalf("lost read error: %v", err)
 	}
 }
