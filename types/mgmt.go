@@ -66,7 +66,7 @@ func (m *MgmtNet) Validate() error {
 		}
 
 		if m.MacvlanAux == "auto" {
-			if m.IPAM.Provider != IPAMProviderContainerlab {
+			if m.IPAM.Provider == IPAMProviderRuntime {
 				return fmt.Errorf("mgmt.macvlan-aux auto requires the containerlab IPAM provider")
 			} else {
 				return nil
