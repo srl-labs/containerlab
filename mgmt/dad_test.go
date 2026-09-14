@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"strings"
 	"testing"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/net/bpf"
 )
 
 func TestDADFrames(t *testing.T) {
@@ -76,6 +78,69 @@ func TestDADFrames(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDADCaptureFilter(t *testing.T) {
+	vm, err := bpf.NewVM(dadCaptureFilter())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mac := net.HardwareAddr{2, 0, 0, 0, 0, 1}
+	arp, err := dadProbe(mac, netip.MustParseAddr("192.0.2.2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns, err := dadProbe(mac, netip.MustParseAddr("2001:db8::2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	icmpv6 := func(kind byte) []byte {
+		frame := append([]byte(nil), ns...)
+		frame[54] = byte(kind)
+		return frame
+	}
+	ipv4 := append([]byte(nil), arp...)
+	ipv4[12], ipv4[13] = 0x08, 0x00
+	for _, tc := range []struct {
+		name   string
+		frame  []byte
+		accept bool
+	}{
+		{"ARP", arp, true},
+		{"neighbour solicitation", ns, true},
+		{"neighbour advertisement", icmpv6(byte(layers.ICMPv6TypeNeighborAdvertisement)), true},
+		{"router advertisement", icmpv6(byte(layers.ICMPv6TypeRouterAdvertisement)), false},
+		{"echo request", icmpv6(byte(layers.ICMPv6TypeEchoRequest)), false},
+		{"IPv4", ipv4, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			captured, err := vm.Run(tc.frame)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (captured != 0) != tc.accept {
+				t.Fatalf("captured %d bytes, accept=%t", captured, tc.accept)
+			}
+		})
+	}
+}
+
+func TestDADDropDeltas(t *testing.T) {
+	p := &macvlanProbe{}
+	if err := p.checkDrops(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.checkDrops(2); !errors.Is(err, errDADObservationLost) ||
+		!strings.Contains(err.Error(), "dropped 2 packets") {
+		t.Fatalf("first drop delta: %v", err)
+	}
+	if err := p.checkDrops(2); err != nil {
+		t.Fatalf("unchanged cumulative drops retriggered loss: %v", err)
+	}
+	if err := p.checkDrops(3); !errors.Is(err, errDADObservationLost) ||
+		!strings.Contains(err.Error(), "dropped 1 packets") {
+		t.Fatalf("second drop delta: %v", err)
 	}
 }
 

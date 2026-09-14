@@ -139,3 +139,68 @@ func TestDADSchedulerErrorsAndDrain(t *testing.T) {
 		})
 	}
 }
+
+func TestDADSchedulerRestartsAfterObservationLoss(t *testing.T) {
+	var sends, drains int
+	s := newDADScheduler(
+		func(netip.Addr) error {
+			sends++
+			return nil
+		},
+		func() error {
+			drains++
+			if drains == 1 {
+				return errDADObservationLost
+			}
+			return nil
+		},
+		time.Millisecond,
+		time.Millisecond,
+	)
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := s.Check(ctx, netip.MustParseAddr("192.0.2.2")); err != nil {
+		t.Fatal(err)
+	}
+	if sends != 6 || drains != 2 {
+		t.Fatalf("sends=%d drains=%d, want 6 and 2", sends, drains)
+	}
+}
+
+func TestDADSchedulerSendDoesNotBlockConflicts(t *testing.T) {
+	ip := netip.MustParseAddr("192.0.2.2")
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	s := newDADScheduler(
+		func(netip.Addr) error {
+			close(entered)
+			<-release
+			return nil
+		},
+		func() error { return nil },
+		time.Millisecond,
+		time.Second,
+	)
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- s.Check(ctx, ip) }()
+	<-entered
+	conflicted := make(chan struct{})
+	go func() {
+		s.conflict(ip, ErrDuplicateAddress)
+		close(conflicted)
+	}()
+	select {
+	case <-conflicted:
+	case <-time.After(100 * time.Millisecond):
+		close(release)
+		t.Fatal("socket write held the scheduler mutex")
+	}
+	close(release)
+	if err := <-result; !errors.Is(err, ErrDuplicateAddress) {
+		t.Fatalf("conflict result: %v", err)
+	}
+}

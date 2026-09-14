@@ -257,17 +257,6 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			explicit = append(explicit, ip)
 			explicitNodes = append(explicitNodes, n)
 		}
-		accepted, err := ipam.CheckIPAddresses(checkCtx, explicit, concurrency, accept)
-		if err != nil {
-			return err
-		}
-		for i, ok := range accepted {
-			if !ok {
-				err, _ := probeErrors.Load(explicit[i])
-				log.Warn("Duplicate static management address; retaining configured address",
-					"node", explicitNodes[i].ShortName, "address", explicit[i], "error", err.(error))
-			}
-		}
 		// Reserve all retained preferences before allocating for new nodes.
 		var preferences []netip.Addr
 		var retained []*clabtypes.NodeConfig
@@ -289,11 +278,19 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			preferences = append(preferences, ip)
 			retained = append(retained, n)
 		}
-		accepted, err = ipam.CheckIPAddresses(checkCtx, preferences, concurrency, accept)
+		candidates := append(append([]netip.Addr(nil), explicit...), preferences...)
+		accepted, err := ipam.CheckIPAddresses(checkCtx, candidates, concurrency, accept)
 		if err != nil {
 			return err
 		}
-		for i, ok := range accepted {
+		for i, ok := range accepted[:len(explicit)] {
+			if !ok {
+				err, _ := probeErrors.Load(explicit[i])
+				log.Warn("Duplicate static management address; retaining configured address",
+					"node", explicitNodes[i].ShortName, "address", explicit[i], "error", err.(error))
+			}
+		}
+		for i, ok := range accepted[len(explicit):] {
 			if ok {
 				*address(retained[i]) = preferences[i].String()
 			}

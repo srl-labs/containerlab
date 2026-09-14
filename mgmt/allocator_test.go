@@ -536,6 +536,41 @@ func TestPreferredAddressReservedBeforeNewNodes(t *testing.T) {
 	}
 }
 
+func TestStaticAndPreferredAddressesShareDADBatch(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	m := &clabtypes.MgmtNet{Driver: "macvlan", IPv4Subnet: "192.0.2.0/24"}
+	nodes := []*clabtypes.NodeConfig{
+		{ShortName: "static", MgmtIPv4Address: "192.0.2.2"},
+		{ShortName: "preferred"},
+	}
+	var calls atomic.Int32
+	gate := make(chan struct{})
+	err := allocateManagementIPs(
+		ctx,
+		m,
+		nodes,
+		func(ctx context.Context, _ *clabtypes.MgmtNet, _ netip.Addr) error {
+			if calls.Add(1) == 2 {
+				close(gate)
+			}
+			select {
+			case <-gate:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		},
+		clabtypes.AllocationOptions{Preferred: map[string]clabtypes.NodeAddresses{
+			"preferred": {IPv4: "192.0.2.3"},
+		}},
+	)
+	if err != nil || calls.Load() != 2 || nodes[1].MgmtIPv4Address != "192.0.2.3" {
+		t.Fatalf("shared DAD batch failed: %v, calls=%d, preferred=%s",
+			err, calls.Load(), nodes[1].MgmtIPv4Address)
+	}
+}
+
 func TestMacvlanAllocationConcurrentChecks(t *testing.T) {
 	for _, mode := range []string{"generated", "preferred", "explicit"} {
 		t.Run(mode, func(t *testing.T) {

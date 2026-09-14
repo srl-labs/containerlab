@@ -146,6 +146,17 @@ func (s *dadScheduler) conflict(ip netip.Addr, err error) {
 	s.mu.Unlock()
 	s.notify()
 }
+func (s *dadScheduler) restartPending() {
+	s.mu.Lock()
+	now := time.Now()
+	for _, r := range s.pending {
+		r.attempts = 0
+		r.next = now
+	}
+	heap.Init(&s.queue)
+	s.mu.Unlock()
+	s.notify()
+}
 func (s *dadScheduler) Close() error {
 	s.cancel(errDADClosed)
 	<-s.done
@@ -195,26 +206,41 @@ func (s *dadScheduler) run() {
 			// receiver and this drain share a lock, including conflict dispatch.
 			s.mu.Unlock()
 			if err := s.drain(); err != nil {
+				if errors.Is(err, errDADObservationLost) {
+					s.restartPending()
+					continue
+				}
 				s.cancel(err)
 				return
 			}
 			s.mu.Lock()
-			s.finish(r, nil)
+			if s.pending[r.ip] == r && r.attempts == 3 {
+				s.finish(r, nil)
+			}
 			s.mu.Unlock()
 			continue
 		}
 		// Only this goroutine sends. Space bounded bursts from actual send
 		// completion; scheduler pauses must not produce catch-up bursts.
+		s.mu.Unlock()
 		if err := s.send(r.ip); err != nil {
-			s.mu.Unlock()
 			s.cancel(err)
 			return
 		}
 		now := time.Now()
+		s.mu.Lock()
+		if s.ctx.Err() != nil {
+			s.mu.Unlock()
+			return
+		}
 		s.burstLeft--
 		if s.burstLeft == 0 {
 			s.nextSend = now.Add(s.interval * dadSendBurst)
 			s.burstLeft = dadSendBurst
+		}
+		if s.pending[r.ip] != r {
+			s.mu.Unlock()
+			continue
 		}
 		r.attempts++
 		r.next = now.Add(s.observation)

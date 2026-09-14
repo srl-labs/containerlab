@@ -30,6 +30,8 @@ var ErrDuplicateAddress = errors.New("duplicate address")
 // every address in that route.
 type occupiedPrefix struct{ prefix netip.Prefix }
 
+var errDADObservationLost = errors.New("DAD observation lost")
+
 func (e *occupiedPrefix) Error() string {
 	return fmt.Sprintf("%s in host reservation %s", ErrDuplicateAddress, e.prefix)
 }
@@ -188,6 +190,7 @@ type macvlanProbe struct {
 	scheduler *dadScheduler
 	rxMu      sync.Mutex
 	receiver  sync.WaitGroup
+	drops     uint
 }
 
 func newMacvlanProbe(parentName string) (*macvlanProbe, error) {
@@ -312,15 +315,7 @@ func (p *macvlanProbe) start() error {
 	if err := socket.SetPromiscuous(true); err != nil {
 		return err
 	}
-	filter, err := bpf.Assemble([]bpf.Instruction{
-		bpf.LoadAbsolute{Off: 12, Size: 2},
-		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeARP), SkipTrue: 3},
-		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeIPv6), SkipFalse: 3},
-		bpf.LoadAbsolute{Off: 20, Size: 1},
-		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.IPProtocolICMPv6), SkipFalse: 1},
-		bpf.RetConstant{Val: 2048},
-		bpf.RetConstant{Val: 0},
-	})
+	filter, err := bpf.Assemble(dadCaptureFilter())
 	if err != nil {
 		return err
 	}
@@ -338,14 +333,18 @@ func (p *macvlanProbe) start() error {
 				"frame", fmt.Sprintf("%x", frame), "error", err)
 		}
 		return err
-	}, p.drain, time.Second/1000, time.Second)
+	}, p.drain, time.Millisecond, time.Second)
 	p.receiver.Go(func() {
 		ticker := time.NewTicker(10 * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			if err := p.drain(); err != nil {
-				p.scheduler.cancel(err)
-				return
+				if errors.Is(err, errDADObservationLost) {
+					p.scheduler.restartPending()
+				} else {
+					p.scheduler.cancel(err)
+					return
+				}
 			}
 			select {
 			case <-p.scheduler.ctx.Done():
@@ -355,6 +354,21 @@ func (p *macvlanProbe) start() error {
 		}
 	})
 	return nil
+}
+
+func dadCaptureFilter() []bpf.Instruction {
+	return []bpf.Instruction{
+		bpf.LoadAbsolute{Off: 12, Size: 2},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeARP), SkipTrue: 7},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.EthernetTypeIPv6), SkipFalse: 5},
+		bpf.LoadAbsolute{Off: 20, Size: 1},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.IPProtocolICMPv6), SkipFalse: 3},
+		bpf.LoadAbsolute{Off: 54, Size: 1},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.ICMPv6TypeNeighborSolicitation), SkipTrue: 2},
+		bpf.JumpIf{Cond: bpf.JumpEqual, Val: uint32(layers.ICMPv6TypeNeighborAdvertisement), SkipTrue: 1},
+		bpf.RetConstant{Val: 0},
+		bpf.RetConstant{Val: 2048},
+	}
 }
 
 func (p *macvlanProbe) drain() error {
@@ -370,8 +384,8 @@ func (p *macvlanProbe) drain() error {
 			if err != nil {
 				return err
 			}
-			if stats.Drops() > 0 {
-				return fmt.Errorf("DAD receive queue dropped %d packets", stats.Drops())
+			if err := p.checkDrops(stats.Drops()); err != nil {
+				return err
 			}
 			return nil
 		}
@@ -394,7 +408,16 @@ func (p *macvlanProbe) drain() error {
 			log.Debug("Ignoring DAD frame without a valid peer address")
 		}
 	}
-	return fmt.Errorf("DAD receive queue overloaded")
+	return fmt.Errorf("%w: receive queue overloaded", errDADObservationLost)
+}
+
+func (p *macvlanProbe) checkDrops(drops uint) error {
+	if drops <= p.drops {
+		return nil
+	}
+	delta := drops - p.drops
+	p.drops = drops
+	return fmt.Errorf("%w: receive queue dropped %d packets", errDADObservationLost, delta)
 }
 
 func dadProbe(mac net.HardwareAddr, ip netip.Addr) ([]byte, error) {
