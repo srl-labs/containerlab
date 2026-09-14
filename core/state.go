@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -78,8 +77,7 @@ func (c *CLab) writeIPAMState(state *LabState) {
 	}
 	for name, node := range c.Nodes {
 		cfg := node.Config()
-		if cfg.NetworkMode == "host" || cfg.NetworkMode == "none" ||
-			strings.HasPrefix(cfg.NetworkMode, "container:") {
+		if !cfg.ManagementIPAMEligible() {
 			continue
 		}
 		addresses := clabtypes.NodeAddresses{}

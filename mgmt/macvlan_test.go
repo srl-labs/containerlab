@@ -9,12 +9,11 @@ import (
 	"testing"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 type parentNetlink struct {
-	clabutils.MacvlanNetlink
+	MacvlanNetlink
 	addresses []netlink.Addr
 	err       error
 	parent    netlink.Link
@@ -326,16 +325,16 @@ func TestPrepareMacvlanParentRejectsConflictingAuxRoute(t *testing.T) {
 
 func TestEnsureMacvlanHostValidation(t *testing.T) {
 	m := &clabtypes.MgmtNet{Network: "test", Driver: "macvlan", MacvlanParent: "parent", IPv4Subnet: "192.0.2.0/24"}
-	if err := EnsureMacvlanHost(context.Background(), m, clabutils.MacvlanHost{}, nil, "network-id"); err != nil {
+	if err := EnsureMacvlanHost(context.Background(), m, MacvlanHost{}, nil, "network-id"); err != nil {
 		t.Fatalf("no auxiliary address should be a no-op: %v", err)
 	}
 	m.MacvlanAux = "invalid"
-	if err := EnsureMacvlanHost(context.Background(), m, clabutils.MacvlanHost{}, nil, "network-id"); err == nil {
+	if err := EnsureMacvlanHost(context.Background(), m, MacvlanHost{}, nil, "network-id"); err == nil {
 		t.Fatal("invalid auxiliary address accepted")
 	}
 	m.MacvlanAux = "192.0.2.129"
 	failure := errors.New("lookup failed")
-	host := clabutils.MacvlanHost{Links: parentNetlink{lookupErr: failure}}
+	host := MacvlanHost{Links: parentNetlink{lookupErr: failure}}
 	parent := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent"}}
 	if err := EnsureMacvlanHost(context.Background(), m, host, parent, "network-id"); !errors.Is(err, failure) || !strings.Contains(err.Error(), m.Network) {
 		t.Fatalf("missing network context or underlying error: %v", err)

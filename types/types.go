@@ -264,6 +264,13 @@ func (n *NodeConfig) GetHostname() string {
 	return n.ShortName
 }
 
+// ManagementIPAMEligible reports whether containerlab should allocate a management address for the node.
+func (n *NodeConfig) ManagementIPAMEligible() bool {
+	return !n.IsRootNamespaceBased && !n.SkipUniquenessCheck &&
+		n.NetworkMode != "host" && n.NetworkMode != "none" &&
+		!strings.HasPrefix(n.NetworkMode, "container:")
+}
+
 type GenericFilter struct {
 	// defined by now "label" / "name" [then only Match is required]
 	FilterType string

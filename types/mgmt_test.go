@@ -6,6 +6,27 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+func TestNodeConfigManagementIPAMEligible(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		node NodeConfig
+		want bool
+	}{
+		{name: "default", want: true},
+		{name: "host network", node: NodeConfig{NetworkMode: "host"}},
+		{name: "no network", node: NodeConfig{NetworkMode: "none"}},
+		{name: "shared namespace", node: NodeConfig{NetworkMode: "container:peer"}},
+		{name: "root namespace", node: NodeConfig{IsRootNamespaceBased: true}},
+		{name: "external container", node: NodeConfig{SkipUniquenessCheck: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.node.ManagementIPAMEligible(); got != tc.want {
+				t.Fatalf("ManagementIPAMEligible() = %t; want %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestMacvlanManagementAcceptsPrivateAddresses(t *testing.T) {
 	for _, tc := range []struct {
 		name, subnet, gateway, aux string

@@ -8,14 +8,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 // NewMacvlanHost configures host connectivity with the management DAD policy.
 // A nil links argument uses the host's netlink interface.
-func NewMacvlanHost(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink) clabutils.MacvlanHost {
-	host := clabutils.MacvlanHost{Links: links}
+func NewMacvlanHost(m *clabtypes.MgmtNet, links MacvlanNetlink) MacvlanHost {
+	host := MacvlanHost{Links: links}
 	if host.Links == nil {
 		host.Links = &netlink.Handle{}
 	}
@@ -28,7 +27,7 @@ func NewMacvlanHost(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink) clabut
 
 // PrepareMacvlanParent looks up the parent and resolves management subnets
 // without modifying host interfaces or routes.
-func PrepareMacvlanParent(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink) (netlink.Link, error) {
+func PrepareMacvlanParent(m *clabtypes.MgmtNet, links MacvlanNetlink) (netlink.Link, error) {
 	parent, err := links.LinkByName(m.MacvlanParent)
 	if err != nil {
 		return nil, fmt.Errorf("macvlan parent %q: %w", m.MacvlanParent, err)
@@ -45,7 +44,7 @@ func PrepareMacvlanParent(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink) 
 	return parent, nil
 }
 
-func validateMacvlanAuxParentRoute(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink, parent netlink.Link) error {
+func validateMacvlanAuxParentRoute(m *clabtypes.MgmtNet, links MacvlanNetlink, parent netlink.Link) error {
 	if m.MacvlanAux == "" {
 		return nil
 	}
@@ -81,7 +80,7 @@ func macvlanFamily(ip netip.Addr) int {
 
 // EnsureMacvlanHost configures auxiliary connectivity after network validation.
 // It is a no-op when no auxiliary address is configured.
-func EnsureMacvlanHost(ctx context.Context, m *clabtypes.MgmtNet, host clabutils.MacvlanHost, parent netlink.Link, networkID string) error {
+func EnsureMacvlanHost(ctx context.Context, m *clabtypes.MgmtNet, host MacvlanHost, parent netlink.Link, networkID string) error {
 	if m.MacvlanAux == "" {
 		return nil
 	}
@@ -97,7 +96,7 @@ func EnsureMacvlanHost(ctx context.Context, m *clabtypes.MgmtNet, host clabutils
 
 // ResolveMacvlanSubnets infers omitted subnets from the parent and validates
 // subnet-dependent settings before updating the management configuration.
-func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink, parent netlink.Link) error {
+func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links MacvlanNetlink, parent netlink.Link) error {
 	resolved := *m
 	explicitIPv4, explicitIPv6 := m.IPv4Subnet != "", m.IPv6Subnet != ""
 	aux, _ := netip.ParseAddr(m.MacvlanAux)
@@ -150,7 +149,7 @@ func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink,
 
 // macvlanParentSubnet returns the parent's single usable subnet for a family.
 // No global-unicast address returns an invalid prefix without an error.
-func macvlanParentSubnet(links clabutils.MacvlanNetlink, parent netlink.Link, family int) (netip.Prefix, error) {
+func macvlanParentSubnet(links MacvlanNetlink, parent netlink.Link, family int) (netip.Prefix, error) {
 	addresses, err := links.AddrList(parent, family)
 	if err != nil {
 		return netip.Prefix{}, fmt.Errorf("read macvlan parent %q addresses: %w", parent.Attrs().Name, err)

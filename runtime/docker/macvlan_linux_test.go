@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/mgmt"
 
 	"github.com/vishvananda/netlink"
 )
@@ -43,7 +43,7 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	host := clabutils.MacvlanHost{Links: links}
+	host := mgmt.MacvlanHost{Links: links}
 	networkID := fmt.Sprintf("kernel-test-%d", os.Getpid())
 	t.Cleanup(func() { _ = host.Remove(networkID) })
 	for range 2 {
@@ -57,11 +57,11 @@ func testMacvlanHostKernel(t *testing.T, ipText, prefixText string) {
 			t.Fatal(err)
 		}
 	}
-	link, err := links.LinkByName(clabutils.MacvlanHostName(networkID))
+	link, err := links.LinkByName(mgmt.MacvlanHostName(networkID))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if link.Attrs().Alias != clabutils.MacvlanHostAlias(networkID) ||
+	if link.Attrs().Alias != mgmt.MacvlanHostAlias(networkID) ||
 		link.Attrs().MTU != parentBefore.Attrs().MTU {
 		t.Fatalf("incorrect host link attributes: %+v", link.Attrs())
 	}

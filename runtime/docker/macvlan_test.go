@@ -10,10 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	clabutils "github.com/srl-labs/containerlab/utils"
-
 	networkapi "github.com/docker/docker/api/types/network"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	"github.com/srl-labs/containerlab/mgmt"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -54,7 +53,7 @@ func (f *fakeMacvlanNetlink) LinkAdd(link netlink.Link) error {
 	f.links[link.Attrs().Name] = link
 	if f.concurrent {
 		// Simulate a competing deploy that has already marked its new link.
-		link.Attrs().Alias = clabutils.MacvlanHostAlias("network-id")
+		link.Attrs().Alias = mgmt.MacvlanHostAlias("network-id")
 		return unix.EEXIST
 	}
 	return nil
@@ -153,7 +152,7 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 	for _, concurrent := range []bool{false, true} {
 		f := newFakeMacvlanNetlink()
 		f.concurrent = concurrent
-		host := clabutils.MacvlanHost{Links: f}
+		host := mgmt.MacvlanHost{Links: f}
 		ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
 		for range 2 {
 			if err := host.Ensure(
@@ -171,7 +170,7 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 		}
 		// Reuse must repair missing routes and a down interface even if the IP exists.
 		f.routes = nil
-		f.links[clabutils.MacvlanHostName("network-id")].Attrs().Flags = 0
+		f.links[mgmt.MacvlanHostName("network-id")].Attrs().Flags = 0
 		if err := host.Ensure(
 			context.Background(),
 			"network-id",
@@ -206,12 +205,12 @@ func TestMacvlanHostOwnership(t *testing.T) {
 	for _, kind := range []string{"foreign macvlan", "wrong type", "wrong parent", "wrong mode"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newFakeMacvlanNetlink()
-			name := clabutils.MacvlanHostName("network-id")
+			name := mgmt.MacvlanHostName("network-id")
 			attrs := netlink.LinkAttrs{
 				Name:        name,
 				Index:       2,
 				ParentIndex: 1,
-				Alias:       clabutils.MacvlanHostAlias("network-id"),
+				Alias:       mgmt.MacvlanHostAlias("network-id"),
 			}
 			link := &netlink.Macvlan{LinkAttrs: attrs, Mode: netlink.MACVLAN_MODE_BRIDGE}
 			f.links[name] = link
@@ -226,7 +225,7 @@ func TestMacvlanHostOwnership(t *testing.T) {
 				link.Mode = netlink.MACVLAN_MODE_PRIVATE
 			}
 			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
-			host := clabutils.MacvlanHost{Links: f}
+			host := mgmt.MacvlanHost{Links: f}
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
@@ -266,7 +265,7 @@ func TestMacvlanHostFailuresAreRetryable(t *testing.T) {
 				f.routeListErr = unix.EPERM
 			}
 			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
-			host := clabutils.MacvlanHost{Links: f}
+			host := mgmt.MacvlanHost{Links: f}
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
@@ -309,7 +308,7 @@ func TestMacvlanRouteConflicts(t *testing.T) {
 			_, dst, _ := net.ParseCIDR(tc.route)
 			f.routes = []netlink.Route{{Dst: dst, LinkIndex: 1}}
 			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
-			err := (clabutils.MacvlanHost{Links: f}).Ensure(
+			err := (mgmt.MacvlanHost{Links: f}).Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
@@ -327,9 +326,9 @@ func TestMacvlanRouteConflicts(t *testing.T) {
 }
 
 func TestMacvlanHostName(t *testing.T) {
-	a := clabutils.MacvlanHostName(strings.Repeat("a", 64))
-	b := clabutils.MacvlanHostName(strings.Repeat("b", 64))
-	if len(a) > 15 || a == b || a != clabutils.MacvlanHostName(strings.Repeat("a", 64)) {
+	a := mgmt.MacvlanHostName(strings.Repeat("a", 64))
+	b := mgmt.MacvlanHostName(strings.Repeat("b", 64))
+	if len(a) > 15 || a == b || a != mgmt.MacvlanHostName(strings.Repeat("a", 64)) {
 		t.Fatalf("invalid names: %q, %q", a, b)
 	}
 }
@@ -337,7 +336,7 @@ func TestMacvlanHostName(t *testing.T) {
 func TestMacvlanHostAddressConflicts(t *testing.T) {
 	for _, index := range []int{1, 2} {
 		f := newFakeMacvlanNetlink()
-		host := clabutils.MacvlanHost{Links: f}
+		host := mgmt.MacvlanHost{Links: f}
 		ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
 		if err := host.Ensure(
 			context.Background(),
@@ -375,7 +374,7 @@ func TestMacvlanHostAddressConflicts(t *testing.T) {
 func TestMacvlanHostAliasFailure(t *testing.T) {
 	f := newFakeMacvlanNetlink()
 	f.aliasErr = unix.EPERM
-	host := clabutils.MacvlanHost{Links: f}
+	host := mgmt.MacvlanHost{Links: f}
 	ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
 	if err := host.Ensure(
 		context.Background(),
@@ -635,7 +634,7 @@ func TestMacvlanIPv6DAD(t *testing.T) {
 		f.addrs = []netlink.Addr{*addr}
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		err := (clabutils.MacvlanHost{Links: f}).Ensure(
+		err := (mgmt.MacvlanHost{Links: f}).Ensure(
 			ctx,
 			"network-id",
 			f.links["eth0"],
@@ -661,7 +660,7 @@ func TestMacvlanIPv6RouteConflict(t *testing.T) {
 	f := newFakeMacvlanNetlink()
 	_, dst, _ := net.ParseCIDR("2001:db8::/64")
 	f.routes = []netlink.Route{{Dst: dst, LinkIndex: 1}}
-	err := (clabutils.MacvlanHost{Links: f}).Ensure(
+	err := (mgmt.MacvlanHost{Links: f}).Ensure(
 		context.Background(),
 		"network-id",
 		f.links["eth0"],
@@ -699,7 +698,7 @@ func TestMacvlanHostProbeBeforeAssignment(t *testing.T) {
 			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
 			conflict := errors.New("occupied address")
 			calls := 0
-			host := clabutils.MacvlanHost{Links: f, Probe: func(_ context.Context, link *netlink.LinkAttrs, candidate netip.Addr) error {
+			host := mgmt.MacvlanHost{Links: f, Probe: func(_ context.Context, link *netlink.LinkAttrs, candidate netip.Addr) error {
 				calls++
 				if f.addrAdds != 0 || candidate != ip || link.Index == 0 {
 					t.Fatal("probe must receive the live interface and candidate before assignment")

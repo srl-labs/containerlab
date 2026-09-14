@@ -1,4 +1,4 @@
-package utils
+package mgmt
 
 import (
 	"context"
@@ -177,13 +177,6 @@ func (h MacvlanHost) ensureAddress(ctx context.Context, link netlink.Link, ip ne
 		return fmt.Errorf("assign host address %s: %w", ip, err)
 	}
 	return h.waitAddressReady(ctx, link, ip)
-}
-
-func macvlanFamily(ip netip.Addr) int {
-	if ip.Is4() {
-		return netlink.FAMILY_V4
-	}
-	return netlink.FAMILY_V6
 }
 
 // IPv6 source addresses cannot be used by routes until kernel DAD completes.
