@@ -35,6 +35,9 @@ func AllocateManagementIPs(
 		drafts[i] = &copy
 	}
 	err := allocateManagementIPs(ctx, m, drafts, checker.Check, options...)
+	if err == nil {
+		err = setManagementIPConfig(m, drafts)
+	}
 	if closeErr := checker.Close(); closeErr != nil {
 		return errors.Join(err, closeErr)
 	}
@@ -43,9 +46,54 @@ func AllocateManagementIPs(
 	}
 	for i, node := range nodes {
 		node.MgmtIPv4Address = drafts[i].MgmtIPv4Address
+		node.MgmtIPv4PrefixLength = drafts[i].MgmtIPv4PrefixLength
+		node.MgmtIPv4Gateway = drafts[i].MgmtIPv4Gateway
 		node.MgmtIPv6Address = drafts[i].MgmtIPv6Address
+		node.MgmtIPv6PrefixLength = drafts[i].MgmtIPv6PrefixLength
+		node.MgmtIPv6Gateway = drafts[i].MgmtIPv6Gateway
 	}
 	return nil
+}
+
+func setManagementIPConfig(m *clabtypes.MgmtNet, nodes []*clabtypes.NodeConfig) error {
+	for _, v4 := range []bool{true, false} {
+		subnet, configuredGateway := m.IPv6Subnet, m.IPv6Gw
+		if v4 {
+			subnet, configuredGateway = m.IPv4Subnet, m.IPv4Gw
+		}
+		if subnet == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(subnet)
+		if err != nil {
+			return err
+		}
+		gateway := prefix.Masked().Addr().Next()
+		if configuredGateway != "" {
+			gateway, err = netip.ParseAddr(configuredGateway)
+			if err != nil {
+				return err
+			}
+		}
+		for _, node := range nodes {
+			if !eligibleForManagementIPAM(node) {
+				continue
+			}
+			if v4 && node.MgmtIPv4Address != "" {
+				node.MgmtIPv4PrefixLength, node.MgmtIPv4Gateway = prefix.Bits(), gateway.String()
+			}
+			if !v4 && node.MgmtIPv6Address != "" {
+				node.MgmtIPv6PrefixLength, node.MgmtIPv6Gateway = prefix.Bits(), gateway.String()
+			}
+		}
+	}
+	return nil
+}
+
+func eligibleForManagementIPAM(n *clabtypes.NodeConfig) bool {
+	return !n.IsRootNamespaceBased && !n.SkipUniquenessCheck &&
+		n.NetworkMode != "host" && n.NetworkMode != "none" &&
+		!strings.HasPrefix(n.NetworkMode, "container:")
 }
 
 func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*clabtypes.NodeConfig,
@@ -135,11 +183,6 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			}
 			return &n.MgmtIPv6Address
 		}
-		eligible := func(n *clabtypes.NodeConfig) bool {
-			return !n.IsRootNamespaceBased && !n.SkipUniquenessCheck &&
-				n.NetworkMode != "host" && n.NetworkMode != "none" &&
-				!strings.HasPrefix(n.NetworkMode, "container:")
-		}
 		// Runtime reservations are authoritative even when wire/local DAD is disabled.
 		runtimeReserved := make(map[netip.Addr]bool, len(reservedAddresses))
 		for _, ip := range reservedAddresses {
@@ -157,7 +200,7 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 				return err
 			}
 			owned[current.Address] = current.NodeName
-			if n := byName[current.NodeName]; n != nil && eligible(n) && *address(n) == "" {
+			if n := byName[current.NodeName]; n != nil && eligibleForManagementIPAM(n) && *address(n) == "" {
 				*address(n) = current.Address.String()
 			}
 		}
@@ -193,7 +236,7 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 		var explicit []netip.Addr
 		var explicitNodes []*clabtypes.NodeConfig
 		for _, n := range nodes {
-			if !eligible(n) || *address(n) == "" {
+			if !eligibleForManagementIPAM(n) || *address(n) == "" {
 				continue
 			}
 			ip, err := netip.ParseAddr(*address(n))
@@ -229,7 +272,7 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 		var preferences []netip.Addr
 		var retained []*clabtypes.NodeConfig
 		for _, n := range nodes {
-			if !eligible(n) || *address(n) != "" {
+			if !eligibleForManagementIPAM(n) || *address(n) != "" {
 				continue
 			}
 			preference := preferred[n.ShortName].IPv6
@@ -258,7 +301,7 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 		var keys []string
 		var pending []*clabtypes.NodeConfig
 		for _, n := range nodes {
-			if !eligible(n) || *address(n) != "" {
+			if !eligibleForManagementIPAM(n) || *address(n) != "" {
 				continue
 			}
 			keys = append(keys, n.ShortName)

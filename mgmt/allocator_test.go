@@ -20,7 +20,9 @@ func TestAllocateIPs(t *testing.T) {
 		IPAM:       clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab},
 		IPv4Subnet: "192.0.2.0/24",
 		IPv4Range:  "192.0.2.128/30",
+		IPv4Gw:     "192.0.2.254",
 		IPv6Subnet: "2001:db8::/64",
+		IPv6Gw:     "2001:db8::ff",
 		MacvlanAux: "192.0.2.129/30",
 	}
 	a, b := &clabtypes.NodeConfig{ShortName: "a"}, &clabtypes.NodeConfig{ShortName: "b"}
@@ -46,6 +48,10 @@ func TestAllocateIPs(t *testing.T) {
 		if !netip.MustParsePrefix(m.IPv4Range).Contains(netip.MustParseAddr(n.MgmtIPv4Address)) ||
 			n.MgmtIPv4Address == "192.0.2.129" {
 			t.Fatalf("invalid allocation: %+v", n)
+		}
+		if n.MgmtIPv4PrefixLength != 24 || n.MgmtIPv4Gateway != m.IPv4Gw ||
+			n.MgmtIPv6PrefixLength != 64 || n.MgmtIPv6Gateway != m.IPv6Gw {
+			t.Fatalf("missing management IP configuration: %+v", n)
 		}
 	}
 	if a.MgmtIPv4Address == b.MgmtIPv4Address {
@@ -75,6 +81,9 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 		nodes[2].MgmtIPv4Address != "" ||
 		nodes[3].MgmtIPv4Address != "" {
 		t.Fatal("explicit or ineligible address changed")
+	}
+	if nodes[0].MgmtIPv4PrefixLength != 29 || nodes[0].MgmtIPv4Gateway != "192.0.2.1" {
+		t.Fatalf("static address missing management IP configuration: %+v", nodes[0])
 	}
 	if err := AllocateManagementIPs(context.Background(),
 		m,

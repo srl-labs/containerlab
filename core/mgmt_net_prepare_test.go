@@ -59,6 +59,9 @@ func TestPrepareManagementNetworkAllocatesAfterResolution(t *testing.T) {
 		cfg.MgmtIPv4Address == m.IPv4Gw {
 		t.Fatalf("invalid resolved allocation: %s", cfg.MgmtIPv4Address)
 	}
+	if cfg.MgmtIPv4PrefixLength != 29 || cfg.MgmtIPv4Gateway != m.IPv4Gw {
+		t.Fatalf("missing resolved management IP configuration: %+v", cfg)
+	}
 }
 
 func TestPrepareManagementNetworkDelegatesRuntimeIPAM(t *testing.T) {
