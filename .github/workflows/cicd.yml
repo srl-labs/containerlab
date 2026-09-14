@@ -515,6 +515,17 @@ jobs:
       uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  frr-tests:
+    uses: ./.github/workflows/frr-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
     needs:
@@ -564,6 +575,7 @@ jobs:
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
+      - frr-tests
       - download-tests
       - process-gitref
 
@@ -665,6 +677,7 @@ jobs:
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
+      - frr-tests
       - download-tests
       - process-gitref
     steps:

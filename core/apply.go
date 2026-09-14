@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -125,10 +124,6 @@ func (c *CLab) apply(
 		return result, nil
 	}
 
-	if err := c.checkUnsupportedApplyNodes(); err != nil {
-		return nil, err
-	}
-
 	if err := c.setMgmtBridgeFromRuntime(currentNodes); err != nil {
 		return nil, err
 	}
@@ -191,15 +186,11 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.DeployNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+	if err := c.deployApplyNodes(ctx, plan, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
 	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
-		return nil, err
-	}
-
-	if err := c.startStoppedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -258,21 +249,6 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 	}
 
 	return c.verifyDuplicateAddresses()
-}
-
-func (c *CLab) checkUnsupportedApplyNodes() error {
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		cfg := c.Nodes[nodeName].Config()
-		if cfg != nil && strings.HasPrefix(cfg.NetworkMode, "container:") {
-			return fmt.Errorf(
-				"apply does not support nodes with %q; use redeploy or "+
-					"deploy --reconfigure",
-				cfg.NetworkMode,
-			)
-		}
-	}
-
-	return nil
 }
 
 func (c *CLab) prepareApply(

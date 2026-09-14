@@ -214,6 +214,13 @@ func WaitForContainerRunning(
 	r ContainerRuntime,
 	contName, nodeName string,
 ) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("node %q waiting for external container %q: %w", nodeName, contName, err)
+	}
+	if r.GetContainerStatus(ctx, contName) == Running {
+		return nil
+	}
+
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 

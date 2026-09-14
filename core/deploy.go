@@ -493,6 +493,24 @@ func (c *CLab) DeployNodes(
 	nodeNames []string,
 	maxWorkers uint,
 ) error {
+	return c.deployNodes(ctx, nodeNames, maxWorkers, nil)
+}
+
+// deployApplyNodes schedules starts and creates together: a new sidecar can
+// depend on a stopped target, and a stopped node can depend on a new target.
+func (c *CLab) deployApplyNodes(ctx context.Context, plan *applyPlan, maxWorkers uint) error {
+	nodeNames := sortedStringSet(
+		unionStringSets(plan.addedNodeSet, plan.recreatedNodeSet, plan.startNodeSet),
+	)
+	return c.deployNodes(ctx, nodeNames, maxWorkers, plan.startNodeSet)
+}
+
+func (c *CLab) deployNodes(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+	startNodeSet map[string]struct{},
+) error {
 	if len(nodeNames) == 0 {
 		return nil
 	}
@@ -500,28 +518,62 @@ func (c *CLab) DeployNodes(
 	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
 		maxWorkers = uint(len(nodeNames))
 	}
-	for _, nodeName := range nodeNames {
-		if _, exists := c.Nodes[nodeName]; !exists {
-			return fmt.Errorf("node %q not found", nodeName)
-		}
+	if _, err := c.networkModeNodeOrder(nodeNames); err != nil {
+		return err
 	}
 
 	input := make(chan string)
 	errCh := make(chan error, len(nodeNames))
+	completed := make(map[string]*nodeDeployCompletion, len(nodeNames))
+	for _, name := range nodeNames {
+		completed[name] = &nodeDeployCompletion{done: make(chan struct{})}
+	}
+	finish := func(name string, err error) {
+		completed[name].err = err
+		close(completed[name].done)
+		errCh <- err
+	}
 
 	for range maxWorkers {
 		go func() {
 			for nodeName := range input {
+				if _, start := startNodeSet[nodeName]; start {
+					log.Info("Starting stopped node", "node", nodeName)
+					err := c.Nodes[nodeName].Start(ctx)
+					if err != nil {
+						err = fmt.Errorf("failed starting node %q: %w", nodeName, err)
+					}
+					finish(nodeName, err)
+					continue
+				}
 				log.Info("Creating node", "node", nodeName)
-				errCh <- c.deployNode(ctx, c.Nodes[nodeName])
+				finish(nodeName, c.deployNode(ctx, c.Nodes[nodeName]))
 			}
 		}()
 	}
 
+	// Wait outside the worker pool. Targets in this operation signal completion
+	// directly, avoiding runtime polling and propagating failures to dependents.
+	var feedWg sync.WaitGroup
 	for _, nodeName := range nodeNames {
-		input <- nodeName
+		feedWg.Add(1)
+		go func(nodeName string) {
+			defer feedWg.Done()
+			if err := c.waitForNodeDeployTarget(ctx, nodeName, completed); err != nil {
+				finish(nodeName, err)
+				return
+			}
+			select {
+			case input <- nodeName:
+			case <-ctx.Done():
+				finish(nodeName, ctx.Err())
+			}
+		}(nodeName)
 	}
-	close(input)
+	go func() {
+		feedWg.Wait()
+		close(input)
+	}()
 
 	var errs []error
 	for range nodeNames {
@@ -535,6 +587,70 @@ func (c *CLab) DeployNodes(
 	}
 
 	return nil
+}
+
+type nodeDeployCompletion struct {
+	done chan struct{}
+	// Closing done publishes err to dependent goroutines.
+	err error
+}
+
+func (c *CLab) waitForNodeDeployTarget(
+	ctx context.Context,
+	name string,
+	completed map[string]*nodeDeployCompletion,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
+	if completion, selected := completed[target]; selected {
+		select {
+		case <-completion.done:
+			if completion.err != nil {
+				return fmt.Errorf(
+					"node %q depends on failed node %q: %w",
+					name,
+					target,
+					completion.err,
+				)
+			}
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return c.waitForApplyNetworkModeTarget(ctx, name)
+}
+
+// waitForApplyNetworkModeTarget waits until a node's network-mode:
+// container:<target> target is running, so apply's incremental deploy never
+// races a newly created or recreated target against its dependent. The
+// target may be a node in this same apply call (added or recreated
+// alongside the dependent) or, like fresh deploy, an external container not
+// managed by this topology.
+func (c *CLab) waitForApplyNetworkModeTarget(ctx context.Context, nodeName string) error {
+	node, exists := c.Nodes[nodeName]
+	if !exists {
+		return nil
+	}
+
+	target := networkModeContainerTarget(node.Config().NetworkMode)
+	if target == "" {
+		return nil
+	}
+
+	targetNode, internal := c.Nodes[target]
+	if !internal {
+		return c.waitForExternalNodeDependencies(ctx, nodeName)
+	}
+
+	runtime := c.globalRuntime()
+	if runtime == nil {
+		return fmt.Errorf("container runtime is not initialized")
+	}
+
+	return clabruntime.WaitForContainerRunning(ctx, runtime, targetNode.Config().LongName, nodeName)
 }
 
 func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {

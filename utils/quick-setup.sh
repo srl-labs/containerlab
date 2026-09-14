@@ -26,7 +26,7 @@ function check_os {
             DISTRO_TYPE="fedora"
         elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
             DISTRO_TYPE="rhel"
-            if [[ "$ID" = "rocky" ]] && [ "${VERSION_ID:0:2}" = "10" ]; then
+            if [[ "$ID" = "rocky" || "$ID" = "centos" ]] && [ "${VERSION_ID:0:2}" = "10" ]; then
                 DOCKER_VERSION="28.5.2"
             fi
         else
@@ -106,6 +106,12 @@ function install-docker-ubuntu {
 function install-docker-rhel {
     # using instructions from:
     # https://docs.docker.com/engine/install/rhel/#install-using-the-repository
+    # https://docs.docker.com/engine/install/centos/#install-using-the-repository
+    local docker_repo="rhel"
+    if [ "$ID" = "centos" ]; then
+        docker_repo="centos"
+    fi
+
     sudo yum remove -y docker \
                   docker-client \
                   docker-client-latest \
@@ -118,7 +124,7 @@ function install-docker-rhel {
                   runc
 
     sudo yum install -y yum-utils
-    sudo yum-config-manager -y --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+    sudo yum-config-manager -y --add-repo "https://download.docker.com/linux/${docker_repo}/docker-ce.repo"
 
     DOCKER_PKG_NAME=$(yum list docker-ce --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
     DOCKER_CLI_PKG_NAME=$(yum list docker-ce-cli --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)

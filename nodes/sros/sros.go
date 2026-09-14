@@ -19,18 +19,17 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-	"unicode"
 
 	"github.com/beevik/etree"
 	"github.com/brunoga/deep"
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
+	"github.com/vishvananda/netns"
 
 	"github.com/scrapli/scrapligo/response"
 
@@ -62,22 +61,29 @@ const (
 
 	retryTimer = 1 * time.Second
 
-	scrapliPlatformName          = "nokia_sros"
-	scrapliPlatformNameClassic   = "nokia_sros_classic"
-	configCf3                    = "config/cf3"
-	configCf2                    = "config/cf2"
-	configCf1                    = "config/cf1"
-	startupCfgName               = "config.cfg"
-	tlsKeyFile                   = "node.key"
-	tlsCertFile                  = "node.crt"
-	tlsCertProfileName           = "clab-grpc-certs"
-	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
-	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
-	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
-	envNokiaSrosCard             = "NOKIA_SROS_CARD"
-	envNokiaSrosSFM              = "NOKIA_SROS_SFM"
-	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
-	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
+	scrapliPlatformName        = "nokia_sros"
+	scrapliPlatformNameClassic = "nokia_sros_classic"
+	configCf3                  = "config/cf3"
+	configCf2                  = "config/cf2"
+	configCf1                  = "config/cf1"
+	startupCfgName             = "config.cfg"
+	tlsKeyFile                 = "node.key"
+	tlsCertFile                = "node.crt"
+	tlsCertProfileName         = "clab-grpc-certs"
+
+	// SR-SIM ENV VARS
+	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard          = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
+	envSrosIPv4Active         = "NOKIA_SROS_ADDRESS_IPV4_ACTIVE"
+	envSrosIPv6Active         = "NOKIA_SROS_ADDRESS_IPV6_ACTIVE"
+	envSrosStaticRoutePrefix  = "NOKIA_SROS_STATIC_ROUTE_"
+
+	// CLAB SPECIFIC ENV VARS
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
 	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
 
@@ -212,11 +218,13 @@ type sros struct {
 	baseShortName string
 	baseLongName  string
 	// rootCtrName is the container that owns the netns.
-	//  - for components based: the 0th sorted component.
+	//  - for components based: the internal netns container.
 	//  - for network mode based: parsed from network-mode.
 	rootCtrName string
 
 	preDeployParams *clabnodes.PreDeployParams
+
+	netnsNode clabnodes.Node
 }
 
 func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
@@ -557,58 +565,49 @@ func (n *sros) Delete(ctx context.Context) error {
 		return n.DefaultNode.Delete(ctx)
 	}
 
+	var errs []error
+
 	// Delete all the component containers
-	for _, componentNodes := range n.componentNodes {
-		err := componentNodes.Delete(ctx)
+	for _, componentNode := range n.componentNodes {
+		err := componentNode.Delete(ctx)
 		if err != nil {
 			log.Warn(err)
+			errs = append(errs, err)
 		}
 	}
 
-	return n.DefaultNode.Delete(ctx)
+	errs = append(errs, n.DefaultNode.Delete(ctx), n.netnsNode.Delete(ctx))
+
+	return errors.Join(errs...)
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
 func (n *sros) DeleteNetnsSymlink() error {
+	var errs []error
+
 	// if it is the base node, then we need to delete the symlink for all the components.
 	if n.isDistributedBaseNode() {
 		for _, componentNode := range n.componentNodes {
-			err := componentNode.DeleteNetnsSymlink()
-			if err != nil {
-				return err
-			}
+			errs = append(errs, componentNode.DeleteNetnsSymlink())
 		}
+		if n.netnsNode != nil {
+			errs = append(errs, n.netnsNode.DeleteNetnsSymlink())
+		}
+		errs = append(errs, clabutils.DeleteNetnsSymlink(n.Cfg.LongName))
+	}
+
+	errs = append(errs, n.DefaultNode.DeleteNetnsSymlink(), n.cleanupParkingNetNS())
+
+	return errors.Join(errs...)
+}
+
+func (n *sros) cleanupParkingNetNS() error {
+	name := clabutils.ParkingNetnsName(n.Cfg.LongName)
+	if _, err := clabutils.GetNamedNetNS(name); err != nil {
 		return nil
 	}
 
-	return n.DefaultNode.DeleteNetnsSymlink()
-}
-
-// sortComponents ensure components are in order of
-// LCs first, then CPMs (cpm b comes first if present).
-func (n *sros) sortComponents() {
-	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
-		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
-		s2 := strings.ToUpper(strings.TrimSpace(b.Slot))
-
-		p1 := n.getSortOrder(s1)
-		p2 := n.getSortOrder(s2)
-
-		return p1 - p2
-	})
-}
-
-func (n *sros) getSortOrder(slot string) int {
-	r := rune(slot[0])
-	if unicode.IsLetter(r) {
-		// for letters, B before A, letters after numbers
-		// B=66 -> 34
-		// A=65 -> 35
-		return 100 - int(r)
-	} else {
-		num, _ := strconv.Atoi(slot)
-		return num // 1, 2, 3... smaller than CPM slots, so will come first
-	}
+	return netns.DeleteNamed(name)
 }
 
 func (n *sros) setupComponentNodes() error {
@@ -616,12 +615,17 @@ func (n *sros) setupComponentNodes() error {
 		return nil
 	}
 
-	n.sortComponents()
-
-	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
+	n.netnsNode = new(namespaceNode)
+	if err := n.netnsNode.Init(
+		n.newNetnsConfig(),
+		clabnodes.WithRuntime(n.GetRuntime()),
+	); err != nil {
+		return err
+	}
+	rootCtrName := n.netnsNode.Config().LongName
 
 	// loop through the components, creating them
-	for idx, c := range n.Cfg.Components {
+	for _, c := range n.Cfg.Components {
 		// instantiate a new nokia_srsim instance
 		srosNode := new(sros)
 		componentNode := clabnodes.Node(srosNode)
@@ -632,12 +636,8 @@ func (n *sros) setupComponentNodes() error {
 			return fmt.Errorf("failed to deep copy node config for component: %w", err)
 		}
 
-		// the first node will create the namespace, so NetworkMode remains unchanged.
-		// all consecutive need to be attached to specifically that Namespace via NetworkMode
-		if idx > 0 {
-			componentConfig.NetworkMode = fmt.Sprintf("container:%s",
-				n.componentNodes[0].GetShortName())
-		}
+		// component nodes join to the nents pause container
+		componentConfig.NetworkMode = fmt.Sprintf("container:%s", n.netnsNode.GetShortName())
 
 		// adjust the config values from the original node
 		componentConfig.ShortName = n.calcComponentName(componentConfig.ShortName, c.Slot)
@@ -645,11 +645,9 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.NodeType = n.Cfg.NodeType
 		componentConfig.Components = nil
 		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
-		if idx != 0 {
-			componentConfig.DNS = nil
-			componentConfig.PortBindings = nil
-			componentConfig.PortSet = nil
-		}
+		componentConfig.DNS = nil
+		componentConfig.PortBindings = nil
+		componentConfig.PortSet = nil
 
 		// add the component env to the componentConfig env
 		for k, v := range c.Env {
@@ -723,6 +721,17 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
+	if err := n.netnsNode.Deploy(ctx, deployParams); err != nil {
+		return fmt.Errorf("deploy network namespace node %q: %w", n.netnsNode.GetShortName(), err)
+	}
+
+	ips, err := n.distNodeMgmtIPs()
+	if err != nil {
+		return err
+	}
+
+	n.setComponentMgmtEnv(ips)
+
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
 		if err := c.PreDeploy(ctx, n.preDeployParams); err != nil {
@@ -744,15 +753,56 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	n.renameDone = true
 
 	// adjust also the mgmt IP addresses of the general node
-	ips, err := n.distNodeMgmtIPs()
-	if err != nil {
-		return err
-	}
-
 	n.Cfg.MgmtIPv4Address = ips.IPv4
 	n.Cfg.MgmtIPv6Address = ips.IPv6
 
 	return nil
+}
+
+// set env vars for the CPMs so that they are aware of mgmt info
+func (n *sros) setComponentMgmtEnv(ips MgmtIP) {
+	for _, component := range n.componentNodes {
+		cfg := component.Config()
+		slot := strings.ToUpper(cfg.Env[envNokiaSrosSlot])
+
+		if slot != slotAName && slot != slotBName {
+			continue
+		}
+
+		env := cfg.Env
+		if intf := env["NOKIA_SROS_MGMT_IF"]; intf != "" && intf != "eth0" {
+			continue
+		}
+		if env[envSrosIPv4Active] != "" || env[envSrosIPv6Active] != "" {
+			continue
+		}
+
+		// SKIP if the user defines this env var
+		explicitRoutes := false
+		for key := range env {
+			if strings.HasPrefix(key, envSrosStaticRoutePrefix) {
+				explicitRoutes = true
+				break
+			}
+		}
+		if explicitRoutes {
+			continue
+		}
+
+		if ips.IPv4 != "" {
+			env[envSrosIPv4Active] = fmt.Sprintf("%s/%d", ips.IPv4, ips.IPv4pLen)
+			if ips.IPv4Gw != "" {
+				env[envSrosStaticRoutePrefix+"1"] = "0.0.0.0/0@" + ips.IPv4Gw
+			}
+		}
+
+		if ips.IPv6 != "" {
+			env[envSrosIPv6Active] = fmt.Sprintf("%s/%d", ips.IPv6, ips.IPv6pLen)
+			if ips.IPv6Gw != "" {
+				env[envSrosStaticRoutePrefix+"2"] = "::/0@" + ips.IPv6Gw
+			}
+		}
+	}
 }
 
 // isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a
@@ -786,8 +836,7 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	} else if n.isDistributedCardNode() {
 		return n.Runtime.GetNSPath(ctx, n.rootCtrName)
 	}
-	// delegate to the 0th component node which owns the netns
-	return n.componentNodes[0].GetNSPath(ctx)
+	return n.netnsNode.GetNSPath(ctx)
 }
 
 // calcComponentName appends the line card suffix to the given node name.
@@ -1414,6 +1463,10 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
+		// check for the netns holder as to never orphan it.
+		if n.netnsNode != nil {
+			return n.netnsNode.GetContainers(ctx)
+		}
 		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
 			clabnodes.ErrContainersNotFound)
 	}
@@ -1859,8 +1912,10 @@ func CheckPortWithRetry(
 type MgmtIP struct {
 	IPv4        string
 	IPv4pLen    int
+	IPv4Gw      string
 	IPv6        string
 	IPv6pLen    int
+	IPv6Gw      string
 	ContainerID string
 }
 
@@ -1870,47 +1925,44 @@ type MgmtIP struct {
 func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 	ips := MgmtIP{}
 
-	var components []*clabtypes.Component
-
+	var containerName string
 	if n.isDistributedBaseNode() {
-		components = n.Cfg.Components
+		if n.netnsNode != nil {
+			containerName = n.netnsNode.Config().LongName
+		}
 	} else {
-		components = n.rootComponents
+		containerName = n.rootCtrName
 	}
 
-	// for distributed nodes, get the IP from the
-	// 0th component container
-	if len(components) > 0 {
-		c := components[0]
-		slot := strings.ToLower(c.Slot)
+	if containerName == "" {
+		return ips, nil
+	}
 
-		componentName := n.Cfg.LongName + "-" + slot
-
-		containers, err := n.Runtime.ListContainers(
-			context.Background(),
-			[]*clabtypes.GenericFilter{
-				{
-					FilterType: "name",
-					Match:      componentName,
-				},
+	containers, err := n.Runtime.ListContainers(
+		context.Background(),
+		[]*clabtypes.GenericFilter{
+			{
+				FilterType: "name",
+				Match:      containerName,
 			},
-		)
-		if err != nil {
-			return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
+		},
+	)
+	if err != nil {
+		return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", containerName, err)
+	}
+
+	for _, container := range containers {
+		if container.NetworkSettings.IPv4addr != "" {
+			ips.IPv4 = container.NetworkSettings.IPv4addr
+			ips.IPv4pLen = container.NetworkSettings.IPv4pLen
+			ips.IPv4Gw = container.NetworkSettings.IPv4Gw
+			ips.ContainerID = container.ID
 		}
-
-		for _, container := range containers {
-			if container.NetworkSettings.IPv4addr != "" {
-				ips.IPv4 = container.NetworkSettings.IPv4addr
-				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
-				ips.ContainerID = container.ID
-			}
-			if container.NetworkSettings.IPv6addr != "" {
-				ips.IPv6 = container.NetworkSettings.IPv6addr
-				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
-				ips.ContainerID = container.ID
-			}
-
+		if container.NetworkSettings.IPv6addr != "" {
+			ips.IPv6 = container.NetworkSettings.IPv6addr
+			ips.IPv6pLen = container.NetworkSettings.IPv6pLen
+			ips.IPv6Gw = container.NetworkSettings.IPv6Gw
+			ips.ContainerID = container.ID
 		}
 	}
 
@@ -2179,6 +2231,10 @@ func (n *sros) Start(ctx context.Context) error {
 		return n.PostDeployEndpoints(ctx)
 	}
 
+	if err := n.ensureNetnsRunning(ctx); err != nil {
+		return err
+	}
+
 	for _, c := range n.componentNodes {
 		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
 			return fmt.Errorf("node %q component %q start error: %w",
@@ -2189,7 +2245,6 @@ func (n *sros) Start(ctx context.Context) error {
 	if err := n.RestoreEndpoints(ctx); err != nil {
 		return err
 	}
-
 	return n.PostDeployEndpoints(ctx)
 }
 
@@ -2198,14 +2253,14 @@ func (n *sros) Stop(ctx context.Context) error {
 		return n.DefaultNode.Stop(ctx)
 	}
 
+	if n.GetContainerStatus(ctx) == clabruntime.Stopped {
+		return nil
+	}
 	if err := n.ParkEndpoints(ctx); err != nil {
 		return err
 	}
 
-	// stop components in reverse order as 0th ctr is netns owner.
-	// and we don't want to orphan anything.
-	for i := len(n.componentNodes) - 1; i >= 0; i-- {
-		c := n.componentNodes[i]
+	for _, c := range n.componentNodes {
 		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
 			log.Warnf("node %q component %q stop error: %v",
 				n.Cfg.ShortName, c.Config().ShortName, err)
@@ -2253,4 +2308,47 @@ func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Co
 // see https://github.com/srl-labs/containerlab/pull/3270.
 func (*sros) DefaultLinkType() clablinks.LinkType {
 	return clablinks.LinkTypeVethStitch
+}
+
+// RestoreEndpoints retains normal lifecycle parking while restoring the logical
+// node's symlink as well as the component symlinks created by the runtime.
+func (n *sros) RestoreEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.RestoreEndpoints(ctx); err != nil {
+		return err
+	}
+	if !n.isDistributedBaseNode() {
+		return nil
+	}
+	nsPath, err := n.GetNSPath(ctx)
+	if err != nil {
+		return err
+	}
+	return clabutils.LinkContainerNS(nsPath, n.Cfg.LongName)
+}
+
+func (n *sros) ensureNetnsRunning(ctx context.Context) error {
+	switch status := n.netnsNode.GetContainerStatus(ctx); status {
+	case clabruntime.Running:
+		// The namespace holder intentionally survives regular node lifecycle operations.
+	case clabruntime.Created, clabruntime.Stopped:
+		if err := n.netnsNode.Start(ctx); err != nil {
+			return fmt.Errorf("node %q network namespace container start error: %w",
+				n.Cfg.ShortName, err)
+		}
+	case clabruntime.Paused:
+		if err := n.Runtime.UnpauseContainer(ctx, n.netnsNode.Config().LongName); err != nil {
+			return fmt.Errorf("node %q network namespace container unpause error: %w",
+				n.Cfg.ShortName, err)
+		}
+	case clabruntime.NotFound:
+		return fmt.Errorf(
+			"node %q network namespace container %q not found; recreate the node",
+			n.Cfg.ShortName, n.netnsNode.Config().LongName,
+		)
+	default:
+		return fmt.Errorf("node %q network namespace container %q is %s",
+			n.Cfg.ShortName, n.netnsNode.Config().LongName, status)
+	}
+
+	return nil
 }

@@ -30,6 +30,10 @@ topology:
     R2:
       kind: nokia_srsim
       type: sr-1-24d
+{{- if .recreateVersion }}
+      env:
+        CLAB_RECREATE_TEST: "{{ .recreateVersion }}"
+{{- end }}
       components:
         - slot: A
           type: cpm-1x/i24-800gqsfpdd-1

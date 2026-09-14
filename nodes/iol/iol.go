@@ -104,7 +104,19 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	nodeType := strings.ToLower(n.Cfg.NodeType)
 
-	n.Pid = strconv.Itoa(n.Cfg.Index + 1) // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+	pid := n.Cfg.Index + 1 // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+
+	// CLAB_IOL_PID_OFFSET shifts the auto-assigned PID, e.g. to keep IDs unique across labs.
+	if v, ok := n.Cfg.Env["CLAB_IOL_PID_OFFSET"]; ok {
+		offset, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("invalid CLAB_IOL_PID_OFFSET %q: %w", v, err)
+		}
+
+		pid += offset
+	}
+
+	n.Pid = strconv.Itoa(pid)
 
 	env := map[string]string{
 		"IOL_PID": n.Pid,
@@ -174,9 +186,6 @@ func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 
 	// Must update mgmt IP if not first boot
 	if !n.firstBoot {
-		// iol has a 5sec boot delay, wait a few extra secs for the console
-		time.Sleep(10 * time.Second)
-
 		return n.UpdateMgmtIntf(ctx)
 	}
 
@@ -439,8 +448,22 @@ func (n *iol) CheckInterfaceName() error {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
+	// ponytail: fixed sleep heuristic; proper fix is to read PTY output until
+	// an interactive prompt pattern is detected. Upgrade by implementing a
+	// PTY reader in WriteToStdinNoWait or adding a console-ready probe.
+	//
+	// IOL has a 5s startup countdown followed by NVRAM loading (~10-20s
+	// depending on config size and system load). Commands written to the PTY
+	// during NVRAM loading are consumed mid-boot and silently lost, which
+	// leaves the management interface unconfigured. Wait 25s so the first
+	// attempt lands after the console is interactive.
+	time.Sleep(25 * time.Second)
+
+	// Prefix with \rend\r to exit any lingering config mode left by a
+	// previous partial attempt before re-entering the command sequence.
+	// All IOS commands here are idempotent; repeating them is safe.
 	mgmt_str := fmt.Sprintf(
-		"\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		"\rend\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
 		n.Cfg.MgmtIPv4Address,
 		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		n.Cfg.MgmtIPv6Address,
@@ -448,8 +471,20 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		n.Cfg.MgmtIPv4Gateway,
 		n.Cfg.MgmtIPv6Gateway,
 	)
+	data := []byte(mgmt_str)
 
-	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
+	var lastErr error
+	for i := range 3 {
+		if i > 0 {
+			time.Sleep(10 * time.Second)
+		}
+		lastErr = n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, data)
+		if lastErr != nil {
+			log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
+				i+1, n.Cfg.ShortName, lastErr)
+		}
+	}
+	return lastErr
 }
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
