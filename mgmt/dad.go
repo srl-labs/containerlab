@@ -122,7 +122,7 @@ func (d *dadChecker) prepare(m *clabtypes.MgmtNet, ip netip.Addr) (*macvlanProbe
 	if prefix, found := d.local.Lookup(ip); found {
 		return nil, &occupiedPrefix{prefix: prefix}
 	}
-	if m.Driver == "macvlan" && m.EffectiveMacvlanMode() == "bridge" {
+	if m.WireDADEnabled() {
 		if d.wire == nil {
 			wire, err := newMacvlanProbe(m.MacvlanParent)
 			if err != nil {

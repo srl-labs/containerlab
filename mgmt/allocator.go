@@ -148,8 +148,7 @@ func newAllocationRun(
 }
 
 func (r *allocationRun) allocate(ctx context.Context) error {
-	if r.network.IPAM.DADEnabled() && r.network.Driver == "macvlan" &&
-		r.network.EffectiveMacvlanMode() == "bridge" {
+	if r.network.WireDADEnabled() {
 		group, familyCtx := errgroup.WithContext(ctx)
 		for _, v4 := range []bool{true, false} {
 			group.Go(func() error { return r.allocateFamily(familyCtx, v4) })
@@ -222,7 +221,7 @@ func (r *allocationRun) allocateFamily(ctx context.Context, v4 bool) error {
 		owned:           make(map[netip.Addr]string),
 	}
 	defer family.cancel(nil)
-	if r.network.Driver == "macvlan" && r.network.EffectiveMacvlanMode() == "bridge" {
+	if r.network.WireDADEnabled() {
 		family.concurrency = len(r.nodes)
 	}
 	if r.network.IPAM.DADEnabled() {

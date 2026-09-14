@@ -95,6 +95,12 @@ func (m *MgmtNet) EffectiveMacvlanMode() string {
 	return m.MacvlanMode
 }
 
+// WireDADEnabled reports whether management addresses can be probed on a macvlan parent.
+func (m *MgmtNet) WireDADEnabled() bool {
+	return m.IPAM.Provider != IPAMProviderRuntime && m.IPAM.DADEnabled() &&
+		m.Driver == "macvlan" && m.EffectiveMacvlanMode() == "bridge"
+}
+
 func validateMacvlanSubnet(subnet, gateway, ipRange string, ipv4 bool) error {
 	if subnet == "" && gateway == "" && ipRange == "" {
 		return nil

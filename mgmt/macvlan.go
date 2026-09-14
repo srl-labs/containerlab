@@ -20,8 +20,7 @@ func NewMacvlanHost(m *clabtypes.MgmtNet, links clabutils.MacvlanHostNetlink) cl
 	if host.Links == nil {
 		host.Links = &netlink.Handle{}
 	}
-	if m.IPAM.Provider != clabtypes.IPAMProviderRuntime && m.IPAM.DADEnabled() &&
-		m.Driver == "macvlan" && m.EffectiveMacvlanMode() == "bridge" {
+	if m.WireDADEnabled() {
 		host.Probe = ProbeAddress
 	}
 	return host

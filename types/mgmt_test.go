@@ -276,6 +276,57 @@ func TestDADValidation(t *testing.T) {
 	}
 }
 
+func TestWireDADEnabled(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*MgmtNet)
+		want   bool
+	}{
+		{name: "defaults", want: true},
+		{
+			name: "containerlab provider",
+			change: func(m *MgmtNet) {
+				m.IPAM.Provider = IPAMProviderContainerlab
+			},
+			want: true,
+		},
+		{
+			name: "runtime provider",
+			change: func(m *MgmtNet) {
+				m.IPAM.Provider = IPAMProviderRuntime
+			},
+		},
+		{
+			name: "DAD disabled",
+			change: func(m *MgmtNet) {
+				m.IPAM.DAD = new(false)
+			},
+		},
+		{
+			name: "bridge driver",
+			change: func(m *MgmtNet) {
+				m.Driver = "bridge"
+			},
+		},
+		{
+			name: "private mode",
+			change: func(m *MgmtNet) {
+				m.MacvlanMode = "private"
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := &MgmtNet{Driver: "macvlan"}
+			if tc.change != nil {
+				tc.change(m)
+			}
+			if got := m.WireDADEnabled(); got != tc.want {
+				t.Fatalf("WireDADEnabled() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestManagementIPAMYAML(t *testing.T) {
 	var m MgmtNet
 	if err := yaml.UnmarshalStrict(
