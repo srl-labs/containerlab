@@ -319,6 +319,28 @@ func TestAllocationDADExhaustionAndStaticConflict(t *testing.T) {
 			t.Fatalf("expected exhausted pool without committing: %v; calls %d", err, calls)
 		}
 	}
+
+	m := &clabtypes.MgmtNet{
+		Driver:     "macvlan",
+		IPv4Subnet: "192.0.2.0/29",
+	}
+	n := &clabtypes.NodeConfig{ShortName: "node", MgmtIPv4Address: "192.0.2.2"}
+	calls := 0
+	if err := allocateManagementIPs(
+		context.Background(),
+		m,
+		[]*clabtypes.NodeConfig{n},
+		func(context.Context, *clabtypes.MgmtNet, netip.Addr) error {
+			calls++
+			return nil
+		},
+		clabtypes.AllocationOptions{Reserved: []netip.Addr{netip.MustParseAddr("192.0.2.2")}},
+	); err != nil {
+		t.Fatalf("runtime static conflict should warn: %v", err)
+	}
+	if calls != 0 || n.MgmtIPv4Address != "192.0.2.2" {
+		t.Fatal("runtime conflict changed or probed explicit address")
+	}
 }
 
 func TestAllocationDADCancellationDuringRetry(t *testing.T) {

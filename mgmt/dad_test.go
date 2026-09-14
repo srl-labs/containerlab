@@ -112,17 +112,27 @@ func TestDADRouteReservations(t *testing.T) {
 	d.addRoutes([]netlink.Route{
 		route("192.0.2.0/24", netlink.SCOPE_LINK, 7),
 		route("198.51.100.0/24", netlink.SCOPE_LINK, 8),
+		route("172.16.0.0/12", netlink.SCOPE_LINK, 9),
 		route("10.0.0.0/8", netlink.SCOPE_UNIVERSE, 9),
 		route("0.0.0.0/0", netlink.SCOPE_UNIVERSE, 9),
-	}, 7)
+	}, 7, netip.MustParsePrefix("172.20.20.0/24"))
 	for _, tc := range []struct {
 		ip       string
 		reserved bool
-	}{{"192.0.2.5", false}, {"198.51.100.5", true}, {"10.0.0.5", false}, {"203.0.113.5", false}} {
+	}{{"192.0.2.5", false}, {"198.51.100.5", true}, {"172.20.20.5", false}, {"10.0.0.5", false}, {"203.0.113.5", false}} {
 		_, got := d.local.Lookup(netip.MustParseAddr(tc.ip))
 		if got != tc.reserved {
 			t.Fatalf("%s reserved=%t, want %t", tc.ip, got, tc.reserved)
 		}
+	}
+
+	d = &dadChecker{loaded: true}
+	subnet := netip.MustParsePrefix("172.20.20.0/24")
+	d.addRoutes([]netlink.Route{
+		route(subnet.String(), netlink.SCOPE_LINK, 9),
+	}, 7, subnet)
+	if _, reserved := d.local.Lookup(netip.MustParseAddr("172.20.20.5")); !reserved {
+		t.Fatal("ignored an equal-prefix route on another interface")
 	}
 }
 

@@ -39,6 +39,19 @@ func TestNetworkAddressesFiltersPoolsBeforeInspect(t *testing.T) {
 						"IPAM":       map[string]any{"Config": []any{map[string]any{"Subnet": "192.0.2.0/25", "Gateway": "192.0.2.1", "AuxiliaryAddresses": map[string]string{"reserved": "192.0.2.3"}}, map[string]string{"Subnet": "2001:db8::/64", "Gateway": "2001:db8::1"}}},
 						"Containers": map[string]any{"owner-id": map[string]string{"Name": "r1", "IPv4Address": "192.0.2.2/25", "IPv6Address": "2001:db8::2/64"}},
 					})
+				case "/containers/json":
+					if r.URL.Query().Get("all") != "1" {
+						t.Errorf("stopped containers were not requested: %s", r.URL.RawQuery)
+					}
+					json.NewEncoder(w).Encode([]any{map[string]any{
+						"Id": "stopped-id",
+						"NetworkSettings": map[string]any{"Networks": map[string]any{
+							"match": map[string]any{"IPAMConfig": map[string]string{
+								"IPv4Address": "192.0.2.4",
+								"IPv6Address": "2001:db8::4",
+							}},
+						}},
+					}})
 				default:
 					t.Errorf("unexpected inspection %s", path)
 					http.NotFound(w, r)
@@ -61,10 +74,15 @@ func TestNetworkAddressesFiltersPoolsBeforeInspect(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if calls["/networks"] != 1 || calls["/networks/match"] != 1 || len(calls) != 2 {
+			if calls["/networks"] != 1 || calls["/networks/match"] != 1 ||
+				calls["/containers/json"] != 1 || len(calls) != 3 {
 				t.Fatalf("wrong request count: %v", calls)
 			}
-			want := map[string]string{"192.0.2.1": "", "192.0.2.3": "", "2001:db8::1": "", "192.0.2.2": "owner-id", "2001:db8::2": "owner-id"}
+			want := map[string]string{
+				"192.0.2.1": "", "192.0.2.3": "", "2001:db8::1": "",
+				"192.0.2.2": "owner-id", "2001:db8::2": "owner-id",
+				"192.0.2.4": "stopped-id", "2001:db8::4": "stopped-id",
+			}
 			if len(got) != len(want) {
 				t.Fatalf("snapshot: %+v", got)
 			}

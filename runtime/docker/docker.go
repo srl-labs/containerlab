@@ -206,6 +206,33 @@ func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 		return nil, fmt.Errorf("list Docker network pools: %w", err)
 	}
 	var addresses []clabruntime.NetworkAddress
+	seen := make(map[clabruntime.NetworkAddress]bool)
+	matchedNetworks := make(map[string]bool)
+	add := func(networkName, value, containerID string) error {
+		if value == "" {
+			return nil
+		}
+		ip, err := netip.ParseAddr(value)
+		if err != nil {
+			prefix, prefixErr := netip.ParsePrefix(value)
+			if prefixErr != nil {
+				return fmt.Errorf("network %s address %q: %w", networkName, value, prefixErr)
+			}
+			ip = prefix.Addr()
+		}
+		ip = ip.Unmap()
+		for _, subnet := range subnets {
+			if subnet.Contains(ip) {
+				address := clabruntime.NetworkAddress{NetworkName: networkName, ContainerID: containerID, Address: ip}
+				if !seen[address] {
+					addresses = append(addresses, address)
+					seen[address] = true
+				}
+				break
+			}
+		}
+		return nil
+	}
 	for _, network := range networks {
 		matches := false
 		for _, pool := range network.IPAM.Config {
@@ -229,41 +256,40 @@ func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 		if err != nil {
 			return nil, fmt.Errorf("inspect occupied addresses on Docker network %s: %w", network.Name, err)
 		}
+		matchedNetworks[details.Name] = true
 		// Endpoint addresses include a prefix length; gateways and aux entries do not.
-		add := func(value, containerID string) error {
-			if value == "" {
-				return nil
-			}
-			ip, err := netip.ParseAddr(value)
-			if err != nil {
-				prefix, prefixErr := netip.ParsePrefix(value)
-				if prefixErr != nil {
-					return fmt.Errorf("network %s address %q: %w", details.Name, value, prefixErr)
-				}
-				ip = prefix.Addr()
-			}
-			ip = ip.Unmap()
-			for _, subnet := range subnets {
-				if subnet.Contains(ip) {
-					addresses = append(addresses, clabruntime.NetworkAddress{NetworkName: details.Name, ContainerID: containerID, Address: ip})
-					break
-				}
-			}
-			return nil
-		}
 		for _, pool := range details.IPAM.Config {
-			if err := add(pool.Gateway, ""); err != nil {
+			if err := add(details.Name, pool.Gateway, ""); err != nil {
 				return nil, err
 			}
 			for _, value := range pool.AuxAddress {
-				if err := add(value, ""); err != nil {
+				if err := add(details.Name, value, ""); err != nil {
 					return nil, err
 				}
 			}
 		}
 		for id, endpoint := range details.Containers {
 			for _, value := range []string{endpoint.IPv4Address, endpoint.IPv6Address} {
-				if err := add(value, id); err != nil {
+				if err := add(details.Name, value, id); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	containers, err := d.Client.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("list Docker container address requests: %w", err)
+	}
+	for _, ctr := range containers {
+		for networkName, endpoint := range ctr.NetworkSettings.Networks {
+			if !matchedNetworks[networkName] || endpoint.IPAMConfig == nil {
+				continue
+			}
+			for _, value := range []string{
+				endpoint.IPAMConfig.IPv4Address,
+				endpoint.IPAMConfig.IPv6Address,
+			} {
+				if err := add(networkName, value, ctr.ID); err != nil {
 					return nil, err
 				}
 			}
@@ -1464,8 +1490,14 @@ func (d *DockerRuntime) produceGenericContainerList(
 
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
+			if ctr.NetworkSettings.IPv4addr == "" && ifcfg.IPAMConfig != nil {
+				ctr.NetworkSettings.IPv4addr = ifcfg.IPAMConfig.IPv4Address
+			}
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
+			if ctr.NetworkSettings.IPv6addr == "" && ifcfg.IPAMConfig != nil {
+				ctr.NetworkSettings.IPv6addr = ifcfg.IPAMConfig.IPv6Address
+			}
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
 			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
 			ctr.NetworkSettings.IPv6Gw = ifcfg.IPv6Gateway

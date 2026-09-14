@@ -92,7 +92,8 @@ func (d *dadChecker) load(m *clabtypes.MgmtNet) error {
 		if err != nil {
 			return fmt.Errorf("snapshot host routes: %w", err)
 		}
-		d.addRoutes(routes, bridgeIndex)
+		subnet, _ := netip.ParsePrefix(m.IPv4Subnet)
+		d.addRoutes(routes, bridgeIndex, subnet)
 		if contents, err := os.ReadFile(resolvconf.Path()); err == nil {
 			for _, prefix := range resolvconf.GetNameserversAsPrefix(contents) {
 				d.local.Add(prefix)
@@ -145,7 +146,7 @@ func (d *dadChecker) Check(ctx context.Context, m *clabtypes.MgmtNet, ip netip.A
 
 func (d *dadChecker) Close() error { return d.wire.Close() }
 
-func (d *dadChecker) addRoutes(routes []netlink.Route, bridgeIndex int) {
+func (d *dadChecker) addRoutes(routes []netlink.Route, bridgeIndex int, subnet netip.Prefix) {
 	for _, route := range routes {
 		if route.Scope != netlink.SCOPE_LINK || route.Dst == nil ||
 			route.Dst.IP.IsUnspecified() ||
@@ -153,6 +154,10 @@ func (d *dadChecker) addRoutes(routes []netlink.Route, bridgeIndex int) {
 			continue
 		}
 		if prefix, err := netip.ParsePrefix(route.Dst.String()); err == nil {
+			if subnet.IsValid() && prefix.Bits() < subnet.Bits() &&
+				prefix.Contains(subnet.Masked().Addr()) {
+				continue
+			}
 			d.local.Add(prefix)
 		}
 	}

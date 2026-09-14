@@ -126,6 +126,26 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 	if err := ResolveMacvlanSubnets(&m, parentNetlink{}, parent); err == nil {
 		t.Fatal("accepted parent without usable addresses")
 	}
+
+	m = clabtypes.MgmtNet{
+		Driver:        "macvlan",
+		MacvlanParent: "parent",
+		IPv4Subnet:    "192.0.2.0/24",
+	}
+	var addresses []netlink.Addr
+	for _, value := range []string{"2001:db8::1/64", "2001:db9::1/64"} {
+		address, err := netlink.ParseAddr(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		addresses = append(addresses, *address)
+	}
+	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
+		t.Fatalf("unrequested IPv6 inference blocked explicit IPv4: %v", err)
+	}
+	if m.IPv6Subnet != "" {
+		t.Fatalf("unexpected inferred IPv6 subnet %q", m.IPv6Subnet)
+	}
 }
 
 func TestMacvlanHostDADPolicy(t *testing.T) {

@@ -62,20 +62,25 @@ func EnsureMacvlanHost(ctx context.Context, m *clabtypes.MgmtNet, host clabutils
 // subnet-dependent settings before updating the management configuration.
 func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink, parent netlink.Link) error {
 	resolved := *m
+	explicitIPv4, explicitIPv6 := m.IPv4Subnet != "", m.IPv6Subnet != ""
 	for _, family := range []struct {
 		name          string
 		id            int
 		subnet        *string
 		gateway, pool string
+		otherExplicit bool
 	}{
-		{"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range},
-		{"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range},
+		{"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range, explicitIPv6},
+		{"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range, explicitIPv4},
 	} {
 		if *family.subnet != "" {
 			continue
 		}
 		subnet, err := MacvlanParentSubnet(links, parent, family.id)
 		if err != nil {
+			if family.otherExplicit && family.gateway == "" && family.pool == "" {
+				continue
+			}
 			return err
 		}
 		if subnet.IsValid() {
