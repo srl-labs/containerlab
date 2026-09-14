@@ -373,6 +373,9 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 		o.ToolsSSHX.MountSSHDir,
 	)
+	if err := c.AllocateToolManagementIPs(ctx, sshxNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate SSHX management address: %w", err)
+	}
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {
@@ -636,6 +639,9 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 		o.ToolsSSHX.MountSSHDir,
 	)
+	if err := c.AllocateToolManagementIPs(ctx, sshxNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate SSHX management address: %w", err)
+	}
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {

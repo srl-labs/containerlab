@@ -235,6 +235,9 @@ func (c *CLab) initMgmtNetwork() error {
 	if err := c.Config.Mgmt.Validate(); err != nil {
 		return err
 	}
+	if err := c.validateManagementLinks(); err != nil {
+		return err
+	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
 

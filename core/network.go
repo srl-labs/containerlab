@@ -2,8 +2,12 @@ package core
 
 import (
 	"context"
+	"fmt"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablinks "github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/mgmt"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
@@ -18,6 +22,38 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *CLab) validateManagementLinks() error {
+	if c.Config.Mgmt.Driver != "macvlan" || c.Config.Topology == nil {
+		return nil
+	}
+	for _, link := range c.Config.Topology.Links {
+		if link.Link.GetType() == clablinks.LinkTypeMgmtNet {
+			return fmt.Errorf("mgmt-net links require a bridge management network and cannot be used with mgmt.driver %q", c.Config.Mgmt.Driver)
+		}
+	}
+	return nil
+}
+
+// AllocateToolManagementIPs assigns addresses when the topology uses containerlab IPAM.
+func (c *CLab) AllocateToolManagementIPs(ctx context.Context, cfg *clabtypes.NodeConfig) error {
+	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+		return nil
+	}
+	if err := c.CreateNetwork(ctx); err != nil {
+		return err
+	}
+	reserved, err := c.collectReservedManagementAddresses(ctx, nil)
+	if err != nil {
+		return err
+	}
+	return mgmt.AllocateManagementIPs(
+		ctx,
+		c.Config.Mgmt,
+		[]*clabtypes.NodeConfig{cfg},
+		clabtypes.AllocationOptions{Reserved: reserved},
+	)
 }
 
 func (c *CLab) skipMgmtNetwork() bool {
