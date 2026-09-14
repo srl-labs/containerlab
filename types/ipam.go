@@ -10,6 +10,10 @@ const (
 	IPAMProviderRuntime      IPAMProvider = "runtime"
 )
 
+func (p IPAMProvider) IsValid() bool {
+	return p == "" || p == IPAMProviderContainerlab || p == IPAMProviderRuntime
+}
+
 // MgmtIPAM configures management address allocation and duplicate detection.
 type MgmtIPAM struct {
 	Provider IPAMProvider `json:"provider,omitempty" yaml:"provider,omitempty"`

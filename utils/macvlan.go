@@ -123,10 +123,7 @@ func (h MacvlanHost) Ensure(
 }
 
 func (h MacvlanHost) ensureAddress(ctx context.Context, link netlink.Link, ip netip.Addr) error {
-	family, err := NetlinkFamily(ip)
-	if err != nil {
-		return err
-	}
+	family := NetlinkFamily(ip)
 	addrs, err := h.Links.AddrList(nil, family)
 	if err != nil {
 		return fmt.Errorf("list host interface addresses: %w", err)

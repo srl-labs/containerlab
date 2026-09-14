@@ -16,22 +16,17 @@ import (
 
 func TestNetlinkFamily(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		ip      netip.Addr
-		family  int
-		wantErr bool
+		name   string
+		ip     netip.Addr
+		family int
 	}{
 		{name: "IPv4", ip: netip.MustParseAddr("192.0.2.1"), family: netlink.FAMILY_V4},
 		{name: "IPv6", ip: netip.MustParseAddr("2001:db8::1"), family: netlink.FAMILY_V6},
-		{name: "invalid", wantErr: true},
-		{name: "mapped IPv4", ip: netip.MustParseAddr("::ffff:192.0.2.1"), wantErr: true},
+		{name: "invalid", family: netlink.FAMILY_ALL},
+		{name: "mapped IPv4", ip: netip.MustParseAddr("::ffff:192.0.2.1"), family: netlink.FAMILY_V6},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			family, err := NetlinkFamily(tc.ip)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("NetlinkFamily(%s) error = %v; want error %t", tc.ip, err, tc.wantErr)
-			}
-			if err == nil && family != tc.family {
+			if family := NetlinkFamily(tc.ip); family != tc.family {
 				t.Fatalf("NetlinkFamily(%s) = %d; want %d", tc.ip, family, tc.family)
 			}
 		})

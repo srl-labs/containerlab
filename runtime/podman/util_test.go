@@ -6,6 +6,7 @@ package podman
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -15,6 +16,7 @@ import (
 
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	netTypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/podman/v6/pkg/bindings"
 	"go.podman.io/podman/v6/pkg/specgen"
 )
@@ -268,5 +270,87 @@ func TestNetworkAddressesFiltersPoolsBeforeInspect(t *testing.T) {
 		if !ok || owner != entry.ContainerID || entry.NetworkName != "match" {
 			t.Fatalf("wrong reservation: %+v", entry)
 		}
+	}
+}
+
+func TestNetOptsLeaseRanges(t *testing.T) {
+	r := &PodmanRuntime{mgmt: &types.MgmtNet{
+		Network:    "clab",
+		IPv4Subnet: "192.0.2.0/24",
+		IPv4Range:  "192.0.2.128/26",
+		IPv6Subnet: "2001:db8::/64",
+		IPv6Range:  "2001:db8::100/126",
+	}}
+	network, err := r.netOpts(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range [][2]string{
+		{"192.0.2.129", "192.0.2.191"},
+		{"2001:db8::101", "2001:db8::103"},
+	} {
+		lease := network.Subnets[i].LeaseRange
+		if lease == nil || lease.StartIP.String() != want[0] || lease.EndIP.String() != want[1] {
+			t.Fatalf("lease range %d = %+v; want %v", i, lease, want)
+		}
+	}
+
+	r.mgmt.IPv4Range = "198.51.100.0/24"
+	if _, err := r.netOpts(context.Background()); err == nil {
+		t.Fatal("accepted an IP range outside its subnet")
+	}
+}
+
+func TestSetMgmtIPAMFromPodmanSubnets(t *testing.T) {
+	v4, err := netTypes.ParseCIDR("192.0.2.0/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v6, err := netTypes.ParseCIDR("2001:db8::/64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := &types.MgmtNet{IPv4Range: "198.51.100.0/24", IPv6Range: "2001:db8:1::/64"}
+	err = setMgmtIPAMFromPodmanSubnets(m, []netTypes.Subnet{
+		{
+			Subnet:  v4,
+			Gateway: net.ParseIP("192.0.2.1"),
+			LeaseRange: &netTypes.LeaseRange{
+				StartIP: net.ParseIP("192.0.2.129"),
+				EndIP:   net.ParseIP("192.0.2.191"),
+			},
+		},
+		{Subnet: v6, Gateway: net.ParseIP("2001:db8::1")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.IPv4Subnet != "192.0.2.0/24" || m.IPv4Gw != "192.0.2.1" ||
+		m.IPv4Range != "192.0.2.128/26" {
+		t.Fatalf("incorrect IPv4 IPAM: %+v", m)
+	}
+	if m.IPv6Subnet != "2001:db8::/64" || m.IPv6Gw != "2001:db8::1" ||
+		m.IPv6Range != "" {
+		t.Fatalf("incorrect IPv6 IPAM: %+v", m)
+	}
+
+	err = setMgmtIPAMFromPodmanSubnets(m, []netTypes.Subnet{{
+		Subnet: v4,
+		LeaseRange: &netTypes.LeaseRange{
+			StartIP: net.ParseIP("192.0.2.20"),
+			EndIP:   net.ParseIP("192.0.2.50"),
+		},
+	}})
+	if err == nil {
+		t.Fatal("accepted a lease range that cannot be represented as a CIDR")
+	}
+}
+
+func TestCreateNetValidatesManagementConfig(t *testing.T) {
+	r := &PodmanRuntime{mgmt: &types.MgmtNet{
+		IPAM: types.MgmtIPAM{Provider: types.IPAMProvider("invalid")},
+	}}
+	if err := r.CreateNet(context.Background()); err == nil {
+		t.Fatal("accepted an invalid IPAM provider")
 	}
 }

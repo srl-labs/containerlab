@@ -257,7 +257,7 @@ func TestDADValidation(t *testing.T) {
 			t.Fatal("incorrect DAD default")
 		}
 	}
-	if (&MgmtNet{IPAM: MgmtIPAM{Provider: "index"}}).Validate() == nil {
+	if (&MgmtNet{IPAM: MgmtIPAM{Provider: IPAMProvider("index")}}).Validate() == nil {
 		t.Fatal("accepted invalid provider")
 	}
 }

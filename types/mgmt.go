@@ -8,7 +8,7 @@ import (
 
 // Validate checks management driver options without accessing the runtime or host.
 func (m *MgmtNet) Validate() error {
-	if m.IPAM.Provider != "" && m.IPAM.Provider != IPAMProviderRuntime && m.IPAM.Provider != IPAMProviderContainerlab {
+	if !m.IPAM.Provider.IsValid() {
 		return fmt.Errorf("unsupported mgmt.ipam.provider %q", m.IPAM.Provider)
 	}
 	switch m.Driver {

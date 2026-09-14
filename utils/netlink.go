@@ -24,14 +24,14 @@ import (
 )
 
 // NetlinkFamily returns the netlink address family for an IP address.
-func NetlinkFamily(ip netip.Addr) (int, error) {
-	if !ip.IsValid() || ip.Is4In6() {
-		return netlink.FAMILY_ALL, fmt.Errorf("invalid netlink IP address %q", ip)
-	}
+func NetlinkFamily(ip netip.Addr) int {
 	if ip.Is4() {
-		return netlink.FAMILY_V4, nil
+		return netlink.FAMILY_V4
 	}
-	return netlink.FAMILY_V6, nil
+	if ip.Is6() {
+		return netlink.FAMILY_V6
+	}
+	return netlink.FAMILY_ALL
 }
 
 const (

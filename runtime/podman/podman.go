@@ -20,6 +20,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	netTypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/podman/v6/pkg/api/handlers"
 	"go.podman.io/podman/v6/pkg/bindings"
 	"go.podman.io/podman/v6/pkg/bindings/containers"
@@ -158,6 +159,9 @@ func (r *PodmanRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 
 // CreateNet used to create a new bridge for clab mgmt network.
 func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
+	if err := r.mgmt.Validate(); err != nil {
+		return err
+	}
 	if r.mgmt.Driver == "macvlan" {
 		return fmt.Errorf("macvlan management networks are not implemented for Podman runtime")
 	}
@@ -185,7 +189,8 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		}
 		log.Debugf("Create network response was: %+v", resp)
 	}
-	if r.mgmt.Bridge == "" || r.mgmt.IPAM.Provider != types.IPAMProviderRuntime {
+	containerlabIPAM := r.mgmt.IPAM.Provider != types.IPAMProviderRuntime
+	if r.mgmt.Bridge == "" || containerlabIPAM {
 		details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
 		if err != nil {
 			return err
@@ -194,25 +199,35 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 			r.mgmt.Bridge = details.NetworkInterface
 		}
 
-		if r.mgmt.IPAM.Provider != types.IPAMProviderRuntime {
-			// Allocation requires the subnet and gateway of the created or reused network.
-			r.mgmt.IPv4Subnet, r.mgmt.IPv6Subnet = "", ""
-			r.mgmt.IPv4Gw, r.mgmt.IPv6Gw = "", ""
-
-			for _, subnet := range details.Subnets {
-				gateway := ""
-				if subnet.Gateway != nil {
-					gateway = subnet.Gateway.String()
-				}
-				if subnet.Subnet.IP.To4() != nil {
-					r.mgmt.IPv4Subnet, r.mgmt.IPv4Gw = subnet.Subnet.String(), gateway
-				} else {
-					r.mgmt.IPv6Subnet, r.mgmt.IPv6Gw = subnet.Subnet.String(), gateway
-				}
+		if containerlabIPAM {
+			if err := setMgmtIPAMFromPodmanSubnets(r.mgmt, details.Subnets); err != nil {
+				return err
 			}
 		}
 	}
 
+	return nil
+}
+
+func setMgmtIPAMFromPodmanSubnets(m *types.MgmtNet, subnets []netTypes.Subnet) error {
+	m.IPv4Subnet, m.IPv6Subnet = "", ""
+	m.IPv4Gw, m.IPv6Gw = "", ""
+	m.IPv4Range, m.IPv6Range = "", ""
+	for _, subnet := range subnets {
+		gateway := ""
+		if subnet.Gateway != nil {
+			gateway = subnet.Gateway.String()
+		}
+		ipRange, err := podmanLeaseRangePrefix(subnet.LeaseRange)
+		if err != nil {
+			return err
+		}
+		if subnet.Subnet.IP.To4() != nil {
+			m.IPv4Subnet, m.IPv4Gw, m.IPv4Range = subnet.Subnet.String(), gateway, ipRange
+		} else {
+			m.IPv6Subnet, m.IPv6Gw, m.IPv6Range = subnet.Subnet.String(), gateway, ipRange
+		}
+	}
 	return nil
 }
 

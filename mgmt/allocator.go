@@ -87,9 +87,6 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 	check func(context.Context, *clabtypes.MgmtNet, netip.Addr) error,
 	options clabtypes.AllocationOptions,
 ) ([]*clabtypes.NodeConfig, error) {
-	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
-		return nodes, nil
-	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -139,9 +136,11 @@ func newAllocationRun(
 	for i, node := range nodes {
 		copy := *node
 		run.drafts[i] = &copy
-		run.byName[copy.ShortName] = &copy
+		if copy.ManagementIPAMEligible() {
+			run.nodes = append(run.nodes, &copy)
+			run.byName[copy.ShortName] = &copy
+		}
 	}
-	run.nodes = append([]*clabtypes.NodeConfig(nil), run.drafts...)
 	sort.Slice(run.nodes, func(i, j int) bool {
 		return run.nodes[i].ShortName < run.nodes[j].ShortName
 	})
@@ -269,7 +268,7 @@ func (r *allocationRun) reserveExisting(family *familyAllocation) error {
 		}
 		family.owned[current.Address] = current.NodeName
 		node := r.byName[current.NodeName]
-		if node != nil && node.ManagementIPAMEligible() && *family.address(node) == "" {
+		if node != nil && *family.address(node) == "" {
 			*family.address(node) = current.Address.String()
 		}
 	}
@@ -280,7 +279,7 @@ func (r *allocationRun) probeRetained(family *familyAllocation) error {
 	var explicit []netip.Addr
 	var explicitNodes []*clabtypes.NodeConfig
 	for _, node := range r.nodes {
-		if !node.ManagementIPAMEligible() || *family.address(node) == "" {
+		if *family.address(node) == "" {
 			continue
 		}
 		address, err := netip.ParseAddr(*family.address(node))
@@ -305,7 +304,7 @@ func (r *allocationRun) probeRetained(family *familyAllocation) error {
 	var preferences []netip.Addr
 	var retained []*clabtypes.NodeConfig
 	for _, node := range r.nodes {
-		if !node.ManagementIPAMEligible() || *family.address(node) != "" {
+		if *family.address(node) != "" {
 			continue
 		}
 		preference := r.options.Preferred[node.ShortName].IPv6
@@ -351,7 +350,7 @@ func (r *allocationRun) allocatePending(family *familyAllocation) error {
 	var keys []string
 	var pending []*clabtypes.NodeConfig
 	for _, node := range r.nodes {
-		if !node.ManagementIPAMEligible() || *family.address(node) != "" {
+		if *family.address(node) != "" {
 			continue
 		}
 		keys = append(keys, node.ShortName)

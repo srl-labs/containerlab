@@ -53,11 +53,7 @@ func validateMacvlanAuxParentRoute(m *clabtypes.MgmtNet, links clabutils.Macvlan
 	if err != nil {
 		return err
 	}
-	family, err := clabutils.NetlinkFamily(ip)
-	if err != nil {
-		return err
-	}
-	routes, err := links.RouteList(nil, family)
+	routes, err := links.RouteList(nil, clabutils.NetlinkFamily(ip))
 	if err != nil {
 		return fmt.Errorf("list macvlan parent routes: %w", err)
 	}

@@ -136,7 +136,11 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 }
 
 func TestManagementIPAMProvider(t *testing.T) {
-	for _, provider := range []clabtypes.IPAMProvider{"", clabtypes.IPAMProviderContainerlab, clabtypes.IPAMProviderRuntime} {
+	for _, provider := range []clabtypes.IPAMProvider{
+		"",
+		clabtypes.IPAMProviderContainerlab,
+		clabtypes.IPAMProviderRuntime,
+	} {
 		t.Run(string(provider), func(t *testing.T) {
 			m := &clabtypes.MgmtNet{
 				IPv4Subnet: "192.0.2.0/24",
@@ -206,12 +210,23 @@ func TestAllocationDADProviderAndDisable(t *testing.T) {
 				IPAM:       clabtypes.MgmtIPAM{Provider: provider, DAD: dad},
 			}
 			calls := 0
-			err := allocateManagementIPsForTest(
-				context.Background(),
-				m,
-				[]*clabtypes.NodeConfig{{ShortName: "node"}},
-				func(context.Context, *clabtypes.MgmtNet, netip.Addr) error { calls++; return nil },
-			)
+			nodes := []*clabtypes.NodeConfig{{ShortName: "node"}}
+			var err error
+			if provider == clabtypes.IPAMProviderRuntime {
+				err = AllocateManagementIPs(
+					context.Background(),
+					m,
+					nodes,
+					clabtypes.AllocationOptions{},
+				)
+			} else {
+				err = allocateManagementIPsForTest(
+					context.Background(),
+					m,
+					nodes,
+					func(context.Context, *clabtypes.MgmtNet, netip.Addr) error { calls++; return nil },
+				)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
