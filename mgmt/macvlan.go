@@ -100,24 +100,31 @@ func EnsureMacvlanHost(ctx context.Context, m *clabtypes.MgmtNet, host clabutils
 func ResolveMacvlanSubnets(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink, parent netlink.Link) error {
 	resolved := *m
 	explicitIPv4, explicitIPv6 := m.IPv4Subnet != "", m.IPv6Subnet != ""
+	aux, _ := netip.ParseAddr(m.MacvlanAux)
+	if prefix, err := netip.ParsePrefix(m.MacvlanAux); err == nil {
+		aux = prefix.Addr()
+	}
 	for _, family := range []struct {
 		name          string
 		id            int
 		subnet        *string
 		gateway, pool string
 		otherExplicit bool
+		requested     bool
 	}{
-		{"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range, explicitIPv6},
-		{"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range, explicitIPv4},
+		{"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range,
+			explicitIPv6, resolved.IPv4Gw != "" || resolved.IPv4Range != "" || aux.Is4()},
+		{"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range,
+			explicitIPv4, resolved.IPv6Gw != "" || resolved.IPv6Range != "" || aux.Is6()},
 	} {
 		if *family.subnet != "" {
 			continue
 		}
+		if family.otherExplicit && !family.requested {
+			continue
+		}
 		subnet, err := MacvlanParentSubnet(links, parent, family.id)
 		if err != nil {
-			if family.otherExplicit && family.gateway == "" && family.pool == "" {
-				continue
-			}
 			return err
 		}
 		if subnet.IsValid() {

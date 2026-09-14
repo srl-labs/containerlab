@@ -133,24 +133,98 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 		t.Fatal("accepted parent without usable addresses")
 	}
 
+	for _, tc := range []struct {
+		name      string
+		addresses []string
+	}{
+		{"usable", []string{"2001:db8::1/64"}},
+		{"ambiguous", []string{"2001:db8::1/64", "2001:db9::1/64"}},
+	} {
+		t.Run("unrequested IPv6 "+tc.name, func(t *testing.T) {
+			m := clabtypes.MgmtNet{
+				Driver:        "macvlan",
+				MacvlanParent: "parent",
+				IPv4Subnet:    "192.0.2.0/24",
+			}
+			var addresses []netlink.Addr
+			for _, value := range tc.addresses {
+				address, err := netlink.ParseAddr(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				addresses = append(addresses, *address)
+			}
+			if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
+				t.Fatalf("unrequested IPv6 inference blocked explicit IPv4: %v", err)
+			}
+			if m.IPv6Subnet != "" {
+				t.Fatalf("unexpected inferred IPv6 subnet %q", m.IPv6Subnet)
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name      string
+		addresses []string
+	}{
+		{"usable", []string{"192.0.2.1/24"}},
+		{"ambiguous", []string{"192.0.2.1/24", "198.51.100.1/24"}},
+	} {
+		t.Run("unrequested IPv4 "+tc.name, func(t *testing.T) {
+			m := clabtypes.MgmtNet{
+				Driver:        "macvlan",
+				MacvlanParent: "parent",
+				IPv6Subnet:    "2001:db8::/64",
+			}
+			var addresses []netlink.Addr
+			for _, value := range tc.addresses {
+				address, err := netlink.ParseAddr(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				addresses = append(addresses, *address)
+			}
+			if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
+				t.Fatalf("unrequested IPv4 inference blocked explicit IPv6: %v", err)
+			}
+			if m.IPv4Subnet != "" {
+				t.Fatalf("unexpected inferred IPv4 subnet %q", m.IPv4Subnet)
+			}
+		})
+	}
+
 	m = clabtypes.MgmtNet{
 		Driver:        "macvlan",
 		MacvlanParent: "parent",
 		IPv4Subnet:    "192.0.2.0/24",
+		IPv6Range:     "2001:db8::/80",
 	}
-	var addresses []netlink.Addr
-	for _, value := range []string{"2001:db8::1/64", "2001:db9::1/64"} {
-		address, err := netlink.ParseAddr(value)
-		if err != nil {
-			t.Fatal(err)
-		}
-		addresses = append(addresses, *address)
+	ipv6Address, err := netlink.ParseAddr("2001:db8::1/64")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
-		t.Fatalf("unrequested IPv6 inference blocked explicit IPv4: %v", err)
+	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: []netlink.Addr{*ipv6Address}}, parent); err != nil {
+		t.Fatalf("requested IPv6 inference failed: %v", err)
 	}
-	if m.IPv6Subnet != "" {
-		t.Fatalf("unexpected inferred IPv6 subnet %q", m.IPv6Subnet)
+	if m.IPv6Subnet != "2001:db8::/64" {
+		t.Fatalf("requested IPv6 subnet was not inferred: %q", m.IPv6Subnet)
+	}
+
+	m = clabtypes.MgmtNet{
+		Driver:        "macvlan",
+		MacvlanParent: "parent",
+		IPv6Subnet:    "2001:db8::/64",
+		IPv4Range:     "192.0.2.0/25",
+	}
+	ipv4Address, err := netlink.ParseAddr("192.0.2.1/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: []netlink.Addr{*ipv4Address}}, parent); err != nil {
+		t.Fatalf("requested IPv4 inference failed: %v", err)
+	}
+	if m.IPv4Subnet != "192.0.2.0/24" {
+		t.Fatalf("requested IPv4 subnet was not inferred: %q", m.IPv4Subnet)
 	}
 }
 
