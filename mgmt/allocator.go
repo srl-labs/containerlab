@@ -204,8 +204,9 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			}
 			if err := allocator.Reserve(ip); err != nil {
 				if runtimeReserved[ip] && m.IPAM.DADEnabled() {
-					log.Warn("Static management address is already reserved by the runtime",
-						"node", n.ShortName, "address", ip)
+					log.Warn("Duplicate static management address; retaining configured address",
+						"node", n.ShortName, "address", ip, "error", err)
+					continue
 				}
 				return fmt.Errorf("node %s: %w", n.ShortName, err)
 			}
