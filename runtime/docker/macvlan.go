@@ -11,10 +11,11 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/srl-labs/containerlab/mgmt"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/srl-labs/containerlab/utils/ipam"
 )
 
-func (d *DockerRuntime) macvlanHost() mgmt.MacvlanHost {
+func (d *DockerRuntime) macvlanHost() clabutils.MacvlanHost {
 	return mgmt.NewMacvlanHost(d.mgmt, d.macvlanNetlink)
 }
 

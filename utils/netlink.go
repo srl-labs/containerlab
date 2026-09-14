@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -21,6 +22,17 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
+
+// NetlinkFamily returns the netlink address family for an IP address.
+func NetlinkFamily(ip netip.Addr) (int, error) {
+	if !ip.IsValid() || ip.Is4In6() {
+		return netlink.FAMILY_ALL, fmt.Errorf("invalid netlink IP address %q", ip)
+	}
+	if ip.Is4() {
+		return netlink.FAMILY_V4, nil
+	}
+	return netlink.FAMILY_V6, nil
+}
 
 const (
 	parkingNetnsPrefix = "clab-park-"

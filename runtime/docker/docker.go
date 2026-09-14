@@ -39,7 +39,6 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/mgmt"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -83,7 +82,7 @@ type DockerRuntime struct {
 	Client         *dockerC.Client
 	mgmt           *clabtypes.MgmtNet
 	version        string
-	macvlanNetlink mgmt.MacvlanNetlink
+	macvlanNetlink clabutils.MacvlanHostNetlink
 }
 
 func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {

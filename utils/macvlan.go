@@ -1,4 +1,4 @@
-package mgmt
+package utils
 
 import (
 	"context"
@@ -13,10 +13,15 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// MacvlanNetlink provides host interface, address, and route operations for macvlan.
+// MacvlanNetlink provides macvlan creation and lookup operations.
 type MacvlanNetlink interface {
 	LinkByName(string) (netlink.Link, error)
 	LinkAdd(netlink.Link) error
+}
+
+// MacvlanHostNetlink provides address, route, and lifecycle operations for host macvlans.
+type MacvlanHostNetlink interface {
+	MacvlanNetlink
 	LinkDel(netlink.Link) error
 	LinkSetUp(netlink.Link) error
 	LinkSetAlias(netlink.Link, string) error
@@ -30,7 +35,13 @@ type MacvlanNetlink interface {
 type MacvlanHost struct {
 	// Probe checks a new address before assignment; nil skips the probe.
 	Probe func(context.Context, *netlink.LinkAttrs, netip.Addr) error
-	Links MacvlanNetlink
+	Links MacvlanHostNetlink
+}
+
+// AddMacvlan constructs and adds a macvlan interface.
+func AddMacvlan(links MacvlanNetlink, attrs netlink.LinkAttrs, mode netlink.MacvlanMode) (*netlink.Macvlan, error) {
+	link := &netlink.Macvlan{LinkAttrs: attrs, Mode: mode}
+	return link, links.LinkAdd(link)
 }
 
 func MacvlanHostName(networkID string) string {
@@ -62,14 +73,10 @@ func (h MacvlanHost) Ensure(
 		hash := sha256.Sum256([]byte(networkID))
 		mac := net.HardwareAddr(hash[:6])
 		mac[0] = (mac[0] & 0xfe) | 0x02
-		link = &netlink.Macvlan{
-			LinkAttrs: netlink.LinkAttrs{
-				Name: name, ParentIndex: parent.Attrs().Index,
-				MTU: parent.Attrs().MTU, HardwareAddr: mac,
-			},
-			Mode: netlink.MACVLAN_MODE_BRIDGE,
-		}
-		err := h.Links.LinkAdd(link)
+		link, err = AddMacvlan(h.Links, netlink.LinkAttrs{
+			Name: name, ParentIndex: parent.Attrs().Index,
+			MTU: parent.Attrs().MTU, HardwareAddr: mac,
+		}, netlink.MACVLAN_MODE_BRIDGE)
 		if err != nil && !errors.Is(err, unix.EEXIST) {
 			return fmt.Errorf("create host interface %q: %w", name, err)
 		}
@@ -116,7 +123,11 @@ func (h MacvlanHost) Ensure(
 }
 
 func (h MacvlanHost) ensureAddress(ctx context.Context, link netlink.Link, ip netip.Addr) error {
-	addrs, err := h.Links.AddrList(nil, macvlanFamily(ip))
+	family, err := NetlinkFamily(ip)
+	if err != nil {
+		return err
+	}
+	addrs, err := h.Links.AddrList(nil, family)
 	if err != nil {
 		return fmt.Errorf("list host interface addresses: %w", err)
 	}
@@ -164,7 +175,7 @@ func (h MacvlanHost) ensureAddress(ctx context.Context, link netlink.Link, ip ne
 		if errors.Is(err, unix.EEXIST) {
 			// A concurrent deploy may have added it. Inspect once instead of
 			// treating any EEXIST (including conflicting addresses) as success.
-			addrs, listErr := h.Links.AddrList(link, macvlanFamily(ip))
+			addrs, listErr := h.Links.AddrList(link, family)
 			if listErr != nil {
 				return fmt.Errorf("re-inspect host interface addresses: %w", listErr)
 			}
