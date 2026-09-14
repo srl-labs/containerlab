@@ -83,10 +83,12 @@ func (d *dadChecker) load(m *clabtypes.MgmtNet) error {
 		bridgeIndex := 0
 		if m.Bridge != "" {
 			bridge, err := netlink.LinkByName(m.Bridge)
-			if err != nil {
+			if err != nil && !errors.As(err, &netlink.LinkNotFoundError{}) {
 				return fmt.Errorf("look up management bridge: %w", err)
 			}
-			bridgeIndex = bridge.Attrs().Index
+			if err == nil {
+				bridgeIndex = bridge.Attrs().Index
+			}
 		}
 		routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 		if err != nil {

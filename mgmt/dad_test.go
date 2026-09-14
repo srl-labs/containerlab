@@ -103,6 +103,21 @@ func TestDADSnapshotLookups(t *testing.T) {
 	}
 }
 
+func TestDADSnapshotToleratesMissingBridge(t *testing.T) {
+	const bridge = "does-not-exist"
+	if _, err := netlink.LinkByName(bridge); !errors.As(err, &netlink.LinkNotFoundError{}) {
+		t.Skipf("test bridge unexpectedly exists or lookup failed differently: %v", err)
+	}
+	d := &dadChecker{}
+	if err := d.load(&clabtypes.MgmtNet{
+		Driver:     "bridge",
+		Bridge:     bridge,
+		IPv4Subnet: "192.0.2.0/24",
+	}); err != nil {
+		t.Fatalf("missing deferred bridge blocked DAD snapshot: %v", err)
+	}
+}
+
 func TestDADRouteReservations(t *testing.T) {
 	route := func(cidr string, scope netlink.Scope, index int) netlink.Route {
 		_, dst, _ := net.ParseCIDR(cidr)

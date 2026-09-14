@@ -136,7 +136,8 @@ func allocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			return &n.MgmtIPv6Address
 		}
 		eligible := func(n *clabtypes.NodeConfig) bool {
-			return n.NetworkMode != "host" && n.NetworkMode != "none" &&
+			return !n.IsRootNamespaceBased && !n.SkipUniquenessCheck &&
+				n.NetworkMode != "host" && n.NetworkMode != "none" &&
 				!strings.HasPrefix(n.NetworkMode, "container:")
 		}
 		// Runtime reservations are authoritative even when wire/local DAD is disabled.

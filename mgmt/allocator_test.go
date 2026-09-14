@@ -61,6 +61,8 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 	nodes := []*clabtypes.NodeConfig{
 		{ShortName: "static", MgmtIPv4Address: "192.0.2.2"},
 		{ShortName: "host", NetworkMode: "host"},
+		{ShortName: "root", IsRootNamespaceBased: true},
+		{ShortName: "external", SkipUniquenessCheck: true},
 	}
 	for _, name := range []string{"a", "b", "c", "d"} {
 		nodes = append(nodes, &clabtypes.NodeConfig{ShortName: name})
@@ -68,8 +70,11 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 	if err := AllocateManagementIPs(context.Background(), m, nodes); err != nil {
 		t.Fatal(err)
 	}
-	if nodes[0].MgmtIPv4Address != "192.0.2.2" || nodes[1].MgmtIPv4Address != "" {
-		t.Fatal("explicit or host address changed")
+	if nodes[0].MgmtIPv4Address != "192.0.2.2" ||
+		nodes[1].MgmtIPv4Address != "" ||
+		nodes[2].MgmtIPv4Address != "" ||
+		nodes[3].MgmtIPv4Address != "" {
+		t.Fatal("explicit or ineligible address changed")
 	}
 	if err := AllocateManagementIPs(context.Background(),
 		m,
