@@ -19,10 +19,16 @@ type parentNetlink struct {
 	err       error
 	parent    netlink.Link
 	lookupErr error
+	routes    []netlink.Route
+	routeErr  error
 }
 
 func (f parentNetlink) AddrList(_ netlink.Link, _ int) ([]netlink.Addr, error) {
 	return f.addresses, f.err
+}
+
+func (f parentNetlink) RouteList(netlink.Link, int) ([]netlink.Route, error) {
+	return f.routes, f.routeErr
 }
 
 func TestMacvlanParentSubnet(t *testing.T) {
@@ -203,6 +209,42 @@ func TestPrepareMacvlanParent(t *testing.T) {
 				}
 			} else if err != nil || got != parent {
 				t.Fatalf("parent lookup: %v, %v", got, err)
+			}
+		})
+	}
+}
+
+func TestPrepareMacvlanParentRejectsConflictingAuxRoute(t *testing.T) {
+	parent := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent", Index: 7, Flags: net.FlagUp}}
+	_, dst, err := net.ParseCIDR("192.0.2.0/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	links := parentNetlink{
+		parent: parent,
+		routes: []netlink.Route{{LinkIndex: parent.Attrs().Index, Dst: dst}},
+	}
+	for _, tc := range []struct {
+		aux     string
+		failure bool
+	}{
+		{"192.0.2.129", true},
+		{"192.0.2.129/26", false},
+	} {
+		t.Run(tc.aux, func(t *testing.T) {
+			m := &clabtypes.MgmtNet{
+				Driver:        "macvlan",
+				MacvlanParent: "parent",
+				IPv4Subnet:    "192.0.2.0/24",
+				MacvlanAux:    tc.aux,
+			}
+			_, err := PrepareMacvlanParent(m, links)
+			if tc.failure {
+				if err == nil || !strings.Contains(err.Error(), "use a narrower prefix") {
+					t.Fatalf("conflicting parent route accepted: %v", err)
+				}
+			} else if err != nil {
+				t.Fatalf("narrower auxiliary route rejected: %v", err)
 			}
 		})
 	}

@@ -39,7 +39,44 @@ func PrepareMacvlanParent(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink) 
 	if err := ResolveMacvlanSubnets(m, links, parent); err != nil {
 		return nil, err
 	}
+	if err := validateMacvlanAuxParentRoute(m, links, parent); err != nil {
+		return nil, err
+	}
 	return parent, nil
+}
+
+func validateMacvlanAuxParentRoute(m *clabtypes.MgmtNet, links clabutils.MacvlanNetlink, parent netlink.Link) error {
+	if m.MacvlanAux == "" {
+		return nil
+	}
+	ip, route, err := m.MacvlanHostAddress()
+	if err != nil {
+		return err
+	}
+	routes, err := links.RouteList(nil, macvlanFamily(ip))
+	if err != nil {
+		return fmt.Errorf("list macvlan parent routes: %w", err)
+	}
+	for _, existing := range routes {
+		if existing.Dst == nil || existing.LinkIndex != parent.Attrs().Index {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(existing.Dst.String())
+		if err == nil && prefix.Bits() >= route.Bits() && route.Contains(prefix.Addr()) {
+			return fmt.Errorf(
+				"mgmt.macvlan-aux route %s conflicts with parent interface %q route %s; use a narrower prefix",
+				route, parent.Attrs().Name, prefix,
+			)
+		}
+	}
+	return nil
+}
+
+func macvlanFamily(ip netip.Addr) int {
+	if ip.Is4() {
+		return netlink.FAMILY_V4
+	}
+	return netlink.FAMILY_V6
 }
 
 // EnsureMacvlanHost configures auxiliary connectivity after network validation.
