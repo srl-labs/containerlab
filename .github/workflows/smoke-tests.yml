@@ -54,8 +54,7 @@ jobs:
           - "28*.robot"
           - "29*.robot"
           - "30*.robot"
-          - "32*.robot"
-          - "33*.robot"
+          - "mgmt"
 
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
@@ -104,16 +103,7 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Run smoke tests
-        run: |
-          if [[ '${{ matrix.test-suite }}' == '32*.robot' ]]; then
-            cat > "${RUNNER_TEMP}/clab-dad-debug" <<'EOF'
-          #!/bin/sh
-          exec containerlab --debug "$@"
-          EOF
-            chmod +x "${RUNNER_TEMP}/clab-dad-debug"
-            export CLAB_BIN="${RUNNER_TEMP}/clab-dad-debug"
-          fi
-          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+        run: ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report

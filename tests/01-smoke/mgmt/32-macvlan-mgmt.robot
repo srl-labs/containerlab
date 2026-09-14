@@ -1,7 +1,7 @@
 *** Settings ***
 Library             OperatingSystem
 Library             Collections
-Resource            ../common.robot
+Resource            ../../common.robot
 
 Suite Setup         Setup
 Suite Teardown      Cleanup
