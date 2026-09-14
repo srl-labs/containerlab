@@ -8,6 +8,33 @@ import (
 	"testing"
 )
 
+func TestCanonicalPrefix(t *testing.T) {
+	for input, want := range map[string]string{
+		"192.0.2.42/24":   "192.0.2.0/24",
+		"2001:0db8::1/64": "2001:db8::/64",
+		"":                "",
+		"invalid":         "invalid",
+	} {
+		if got := CanonicalPrefix(input); got != want {
+			t.Errorf("CanonicalPrefix(%q) = %q; want %q", input, got, want)
+		}
+	}
+}
+
+func TestCanonicalIP(t *testing.T) {
+	for input, want := range map[string]string{
+		"192.0.2.1":       "192.0.2.1",
+		"192.0.2.1/24":    "192.0.2.1",
+		"2001:0db8::1/64": "2001:db8::1",
+		"":                "",
+		"invalid":         "invalid",
+	} {
+		if got := CanonicalIP(input); got != want {
+			t.Errorf("CanonicalIP(%q) = %q; want %q", input, got, want)
+		}
+	}
+}
+
 func allocateOne(
 	a *IPAllocator,
 	ctx context.Context,

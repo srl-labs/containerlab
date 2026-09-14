@@ -11,6 +11,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/srl-labs/containerlab/mgmt"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils/ipam"
 )
 
 func (d *DockerRuntime) macvlanHost() mgmt.MacvlanHost {
@@ -141,10 +142,10 @@ func validateMacvlanNetwork(n *networkapi.Inspect, want networkapi.CreateOptions
 
 func validateMacvlanPool(pools []networkapi.IPAMConfig, want networkapi.IPAMConfig) error {
 	for _, pool := range pools {
-		if canonicalPrefix(pool.Subnet) != canonicalPrefix(want.Subnet) {
+		if ipam.CanonicalPrefix(pool.Subnet) != ipam.CanonicalPrefix(want.Subnet) {
 			continue
 		}
-		if want.Gateway != "" && canonicalIP(pool.Gateway) != canonicalIP(want.Gateway) {
+		if want.Gateway != "" && ipam.CanonicalIP(pool.Gateway) != ipam.CanonicalIP(want.Gateway) {
 			return fmt.Errorf(
 				"subnet %s gateway is %q, requested %q",
 				want.Subnet,
@@ -152,7 +153,7 @@ func validateMacvlanPool(pools []networkapi.IPAMConfig, want networkapi.IPAMConf
 				want.Gateway,
 			)
 		}
-		if canonicalPrefix(pool.IPRange) != canonicalPrefix(want.IPRange) {
+		if ipam.CanonicalPrefix(pool.IPRange) != ipam.CanonicalPrefix(want.IPRange) {
 			return fmt.Errorf(
 				"subnet %s IP range is %q, requested %q",
 				want.Subnet,
@@ -161,7 +162,7 @@ func validateMacvlanPool(pools []networkapi.IPAMConfig, want networkapi.IPAMConf
 			)
 		}
 		if aux := want.AuxAddress["host"]; aux != "" {
-			if canonicalIP(pool.AuxAddress["host"]) != aux || canonicalIP(pool.Gateway) == aux {
+			if ipam.CanonicalIP(pool.AuxAddress["host"]) != aux || ipam.CanonicalIP(pool.Gateway) == aux {
 				return fmt.Errorf(
 					"subnet %s does not reserve host address %s as requested",
 					want.Subnet,
@@ -172,21 +173,4 @@ func validateMacvlanPool(pools []networkapi.IPAMConfig, want networkapi.IPAMConf
 		return nil
 	}
 	return fmt.Errorf("subnet %s is missing from the existing network", want.Subnet)
-}
-
-func canonicalPrefix(value string) string {
-	if prefix, err := netip.ParsePrefix(value); err == nil {
-		return prefix.Masked().String()
-	}
-	return value
-}
-
-func canonicalIP(value string) string {
-	if prefix, err := netip.ParsePrefix(value); err == nil {
-		return prefix.Addr().String()
-	}
-	if ip, err := netip.ParseAddr(value); err == nil {
-		return ip.String()
-	}
-	return value
 }

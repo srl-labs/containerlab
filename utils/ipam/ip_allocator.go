@@ -19,6 +19,25 @@ type IPAllocator struct {
 	used   types.IPPrefixSet
 }
 
+// CanonicalPrefix normalizes a prefix while preserving invalid input.
+func CanonicalPrefix(value string) string {
+	if prefix, err := netip.ParsePrefix(value); err == nil {
+		return prefix.Masked().String()
+	}
+	return value
+}
+
+// CanonicalIP normalizes an address with or without a prefix while preserving invalid input.
+func CanonicalIP(value string) string {
+	if prefix, err := netip.ParsePrefix(value); err == nil {
+		return prefix.Addr().String()
+	}
+	if address, err := netip.ParseAddr(value); err == nil {
+		return address.String()
+	}
+	return value
+}
+
 // NewIPAllocator creates an allocator, excluding subnet boundary addresses.
 // Reserved addresses (for example gateways) may be outside the allocation pool.
 func NewIPAllocator(subnet, pool netip.Prefix, reserved []netip.Addr) (*IPAllocator, error) {
