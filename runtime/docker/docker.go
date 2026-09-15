@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -71,16 +72,18 @@ type DeviceMapping struct {
 func init() {
 	clabruntime.Register(RuntimeName, func() clabruntime.ContainerRuntime {
 		return &DockerRuntime{
-			mgmt: new(clabtypes.MgmtNet),
+			mgmt:        new(clabtypes.MgmtNet),
+			macvlanHost: clabutils.MacvlanHost{Links: &netlink.Handle{}},
 		}
 	})
 }
 
 type DockerRuntime struct {
-	config  clabruntime.RuntimeConfig
-	Client  *dockerC.Client
-	mgmt    *clabtypes.MgmtNet
-	version string
+	config      clabruntime.RuntimeConfig
+	Client      *dockerC.Client
+	mgmt        *clabtypes.MgmtNet
+	version     string
+	macvlanHost clabutils.MacvlanHost
 }
 
 func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
@@ -127,6 +130,9 @@ func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
+	if n.Driver == clabtypes.MgmtDriverMacvlan {
+		return
+	}
 	// return if MTU value was set by a user via config file
 	if n.MTU != 0 {
 		return
@@ -188,8 +194,136 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	}
 }
 
+// NetworkAddresses returns occupied addresses in the requested subnets.
+// Only networks with overlapping IPAM pools are inspected.
+func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix,
+) ([]clabruntime.NetworkAddress, error) {
+	if len(subnets) == 0 {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancel()
+	networks, err := d.Client.NetworkList(ctx, networkapi.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list Docker network pools: %w", err)
+	}
+	var addresses []clabruntime.NetworkAddress
+	seen := make(map[clabruntime.NetworkAddress]bool)
+	matchedNetworks := make(map[string]bool)
+	add := func(networkName, value, containerID string) error {
+		if value == "" {
+			return nil
+		}
+		ip, err := netip.ParseAddr(value)
+		if err != nil {
+			prefix, prefixErr := netip.ParsePrefix(value)
+			if prefixErr != nil {
+				return fmt.Errorf("network %s address %q: %w", networkName, value, prefixErr)
+			}
+			ip = prefix.Addr()
+		}
+		ip = ip.Unmap()
+		for _, subnet := range subnets {
+			if subnet.Contains(ip) {
+				address := clabruntime.NetworkAddress{
+					NetworkName: networkName,
+					ContainerID: containerID,
+					Address:     ip,
+				}
+				if !seen[address] {
+					addresses = append(addresses, address)
+					seen[address] = true
+				}
+				break
+			}
+		}
+		return nil
+	}
+	for _, network := range networks {
+		matches := false
+		for _, pool := range network.IPAM.Config {
+			if pool.Subnet == "" {
+				continue
+			}
+			prefix, err := netip.ParsePrefix(pool.Subnet)
+			if err != nil {
+				return nil, fmt.Errorf("network %s subnet: %w", network.Name, err)
+			}
+			for _, subnet := range subnets {
+				if prefix.Overlaps(subnet) {
+					matches = true
+				}
+			}
+		}
+		if !matches {
+			continue
+		}
+		details, err := d.Client.NetworkInspect(ctx, network.ID, networkapi.InspectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"inspect occupied addresses on Docker network %s: %w",
+				network.Name,
+				err,
+			)
+		}
+		matchedNetworks[details.Name] = true
+		// Endpoint addresses include a prefix length; gateways and aux entries do not.
+		for _, pool := range details.IPAM.Config {
+			if err := add(details.Name, pool.Gateway, ""); err != nil {
+				return nil, err
+			}
+			for _, value := range pool.AuxAddress {
+				if err := add(details.Name, value, ""); err != nil {
+					return nil, err
+				}
+			}
+		}
+		for id, endpoint := range details.Containers {
+			for _, value := range []string{endpoint.IPv4Address, endpoint.IPv6Address} {
+				if err := add(details.Name, value, id); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	containers, err := d.Client.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("list Docker container address requests: %w", err)
+	}
+	for _, ctr := range containers {
+		for networkName, endpoint := range ctr.NetworkSettings.Networks {
+			if !matchedNetworks[networkName] || endpoint.IPAMConfig == nil {
+				continue
+			}
+			for _, value := range []string{
+				endpoint.IPAMConfig.IPv4Address,
+				endpoint.IPAMConfig.IPv6Address,
+			} {
+				if err := add(networkName, value, ctr.ID); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return addresses, nil
+}
+
 // CreateNet creates a docker network or reusing if it exists.
-func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
+func (d *DockerRuntime) CreateNet(
+	ctx context.Context,
+	options ...clabruntime.NetworkCreateOptions,
+) (err error) {
+	if err := d.mgmt.Validate(); err != nil {
+		return err
+	}
+	if d.mgmt.Driver == clabtypes.MgmtDriverMacvlan {
+		var excluded []netip.Addr
+		for _, option := range options {
+			excluded = append(excluded, option.StaticAddresses...)
+		}
+		return d.createMacvlanNetwork(ctx, excluded)
+	}
+
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -204,7 +338,19 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+		netResource, err = d.Client.NetworkInspect(
+			nctx,
+			d.mgmt.Network,
+			networkapi.InspectOptions{},
+		)
+		if err != nil {
+			return err
+		}
 	case err == nil:
+		if d.mgmt.Driver != "" && string(d.mgmt.Driver) != netResource.Driver {
+			return fmt.Errorf("network %q uses driver %q, requested %q",
+				d.mgmt.Network, netResource.Driver, d.mgmt.Driver)
+		}
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
 		if err != nil {
@@ -219,6 +365,16 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		d.mgmt.Bridge = bridgeName
 	}
 
+	// default docker bridge rejects user-specified endpoint addresses (ie. clab ipam generated
+	// addr)
+	if d.mgmt.Network == defaultDockerNetwork &&
+		d.mgmt.IPAM.Provider != clabtypes.IPAMProviderRuntime {
+		log.Info("Using runtime IPAM for default bridge network")
+		d.mgmt.IPAM.Provider = clabtypes.IPAMProviderRuntime
+	}
+
+	setMgmtIPAMFromDockerPools(d.mgmt, netResource.IPAM.Config, false)
+
 	// get management bridge v4/6 addresses and save it under mgmt struct
 	// so that nodes can use this information prior to being deployed
 	// this was added to allow mgmt network gw ip to be available in a startup config templation
@@ -231,6 +387,32 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
 	return d.postCreateNetActions()
+}
+
+func setMgmtIPAMFromDockerPools(
+	m *clabtypes.MgmtNet,
+	pools []networkapi.IPAMConfig,
+	includeGateways bool,
+) {
+	m.IPv4Subnet, m.IPv6Subnet = "", ""
+	m.IPv4Range, m.IPv6Range = "", ""
+	m.IPv4Gw, m.IPv6Gw = "", ""
+
+	for _, pool := range pools {
+		prefix, err := netip.ParsePrefix(pool.Subnet)
+		if err != nil {
+			continue
+		}
+		gateway := ""
+		if includeGateways {
+			gateway = pool.Gateway
+		}
+		if prefix.Addr().Is4() {
+			m.IPv4Subnet, m.IPv4Range, m.IPv4Gw = pool.Subnet, pool.IPRange, gateway
+		} else {
+			m.IPv6Subnet, m.IPv6Range, m.IPv6Gw = pool.Subnet, pool.IPRange, gateway
+		}
+	}
 }
 
 // skipcq: GO-R1005
@@ -474,7 +656,7 @@ func getMgmtBridgeIPs(
 		}
 	}
 
-	// didnt find any gateways, fallthrough to returning the error
+	// didn't find any gateways, fallthrough to returning the error
 	if v4 == "" && v6 == "" {
 		if bridgeName == "" {
 			return "", "", nil
@@ -543,10 +725,11 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// DeleteNet deletes a docker bridge.
+// DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
-	if network == "bridge" || d.config.KeepMgmtNet {
+	if network == "bridge" ||
+		(d.config.KeepMgmtNet && d.mgmt.Driver != clabtypes.MgmtDriverMacvlan) {
 		log.Debugf("Skipping deletion of %q network", network)
 		return nil
 	}
@@ -554,6 +737,9 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	nres, err := d.Client.NetworkInspect(nctx, network, networkapi.InspectOptions{})
+	if cerrdefs.IsNotFound(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -561,9 +747,20 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		log.Debugf("network %q was not created by containerlab, deletion skipped", network)
 		return nil
 	}
+	if d.config.KeepMgmtNet {
+		if nres.Driver == "macvlan" {
+			return d.syncMacvlanHostRoutes(&nres)
+		}
+		return nil
+	}
 
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
+		if nres.Driver == "macvlan" {
+			if err := d.syncMacvlanHostRoutes(&nres); err != nil {
+				return err
+			}
+		}
 		if d.config.Debug {
 			log.Debugf(
 				"network %q has %d active endpoints, deletion skipped",
@@ -576,13 +773,18 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		}
 		return nil
 	}
-	err = d.Client.NetworkRemove(nctx, network)
-	if err != nil {
+
+	// Remove the Docker network first: active endpoints or a concurrent attach
+	// must prevent removal of the host interface shared by all labs on this network.
+	if err = d.Client.NetworkRemove(nctx, nres.ID); err != nil && !cerrdefs.IsNotFound(err) {
 		return err
 	}
 
-	err = d.deleteMgmtNetworkFwdRule()
-	if err != nil {
+	if nres.Driver == "macvlan" {
+		return d.managementMacvlanHost().Remove(nres.ID)
+	}
+
+	if err = d.deleteMgmtNetworkFwdRule(); err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}
 
@@ -1334,8 +1536,14 @@ func (d *DockerRuntime) produceGenericContainerList(
 
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
+			if ctr.NetworkSettings.IPv4addr == "" && ifcfg.IPAMConfig != nil {
+				ctr.NetworkSettings.IPv4addr = ifcfg.IPAMConfig.IPv4Address
+			}
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
+			if ctr.NetworkSettings.IPv6addr == "" && ifcfg.IPAMConfig != nil {
+				ctr.NetworkSettings.IPv6addr = ifcfg.IPAMConfig.IPv6Address
+			}
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
 			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
 			ctr.NetworkSettings.IPv6Gw = ifcfg.IPv6Gateway

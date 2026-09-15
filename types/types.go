@@ -70,6 +70,15 @@ type MgmtNet struct {
 	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
+
+	Driver MgmtDriver `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	IPAM MgmtIPAM `json:"ipam,omitempty" yaml:"ipam,omitempty"`
+
+	// Macvlan specific options.
+	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    *bool  `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
 }
 
 // Interface compliance.
@@ -253,6 +262,17 @@ func (n *NodeConfig) GetHostname() string {
 	}
 
 	return n.ShortName
+}
+
+// whether a node should participate in IPAM or not.
+func (n *NodeConfig) ManagementIPAMEligible() bool {
+	if n.IsRootNamespaceBased || n.SkipUniquenessCheck {
+		return false
+	}
+	if n.NetworkMode == "host" || n.NetworkMode == "none" {
+		return false
+	}
+	return !strings.HasPrefix(n.NetworkMode, "container:")
 }
 
 type GenericFilter struct {
@@ -489,4 +509,17 @@ type ImpairmentData struct {
 	PacketLoss float64 `json:"packet_loss"`
 	Rate       int     `json:"rate"`
 	Corruption float64 `json:"corruption"`
+}
+
+// MgmtDriver selects the management network implementation.
+type MgmtDriver string
+
+const (
+	MgmtDriverBridge  MgmtDriver = "bridge"
+	MgmtDriverMacvlan MgmtDriver = "macvlan"
+)
+
+// IsValid reports whether the driver is supported.
+func (d MgmtDriver) IsValid() bool {
+	return d == "" || d == MgmtDriverBridge || d == MgmtDriverMacvlan
 }

@@ -249,6 +249,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 	mockNode.EXPECT().
 		Reconcile(gomock.Any(), diff).
 		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+	mockRuntime.EXPECT().SyncMgmtHostRoutes(gomock.Any()).Return(nil)
 
 	topo := clabtypes.NewTopology()
 	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "linux", Image: "alpine:latest"}
@@ -256,7 +257,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 	c := &CLab{
 		Config: &Config{
 			Name:     "noop",
-			Mgmt:     &clabtypes.MgmtNet{},
+			Mgmt:     &clabtypes.MgmtNet{Driver: clabtypes.MgmtDriverMacvlan},
 			Topology: topo,
 		},
 		TopoPaths: topoPaths,
@@ -267,6 +268,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 		Runtimes: map[string]clabruntime.ContainerRuntime{
 			clabruntimedocker.RuntimeName: mockRuntime,
 		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
 	}
 
 	result, err := c.Apply(context.Background(), &ApplyOptions{})

@@ -1,0 +1,28 @@
+name: {{ .name }}
+
+mgmt:
+  network: clab-smoke34
+  driver: bridge
+  ipv4-subnet: 198.18.34.0/24
+  ipv4-gw: 198.18.34.1
+{{- if .narrow }}
+  ipv4-range: 198.18.34.192/26
+{{- else }}
+  ipv4-range: 198.18.34.128/25
+{{- end }}
+  ipv6-subnet: fd00:34::/64
+  ipv6-gw: fd00:34::1
+{{- if .narrow }}
+  ipv6-range: fd00:34::80/121
+{{- else }}
+  ipv6-range: fd00:34::/120
+{{- end }}
+  ipam:
+    provider: containerlab
+
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine:3
+      cmd: sleep 9999

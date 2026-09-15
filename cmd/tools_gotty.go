@@ -384,6 +384,10 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 	)
 
+	if err := c.AllocateToolManagementIPs(ctx, gottyNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate GoTTY management address: %w", err)
+	}
+
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {
 		return fmt.Errorf("failed to create GoTTY container: %w", err)
@@ -663,6 +667,10 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		o.ToolsGoTTY.Shell,
 		labelsMap,
 	)
+
+	if err := c.AllocateToolManagementIPs(ctx, gottyNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate GoTTY management address: %w", err)
+	}
 
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {

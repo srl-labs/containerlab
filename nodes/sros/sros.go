@@ -721,6 +721,16 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
+
+	netnsConfig := n.netnsNode.Config()
+
+	netnsConfig.MgmtIPv4Address = n.Cfg.MgmtIPv4Address
+	netnsConfig.MgmtIPv4PrefixLength = n.Cfg.MgmtIPv4PrefixLength
+	netnsConfig.MgmtIPv4Gateway = n.Cfg.MgmtIPv4Gateway
+	netnsConfig.MgmtIPv6Address = n.Cfg.MgmtIPv6Address
+	netnsConfig.MgmtIPv6PrefixLength = n.Cfg.MgmtIPv6PrefixLength
+	netnsConfig.MgmtIPv6Gateway = n.Cfg.MgmtIPv6Gateway
+
 	if err := n.netnsNode.Deploy(ctx, deployParams); err != nil {
 		return fmt.Errorf("deploy network namespace node %q: %w", n.netnsNode.GetShortName(), err)
 	}

@@ -216,15 +216,29 @@ func (c *CLab) initMgmtNetwork() error {
 		c.Config.Mgmt.Network = dockerNetName
 	}
 
-	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+	if c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan {
+		if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
+			// assign the default subnets
+			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
+			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+		}
 	}
 
 	// by default external access is enabled if not set by a user
 	if c.Config.Mgmt.ExternalAccess == nil {
 		c.Config.Mgmt.ExternalAccess = new(bool)
 		*c.Config.Mgmt.ExternalAccess = true
+	}
+
+	if c.Config.Mgmt.IPAM.Provider == "" {
+		c.Config.Mgmt.IPAM.Provider = clabtypes.IPAMProviderContainerlab
+	}
+
+	if err := c.Config.Mgmt.Validate(); err != nil {
+		return err
+	}
+	if err := c.validateManagementLinks(); err != nil {
+		return err
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)

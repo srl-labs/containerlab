@@ -3,6 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/netip"
+
+	clabtypes "github.com/srl-labs/containerlab/types"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -157,9 +160,19 @@ func (c *CLab) apply(
 
 	if plan.empty() {
 		if options.finalizeNoop {
-			if err := c.prepareApply(ctx, nil, options.skipLabDirFileACLs); err != nil {
+			if err := c.prepareApply(
+				ctx,
+				nil,
+				options.skipLabDirFileACLs,
+				currentNodes,
+			); err != nil {
 				return nil, err
 			}
+		}
+		if err := c.syncMgmtHostRoutes(ctx); err != nil {
+			return nil, err
+		}
+		if options.finalizeNoop {
 			if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
 				return nil, err
 			}
@@ -170,7 +183,12 @@ func (c *CLab) apply(
 	}
 
 	deployNodeNames := plan.deployNodeNames()
-	if err := c.prepareApply(ctx, deployNodeNames, options.skipLabDirFileACLs); err != nil {
+	if err := c.prepareApply(
+		ctx,
+		deployNodeNames,
+		options.skipLabDirFileACLs,
+		currentNodes,
+	); err != nil {
 		return nil, err
 	}
 
@@ -211,6 +229,9 @@ func (c *CLab) apply(
 	}
 
 	if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
+		return nil, err
+	}
+	if err := c.syncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
 
@@ -255,8 +276,10 @@ func (c *CLab) prepareApply(
 	ctx context.Context,
 	addedNodes []string,
 	skipLabDirFileACLs bool,
+	currentNodes map[string]*runtimeNodeGroup,
 ) error {
-	if _, err := c.prepareLabManagementNetwork(ctx); err != nil {
+	existing := c.collectExistingManagementAddresses(currentNodes)
+	if _, err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
 		return err
 	}
 
@@ -287,4 +310,25 @@ func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Lin
 	}
 
 	return nil
+}
+
+// try to preserve the existing addressing instead of reallocation
+func (c *CLab) collectExistingManagementAddresses(currentNodes map[string]*runtimeNodeGroup) []clabtypes.ExistingAddress {
+	var existing []clabtypes.ExistingAddress
+	for name, group := range currentNodes {
+		for _, ctr := range group.containers {
+			if ctr.NetworkName != c.Config.Mgmt.Network {
+				continue
+			}
+			for _, value := range []string{ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv6addr} {
+				if ip, err := netip.ParseAddr(value); err == nil {
+					existing = append(
+						existing,
+						clabtypes.ExistingAddress{NodeName: name, ContainerID: ctr.ID, Address: ip},
+					)
+				}
+			}
+		}
+	}
+	return existing
 }
