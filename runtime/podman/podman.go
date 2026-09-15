@@ -178,7 +178,7 @@ func (*PodmanRuntime) SyncMgmtHostRoutes(context.Context) error {
 // CreateNet used to create a new bridge for clab mgmt network.
 func (r *PodmanRuntime) CreateNet(
 	ctx context.Context,
-	_ ...clabruntime.NetworkCreateOptions,
+	_ ...runtime.NetworkCreateOptions,
 ) error {
 	if err := r.mgmt.Validate(); err != nil {
 		return err
