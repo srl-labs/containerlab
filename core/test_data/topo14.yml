@@ -6,4 +6,9 @@ topology:
       startup-config: ./configs/fabric/__clabNodeName__.cfg
       exec:
         - echo "Hello world"
-        - echo "Hello node __clabNodeName__"
+        - echo "Hello node __clabNodeName__ in __clabLabName__"
+      extras:
+        srl-agents:
+          - agents/__clabNodeName__/agent.yml
+        ceos-copy-to-flash:
+          - ceos-configs/__clabNodeName__/ceos-config

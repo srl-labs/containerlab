@@ -3,8 +3,10 @@ package iptables
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
@@ -101,7 +103,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(
 
 	log.Debugf("Installing iptables (%s) rules for bridge %q", af, iface)
 
-	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
+	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to install iptables rule using '%s' command: %w", cmd, err)
@@ -137,7 +139,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	iface := rule.Interface
 
 	// first check if a rule exists before trying to delete it
-	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).Output()
+	res, err := newIptablesCmd(iptCmd, strings.Split(iptCheckArgs, " ")...).Output()
 	if err != nil {
 		// non nil error typically means that DOCKER-USER chain doesn't exist
 		// this happens with old docker installations (centos7 hello) from default repos
@@ -170,7 +172,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	log.Debugf("removing clab iptables rules for bridge %q", iface)
 	log.Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
 
-	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
+	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to delete iptables rules: %w", err)
@@ -183,7 +185,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) bool {
 	iptCmd := iptablesCmd[af]
 
-	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
+	res, err := newIptablesCmd(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
 	if err != nil {
 		log.Warnf("iptables check error: %s. Output: %s", err, string(res))
 		// if we errored on check we don't want to try setting up the rule
@@ -214,4 +216,40 @@ func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) b
 	}
 
 	return false
+}
+
+// newIptablesCmd builds an iptables/ip6tables command that is safe to run from a
+// setuid-root containerlab binary (ruid=user, euid=0).
+//
+// iptables ≥ 1.8.8 exits 111 when getuid() != geteuid() because it loads match/
+// target shared libraries and therefore refuses to run under a setuid parent.
+// We isolate the fix to the child process via Credential so the long-lived
+// containerlab process keeps its real UID (important for $HOME file ownership).
+// Env is cleared so a poisoned library path cannot follow into iptables.
+func newIptablesCmd(name string, args ...string) *exec.Cmd {
+	cmd := exec.Command(name, args...)
+	// nil Env inherits the parent; empty means env -i.
+	cmd.Env = []string{}
+
+	if attr := iptablesSysProcAttr(os.Getuid(), os.Geteuid(), os.Getegid()); attr != nil {
+		cmd.SysProcAttr = attr
+	}
+
+	return cmd
+}
+
+// iptablesSysProcAttr returns SysProcAttr that sets the child's real/effective
+// UIDs to root when the parent is running setuid-root. Nil when no change is needed.
+func iptablesSysProcAttr(ruid, euid, egid int) *syscall.SysProcAttr {
+	if euid != 0 || ruid == 0 {
+		return nil
+	}
+
+	return &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid:         0,
+			Gid:         uint32(egid),
+			NoSetGroups: true,
+		},
+	}
 }

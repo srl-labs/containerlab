@@ -6,6 +6,10 @@ The `exec` command allows a user to execute a command inside the nodes (containe
 
 This command is similar to `docker exec`, but it allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
 
+/// note | VM-based (vrnetlab) kinds
+Like `docker exec`, `exec` runs inside the node's container namespace. For VM-based kinds (vrnetlab integration, e.g. `sonic-vm`), that container is the QEMU launcher wrapping the VM, not the guest VM itself, so guest network-OS commands are not reachable via `exec` and fail with `executable file not found in $PATH`. Use SSH to the node's management address (or its native CLI) to run guest-OS commands. See the [`exec` node property](../manual/nodes.md#exec) for details.
+///
+
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
 
 ## Usage

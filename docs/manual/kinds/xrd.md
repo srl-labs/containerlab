@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: cisco_xrd
 kind_display_name: Cisco XRd
+tags:
+  - Kind
+  - Container kind
 ---
 # -{{ kind_display_name }}-
 

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -69,8 +70,8 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
-		"USERNAME":           defaultCredentials.GetUsername(),
-		"PASSWORD":           defaultCredentials.GetPassword(),
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
@@ -85,8 +86,8 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
 	)
@@ -104,9 +105,9 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	// Create SSH client configuration
 	config := &ssh.ClientConfig{
-		User: n.Credentials.GetUsername(),
+		User: n.Cfg.Credentials.Username,
 		Auth: []ssh.AuthMethod{
-			ssh.Password(n.Credentials.GetPassword()),
+			ssh.Password(n.Cfg.Credentials.Password),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Accept any host key
 		Timeout:         10 * time.Second,
@@ -163,24 +164,21 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 // from the exported RouterOS configuration to avoid including containerlab management IP settings.
 func (n *vrRos) filterManagementInterfaceConfig(config string) string {
 	lines := strings.Split(config, "\n")
-	var filteredLines []string
+	filteredLines := make([]string, 0, len(lines))
+	inIPAddrSection := false
 
 	for _, line := range lines {
-		// Skip lines related to ether1 IP address configuration
-		if strings.Contains(line, "/ip address") {
-			// Mark that we're in the IP address section
-			filteredLines = append(filteredLines, line)
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "/") {
+			inIPAddrSection = trimmedLine == "/ip address"
+		}
+
+		if inIPAddrSection &&
+			strings.HasPrefix(trimmedLine, "add address=") &&
+			slices.Contains(strings.Fields(trimmedLine), "interface=ether1") {
 			continue
 		}
 
-		// Skip IP address entries for ether1 interface
-		if strings.Contains(line, "interface=ether1") &&
-			(strings.Contains(line, "add address=") || strings.Contains(line, "add ")) {
-			// Skip this line as it's ether1 IP configuration
-			continue
-		}
-
-		// Keep all other lines
 		filteredLines = append(filteredLines, line)
 	}
 

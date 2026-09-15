@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2026 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: bridge-reconcile
+
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+    br-30-reconcile:
+      kind: bridge
+
+  links:
+    - endpoints:
+        ["n1:eth1", "br-30-reconcile:{{ if .remap }}e1{{ else }}e2{{ end }}"]
+    - endpoints:
+        ["n1:eth2", "br-30-reconcile:{{ if .remap }}e2{{ else }}e3{{ end }}"]

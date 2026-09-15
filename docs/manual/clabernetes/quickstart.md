@@ -1,3 +1,9 @@
+---
+tags:
+  - Clabernetes
+  - Getting started
+---
+
 # Clabernetes Quickstart
 
 The best way to understand how clabernetes works is to walk through a short example where we deploy a simple but representative [lab](https://learn.srlinux.dev/blog/2024/vlans-on-sr-linux/#the-lab) using clabernetes.

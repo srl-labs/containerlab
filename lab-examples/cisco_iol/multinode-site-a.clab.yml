@@ -1,0 +1,36 @@
+# Multinode Cisco IOL L2 example — site A. An IOL L2 switch with a client behind it,
+# stitched at layer 2 to site B running on another host via a native
+# vxlan-stitch link. Deploy multinode-site-b.clab.yml on the other host; the two
+# sites then form one L2 domain and the clients can ping each other
+# (10.30.0.1 <-> 10.30.0.2) across the stitch.
+#
+# Site A keeps the default IOL application IDs; site B sets
+# CLAB_IOL_PID_OFFSET so its switch derives unique MAC addresses and STP
+# bridge ID. Without the offset both switches boot with identical bridge
+# IDs and STP blocks the stitched port.
+name: iol-site-a
+
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:L2-17.12.01
+      type: l2
+
+  nodes:
+    sw:
+      kind: cisco_iol
+    pc:
+      kind: linux
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip address add 10.30.0.1/24 dev eth1
+
+  links:
+    - endpoints: ["pc:eth1", "sw:Ethernet0/1"]
+    - type: vxlan-stitch
+      endpoint:
+        node: sw
+        interface: eth2 # Ethernet0/2
+      remote: 10.99.0.2 # site B host's IP address
+      vni: 100
+      dst-port: 14789

@@ -1,0 +1,28 @@
+name: stage-execs
+topology:
+  defaults:
+    kind: linux
+    stages:
+      create:
+        exec:
+          - command: echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__
+            target: host
+      create-links:
+        exec:
+          - command: echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__
+            target: host
+      configure:
+        exec:
+          - command: echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__
+            target: host
+      healthy:
+        exec:
+          - command: echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__
+            target: host
+      exit:
+        exec:
+          - command: echo __clabDir__ __clabLabName__ __clabNodeDir__ __clabNodeName__
+            target: host
+  nodes:
+    node1:
+    node2:

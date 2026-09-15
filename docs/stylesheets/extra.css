@@ -12,6 +12,29 @@
   fill: var(--logo-outline-color);
 }
 
+/* START brand accent (custom cyan) --------------------------------------------
+   accent: custom is set in mkdocs.yml; the header stays white because the modern
+   theme variant drives the header from neither primary nor accent. */
+:root {
+  --clab-brand: #00c9ff;
+}
+
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--clab-brand);
+  --md-accent-fg-color--transparent: color-mix(in srgb, var(--clab-brand) 10%, transparent);
+}
+
+/* brand-colored links — a darker cyan keeps contrast on the light background,
+   the full brand cyan pops against the dark one */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #0098c4;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: var(--clab-brand);
+}
+/* END brand accent */
+
 .md-grid {
   /* a slightly increased width for the main content ~1300px */
   max-width: 65rem;
@@ -370,3 +393,205 @@ div.highlight.code-scroll-sm pre>code {
   border-radius: 0.25rem;
   background: linear-gradient(to bottom, var(--md-default-fg-color--lighter), var(--md-accent-fg-color));
 }
+
+/* accent-colored square bullets for unordered lists */
+.md-typeset ul li {
+  list-style-type: square;
+}
+
+.md-typeset ul li::marker {
+  color: var(--md-accent-fg-color);
+}
+
+/* START refreshed home page */
+.clab-home {
+  --clab-cyan: #00c9ff;
+  --clab-border: color-mix(in srgb, var(--md-default-fg-color) 16%, transparent);
+  max-width: 62rem;
+  margin: 0 auto;
+  color: var(--md-default-fg-color);
+}
+
+.clab-home h1,
+.clab-home h2,
+.clab-home h3 {
+  letter-spacing: 0;
+}
+
+/* hero --------------------------------------------------------------------- */
+.clab-hero {
+  position: relative;
+  margin: 0 0 2.6rem;
+  padding: 1rem 0 2.2rem;
+  text-align: center;
+  border-bottom: 1px solid var(--clab-border);
+}
+
+/* soft brand glow behind the hero logo */
+.clab-hero::before {
+  content: "";
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36rem;
+  max-width: 90%;
+  height: 15rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--clab-cyan) 20%, transparent), transparent);
+  filter: blur(6px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.clab-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.clab-hero__content {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+/* the logo lives in the first paragraph of the hero */
+.clab-hero__content > p:first-child {
+  margin: 0;
+}
+
+.clab-hero__content > p:first-child img {
+  width: auto;
+  max-height: 8rem;
+  margin: 0 auto;
+}
+
+.clab-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: center;
+  margin: 1.4rem 0 1.6rem;
+}
+
+.clab-badges img {
+  margin: 0;
+}
+
+.clab-hero__content > p {
+  color: var(--md-default-fg-color--light);
+}
+
+/* sections ----------------------------------------------------------------- */
+.clab-section {
+  margin: 2.6rem 0;
+}
+
+.clab-section > h2 {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  font-size: 1.6rem;
+}
+
+.clab-section > h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.4rem;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--clab-cyan), color-mix(in srgb, var(--clab-cyan) 15%, transparent));
+}
+
+.clab-section > p {
+  max-width: 46rem;
+  margin-top: 0;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.95rem;
+}
+
+/* diagrams & video ---------------------------------------------------------- */
+.clab-diagram {
+  margin: 1.4rem 0 0;
+  text-align: center;
+}
+
+/* the diagrams.net viewer pins .mxgraph to an inline pixel width/height; cap it
+   to the column, let the SVG viewBox drive proportional scaling, and center the
+   figure with auto margins */
+.clab-diagram .mxgraph {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  margin: 0 auto;
+  border: 1px solid transparent;
+}
+
+.clab-diagram .mxgraph svg {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+}
+
+.clab-section .iframe-container {
+  max-width: 44rem;
+  height: auto;
+  margin: 1.2rem auto 0;
+  padding-bottom: 0;
+  aspect-ratio: 16 / 9;
+}
+
+/* center any standalone images placed inside home-page sections */
+.clab-home .clab-section img {
+  display: block;
+  margin-inline: auto;
+}
+
+/* cards -------------------------------------------------------------------- */
+.clab-card-grid.grid.cards {
+  margin-top: 1.2rem;
+}
+
+/* every home section ships exactly four cards: lay them out as one balanced
+   row on the desktop, 2x2 on tablets and a single column on phones */
+.clab-card-grid.grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media screen and (min-width: 64em) {
+  .clab-card-grid.grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 30em) {
+  .clab-card-grid.grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.clab-card-grid.grid.cards > ul > li,
+.clab-card-grid.grid.cards > ol > li {
+  border-color: var(--clab-border);
+  border-radius: 8px;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.clab-card-grid.grid.cards > ul > li:hover,
+.clab-card-grid.grid.cards > ol > li:hover {
+  border-color: color-mix(in srgb, var(--clab-cyan) 65%, var(--clab-border));
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--clab-cyan) 22%, transparent);
+}
+
+@media screen and (max-width: 48em) {
+  .clab-section {
+    margin: 2rem 0;
+  }
+}
+
+[data-md-color-scheme="slate"] .clab-home {
+  --clab-border: color-mix(in srgb, #fff 18%, transparent);
+}
+/* END refreshed home page */

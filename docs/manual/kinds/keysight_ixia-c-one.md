@@ -5,6 +5,7 @@ kind_code_name: keysight_ixia-c-one
 kind_display_name: Keysight Ixia-c-one
 ---
 # -{{ kind_display_name }}-
+
 The corresponding node in containerlab is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 Keysight [Ixia-c-one][ixia-c-one] is a single-container distribution of [Ixia-c][ixia-c], a software traffic generator and protocol emulator with [Open Traffic Generator (OTG) API][otg].
@@ -56,7 +57,7 @@ Client SDK for Open Traffic Generator API is available in various languages, mos
 
 The following labs feature Keysight ixia-c-one node:
 
-- [Keysight Ixia-c and Nokia SR Linux](../../lab-examples/ixiacone-srl.md)
+- [Keysight Ixia-c and Nokia SR Linux](../../lab-examples/ixiacone-srl.md). The example's Go module is intentionally not part of this repository; follow its execution instructions to create one separately.
 
 [ixia-c]: https://ixia-c.dev/
 [ixia-c-one]: https://ixia-c.dev/deployments-containerlab/

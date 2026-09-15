@@ -7,6 +7,7 @@ package vr_ftosv
 import (
 	"fmt"
 	"path"
+	"regexp"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -16,6 +17,10 @@ import (
 var (
 	kindnames          = []string{"dell_ftosv", "vr-ftosv", "vr-dell_ftosv"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`(?:ethernet\s?)?1/1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "ethernet1/1/X or 1/1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -55,8 +60,8 @@ func (n *vrFtosv) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) 
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
-		"USERNAME":           defaultCredentials.GetUsername(),
-		"PASSWORD":           defaultCredentials.GetPassword(),
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
@@ -75,11 +80,15 @@ func (n *vrFtosv) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) 
 
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
 	)
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }

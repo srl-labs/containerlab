@@ -85,6 +85,20 @@ func (mr *MockNodeOverwritesMockRecorder) GetContainerName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).GetContainerName))
 }
 
+// GetContainerStatus mocks base method.
+func (m *MockNodeOverwrites) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerStatus", ctx)
+	ret0, _ := ret[0].(runtime.ContainerStatus)
+	return ret0
+}
+
+// GetContainerStatus indicates an expected call of GetContainerStatus.
+func (mr *MockNodeOverwritesMockRecorder) GetContainerStatus(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerStatus", reflect.TypeOf((*MockNodeOverwrites)(nil).GetContainerStatus), ctx)
+}
+
 // GetContainers mocks base method.
 func (m *MockNodeOverwrites) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	m.ctrl.T.Helper()
@@ -144,6 +158,20 @@ func (mr *MockNodeOverwritesMockRecorder) GetNSPath(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNSPath", reflect.TypeOf((*MockNodeOverwrites)(nil).GetNSPath), ctx)
 }
 
+// PreStop mocks base method.
+func (m *MockNodeOverwrites) PreStop(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreStop", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreStop indicates an expected call of PreStop.
+func (mr *MockNodeOverwritesMockRecorder) PreStop(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreStop", reflect.TypeOf((*MockNodeOverwrites)(nil).PreStop), arg0)
+}
+
 // PullImage mocks base method.
 func (m *MockNodeOverwrites) PullImage(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -171,6 +199,20 @@ func (m *MockNodeOverwrites) RunExec(arg0 context.Context, arg1 *exec.ExecCmd) (
 func (mr *MockNodeOverwritesMockRecorder) RunExec(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNodeOverwrites)(nil).RunExec), arg0, arg1)
+}
+
+// VerifyContainerName mocks base method.
+func (m *MockNodeOverwrites) VerifyContainerName() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyContainerName")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyContainerName indicates an expected call of VerifyContainerName.
+func (mr *MockNodeOverwritesMockRecorder) VerifyContainerName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyContainerName))
 }
 
 // VerifyHostRequirements mocks base method.

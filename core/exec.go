@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -50,9 +52,11 @@ func (c *CLab) Exec(
 			execResult, err := containers[idx].RunExec(ctx, execCmd)
 			if err != nil {
 				// skip nodes that do not support exec
-				if err == clabexec.ErrRunExecNotSupported {
+				if errors.Is(err, clabexec.ErrRunExecNotSupported) {
 					continue
 				}
+				log.Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
+				continue
 			}
 
 			resultCollection.Add(containers[idx].Names[0], execResult)

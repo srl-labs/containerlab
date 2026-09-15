@@ -28,7 +28,6 @@ The user configures the CLOS fabric topology by using the `--nodes` flag. The fl
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page=12, title='')}}-
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 For example, the following flag value will define a 2-tier CLOS fabric with tier1 (leafs) consists of 4x SR Linux containers of IXR-D3 type and the 2x Arista cEOS spines:
 
@@ -76,6 +75,8 @@ To set license for multiple kinds repeat the flag: `--license <kind1>=/path1 --i
 When `--deploy` flag is present, the lab deployment process starts using the generated topology definition file.
 
 The generated definition file is first saved by the path set with `--file` or, if file path is not set, by the default path of `<lab-name>.clab.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
+
+When deploying, you can pass `--export-rendered <path>` to write the rendered topology YAML to a file (same behavior as [`deploy --export-rendered`](deploy.md#export-rendered)).
 
 #### max-workers
 

@@ -42,7 +42,7 @@ func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
 	for _, e := range entries {
 		if e.Type == "" || e.Slot <= 0 {
 			return fmt.Errorf(
-				"invalid mda entry. slot and type are required, got slot %q, type%q",
+				"invalid mda entry. slot and type are required, got slot %d, type %q",
 				e.Slot,
 				e.Type,
 			)
@@ -77,7 +77,7 @@ func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 	for _, e := range entries {
 		if e.Type == "" || e.Slot <= 0 {
 			return fmt.Errorf(
-				"invalid xiom entry. slot and type are required, got slot %q, type %q",
+				"invalid xiom entry. slot and type are required, got slot %d, type %q",
 				e.Slot,
 				e.Type,
 			)

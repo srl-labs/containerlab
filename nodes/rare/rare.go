@@ -62,7 +62,7 @@ func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return n.createRAREFiles()

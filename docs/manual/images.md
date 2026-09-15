@@ -1,3 +1,9 @@
+---
+tags:
+  - Image management
+  - Configuration
+---
+
 For a traditional networking lab orchestration system `containerlab` appears to be quite unique in a way that it runs containers, not VMs. This inherently means that container images need to be available to spin up the nodes.
 
 To keep things simple, containerlab adheres to the same principles of referencing container images as common tools like docker, podman, k8s do. The following example shows a clab file that references container images using various forms:

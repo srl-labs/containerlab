@@ -66,8 +66,8 @@ func (n *vrVJUNOSSWITCH) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeO
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           defaultCredentials.GetUsername(),
-		"PASSWORD":           defaultCredentials.GetPassword(),
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
@@ -87,8 +87,8 @@ func (n *vrVJUNOSSWITCH) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeO
 
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
 	)

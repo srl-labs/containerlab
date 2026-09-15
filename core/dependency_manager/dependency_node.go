@@ -100,11 +100,26 @@ func (d *DependencyNode) getExecs(stage clabtypes.WaitForStage,
 }
 
 // EnterStage is called by a node that is meant to enter the specified stage.
-// The call will be blocked until all dependencies for the node to enter the stage are met.
+// The call will be blocked until all dependencies for the node to enter the stage are met,
+// or until the context is cancelled (e.g. on a Ctrl-C), in which case it returns without
+// running the stage execs so the worker can unwind instead of hanging until SIGQUIT.
 func (d *DependencyNode) EnterStage(ctx context.Context, p clabtypes.WaitForStage) {
 	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.GetShortName(), p)
 
-	d.stageWG[p].Wait()
+	wgDone := make(chan struct{})
+
+	go func() {
+		d.stageWG[p].Wait()
+		close(wgDone)
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Debugf("Stage Change: Enter Cancelled -> %s - %s", d.GetShortName(), p)
+
+		return
+	case <-wgDone:
+	}
 
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
 

@@ -15,6 +15,7 @@ const (
 	ansibleInventoryFileName      = "ansible-inventory.yml"
 	nornirSimpleInventoryFileName = "nornir-simple-inventory.yml"
 	topologyExportDatFileName     = "topology-data.json"
+	stateFileName                 = ".state.clab.yaml"
 	authzKeysFileName             = "authorized_keys"
 	tlsDir                        = ".tls"
 	caDir                         = "ca"
@@ -34,10 +35,10 @@ var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 // generally all these paths are deduced from two main paths. The topology file path and the lab
 // dir path.
 type TopoPaths struct {
-	topoFile string
-	varsFile string
-	labDir   string
-	topoName string
+	topoFile  string
+	varsFiles []string
+	labDir    string
+	topoName  string
 	// if an external CA certificate is used the path to the Cert file is stored here
 	externalCACertFile string
 	// if an external CA certificate is used the path to the Key file is stored here
@@ -45,7 +46,7 @@ type TopoPaths struct {
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
-func NewTopoPaths(topologyFile, varsFile string) (*TopoPaths, error) {
+func NewTopoPaths(topologyFile string, varsFiles []string) (*TopoPaths, error) {
 	t := &TopoPaths{}
 
 	err := t.SetTopologyFilePath(topologyFile)
@@ -53,9 +54,11 @@ func NewTopoPaths(topologyFile, varsFile string) (*TopoPaths, error) {
 		return nil, err
 	}
 
-	err = t.SetTopologyVarsFilePath(varsFile)
-	if err != nil {
-		return nil, err
+	for _, varsFile := range varsFiles {
+		err = t.AppendTopologyVarsFilePath(varsFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return t, err
@@ -79,8 +82,8 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetTopologyVarsFilePath sets the topology vars path.
-func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
+// AppendTopologyVarsFilePath adds a topology vars path.
+func (t *TopoPaths) AppendTopologyVarsFilePath(varsFile string) error {
 	if varsFile == "" {
 		return nil
 	}
@@ -96,7 +99,7 @@ func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
 		return err
 	}
 
-	t.varsFile = absVarsFile
+	t.varsFiles = append(t.varsFiles, absVarsFile)
 
 	return nil
 }
@@ -160,9 +163,14 @@ func (t *TopoPaths) TLSBaseDir() string {
 	return filepath.Join(t.labDir, tlsDir)
 }
 
-// NodeTLSDir returns the directory that contains the certificat data for the given node.
-func (t *TopoPaths) NodeTLSDir(nodename string) string {
-	return filepath.Join(t.TLSBaseDir(), nodename)
+// CABaseDir returns the path of the CA directory within the TLS directory.
+func (t *TopoPaths) CABaseDir() string {
+	return filepath.Join(t.TLSBaseDir(), caDir)
+}
+
+// NodeTLSDir returns the directory that contains the certificate data for the given node.
+func (t *TopoPaths) NodeTLSDir(nodeName string) string {
+	return filepath.Join(t.TLSBaseDir(), nodeName)
 }
 
 // AuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
@@ -195,6 +203,12 @@ func (t *TopoPaths) TopoExportFile() string {
 	return filepath.Join(t.labDir, topologyExportDatFileName)
 }
 
+// StateFile returns the path for the deployed state file (.state.clab.yaml).
+// state file stores resolved NodeConfigs for diff comparison.
+func (t *TopoPaths) StateFile() string {
+	return filepath.Join(t.labDir, stateFileName)
+}
+
 // AnsibleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
 func (t *TopoPaths) AnsibleInventoryFileAbsPath() string {
 	return filepath.Join(t.labDir, ansibleInventoryFileName)
@@ -210,9 +224,9 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
 }
 
-// VarsFilenameAbsPath returns the absolute path to the topology vars file.
-func (t *TopoPaths) VarsFilenameAbsPath() string {
-	return t.varsFile
+// VarsFilenameAbsPath returns the absolute paths to the topology vars files.
+func (t *TopoPaths) VarsFilenamesAbsPath() []string {
+	return t.varsFiles
 }
 
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or
@@ -239,6 +253,12 @@ func (t *TopoPaths) ClabBakDir() string {
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
 // when it is downloaded from a remote location to the clab temp directory.
 func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node, postfix string) string {
+	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
+}
+
+// DownloadFileTmpAbsPath returns the absolute path to a file
+// when it is downloaded from a remote location to the clab temp directory.
+func (t *TopoPaths) DownloadFileTmpAbsPath(node string, postfix string) string {
 	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
 
@@ -288,7 +308,7 @@ func (t *TopoPaths) NodeCertKeyAbsFilename(nodeName string) string {
 	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
 }
 
-// NodeCertAbsFilename returns the path to a cert file for the given identifier.
+// NodeCertAbsFilename returns the path to a cert file for the given node.
 func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }

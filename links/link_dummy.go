@@ -15,7 +15,7 @@ type LinkDummyRaw struct {
 }
 
 func (*LinkDummyRaw) GetType() LinkType {
-	return LinkTypeVEth
+	return LinkTypeDummy
 }
 
 // Resolve resolves the raw veth link definition into a Link interface that is implemented
@@ -101,6 +101,10 @@ func (l *LinkDummy) Deploy(ctx context.Context, ep Endpoint) error {
 	return nil
 }
 
+func (*LinkDummy) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkDummy) Remove(ctx context.Context) error {
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
@@ -117,4 +121,8 @@ func (l *LinkDummy) Remove(ctx context.Context) error {
 
 func (l *LinkDummy) GetEndpoints() []Endpoint {
 	return l.Endpoints
+}
+
+func (l *LinkDummy) GetRuntimeEndpoints() []Endpoint {
+	return l.GetEndpoints()
 }

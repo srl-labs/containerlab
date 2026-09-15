@@ -64,7 +64,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		name := strings.TrimPrefix(containers[idx].Names[0], "/")
 
 		// Get port from labels or use default
-		port := 8080 // default
+		port := defaultToolsAPIServerPort
 
 		if portStr, ok := containers[idx].Labels["clab-api-port"]; ok {
 			if portVal, err := strconv.Atoi(portStr); err == nil {

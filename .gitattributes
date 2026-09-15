@@ -4,3 +4,10 @@ docs/** -linguist-detectable
 lab-examples/** -linguist-detectable
 # nextui is vendored
 core/graph_templates/nextui/** linguist-vendored
+
+# Store docs raster images with Git LFS
+docs/images/**/*.png filter=lfs diff=lfs merge=lfs -text
+docs/images/**/*.gif filter=lfs diff=lfs merge=lfs -text
+docs/images/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/images/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+docs/images/**/*.webp filter=lfs diff=lfs merge=lfs -text

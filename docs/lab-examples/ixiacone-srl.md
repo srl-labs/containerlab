@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
-| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:1.43.0-7`, `srlinux:23.10.1`, `docker-ce:20.10.2`   |
+| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:1.55.0-1`, `srlinux:23.10.1`, `docker-ce:20.10.2`   |
 
 ## Description
 
@@ -63,10 +63,16 @@ During the lab deployment and test execution the following configuration is appl
 
 The test case is written in Go language. To run it, [Go >= 1.21](https://go.dev/doc/install) needs to be installed first.
 
-Once installed, run the test:
+/// note
+The Go module for this test is intentionally not part of the containerlab repository. Create a separate module, add the tested `gosnappi` dependency, and run the test source from there.
+///
 
 ```Shell
-go run ipv4_forwarding.go
+mkdir -p ~/ixiac01-client
+cd ~/ixiac01-client
+go mod init ixiac01-client
+go get github.com/open-traffic-generator/snappi/gosnappi@v1.55.0
+go run /etc/containerlab/lab-examples/ixiac01/ipv4_forwarding.go
 ```
 
 Once 100 packets are sent, the test script checks that we received all the sent packets.
@@ -127,5 +133,3 @@ sudo containerlab destroy --cleanup
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

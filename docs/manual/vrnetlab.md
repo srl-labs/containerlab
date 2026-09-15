@@ -6,8 +6,6 @@ vr_rns:
 ---
 # VM-based routers integration
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
-
 Containerlab focuses on containers, but many routing products ship only in virtual machine packaging. Leaving containerlab users without the ability to create topologies with both containerized and VM-based routing systems would have been a shame.
 
 Keeping this requirement in mind from the very beginning, we added [`bridge`](../lab-examples/ext-bridge.md)/[`ovs-bridge`](kinds/ovs-bridge.md) kind that allows bridging your containerized topology with other resources available via a bridged network. For example, a VM based router:
@@ -110,6 +108,7 @@ The images that work with containerlab will appear in the supported list as we i
 | Juniper vJunosEvolved | [juniper_vjunosevolved](kinds/vr-vjunosevolved.md)      |                                            |                                                                                                                                                                                                              |
 | Cisco XRv             | [cisco_xrv](kinds/vr-xrv.md)                            | [SRL & XRv](../lab-examples/vr-xrv.md)     |                                                                                                                                                                                                              |
 | Cisco XRv9k           | [cisco_xrv9k](kinds/vr-xrv9k.md)                        | [SRL & XRv9k](../lab-examples/vr-xrv9k.md) |                                                                                                                                                                                                              |
+| Cisco XRd vRouter     | [cisco_xrd_vrouter](kinds/cisco_xrd_vrouter.md)        |                                            |                                                                                                                                                                                                              |
 | Cisco CSR1000v        | [cisco_csr](kinds/vr-csr.md)                            |                                            |                                                                                                                                                                                                              |
 | Cisco vIOS            | [cisco_vios](kinds/cisco_vios.md)                       |                                            |                                                                                                                                                                                                              |
 | Cisco Nexus 9000v     | [cisco_nexus9kv](kinds/vr-n9kv.md)                      |                                            |                                                                                                                                                                                                              |
@@ -135,13 +134,17 @@ When vrnetlab starts a VM inside the container it uses `qemu` command to define 
 The following env vars are supported:
 
 * `QEMU_SMP` - sets the number of vCPU cores and their configuration. Use this when the default number of vCPUs is not enough or excessive.
-* `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM. Note, that some kinds have a different way to set CPU/MEM parameters, which is explained in the kind's documentation.
+* `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM.
 * `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
 * `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
 
 ### Datapath connectivity
 
 By hosting a VM inside a container, we made it easy to run VM-based routers in a containerized environment. However, how would you connect container's interfaces to the VM's tap interfaces in a transparent way?
+
+/// note | exec targets the launcher container
+Because the guest network OS runs in a VM inside the launcher container, the [`exec` node property](nodes.md#exec) and the [`exec` command](../cmd/exec.md) run inside the launcher container, not inside the guest VM. Guest network-OS commands are therefore not reachable via `exec`; connect to the node over SSH at its management address (or use the node's native CLI) instead.
+///
 
 To solve this challenge containerlab uses **tc** backend[^4], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
 

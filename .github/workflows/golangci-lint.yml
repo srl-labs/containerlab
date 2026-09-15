@@ -10,33 +10,22 @@ on:
       go_ver:
         description: "Go version"
         required: false
-        default: "1.24.5"
+        default: ""
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ inputs.go_ver }}
-
-      - name: Cache go modules
-        uses: actions/cache@v5
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: install and run the linters
+      - uses: actions/checkout@v7
+      - id: vars
         run: |
-          curl -sSfL \
-            https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh |
-            sh -s -- -b $(go env GOPATH)/bin v2.2.1
-          make lint
+          source .github/vars.env
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ inputs.go_ver || steps.vars.outputs.go_ver }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12

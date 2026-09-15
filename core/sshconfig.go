@@ -23,9 +23,10 @@ type SSHConfigTmpl struct {
 // SSHConfigNodeTmpl represents values for a single node
 // in the sshconfig template.
 type SSHConfigNodeTmpl struct {
-	Names     []string
-	Username  string
-	SSHConfig *clabtypes.SSHConfig
+	Names        []string
+	Username     string
+	IdentityFile string
+	SSHConfig    *clabtypes.SSHConfig
 }
 
 // sshConfigTemplate is the SSH config template.
@@ -67,18 +68,18 @@ func (c *CLab) addSSHConfig() error {
 	// if we fail to parse the version the return value is going to be empty
 	sshVersion := clabutils.GetSSHVersion()
 
-	// add the data for all nodes to the template input
+	// add the data for all nodes to the template input.
+	// Usernames come from NodeConfig.Credentials (topology + kind registry merge in createNodeCfg).
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and extract
-		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		cfg := n.Config()
 		nodeData := SSHConfigNodeTmpl{
-			Names:     []string{n.Config().LongName},
-			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
-			SSHConfig: n.GetSSHConfig(),
+			Names:        []string{cfg.LongName},
+			Username:     cfg.Credentials.Username,
+			IdentityFile: cfg.Credentials.IdentityFile,
+			SSHConfig:    n.GetSSHConfig(),
 		}
-		if len(n.Config().ContainerID) >= 12 {
-			nodeData.Names = append(nodeData.Names, n.Config().ContainerID[:12])
+		if len(cfg.ContainerID) >= 12 {
+			nodeData.Names = append(nodeData.Names, cfg.ContainerID[:12])
 		}
 
 		// if we couldn't parse the ssh version we assume we can't use unbound option

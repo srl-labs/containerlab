@@ -1,0 +1,11 @@
+{% extends "main.html" %}
+
+{% block htmltitle %}
+<title>{{ config.site_name }}</title>
+{% endblock %}
+
+{% block content %}
+<article class="clab-home md-typeset">
+  {{ page.content }}
+</article>
+{% endblock %}

@@ -1,35 +1,50 @@
 name: frr01
 
 topology:
+  groups:
+    routers:
+      kind: frr
+      image: quay.io/frrouting/frr:containerlab-10.7.1
+      # This lab only runs OSPF. Omit this to start every FRR daemon instead.
+      extras:
+        frr:
+          daemons:
+            - ospfd
+    hosts:
+      kind: linux
+      image: wbitt/network-multitool:3.22.2
+
   nodes:
     router1:
-      kind: linux
-      image: frrouting/frr:v7.5.1
-      binds:
-        - router1/daemons:/etc/frr/daemons
-        - router1/frr.conf:/etc/frr/frr.conf
+      group: routers
+      startup-config: router1/frr.conf
     router2:
-      kind: linux
-      image: frrouting/frr:v7.5.1
-      binds:
-        - router2/daemons:/etc/frr/daemons
-        - router2/frr.conf:/etc/frr/frr.conf
+      group: routers
+      startup-config: router2/frr.conf
     router3:
-      kind: linux
-      image: frrouting/frr:v7.5.1
-      binds:
-        - router3/daemons:/etc/frr/daemons
-        - router3/frr.conf:/etc/frr/frr.conf
+      group: routers
+      startup-config: router3/frr.conf
     PC1:
-      kind: linux
-      image: praqma/network-multitool:latest
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.11.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
     PC2:
-      kind: linux
-      image: praqma/network-multitool:latest
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.12.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
     PC3:
-      kind: linux
-      image: praqma/network-multitool:latest
-
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.13.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
   links:
     - endpoints: ["router1:eth1", "router2:eth1"]
     - endpoints: ["router1:eth2", "router3:eth1"]

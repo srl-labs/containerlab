@@ -11,6 +11,8 @@ This is useful for:
 - Monitoring the status of API server containers
 - Seeing who created each API server instance
 
+For a higher-level operational guide, see the [Containerlab API Server manual](../../../manual/api-server.md).
+
 ## Usage
 
 ```
@@ -35,7 +37,7 @@ List all active API server containers in table format (default):
 ╭─────────────────┬─────────┬───────────┬──────┬────────────────────────┬─────────┬───────╮
 │ NAME            │ STATUS  │ HOST      │ PORT │ LABS DIR               │ RUNTIME │ OWNER │
 ├─────────────────┼─────────┼───────────┼──────┼────────────────────────┼─────────┼───────┤
-│ clab-api-server │ running │ localhost │ 8080 │ /opt/containerlab/labs │ docker  │ alice │
+│ clab-api-server │ running │ localhost │ 8090 │ /opt/containerlab/labs │ docker  │ alice │
 ├─────────────────┼─────────┼───────────┼──────┼────────────────────────┼─────────┼───────┤
 │ prod-api-server │ running │ localhost │ 9090 │ /home/labs/production  │ docker  │ bob   │
 ╰─────────────────┴─────────┴───────────┴──────┴────────────────────────┴─────────┴───────╯
@@ -50,7 +52,7 @@ List all API server containers in JSON format:
     "name": "clab-api-server",
     "state": "running",
     "host": "localhost",
-    "port": 8080,
+    "port": 8090,
     "labs_dir": "/opt/containerlab/labs",
     "runtime": "docker",
     "owner": "alice",

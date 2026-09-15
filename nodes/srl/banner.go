@@ -14,8 +14,8 @@ const banner = `................................................................
 : Get started: https://learn.srlinux.dev                       :
 : Container:   https://go.srlinux.dev/container-image          :
 : Docs:        https://doc.srlinux.dev/%s-%-2s                   :
-: Rel. notes:  https://doc.srlinux.dev/rn%s-%s-%s               :
-: YANG:        https://yang.srlinux.dev/v%s.%s.%s               :
+: Rel. notes:  https://doc.srlinux.dev/rnn                     :
+: YANG:        https://yang.srlinux.dev/%-23s:
 : Discord:     https://go.srlinux.dev/discord                  :
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
@@ -24,16 +24,14 @@ const banner = `................................................................
 // banner returns a banner string with a docs version filled in based on the version information
 // queried from the node.
 func (n *srl) banner() (string, error) { //nolint: unparam
-	// if minor is a single digit value, we need to add extra space to patch version
-	// to have banner table aligned nicely
-	if len(n.swVersion.Minor) == 1 {
-		n.swVersion.Patch += " "
-	}
+	// The YANG line is rendered with a fixed-width field so the table stays
+	// aligned regardless of how many digits the version components have
+	// (e.g. x.y, xx.y or xx.yy).
+	version := fmt.Sprintf("%s.%s.%s", n.swVersion.Major, n.swVersion.Minor, n.swVersion.Patch)
 
 	b := fmt.Sprintf(banner,
-		n.swVersion.Major, n.swVersion.Minor,
-		n.swVersion.Major, n.swVersion.Minor, n.swVersion.Patch,
-		n.swVersion.Major, n.swVersion.Minor, n.swVersion.Patch)
+		n.swVersion.Major, n.swVersion.Minor, // Docs
+		version) // YANG
 
 	return b, nil
 }

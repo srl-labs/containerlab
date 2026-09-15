@@ -64,8 +64,8 @@ func (n *F5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"F5_HOSTNAME":     n.Cfg.ShortName,
-		"USERNAME":        defaultCredentials.GetUsername(),
-		"PASSWORD":        defaultCredentials.GetPassword(),
+		"USERNAME":        n.Cfg.Credentials.Username,
+		"PASSWORD":        n.Cfg.Credentials.Password,
 		"CONNECTION_MODE": clabnodes.VrDefConnMode,
 		"QEMU_MEMORY":     defaultQemuMemory,
 		"QEMU_SMP":        defaultQemuSMP,
@@ -108,10 +108,10 @@ func (n *F5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (n *F5BigIPVE) CheckInterfaceName() error {

@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/mitchellh/go-homedir"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -61,9 +63,16 @@ func TestGetDockerConfigPath(t *testing.T) {
 
 	for _, in := range td {
 		got := getDockerConfigPath(in["path"])
-		want, _ := homedir.Expand(in["want"])
+		want := in["want"]
+		if strings.HasPrefix(want, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			want = filepath.Join(home, want[2:])
+		}
 		if got != want {
-			t.Errorf("Invalid docker config path, got %v, want %v", got, in["want"])
+			t.Errorf("Invalid docker config path, got %v, want %v", got, want)
 		}
 	}
 }

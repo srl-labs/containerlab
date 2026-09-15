@@ -76,9 +76,9 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Vars = normalizeVars(link.Vars)
 
 	// create the host side MacVlan Endpoint
-	link.HostEndpoint = &EndpointMacVlan{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
-	}
+	link.HostEndpoint = NewEndpointMacVlan(
+		NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
+	)
 
 	// populate the host interfaces mac address
 	hostLink, err := netlink.LinkByName(r.HostInterface)
@@ -177,6 +177,10 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	return err
 }
 
+func (*LinkMacVlan) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkMacVlan) Remove(ctx context.Context) error {
 	// check Deployment state, if the Link was already
 	// removed via e.g. the peer node
@@ -198,6 +202,10 @@ func (l *LinkMacVlan) GetEndpoints() []Endpoint {
 		l.NodeEndpoint,
 		l.HostEndpoint,
 	}
+}
+
+func (l *LinkMacVlan) GetRuntimeEndpoints() []Endpoint {
+	return []Endpoint{l.NodeEndpoint}
 }
 
 type MacVlanMode string

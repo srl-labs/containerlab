@@ -1,9 +1,20 @@
 # Simple OSPF lab using FRR
 
-This lab example consists of three FRR routers connected in a ring topology. Each router has one PC connected to it.
+This lab example consists of three FRR routers connected in a ring topology. Each router has one PC connected to it. The routers are running OSPF. The PCs have static routes.
 
-This is also an example of how to pre-configure lab nodes on "linux" node types in Containerlab.
+IP Addresses
+* **PC1:** 192.168.11.2/24
+* **PC2:** 192.168.12.2/24
+* **PC3:** 192.168.13.2/24
 
-To start this lab, run the *run.sh* script, which will run the containerlab deploy commands, and then configure the PC interfaces.
+This lab originally ran FRR with the `linux` kind and explicit bind mounts. It now adapts that work to make FRR a first-class citizen through the native `frr` kind.
+
+The routers use the [`frr`](https://containerlab.dev/manual/kinds/frr/) kind. Containerlab writes `/etc/frr/frr.conf` from each node's `startup-config`, along with `/etc/frr/daemons` and `/etc/frr/vtysh.conf`, and makes the routers reachable over SSH:
+
+```bash
+ssh root@clab-frr01-router1
+```
+
+To start this lab, run the *clab deploy* command.
 
 The lab configuration is documented in detail at: https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/
