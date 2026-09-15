@@ -551,12 +551,19 @@ func TestDADClientWireScale(t *testing.T) {
 
 	ipv4Addresses := make([]netip.Addr, 1000)
 	ipv6Addresses := make([]netip.Addr, 1000)
+	freeIPv4Addresses := make([]netip.Addr, 1000)
+	freeIPv6Addresses := make([]netip.Addr, 1000)
 	ipv4 := netip.MustParseAddr("198.19.0.0")
 	ipv6 := netip.MustParseAddr("fd00:dad::")
+	freeIPv4 := netip.MustParseAddr("198.20.0.0")
+	freeIPv6 := netip.MustParseAddr("fd00:fade::")
 	for i := range ipv4Addresses {
 		ipv4 = ipv4.Next()
 		ipv6 = ipv6.Next()
+		freeIPv4 = freeIPv4.Next()
+		freeIPv6 = freeIPv6.Next()
 		ipv4Addresses[i], ipv6Addresses[i] = ipv4, ipv6
+		freeIPv4Addresses[i], freeIPv6Addresses[i] = freeIPv4, freeIPv6
 		for _, address := range []struct {
 			ip    netip.Addr
 			bits  int
@@ -579,57 +586,99 @@ func TestDADClientWireScale(t *testing.T) {
 	}
 
 	families := []struct {
-		name      string
-		addresses func(int) []netip.Addr
+		name           string
+		occupied, free func(int) []netip.Addr
 	}{
-		{name: "IPv4", addresses: func(count int) []netip.Addr {
-			return ipv4Addresses[:count]
-		}},
-		{name: "IPv6", addresses: func(count int) []netip.Addr {
-			return ipv6Addresses[:count]
-		}},
-		{name: "dual-stack", addresses: func(count int) []netip.Addr {
-			addresses := append([]netip.Addr(nil), ipv4Addresses[:count]...)
-			return append(addresses, ipv6Addresses[:count]...)
-		}},
+		{
+			name:     "IPv4",
+			occupied: func(count int) []netip.Addr { return ipv4Addresses[:count] },
+			free:     func(count int) []netip.Addr { return freeIPv4Addresses[:count] },
+		},
+		{
+			name:     "IPv6",
+			occupied: func(count int) []netip.Addr { return ipv6Addresses[:count] },
+			free:     func(count int) []netip.Addr { return freeIPv6Addresses[:count] },
+		},
+		{
+			name: "dual-stack",
+			occupied: func(count int) []netip.Addr {
+				return append(append([]netip.Addr(nil), ipv4Addresses[:count]...), ipv6Addresses[:count]...)
+			},
+			free: func(count int) []netip.Addr {
+				return append(
+					append([]netip.Addr(nil), freeIPv4Addresses[:count]...),
+					freeIPv6Addresses[:count]...,
+				)
+			},
+		},
 	}
 	for _, family := range families {
 		t.Run(family.name, func(t *testing.T) {
-			for _, count := range []int{10, 100, 500, 1000} {
-				t.Run(fmt.Sprint(count), func(t *testing.T) {
-					dad, err := NewDADClient(parentName)
-					if err != nil {
-						t.Fatal(err)
-					}
-					defer dad.Close()
-
-					targets := family.addresses(count)
-					started := time.Now()
-					results := make(chan error, len(targets))
-					var probes sync.WaitGroup
-					for _, ip := range targets {
-						probes.Go(func() {
-							available, err := dad.Probe(context.Background(), ip)
-							if err == nil && available {
-								err = fmt.Errorf("occupied address %s reported available", ip)
+			for _, state := range []struct {
+				name      string
+				addresses func(int) []netip.Addr
+				available bool
+			}{
+				{name: "occupied", addresses: family.occupied},
+				{name: "available", addresses: family.free, available: true},
+			} {
+				t.Run(state.name, func(t *testing.T) {
+					for _, count := range []int{10, 100, 500, 1000} {
+						t.Run(fmt.Sprint(count), func(t *testing.T) {
+							dad, err := NewDADClient(parentName)
+							if err != nil {
+								t.Fatal(err)
 							}
-							results <- err
+							defer dad.Close()
+
+							targets := state.addresses(count)
+							started := time.Now()
+							results := make(chan error, len(targets))
+							var probes sync.WaitGroup
+							for _, ip := range targets {
+								probes.Go(func() {
+									available, err := dad.Probe(context.Background(), ip)
+									if err == nil && available != state.available {
+										err = fmt.Errorf(
+											"address %s availability is %t, want %t",
+											ip,
+											available,
+											state.available,
+										)
+									}
+									results <- err
+								})
+							}
+							probes.Wait()
+							close(results)
+							for err := range results {
+								if err != nil {
+									t.Fatal(err)
+								}
+							}
+							elapsed := time.Since(started)
+							if state.available {
+								maxDuration := dadProbeAttempts*dadObservationTimeout +
+									time.Duration(len(targets)*dadProbeAttempts)*dadSendInterval +
+									2*time.Second
+								if elapsed > maxDuration {
+									t.Fatalf(
+										"concurrent probes took %s, want at most %s",
+										elapsed,
+										maxDuration,
+									)
+								}
+							}
+							t.Logf(
+								"%s %s scale %d (%d probes) completed in %s",
+								family.name,
+								state.name,
+								count,
+								len(targets),
+								elapsed,
+							)
 						})
 					}
-					probes.Wait()
-					close(results)
-					for err := range results {
-						if err != nil {
-							t.Fatal(err)
-						}
-					}
-					t.Logf(
-						"%s scale %d (%d probes) completed in %s",
-						family.name,
-						count,
-						len(targets),
-						time.Since(started),
-					)
 				})
 			}
 		})

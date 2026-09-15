@@ -18,6 +18,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/bpf"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -129,6 +130,20 @@ func (d *DADClient) Probe(ctx context.Context, ip netip.Addr) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+// ProbeBatch reports address availability while probing concurrently.
+func (d *DADClient) ProbeBatch(ctx context.Context, addresses []netip.Addr) ([]bool, error) {
+	available := make([]bool, len(addresses))
+	group, probeCtx := errgroup.WithContext(ctx)
+	for i, address := range addresses {
+		group.Go(func() error {
+			var err error
+			available[i], err = d.Probe(probeCtx, address)
+			return err
+		})
+	}
+	return available, group.Wait()
 }
 
 // Close releases the temporary probe interface and packet socket.

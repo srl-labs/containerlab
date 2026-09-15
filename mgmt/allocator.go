@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 
+	"github.com/charmbracelet/log"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils/ipam"
 )
@@ -156,6 +157,8 @@ func AllocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 				*assignment.address = current.Address.String()
 			}
 		}
+		explicitAssignments := make([]managementAssignment, 0, len(assignments))
+		explicitAddresses := make([]netip.Addr, 0, len(assignments))
 		for _, assignment := range assignments {
 			if *assignment.address == "" {
 				continue
@@ -170,32 +173,40 @@ func AllocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			if err := allocator.Reserve(address); err != nil {
 				return fmt.Errorf("node %s: %w", assignment.node.ShortName, err)
 			}
+			explicitAssignments = append(explicitAssignments, assignment)
+			explicitAddresses = append(explicitAddresses, address)
 		}
-		for _, assignment := range assignments {
-			if *assignment.address != "" {
-				continue
+		if dad != nil {
+			available, err := dad.ProbeBatch(ctx, explicitAddresses)
+			if err != nil {
+				return err
 			}
-			address, err := netip.ParseAddr(assignment.preference)
-			if err != nil || !allocation.Contains(address) {
-				continue
+			for i, ok := range available {
+				if !ok {
+					log.Warn(
+						"Duplicate static management address; retaining configured address",
+						"node", explicitAssignments[i].node.ShortName,
+						"address", explicitAddresses[i],
+					)
+				}
 			}
-			if err := allocator.Reserve(address); err != nil {
-				continue
-			}
-			*assignment.address = address.String()
 		}
+
 		pending := make([]managementAssignment, 0, len(assignments))
+		preferred := make([]netip.Addr, 0, len(assignments))
 		for _, assignment := range assignments {
 			if *assignment.address != "" {
 				continue
 			}
 			pending = append(pending, assignment)
+			address, _ := netip.ParseAddr(assignment.preference)
+			preferred = append(preferred, address)
 		}
 		var addresses []netip.Addr
 		if dad == nil {
-			addresses, err = allocator.NextBatch(ctx, len(pending))
+			addresses, err = allocator.NextPreferredBatch(ctx, preferred)
 		} else {
-			addresses, err = allocator.NextBatch(ctx, len(pending), dad)
+			addresses, err = allocator.NextPreferredBatch(ctx, preferred, dad)
 		}
 		if err != nil {
 			return err

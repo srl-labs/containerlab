@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // ipPrefixSet indexes occupied addresses and CIDRs for one address family.
@@ -248,6 +246,72 @@ func (a *IPAllocator) NextBatch(ctx context.Context, count int, clients ...*DADC
 	if err != nil {
 		return nil, err
 	}
+	return a.nextBatch(ctx, count, dad)
+}
+
+// NextPreferredBatch reserves available preferred addresses and replaces unavailable preferences from the pool.
+func (a *IPAllocator) NextPreferredBatch(
+	ctx context.Context,
+	preferred []netip.Addr,
+	clients ...*DADClient,
+) ([]netip.Addr, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	dad, err := dadClient(clients)
+	if err != nil {
+		return nil, err
+	}
+
+	addresses := make([]netip.Addr, len(preferred))
+	candidates := make([]netip.Addr, 0, len(preferred))
+	candidateIndexes := make([]int, 0, len(preferred))
+	for i, address := range preferred {
+		if !a.pool.Contains(address) {
+			continue
+		}
+		if _, occupied := a.used.lookup(address); occupied {
+			continue
+		}
+		a.used.add(netip.PrefixFrom(address, address.BitLen()))
+		candidates = append(candidates, address)
+		candidateIndexes = append(candidateIndexes, i)
+	}
+
+	available := make([]bool, len(candidates))
+	if dad == nil {
+		for i := range available {
+			available[i] = true
+		}
+	} else {
+		available, err = dad.ProbeBatch(ctx, candidates)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for i, ok := range available {
+		if ok {
+			addresses[candidateIndexes[i]] = candidates[i]
+		}
+	}
+
+	missing := make([]int, 0, len(addresses))
+	for i, address := range addresses {
+		if !address.IsValid() {
+			missing = append(missing, i)
+		}
+	}
+	replacements, err := a.nextBatch(ctx, len(missing), dad)
+	if err != nil {
+		return nil, err
+	}
+	for i, index := range missing {
+		addresses[index] = replacements[i]
+	}
+	return addresses, nil
+}
+
+func (a *IPAllocator) nextBatch(ctx context.Context, count int, dad *DADClient) ([]netip.Addr, error) {
 	addresses := make([]netip.Addr, 0, count)
 	for len(addresses) < count {
 		if err := ctx.Err(); err != nil {
@@ -269,16 +333,8 @@ func (a *IPAllocator) NextBatch(ctx context.Context, count int, clients ...*DADC
 			continue
 		}
 
-		available := make([]bool, len(candidates))
-		group, probeCtx := errgroup.WithContext(ctx)
-		for i, ip := range candidates {
-			group.Go(func() error {
-				var err error
-				available[i], err = dad.Probe(probeCtx, ip)
-				return err
-			})
-		}
-		if err := group.Wait(); err != nil {
+		available, err := dad.ProbeBatch(ctx, candidates)
+		if err != nil {
 			return nil, err
 		}
 		for i, ok := range available {

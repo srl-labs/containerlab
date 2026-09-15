@@ -163,6 +163,30 @@ func TestIPAllocatorNextBatch(t *testing.T) {
 	}
 }
 
+func TestIPAllocatorNextPreferredBatch(t *testing.T) {
+	prefix := netip.MustParsePrefix("192.0.2.0/29")
+	allocator, err := NewIPAllocator(prefix, prefix, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addresses, err := allocator.NextPreferredBatch(context.Background(), []netip.Addr{
+		netip.MustParseAddr("192.0.2.5"),
+		netip.MustParseAddr("192.0.2.5"),
+		netip.MustParseAddr("198.51.100.1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []netip.Addr{
+		netip.MustParseAddr("192.0.2.5"),
+		netip.MustParseAddr("192.0.2.1"),
+		netip.MustParseAddr("192.0.2.2"),
+	}
+	if !slices.Equal(addresses, want) {
+		t.Fatalf("addresses = %v, want %v", addresses, want)
+	}
+}
+
 func TestIPAllocatorInvalidPools(t *testing.T) {
 	for _, pool := range []string{"192.0.3.0/24", "192.0.0.0/16", "2001:db8::/64", "::ffff:192.0.2.0/120"} {
 		if _, err := NewIPAllocator(

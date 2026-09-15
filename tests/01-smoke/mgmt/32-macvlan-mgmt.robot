@@ -15,6 +15,7 @@ ${no-aux-topo}                 ${CURDIR}/32-macvlan-mgmt-no-aux.clab.yml
 ${network}                     clab-smoke32
 ${no-aux-network}              clab-smoke32-no-aux
 ${parent}                      clab-smoke32
+${uplink}                      clab-smoke32-u
 ${peer-ns}                     clab-smoke32-peer
 ${dynamic-node}                clab-32-macvlan-mgmt-dynamic
 ${static-node}                 clab-32-macvlan-mgmt-static
@@ -174,10 +175,13 @@ Log DAD Peer State
 
 Setup
     Skip If    '${runtime}' != 'docker'    MACVLAN management requires Docker.
+    Command Should Succeed    sudo ip link add ${parent} type bridge
+    Set Suite Variable    ${parent-created}    ${True}
+    Command Should Succeed    sudo ip link set ${parent} mtu 1400 up
     Command Should Succeed    sudo ip netns add ${peer-ns}
     Set Suite Variable    ${peer-created}    ${True}
-    Command Should Succeed    sudo ip link add ${parent} type veth peer name eth0 netns ${peer-ns}
-    Set Suite Variable    ${parent-created}    ${True}
+    Command Should Succeed    sudo ip link add ${uplink} type veth peer name eth0 netns ${peer-ns}
+    Command Should Succeed    sudo ip link set ${uplink} mtu 1400 master ${parent} up
     Command Should Succeed    sudo ip -n ${peer-ns} link set lo up
     ${sysctls} =    Catenate
     ...    net.ipv4.conf.all.arp_ignore=0 net.ipv4.conf.eth0.arp_ignore=0
@@ -186,7 +190,6 @@ Setup
     ...    net.ipv6.conf.eth0.disable_ipv6=0
     Command Should Succeed    sudo ip netns exec ${peer-ns} sysctl -w ${sysctls}
     Command Should Succeed    sudo ip -n ${peer-ns} link set eth0 mtu 1400 up
-    Command Should Succeed    sudo ip link set ${parent} mtu 1400 up
     Command Should Succeed    sudo ip addr add 198.18.32.1/24 dev ${parent}
     Command Should Succeed    sudo ip -6 addr add fd00:32::1/64 dev ${parent} nodad
     Command Should Succeed    sudo ip -n ${peer-ns} addr add 198.18.32.2/24 dev eth0
@@ -200,6 +203,7 @@ Cleanup
         ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
         Run Keyword And Continue On Failure
         ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${no-aux-topo} --cleanup
+        Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${uplink}
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
         Run Keyword And Continue On Failure    Network Should Not Exist    ${network}
         Run Keyword And Continue On Failure    Network Should Not Exist    clab-smoke32-inferred
