@@ -12,7 +12,7 @@ containerlab tools netem reset [local-flags]
 
 ### node
 
-With `--topo | -t` or `--name`, the mandatory `--node | -n` flag specifies a node name from the topology. Without topology context, it accepts a container name for backward compatibility.
+With `--topo | -t` or `--name`, the mandatory `--node | -n` flag specifies a node name from the topology. Without topology context, it specifies a container name.
 
 ### interface
 

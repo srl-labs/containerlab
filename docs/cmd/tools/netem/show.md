@@ -14,7 +14,7 @@ containerlab tools netem show [local-flags]
 
 ### node
 
-With `--topo | -t` or `--name`, the `--node | -n` flag specifies a node name from the topology. Without topology context, it accepts a container name for backward compatibility.
+With `--topo | -t` or `--name`, the `--node | -n` flag specifies a node name from the topology. Without topology context, it specifies a container name.
 
 When `--node` is omitted but a topology is provided via `--topo | -t`, the command shows impairments for all nodes in the topology.
 
