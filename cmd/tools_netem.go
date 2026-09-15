@@ -55,18 +55,11 @@ of real-world networks.`,
 
 	c.AddCommand(netemSetCmd)
 	netemSetCmd.Flags().StringVarP(
-		&o.ToolsNetem.NodeName,
+		&o.ToolsNetem.ContainerName,
 		"node",
 		"n",
-		o.ToolsNetem.NodeName,
-		"node name from topology to apply impairment to (requires -t/--topo)",
-	)
-	netemSetCmd.Flags().StringVarP(
-		&o.ToolsNetem.ContainerName,
-		"container",
-		"c",
 		o.ToolsNetem.ContainerName,
-		"container name to apply impairment to (direct container access)",
+		"node name from topology, or container name without --topo/--name",
 	)
 	netemSetCmd.Flags().StringVarP(
 		&o.ToolsNetem.Interface,
@@ -122,18 +115,11 @@ of real-world networks.`,
 	}
 	c.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(
-		&o.ToolsNetem.NodeName,
+		&o.ToolsNetem.ContainerName,
 		"node",
 		"n",
-		o.ToolsNetem.NodeName,
-		"node name from topology to show impairments for (requires -t/--topo)",
-	)
-	netemShowCmd.Flags().StringVarP(
-		&o.ToolsNetem.ContainerName,
-		"container",
-		"c",
 		o.ToolsNetem.ContainerName,
-		"container name to show impairments for (direct container access)",
+		"node name from topology, or container name without --topo/--name",
 	)
 	netemShowCmd.Flags().StringVarP(
 		&o.ToolsNetem.Format,
@@ -155,10 +141,8 @@ of real-world networks.`,
 		},
 	}
 	c.AddCommand(netemResetCmd)
-	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.NodeName, "node", "n",
-		o.ToolsNetem.NodeName, "node name from topology to reset impairment on (requires -t/--topo)")
-	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "container", "c",
-		o.ToolsNetem.ContainerName, "container name to reset impairment on (direct container access)")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
+		o.ToolsNetem.ContainerName, "node name from topology, or container name without --topo/--name")
 	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
 		o.ToolsNetem.Interface, "interface to reset impairment on")
 	netemResetCmd.MarkFlagRequired("interface")
@@ -167,9 +151,8 @@ of real-world networks.`,
 }
 
 func netemSetFn(ctx context.Context, o *Options) error {
-	// set requires a specific node or container
-	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
-		return fmt.Errorf("--node/-n or --container/-c must be specified for 'set' command")
+	if o.ToolsNetem.ContainerName == "" {
+		return fmt.Errorf("--node/-n must be specified for 'set' command")
 	}
 
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
@@ -252,14 +235,6 @@ func validateInputAndRoot(o *Options) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	if o.ToolsNetem.NodeName != "" && o.ToolsNetem.ContainerName != "" {
-		return fmt.Errorf("cannot specify both --node/-n and --container/-c; use one or the other")
-	}
-
-	if o.ToolsNetem.NodeName != "" && o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
-		return fmt.Errorf("--node/-n requires a topology file (--topo/-t) or lab name (--name)")
-	}
-
 	if err := clabutils.CheckAndGetRootPrivs(); err != nil {
 		return err
 	}
@@ -268,17 +243,17 @@ func validateInputAndRoot(o *Options) error {
 }
 
 func resolveNetemNode(ctx context.Context, o *Options) (*clabcore.NetemNode, error) {
-	if o.ToolsNetem.NodeName != "" {
+	if o.Global.TopologyFile != "" || o.Global.TopologyName != "" {
 		c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load topology: %w", err)
 		}
 
-		node, err := c.GetNode(o.ToolsNetem.NodeName)
+		node, err := c.GetNode(o.ToolsNetem.ContainerName)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"node %q not found in topology: %w",
-				o.ToolsNetem.NodeName,
+				o.ToolsNetem.ContainerName,
 				err,
 			)
 		}
@@ -287,15 +262,15 @@ func resolveNetemNode(ctx context.Context, o *Options) (*clabcore.NetemNode, err
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to get namespace path for node %q: %w",
-				o.ToolsNetem.NodeName,
+				o.ToolsNetem.ContainerName,
 				err,
 			)
 		}
 		return clabcore.NewNetemNode(
 			nsPath,
-			o.ToolsNetem.NodeName,
+			o.ToolsNetem.ContainerName,
 			c.Config.Name,
-			o.ToolsNetem.NodeName,
+			o.ToolsNetem.ContainerName,
 		), nil
 	}
 
@@ -446,10 +421,10 @@ func netemShowFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
+	if o.ToolsNetem.ContainerName == "" {
 		if o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
 			return fmt.Errorf(
-				"either --node/-n, --container/-c, or --topo/-t (to show all nodes) must be specified",
+				"either --node/-n or --topo/-t (to show all nodes) must be specified",
 			)
 		}
 		return netemShowAllNodesFn(ctx, o)
@@ -460,12 +435,7 @@ func netemShowFn(o *Options) error {
 		return err
 	}
 
-	displayName := o.ToolsNetem.ContainerName
-	if o.ToolsNetem.NodeName != "" {
-		displayName = o.ToolsNetem.NodeName
-	}
-
-	return showNodeImpairments(o, node, displayName)
+	return showNodeImpairments(o, node, o.ToolsNetem.ContainerName)
 }
 
 func showNodeImpairments(
@@ -740,9 +710,8 @@ func toolsIfaceImpairments(
 }
 
 func netemResetFn(o *Options) error {
-	// reset requires a specific node or container
-	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
-		return fmt.Errorf("--node/-n or --container/-c must be specified for 'reset' command")
+	if o.ToolsNetem.ContainerName == "" {
+		return fmt.Errorf("--node/-n must be specified for 'reset' command")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
