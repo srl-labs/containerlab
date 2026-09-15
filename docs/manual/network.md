@@ -209,17 +209,15 @@ mgmt:
 
 When allocating addresses to nodes, the containerlab provider attempts to do so in a determinsitc manner so that subsequent redeployments of the topology shall result in the same IP addressing for all nodes in the topology.
 
-It is important to understand the persistent nature of the automatic IP addressing is best-effort, and may not always hold true. Allocation is determined based on a hash of the node name, hence changing the node name could result in a different IP address being allocated.
-
-Upon deployment the allocations are saved in the topology state file so nodes hold the same IP addressing upon reconciliation of the topology.
+Upon deployment, allocations are saved in the topology state file and reused when still available. Without that state file it is possible for allocations to shift on topology reconciliations.
 
 ##### Duplicate address detection
 
 Duplicate address detection is enabled by default and ensures allocations by the containerlab IPAM provider are not duplicate on the network. This has no effect on the `runtime` provider.
 
-For the default bridge management network driver, the duplicate address checks are similar to Docker whereby addresses in the local route table, dns addresses etc. are checked to ensure the allocation is unique.
+The default bridge management network relies on runtime address exclusions collected before allocation.
 
-For the MACVLAN driver on `mode: bridge`, since the containers are reachable from the same L2 segment as the host; the duplicate address detection will first check the local ARP/ND cache and send an ARP and/or IPv6 neighbour solicitation out the defined parent interface to ensure the allocated IP address is unqiue on the network segment.
+For the MACVLAN driver on `mode: bridge`, DAD checks local addresses and the ARP/ND cache, then sends an ARP and/or IPv6 neighbour solicitation out the parent interface.
 
 Given the below example, the ARP/ND packets will be sent out the `enp2s0` interface.
 
@@ -230,7 +228,7 @@ mgmt:
 ```
 
 /// note | Scalability of DAD with MACVLAN driver
-As per the DAD process containerlab will send packets out the parent interface then wait for 3 seconds. If no reply is received then the adderess can be used.
+Containerlab sends packets out the parent interface and waits for a response. If no reply is received, the address can be used.
 
 While this process does happen concurrently as the topology scales to 1000+ nodes the checks could add extra time to the lab deployment, and it may be worth disabling the DAD checks.
 ///
@@ -263,11 +261,11 @@ To address this issue, containerlab provides a way to automatically assign the m
 mgmt:
   ipv4-subnet: auto
   ipv6-subnet: auto
-  ipam:
-    provider: runtime
 ```
 
-With this setting in place, containerlab will rely on the container runtime to assign the management network addresses that is not conflicting with the existing addressing scheme on the lab host.
+With this setting in place, the container runtime selects management subnets that do not conflict with the existing addressing scheme on the lab host. The configured IPAM provider then assigns node addresses from the resolved subnets.
+
+Both the default `containerlab` provider and the `runtime` provider are supported.
 
 ##### MTU
 
@@ -482,15 +480,13 @@ mgmt:
 
 For VLANs, create the logical VLAN interface before deploying the lab, then use its name as the parent.
 
-The MTU for the management network is inherented from the parent interface and cannot be changed via the `mgmt.mtu` as with the bridge driver.
+The MTU for the management network is inherited from the parent interface and cannot be changed via `mgmt.mtu` as with the bridge driver.
 
 ##### Mode
 
-`macvlan-mode` accepts `bridge`, `private`, `vepa`, or `passthru`. The default mode is `bridge`. Not to be confused with the `bridge` management network driver.
+`macvlan-mode` accepts `bridge`, `private`, `vepa`, or `passthru`. The default mode is `bridge`. This is not the same as the `bridge` management network driver.
 
-The behaviour of `bridge` mode allows communication between macvlan interfaces on the same parent.
-
-The other modes have different kernel and upstream switching requirements; [auxiliary host connectivity](#auxiliary-host-connectivity) is supported only in `bridge` mode.
+Bridge mode allows communication between macvlan interfaces on the same parent. Auxiliary host connectivity is available only in bridge mode and is disabled automatically for `private`, `vepa`, and `passthru`.
 
 ##### IP Addressing
 
@@ -513,37 +509,23 @@ Reserve the container address range in any external DHCP/IPAM system as the cont
 
 ##### Auxiliary host connectivity
 
-The host is unable to reach its macvlan containers through the parent interface. 
+Linux does not allow a macvlan parent interface to communicate directly with its macvlan children. Resulting in a case whereby the host has no access to the management network of the containers it is running.
 
-We can use an auxillary interface to create an interface on the host to allow the host to reach nodes on the Macvlan management network. This is only applicable for the `bridge` macvlan mode.
+To solve this containerlab creates an owned macvlan interface in the host namespace by default. 
+
+Set `macvlan-aux: false` to disable it:
 
 ```yaml
 mgmt:
   driver: macvlan
   macvlan-parent: eth1
+  macvlan-aux: false
   ipv4-subnet: 192.0.2.0/24
-  ipv4-gw: 192.0.2.1
-  ipv4-range: 192.0.2.128/26
-  macvlan-aux: 192.0.2.129/26  #(1)!
 ```
 
-1. Containerlab assigns the auxiliary address with a `/32` (IPv4) or `/128` (IPv6) mask and adds a /26 route through the host interface:
+When enabled, containerlab selects an unused /32 or /128 auxiliary address checks it on the parent Layer 2 segment.
 
-- A plain address, such as `192.0.2.129`, routes the entire `ipv4-subnet` through the host interface.
-
-- An address with a prefix, such as `192.0.2.129/26`, routes only `192.0.2.128/26`. Use this to reach the container pool while preserving the host's route to the rest of the LAN. Container addresses outside that prefix are not covered by the host route.
-
-###### Auto mode
-
-The `auto` keyword can be used when the IPAM provider is set to `containerlab`. It is not supported for the `runtime` IPAM provider.
-
-In auto mode, the behaviour is as follows:
-
-- Containerlab will intelligently select the auxilliary address and correspondings subnet for the route to be created on the host.
-
-- IPv6 is preferred with a fallback to IPv4 when the management network is not v6 enabled.
-
-- When `ipv4-range`/`ipv6-range` is used, the host route is created according to that.
+After nodes attach to the network, containerlab adds an exact `/32` or `/128` host routes for each node so that the host may reach them via the auxiliary interface.
 
 ### Skipping the management network
 

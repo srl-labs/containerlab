@@ -43,7 +43,8 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 		t.Fatal(err)
 	}
 	preferred := state.Nodes["node"].IPAM
-	if preferred == nil || preferred.IPv4 != cfg.MgmtIPv4Address || preferred.IPv6 != cfg.MgmtIPv6Address {
+	if preferred == nil || preferred.IPv4 != cfg.MgmtIPv4Address ||
+		preferred.IPv6 != cfg.MgmtIPv6Address {
 		t.Fatalf("missing preferred allocation: %+v", preferred)
 	}
 	if state.Topology.Nodes["node"].MgmtIPv4 != "" || topology.Nodes["node"].MgmtIPv4 != "" {

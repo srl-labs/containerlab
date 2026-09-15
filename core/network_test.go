@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/netip"
 	"os"
+	"slices"
 	"testing"
 
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
@@ -31,6 +32,58 @@ func TestInitMacvlanManagementNetwork(t *testing.T) {
 		if c.Config.Mgmt.IPv4Subnet != subnet || c.Config.Mgmt.IPv6Subnet != "" {
 			t.Fatalf("bridge subnet defaults applied to macvlan: %+v", c.Config.Mgmt)
 		}
+	}
+}
+
+func TestCreateNetworkPassesStaticManagementAddresses(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	m := &clabtypes.MgmtNet{
+		IPAM: clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab},
+	}
+	cfg := &clabtypes.NodeConfig{
+		MgmtIPv4Address: "192.0.2.10",
+		MgmtIPv6Address: "2001:db8::10",
+		Labels:          map[string]string{},
+	}
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().Config().Return(cfg).AnyTimes()
+	c := &CLab{
+		Config:            &Config{Mgmt: m},
+		globalRuntimeName: "test",
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+		Nodes:             map[string]clabnodes.Node{"node": node},
+	}
+	rt.EXPECT().CreateNet(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, options ...clabruntime.NetworkCreateOptions) error {
+			want := []netip.Addr{
+				netip.MustParseAddr(cfg.MgmtIPv4Address),
+				netip.MustParseAddr(cfg.MgmtIPv6Address),
+			}
+			if len(options) != 1 || !slices.Equal(options[0].StaticAddresses, want) {
+				t.Fatalf("static addresses = %v, want %v", options, want)
+			}
+			return nil
+		},
+	)
+	rt.EXPECT().Mgmt().Return(m)
+	if err := c.CreateNetwork(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSyncMgmtHostRoutesReturnsRuntimeError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	failure := errors.New("host route synchronization failed")
+	c := &CLab{
+		Config:            &Config{Mgmt: &clabtypes.MgmtNet{Driver: clabtypes.MgmtDriverMacvlan}},
+		globalRuntimeName: "test",
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+	}
+	rt.EXPECT().SyncMgmtHostRoutes(gomock.Any()).Return(failure)
+	if err := c.syncMgmtHostRoutes(context.Background()); !errors.Is(err, failure) {
+		t.Fatalf("runtime error lost: %v", err)
 	}
 }
 
@@ -154,14 +207,16 @@ func TestPrepareManagementNetworkAllocatesAfterResolution(t *testing.T) {
 		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
 		Nodes:             map[string]clabnodes.Node{"node": node},
 	}
-	rt.EXPECT().CreateNet(gomock.Any()).DoAndReturn(func(context.Context) error {
-		if cfg.MgmtIPv4Address != "" {
-			t.Fatal("allocated before resolving network")
-		}
-		m.IPv4Subnet = "192.0.2.0/29"
-		m.IPv4Gw = "192.0.2.6"
-		return nil
-	})
+	rt.EXPECT().
+		CreateNet(gomock.Any()).
+		DoAndReturn(func(context.Context, ...clabruntime.NetworkCreateOptions) error {
+			if cfg.MgmtIPv4Address != "" {
+				t.Fatal("allocated before resolving network")
+			}
+			m.IPv4Subnet = "192.0.2.0/29"
+			m.IPv4Gw = "192.0.2.6"
+			return nil
+		})
 	rt.EXPECT().Mgmt().Return(m)
 	rt.EXPECT().NetworkAddresses(gomock.Any(), gomock.Any()).Return(nil, nil)
 	if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
@@ -192,7 +247,6 @@ func TestPrepareManagementNetworkDelegatesRuntimeIPAM(t *testing.T) {
 				Labels:          map[string]string{},
 			}
 			node := clabmocksmocknodes.NewMockNode(ctrl)
-			// Only network labeling should read the node config; allocation is skipped.
 			node.EXPECT().Config().Return(cfg).Times(1)
 			c := &CLab{
 				Config: &Config{Mgmt: m}, globalRuntimeName: "test",
@@ -216,7 +270,11 @@ func TestPrepareManagementNetworkLoadsPreferredAddress(t *testing.T) {
 	if err := paths.SetLabDir(t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(paths.StateFile(), []byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"), 0644); err != nil {
+	if err := os.WriteFile(
+		paths.StateFile(),
+		[]byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"),
+		0644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	ctrl := gomock.NewController(t)
@@ -251,7 +309,11 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 		t.Run(scenario, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-			m := &clabtypes.MgmtNet{Network: "mgmt", IPv4Subnet: "192.0.2.0/29", IPAM: clabtypes.MgmtIPAM{DAD: new(false)}}
+			m := &clabtypes.MgmtNet{
+				Network:    "mgmt",
+				IPv4Subnet: "192.0.2.0/29",
+				IPAM:       clabtypes.MgmtIPAM{DAD: new(false)},
+			}
 			cfg := &clabtypes.NodeConfig{ShortName: "node", Labels: map[string]string{}}
 			node := clabmocksmocknodes.NewMockNode(ctrl)
 			node.EXPECT().Config().Return(cfg).AnyTimes()
@@ -259,15 +321,29 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			if err := paths.SetLabDir(t.TempDir()); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(paths.StateFile(), []byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"), 0644); err != nil {
+			if err := os.WriteFile(
+				paths.StateFile(),
+				[]byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"),
+				0644,
+			); err != nil {
 				t.Fatal(err)
 			}
-			c := &CLab{TopoPaths: paths, Config: &Config{Mgmt: m}, globalRuntimeName: "test", Runtimes: map[string]clabruntime.ContainerRuntime{"test": rt}, Nodes: map[string]clabnodes.Node{"node": node}}
+			c := &CLab{
+				TopoPaths:         paths,
+				Config:            &Config{Mgmt: m},
+				globalRuntimeName: "test",
+				Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+				Nodes:             map[string]clabnodes.Node{"node": node},
+			}
 			ip := netip.MustParseAddr("192.0.2.5")
-			occupied := []clabruntime.NetworkAddress{{NetworkName: "mgmt", ContainerID: "foreign-id", Address: ip}}
+			occupied := []clabruntime.NetworkAddress{
+				{NetworkName: "mgmt", ContainerID: "foreign-id", Address: ip},
+			}
 			var existing []clabtypes.ExistingAddress
 			if scenario == "own-live" || scenario == "foreign-conflict" {
-				existing = []clabtypes.ExistingAddress{{NodeName: "node", ContainerID: "own-id", Address: ip}}
+				existing = []clabtypes.ExistingAddress{
+					{NodeName: "node", ContainerID: "own-id", Address: ip},
+				}
 			}
 			if scenario == "own-live" {
 				occupied[0].ContainerID = "own-id"
@@ -278,7 +354,9 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			}
 			rt.EXPECT().CreateNet(gomock.Any()).Return(nil)
 			rt.EXPECT().Mgmt().Return(m)
-			rt.EXPECT().NetworkAddresses(gomock.Any(), []netip.Prefix{netip.MustParsePrefix(m.IPv4Subnet)}).Return(occupied, snapshotErr)
+			rt.EXPECT().
+				NetworkAddresses(gomock.Any(), []netip.Prefix{netip.MustParsePrefix(m.IPv4Subnet)}).
+				Return(occupied, snapshotErr)
 			_, err := c.prepareLabManagementNetwork(context.Background(), existing...)
 			if scenario == "foreign-conflict" || scenario == "inspection-error" {
 				if err == nil || cfg.MgmtIPv4Address != "" {
@@ -292,7 +370,8 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			if scenario == "own-live" && cfg.MgmtIPv4Address != ip.String() {
 				t.Fatal("own live allocation lost")
 			}
-			if scenario == "foreign-preferred" && (cfg.MgmtIPv4Address == "" || cfg.MgmtIPv4Address == ip.String()) {
+			if scenario == "foreign-preferred" &&
+				(cfg.MgmtIPv4Address == "" || cfg.MgmtIPv4Address == ip.String()) {
 				t.Fatal("foreign runtime reservation ignored")
 			}
 		})

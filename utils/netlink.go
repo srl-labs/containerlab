@@ -23,8 +23,7 @@ import (
 	"github.com/vishvananda/netns"
 )
 
-// NetlinkFamily returns the netlink address family for an IP address.
-func NetlinkFamily(ip netip.Addr) int {
+func netlinkFamily(ip netip.Addr) int {
 	if ip.Is4() {
 		return netlink.FAMILY_V4
 	}

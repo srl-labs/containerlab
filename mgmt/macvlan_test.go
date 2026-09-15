@@ -79,7 +79,14 @@ func TestMacvlanParentSubnet(t *testing.T) {
 		})
 	}
 	failure := errors.New("read failed")
-	if _, err := macvlanParentSubnet(parentNetlink{err: failure}, parent, netlink.FAMILY_V4); !errors.Is(err, failure) {
+	if _, err := macvlanParentSubnet(
+		parentNetlink{err: failure},
+		parent,
+		netlink.FAMILY_V4,
+	); !errors.Is(
+		err,
+		failure,
+	) {
 		t.Fatalf("lost read error: %v", err)
 	}
 }
@@ -100,14 +107,16 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 		{"missing gateway family", func(m *clabtypes.MgmtNet) { m.IPv6Gw = "2001:db8::1" }, "no usable IPv6 subnet"},
 		{"missing range family", func(m *clabtypes.MgmtNet) { m.IPv6Range = "2001:db8::/80" }, "no usable IPv6 subnet"},
 		{"gateway outside subnet", func(m *clabtypes.MgmtNet) { m.IPv4Gw = "198.51.100.1" }, "gateway"},
-		{"aux outside subnet", func(m *clabtypes.MgmtNet) { m.MacvlanAux = "198.51.100.2" }, "containing subnet"},
-		{"aux missing family", func(m *clabtypes.MgmtNet) { m.MacvlanAux = "2001:db8::2" }, "containing subnet"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := clabtypes.MgmtNet{Driver: "macvlan", MacvlanParent: "parent"}
 			tc.configure(&m)
 			before := m
-			err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: []netlink.Addr{*address}}, parent)
+			err := resolveMacvlanSubnets(
+				&m,
+				parentNetlink{addresses: []netlink.Addr{*address}},
+				parent,
+			)
 			if tc.failure != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.failure) {
 					t.Fatalf("got %v, want %s", err, tc.failure)
@@ -130,7 +139,7 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 		})
 	}
 	m := clabtypes.MgmtNet{Driver: "macvlan", MacvlanParent: "parent"}
-	if err := ResolveMacvlanSubnets(&m, parentNetlink{}, parent); err == nil {
+	if err := resolveMacvlanSubnets(&m, parentNetlink{}, parent); err == nil {
 		t.Fatal("accepted parent without usable addresses")
 	}
 
@@ -155,7 +164,11 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 				}
 				addresses = append(addresses, *address)
 			}
-			if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
+			if err := resolveMacvlanSubnets(
+				&m,
+				parentNetlink{addresses: addresses},
+				parent,
+			); err != nil {
 				t.Fatalf("unrequested IPv6 inference blocked explicit IPv4: %v", err)
 			}
 			if m.IPv6Subnet != "" {
@@ -185,7 +198,11 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 				}
 				addresses = append(addresses, *address)
 			}
-			if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: addresses}, parent); err != nil {
+			if err := resolveMacvlanSubnets(
+				&m,
+				parentNetlink{addresses: addresses},
+				parent,
+			); err != nil {
 				t.Fatalf("unrequested IPv4 inference blocked explicit IPv6: %v", err)
 			}
 			if m.IPv4Subnet != "" {
@@ -204,7 +221,11 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: []netlink.Addr{*ipv6Address}}, parent); err != nil {
+	if err := resolveMacvlanSubnets(
+		&m,
+		parentNetlink{addresses: []netlink.Addr{*ipv6Address}},
+		parent,
+	); err != nil {
 		t.Fatalf("requested IPv6 inference failed: %v", err)
 	}
 	if m.IPv6Subnet != "2001:db8::/64" {
@@ -221,7 +242,11 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ResolveMacvlanSubnets(&m, parentNetlink{addresses: []netlink.Addr{*ipv4Address}}, parent); err != nil {
+	if err := resolveMacvlanSubnets(
+		&m,
+		parentNetlink{addresses: []netlink.Addr{*ipv4Address}},
+		parent,
+	); err != nil {
 		t.Fatalf("requested IPv4 inference failed: %v", err)
 	}
 	if m.IPv4Subnet != "192.0.2.0/24" {
@@ -229,32 +254,13 @@ func TestResolveMacvlanSubnets(t *testing.T) {
 	}
 }
 
-func TestMacvlanHostDADPolicy(t *testing.T) {
-	disabled := false
-	for _, tc := range []struct {
-		name         string
-		driver, mode string
-		ipam         clabtypes.MgmtIPAM
-		probe        bool
-	}{
-		{"default", "macvlan", "", clabtypes.MgmtIPAM{}, true},
-		{"containerlab", "macvlan", "bridge", clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab}, true},
-		{"runtime", "macvlan", "bridge", clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderRuntime}, false},
-		{"disabled", "macvlan", "bridge", clabtypes.MgmtIPAM{DAD: &disabled}, false},
-		{"private", "macvlan", "private", clabtypes.MgmtIPAM{}, false},
-		{"bridge", "bridge", "", clabtypes.MgmtIPAM{}, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			links := &parentNetlink{}
-			m := &clabtypes.MgmtNet{Driver: tc.driver, MacvlanMode: tc.mode, IPAM: tc.ipam}
-			host := NewMacvlanHost(m, links)
-			if (host.Probe != nil) != tc.probe || host.Links != links {
-				t.Fatal("incorrect DAD policy or netlink backend")
-			}
-			if NewMacvlanHost(m, nil).Links == nil {
-				t.Fatal("missing default netlink backend")
-			}
-		})
+func TestNewMacvlanHost(t *testing.T) {
+	links := &parentNetlink{}
+	if host := NewMacvlanHost(links); host.Links != links {
+		t.Fatal("incorrect netlink backend")
+	}
+	if NewMacvlanHost(nil).Links == nil {
+		t.Fatal("missing default netlink backend")
 	}
 }
 
@@ -262,42 +268,74 @@ func (f parentNetlink) LinkByName(string) (netlink.Link, error) {
 	return f.parent, f.lookupErr
 }
 
-func TestResolveMacvlanAux(t *testing.T) {
-	dualStack := &clabtypes.MgmtNet{
-		Network:    "test",
-		IPv4Subnet: "192.0.2.0/24",
-		IPv4Range:  "192.0.2.128/26",
-		IPv6Subnet: "2001:db8::/64",
-		IPv6Range:  "2001:db8::100/120",
-		MacvlanAux: "auto",
+func TestResolveMacvlanAuxAddresses(t *testing.T) {
+	newConfig := func() *clabtypes.MgmtNet {
+		return &clabtypes.MgmtNet{
+			Network:    "test",
+			IPv4Subnet: "192.0.2.0/24",
+			IPv4Gw:     "192.0.2.1",
+			IPv6Subnet: "2001:db8::/64",
+			IPv6Gw:     "2001:db8::1",
+		}
 	}
-	if err := resolveMacvlanAux(dualStack); err != nil {
-		t.Fatal(err)
-	}
-	ip, route, err := dualStack.MacvlanHostAddress()
+	first := newConfig()
+	firstAddresses, err := ResolveMacvlanAuxAddresses(
+		context.Background(),
+		first,
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ip.Is6() || route != netip.MustParsePrefix("2001:db8::100/120") {
-		t.Fatalf("automatic auxiliary address = %s route %s; want IPv6 allocation range", ip, route)
+	if !netip.MustParsePrefix(first.IPv4Subnet).Contains(firstAddresses[0]) ||
+		!netip.MustParsePrefix(first.IPv6Subnet).Contains(firstAddresses[1]) {
+		t.Fatalf("incorrect dual-stack auxiliary addresses: %v", firstAddresses)
 	}
+	second := newConfig()
+	secondAddresses, err := ResolveMacvlanAuxAddresses(context.Background(), second, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repeated := newConfig()
+	repeatedAddresses, err := ResolveMacvlanAuxAddresses(context.Background(), repeated, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(secondAddresses, repeatedAddresses) {
+		t.Fatalf("auxiliary addresses changed: %v, then %v", secondAddresses, repeatedAddresses)
+	}
+	excluded := newConfig()
+	excludedAddresses, err := ResolveMacvlanAuxAddresses(
+		context.Background(), excluded, secondAddresses,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excludedAddresses[0] == secondAddresses[0] || excludedAddresses[1] == secondAddresses[1] {
+		t.Fatalf("selected an excluded node address: %v", excludedAddresses)
+	}
+}
 
-	ipv4 := &clabtypes.MgmtNet{
-		Network:    "test",
-		IPv4Subnet: "192.0.2.0/24",
-		IPv4Range:  "192.0.2.128/26",
-		MacvlanAux: "auto",
-	}
-	if err := resolveMacvlanAux(ipv4); err != nil {
+func TestRestoreMacvlanAuxAddresses(t *testing.T) {
+	m := &clabtypes.MgmtNet{IPv4Subnet: "192.0.2.0/24", IPv6Subnet: "2001:db8::/64"}
+	addresses, err := RestoreMacvlanAuxAddresses(m, "192.0.2.2", "2001:db8::2")
+	if err != nil {
 		t.Fatal(err)
 	}
-	first := ipv4.MacvlanAux
-	ipv4.MacvlanAux = "auto"
-	if err := resolveMacvlanAux(ipv4); err != nil {
-		t.Fatal(err)
+	if !reflect.DeepEqual(addresses, []netip.Addr{
+		netip.MustParseAddr("192.0.2.2"),
+		netip.MustParseAddr("2001:db8::2"),
+	}) {
+		t.Fatalf("addresses not restored: %v", addresses)
 	}
-	if ipv4.MacvlanAux != first {
-		t.Fatalf("automatic auxiliary address changed: %q, then %q", first, ipv4.MacvlanAux)
+	for _, addresses := range [][2]string{
+		{"", "2001:db8::2"},
+		{"192.0.2.2", ""},
+		{"198.51.100.2", "2001:db8::2"},
+	} {
+		if _, err := RestoreMacvlanAuxAddresses(m, addresses[0], addresses[1]); err == nil {
+			t.Fatalf("accepted persisted addresses %q", addresses)
+		}
 	}
 }
 
@@ -315,7 +353,11 @@ func TestPrepareMacvlanParent(t *testing.T) {
 		{"address read error", parentNetlink{parent: parent, err: failure}, "", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			m := &clabtypes.MgmtNet{Driver: "macvlan", MacvlanParent: "parent", IPv4Subnet: tc.subnet}
+			m := &clabtypes.MgmtNet{
+				Driver:        "macvlan",
+				MacvlanParent: "parent",
+				IPv4Subnet:    tc.subnet,
+			}
 			got, err := PrepareMacvlanParent(m, tc.links)
 			if tc.wantErr {
 				if !errors.Is(err, failure) {
@@ -328,59 +370,24 @@ func TestPrepareMacvlanParent(t *testing.T) {
 	}
 }
 
-func TestPrepareMacvlanParentRejectsConflictingAuxRoute(t *testing.T) {
-	parent := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent", Index: 7, Flags: net.FlagUp}}
-	_, dst, err := net.ParseCIDR("192.0.2.0/24")
-	if err != nil {
-		t.Fatal(err)
+func TestEnsureMacvlanHostErrorContext(t *testing.T) {
+	m := &clabtypes.MgmtNet{
+		Network: "test", Driver: "macvlan", MacvlanParent: "parent",
+		IPv4Subnet: "192.0.2.0/24",
 	}
-	links := parentNetlink{
-		parent: parent,
-		routes: []netlink.Route{{LinkIndex: parent.Attrs().Index, Dst: dst}},
-	}
-	for _, tc := range []struct {
-		aux, ipRange string
-		failure      bool
-	}{
-		{"192.0.2.129", "", true},
-		{"192.0.2.129/26", "", false},
-		{"auto", "", true},
-		{"auto", "192.0.2.128/26", false},
-	} {
-		t.Run(tc.aux+"/"+tc.ipRange, func(t *testing.T) {
-			m := &clabtypes.MgmtNet{
-				Driver:        "macvlan",
-				MacvlanParent: "parent",
-				IPv4Subnet:    "192.0.2.0/24",
-				IPv4Range:     tc.ipRange,
-				MacvlanAux:    tc.aux,
-			}
-			_, err := PrepareMacvlanParent(m, links)
-			if tc.failure {
-				if err == nil || !strings.Contains(err.Error(), "use a narrower prefix") {
-					t.Fatalf("conflicting parent route accepted: %v", err)
-				}
-			} else if err != nil {
-				t.Fatalf("narrower auxiliary route rejected: %v", err)
-			}
-		})
-	}
-}
-
-func TestEnsureMacvlanHostValidation(t *testing.T) {
-	m := &clabtypes.MgmtNet{Network: "test", Driver: "macvlan", MacvlanParent: "parent", IPv4Subnet: "192.0.2.0/24"}
-	if err := EnsureMacvlanHost(context.Background(), m, clabutils.MacvlanHost{}, nil, "network-id"); err != nil {
-		t.Fatalf("no auxiliary address should be a no-op: %v", err)
-	}
-	m.MacvlanAux = "invalid"
-	if err := EnsureMacvlanHost(context.Background(), m, clabutils.MacvlanHost{}, nil, "network-id"); err == nil {
-		t.Fatal("invalid auxiliary address accepted")
-	}
-	m.MacvlanAux = "192.0.2.129"
 	failure := errors.New("lookup failed")
 	host := clabutils.MacvlanHost{Links: parentNetlink{lookupErr: failure}}
 	parent := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent"}}
-	if err := EnsureMacvlanHost(context.Background(), m, host, parent, "network-id"); !errors.Is(err, failure) || !strings.Contains(err.Error(), m.Network) {
+	addresses := []netip.Addr{netip.MustParseAddr("192.0.2.129")}
+	if err := EnsureMacvlanHost(
+		context.Background(),
+		m,
+		host,
+		parent,
+		"network-id",
+		addresses,
+	); !errors.Is(err, failure) ||
+		!strings.Contains(err.Error(), m.Network) {
 		t.Fatalf("missing network context or underlying error: %v", err)
 	}
 }

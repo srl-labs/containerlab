@@ -1,12 +1,10 @@
-name: 32-macvlan-auto
+name: 32-macvlan-no-aux
 
 mgmt:
-  network: clab-smoke32-auto
+  network: clab-smoke32-no-aux
   driver: macvlan
   macvlan-parent: clab-smoke32
-{{- if .aux }}
-  macvlan-aux: {{ .aux }}
-{{- end }}
+  macvlan-aux: false
   ipv4-subnet: 198.18.32.0/24
   ipv4-gw: 198.18.32.1
   ipv4-range: 198.18.32.128/25

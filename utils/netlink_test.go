@@ -26,8 +26,8 @@ func TestNetlinkFamily(t *testing.T) {
 		{name: "mapped IPv4", ip: netip.MustParseAddr("::ffff:192.0.2.1"), family: netlink.FAMILY_V6},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if family := NetlinkFamily(tc.ip); family != tc.family {
-				t.Fatalf("NetlinkFamily(%s) = %d; want %d", tc.ip, family, tc.family)
+			if family := netlinkFamily(tc.ip); family != tc.family {
+				t.Fatalf("netlinkFamily(%s) = %d; want %d", tc.ip, family, tc.family)
 			}
 		})
 	}
@@ -67,6 +67,14 @@ func TestSanitizeInterfaceName(t *testing.T) {
 				t.Errorf("got wrong sanitized interface name %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMacvlanHostName(t *testing.T) {
+	a := macvlanHostName(strings.Repeat("a", 64))
+	b := macvlanHostName(strings.Repeat("b", 64))
+	if len(a) > 15 || a == b || a != macvlanHostName(strings.Repeat("a", 64)) {
+		t.Fatalf("invalid names: %q, %q", a, b)
 	}
 }
 
@@ -135,7 +143,8 @@ func (f *hostNetlink) AddrList(link netlink.Link, family int) ([]netlink.Addr, e
 	}
 	var addresses []netlink.Addr
 	for _, address := range f.addresses {
-		if (address.IP.To4() != nil) == (family == netlink.FAMILY_V4) && (link == nil || address.LinkIndex == link.Attrs().Index) {
+		if (address.IP.To4() != nil) == (family == netlink.FAMILY_V4) &&
+			(link == nil || address.LinkIndex == link.Attrs().Index) {
 			addresses = append(addresses, address)
 		}
 	}
@@ -150,8 +159,14 @@ func (f *hostNetlink) AddrAdd(link netlink.Link, address *netlink.Addr) error {
 	}
 	return err
 }
-func (f *hostNetlink) RouteList(netlink.Link, int) ([]netlink.Route, error) {
-	return f.routes, f.call("list-routes")
+func (f *hostNetlink) RouteList(_ netlink.Link, family int) ([]netlink.Route, error) {
+	var routes []netlink.Route
+	for _, route := range f.routes {
+		if route.Dst == nil || (route.Dst.IP.To4() != nil) == (family == netlink.FAMILY_V4) {
+			routes = append(routes, route)
+		}
+	}
+	return routes, f.call("list-routes")
 }
 func (f *hostNetlink) RouteAdd(route *netlink.Route) error {
 	err := f.call("route")
@@ -160,17 +175,30 @@ func (f *hostNetlink) RouteAdd(route *netlink.Route) error {
 	}
 	return err
 }
+func (f *hostNetlink) RouteDel(route *netlink.Route) error {
+	if err := f.call("delete-route"); err != nil {
+		return err
+	}
+	for i := range f.routes {
+		if f.routes[i].Dst.String() == route.Dst.String() &&
+			f.routes[i].LinkIndex == route.LinkIndex {
+			f.routes = append(f.routes[:i], f.routes[i+1:]...)
+			return nil
+		}
+	}
+	return unix.ESRCH
+}
 
 func hostParent() netlink.Link {
 	return &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "parent", Index: 1, MTU: 1400}}
 }
 
 func ensureTestHost(ctx context.Context, host MacvlanHost, ipv6 bool) error {
-	ip, route := "192.0.2.129", "192.0.2.128/26"
+	ip := "192.0.2.129"
 	if ipv6 {
-		ip, route = "2001:db8::129", "2001:db8::/64"
+		ip = "2001:db8::129"
 	}
-	return host.Ensure(ctx, "network-id", hostParent(), netip.MustParseAddr(ip), netip.MustParsePrefix(route))
+	return host.Ensure(ctx, "network-id", hostParent(), []netip.Addr{netip.MustParseAddr(ip)})
 }
 
 func TestMacvlanHostLifecycle(t *testing.T) {
@@ -192,28 +220,30 @@ func TestMacvlanHostLifecycle(t *testing.T) {
 				}
 				createdMAC = append(net.HardwareAddr(nil), mac...)
 			}
-			probes := 0
-			host := MacvlanHost{Links: f, Probe: func(_ context.Context, attrs *netlink.LinkAttrs, ip netip.Addr) error {
-				probes++
-				if len(f.addresses) != 0 || len(f.routes) != 0 {
-					t.Fatal("address or route committed before probing")
-				}
-				if !bytes.Equal(attrs.HardwareAddr, createdMAC) || ip.Is6() != ipv6 {
-					t.Fatal("probe uses incorrect interface or address")
-				}
-				return nil
-			}}
+			host := MacvlanHost{Links: f}
 			for range 2 {
 				if err := ensureTestHost(context.Background(), host, ipv6); err != nil {
 					t.Fatal(err)
 				}
+				source, destination := "192.0.2.129", "192.0.2.140"
+				if ipv6 {
+					source, destination = "2001:db8::129", "2001:db8::140"
+				}
+				if err := host.SyncRoutes(
+					"network-id",
+					[]netip.Addr{netip.MustParseAddr(source)},
+					[]netip.Addr{netip.MustParseAddr(destination)},
+				); err != nil {
+					t.Fatal(err)
+				}
 			}
-			if f.calls["create"] != 1 || f.calls["address"] != 1 || f.calls["route"] != 1 || probes != 1 {
-				t.Fatalf("reuse recreated resources: %+v, probes %d", f.calls, probes)
+			if f.calls["create"] != 1 || f.calls["address"] != 1 || f.calls["route"] != 1 {
+				t.Fatalf("reuse recreated resources: %+v", f.calls)
 			}
 			address, route := f.addresses[0], f.routes[0]
 			bits, width := address.Mask.Size()
-			if bits != width || f.link.Attrs().MTU != 1400 || route.LinkIndex != 2 || !route.Src.Equal(address.IP) {
+			if bits != width || f.link.Attrs().MTU != 1400 || route.LinkIndex != 2 ||
+				!route.Src.Equal(address.IP) {
 				t.Fatalf("incorrect host configuration: %v %v", address, route)
 			}
 			wantScope := netlink.SCOPE_LINK
@@ -231,7 +261,18 @@ func TestMacvlanHostLifecycle(t *testing.T) {
 			if err := ensureTestHost(context.Background(), host, ipv6); err != nil {
 				t.Fatal(err)
 			}
-			if len(f.routes) != 1 || f.link.Attrs().Flags&net.FlagUp == 0 || probes != 1 {
+			source, destination := "192.0.2.129", "192.0.2.140"
+			if ipv6 {
+				source, destination = "2001:db8::129", "2001:db8::140"
+			}
+			if err := host.SyncRoutes(
+				"network-id",
+				[]netip.Addr{netip.MustParseAddr(source)},
+				[]netip.Addr{netip.MustParseAddr(destination)},
+			); err != nil {
+				t.Fatal(err)
+			}
+			if len(f.routes) != 1 || f.link.Attrs().Flags&net.FlagUp == 0 {
 				t.Fatal("partial interface was not repaired in place")
 			}
 			if err := host.Remove("network-id"); err != nil {
@@ -251,12 +292,19 @@ func TestMacvlanHostLifecycle(t *testing.T) {
 }
 
 func TestMacvlanHostSetupFailures(t *testing.T) {
-	for _, operation := range []string{"lookup", "create", "alias", "up", "list-addresses", "address", "list-routes", "route"} {
+	for _, operation := range []string{"lookup", "create", "alias", "up", "list-addresses", "address"} {
 		t.Run(operation, func(t *testing.T) {
 			f := newHostNetlink()
 			f.failures[operation] = unix.EPERM
 			host := MacvlanHost{Links: f}
-			if err := ensureTestHost(context.Background(), host, false); !errors.Is(err, unix.EPERM) {
+			if err := ensureTestHost(
+				context.Background(),
+				host,
+				false,
+			); !errors.Is(
+				err,
+				unix.EPERM,
+			) {
 				t.Fatalf("lost operation error: %v", err)
 			}
 			wantDeletes := 0
@@ -275,7 +323,7 @@ func TestMacvlanHostSetupFailures(t *testing.T) {
 }
 
 func TestMacvlanHostConcurrentReservation(t *testing.T) {
-	for _, operation := range []string{"address", "route"} {
+	for _, operation := range []string{"address"} {
 		for _, installed := range []bool{false, true} {
 			t.Run(operation+"/installed="+strconv.FormatBool(installed), func(t *testing.T) {
 				f := newHostNetlink()
@@ -296,8 +344,119 @@ func TestMacvlanHostConcurrentReservation(t *testing.T) {
 	}
 }
 
+func TestMacvlanHostSyncRoutes(t *testing.T) {
+	f := newHostNetlink()
+	host := MacvlanHost{Links: f}
+	sources := []netip.Addr{
+		netip.MustParseAddr("192.0.2.129"),
+		netip.MustParseAddr("2001:db8::129"),
+	}
+	if err := host.Ensure(context.Background(), "network-id", hostParent(), sources); err != nil {
+		t.Fatal(err)
+	}
+	destinations := []netip.Addr{
+		netip.MustParseAddr("192.0.2.140"),
+		netip.MustParseAddr("2001:db8::140"),
+	}
+	if err := host.SyncRoutes("network-id", sources, destinations); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.routes) != 2 {
+		t.Fatalf("routes = %v", f.routes)
+	}
+	for _, route := range f.routes {
+		bits, width := route.Dst.Mask.Size()
+		if bits != width || route.LinkIndex != f.link.Attrs().Index ||
+			route.Protocol != unix.RTPROT_STATIC {
+			t.Fatalf("invalid host route: %v", route)
+		}
+	}
+	_, foreignDestination, err := net.ParseCIDR("192.0.2.150/32")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.routes = append(f.routes, netlink.Route{
+		LinkIndex: f.link.Attrs().Index,
+		Dst:       foreignDestination,
+		Src:       net.ParseIP("192.0.2.130"),
+		Scope:     netlink.SCOPE_LINK,
+		Table:     unix.RT_TABLE_MAIN,
+		Protocol:  unix.RTPROT_STATIC,
+		Type:      unix.RTN_UNICAST,
+	})
+	if err := host.SyncRoutes("network-id", sources, destinations[1:]); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.routes) != 1 {
+		t.Fatalf("stale route was not pruned: %v", f.routes)
+	}
+	for _, route := range f.routes {
+		if route.Dst.IP.To4() != nil {
+			t.Fatalf("stale IPv4 route remains: %v", f.routes)
+		}
+	}
+	if err := host.SyncRoutes(
+		"network-id",
+		sources[1:],
+		[]netip.Addr{destinations[0]},
+	); err == nil {
+		t.Fatal("missing address-family source accepted")
+	}
+}
+
+func TestMacvlanHostSyncRoutesReconcilesMainTable(t *testing.T) {
+	source := netip.MustParseAddr("192.0.2.129")
+	destination := netip.MustParseAddr("192.0.2.140")
+
+	t.Run("stale source", func(t *testing.T) {
+		f := newHostNetlink()
+		host := MacvlanHost{Links: f}
+		if err := ensureTestHost(context.Background(), host, false); err != nil {
+			t.Fatal(err)
+		}
+		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+			t.Fatal(err)
+		}
+		f.routes[0].Src = net.ParseIP("192.0.2.130")
+		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+			t.Fatal(err)
+		}
+		if len(f.routes) != 1 || !f.routes[0].Src.Equal(net.IP(source.AsSlice())) ||
+			f.calls["delete-route"] != 1 {
+			t.Fatalf("stale source was not replaced: %v, calls=%v", f.routes, f.calls)
+		}
+	})
+
+	t.Run("policy table", func(t *testing.T) {
+		f := newHostNetlink()
+		host := MacvlanHost{Links: f}
+		if err := ensureTestHost(context.Background(), host, false); err != nil {
+			t.Fatal(err)
+		}
+		f.routes = append(f.routes, netlink.Route{
+			LinkIndex: f.link.Attrs().Index,
+			Dst: &net.IPNet{
+				IP:   net.IP(destination.AsSlice()),
+				Mask: net.CIDRMask(destination.BitLen(), destination.BitLen()),
+			},
+			Src:      net.IP(source.AsSlice()),
+			Scope:    netlink.SCOPE_LINK,
+			Table:    100,
+			Protocol: unix.RTPROT_STATIC,
+			Type:     unix.RTN_UNICAST,
+		})
+		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+			t.Fatal(err)
+		}
+		if len(f.routes) != 2 || f.routes[0].Table != 100 ||
+			f.routes[1].Table != unix.RT_TABLE_MAIN {
+			t.Fatalf("policy route suppressed main-table route: %v", f.routes)
+		}
+	})
+}
+
 func TestMacvlanHostRefusesForeignState(t *testing.T) {
-	for _, scenario := range []string{"alias", "type", "parent", "mode", "host-address", "extra-address", "route"} {
+	for _, scenario := range []string{"alias", "type", "parent", "mode", "host-address", "extra-address"} {
 		t.Run(scenario, func(t *testing.T) {
 			f := newHostNetlink()
 			host := MacvlanHost{Links: f}
@@ -324,13 +483,12 @@ func TestMacvlanHostRefusesForeignState(t *testing.T) {
 				}
 				address.LinkIndex = 2
 				f.addresses = append(f.addresses, *address)
-			case "route":
-				f.routes[0].LinkIndex = 99
 			}
 			if err := ensureTestHost(context.Background(), host, false); err == nil {
 				t.Fatal("foreign configuration accepted")
 			}
-			if f.calls["create"] != 1 || f.calls["address"] != 1 || f.calls["route"] != 1 || f.calls["delete"] != 0 {
+			if f.calls["create"] != 1 || f.calls["address"] != 1 || f.calls["route"] != 0 ||
+				f.calls["delete"] != 0 {
 				t.Fatalf("foreign state modified: %+v", f.calls)
 			}
 			if scenario == "alias" || scenario == "type" {
@@ -372,7 +530,11 @@ func TestMacvlanHostIPv6Readiness(t *testing.T) {
 			if state == "tentative" || state == "missing" {
 				cancel()
 			}
-			err = (MacvlanHost{Links: f}).waitAddressReady(ctx, &netlink.Macvlan{LinkAttrs: netlink.LinkAttrs{Index: 2}}, netip.MustParseAddr("2001:db8::129"))
+			err = (MacvlanHost{Links: f}).waitAddressReady(
+				ctx,
+				&netlink.Macvlan{LinkAttrs: netlink.LinkAttrs{Index: 2}},
+				netip.MustParseAddr("2001:db8::129"),
+			)
 			switch state {
 			case "ready":
 				if err != nil {
@@ -383,7 +545,8 @@ func TestMacvlanHostIPv6Readiness(t *testing.T) {
 					t.Fatalf("waiting ignored cancellation: %v", err)
 				}
 			case "duplicate":
-				if err == nil || !strings.Contains(err.Error(), "duplicate address detection failed") {
+				if err == nil ||
+					!strings.Contains(err.Error(), "duplicate address detection failed") {
 					t.Fatalf("duplicate accepted: %v", err)
 				}
 			case "read-error":
@@ -392,18 +555,6 @@ func TestMacvlanHostIPv6Readiness(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestMacvlanHostProbeFailure(t *testing.T) {
-	f := newHostNetlink()
-	failure := errors.New("address is occupied")
-	host := MacvlanHost{Links: f, Probe: func(context.Context, *netlink.LinkAttrs, netip.Addr) error { return failure }}
-	if err := ensureTestHost(context.Background(), host, false); !errors.Is(err, failure) {
-		t.Fatalf("probe failure lost: %v", err)
-	}
-	if len(f.addresses) != 0 || len(f.routes) != 0 || f.calls["delete"] != 0 {
-		t.Fatal("probe failure modified addresses or deleted shared interface")
 	}
 }
 
@@ -424,7 +575,12 @@ func TestMacvlanHostRemoveErrors(t *testing.T) {
 	if err := host.Remove(""); err == nil || f.calls["lookup"] != 0 {
 		t.Fatal("empty ID reached netlink")
 	}
-	if err := host.Ensure(context.Background(), "", hostParent(), netip.MustParseAddr("192.0.2.129"), netip.MustParsePrefix("192.0.2.128/26")); err == nil {
+	if err := host.Ensure(
+		context.Background(),
+		"",
+		hostParent(),
+		[]netip.Addr{netip.MustParseAddr("192.0.2.129")},
+	); err == nil {
 		t.Fatal("empty network ID accepted")
 	}
 	if err := ensureTestHost(context.Background(), host, false); err != nil {

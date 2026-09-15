@@ -28,8 +28,8 @@ type ContainerRuntime interface {
 	WithMgmtNet(*clabtypes.MgmtNet)
 	// Instructs the runtime not to delete the mgmt network on destroy
 	WithKeepMgmtNet()
-	// Create container (bridge) network
-	CreateNet(context.Context) error
+	// CreateNet creates or inspects the management network and stores its resolved subnets.
+	CreateNet(context.Context, ...NetworkCreateOptions) error
 	// NetworkAddresses snapshots occupied addresses from networks whose pools
 	// overlap the requested subnets. Disjoint networks must not be inspected.
 	NetworkAddresses(context.Context, []netip.Prefix) ([]NetworkAddress, error)
@@ -97,6 +97,8 @@ type ContainerRuntime interface {
 	// destination path.
 	// The path must be a file, and the the destination directory must exist inside the container
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
+	// SyncMgmtHostRoutes reconciles host routes to current management endpoints.
+	SyncMgmtHostRoutes(context.Context) error
 }
 
 // NetworkAddress is a runtime-owned endpoint or infrastructure reservation.
@@ -104,6 +106,11 @@ type NetworkAddress struct {
 	NetworkName string
 	ContainerID string
 	Address     netip.Addr
+}
+
+// NetworkCreateOptions contains runtime-only inputs for management network creation.
+type NetworkCreateOptions struct {
+	StaticAddresses []netip.Addr
 }
 
 // ContainerStatus summarizes container lifecycle as seen by the runtime.

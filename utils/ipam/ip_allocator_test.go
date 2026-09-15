@@ -2,11 +2,10 @@ package ipam
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand/v2"
 	"net/netip"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -40,7 +39,7 @@ func TestCanonicalIP(t *testing.T) {
 func TestIPPrefixSetMatchesExhaustiveSearch(t *testing.T) {
 	for _, text := range []string{"192.0.2.0/24", "2001:db8::/120"} {
 		pool := netip.MustParsePrefix(text)
-		var set IPPrefixSet
+		var set ipPrefixSet
 		used := make(map[netip.Addr]bool)
 		rng := rand.New(rand.NewPCG(1, 2))
 		addresses := make([]netip.Addr, 256)
@@ -49,14 +48,14 @@ func TestIPPrefixSetMatchesExhaustiveSearch(t *testing.T) {
 		}
 		for step := 0; step < 150; step++ {
 			prefix := netip.PrefixFrom(addresses[rng.IntN(256)], pool.Bits()+3+rng.IntN(6)).Masked()
-			set.Add(prefix)
+			set.add(prefix)
 			for _, ip := range addresses {
 				if prefix.Contains(ip) {
 					used[ip] = true
 				}
 			}
 			for i, start := range addresses {
-				_, occupied := set.Lookup(start)
+				_, occupied := set.lookup(start)
 				if occupied != used[start] {
 					t.Fatalf("lookup mismatch at %s", start)
 				}
@@ -67,7 +66,7 @@ func TestIPPrefixSetMatchesExhaustiveSearch(t *testing.T) {
 						break
 					}
 				}
-				got, ok := set.NextFree(pool, start)
+				got, ok := set.nextFree(pool, start)
 				if ok != want.IsValid() || (ok && got != want) {
 					t.Fatalf("step %d, %s: next %s/%t, want %s", step, start, got, ok, want)
 				}
@@ -77,20 +76,20 @@ func TestIPPrefixSetMatchesExhaustiveSearch(t *testing.T) {
 }
 
 func TestIPPrefixSetLargeIPv6Reservation(t *testing.T) {
-	var set IPPrefixSet
-	set.Add(netip.MustParsePrefix("::/1"))
-	got, ok := set.NextFree(netip.MustParsePrefix("::/0"), netip.MustParseAddr("::1"))
+	var set ipPrefixSet
+	set.add(netip.MustParsePrefix("::/1"))
+	got, ok := set.nextFree(netip.MustParsePrefix("::/0"), netip.MustParseAddr("::1"))
 	if !ok || got != netip.MustParseAddr("8000::") {
 		t.Fatalf("did not skip /1: %s %t", got, ok)
 	}
-	if _, ok := set.NextFree(
+	if _, ok := set.nextFree(
 		netip.MustParsePrefix("2001:db8::/32"),
 		netip.MustParseAddr("2001:db8::"),
 	); ok {
 		t.Fatal("allocated inside occupied ancestor")
 	}
-	set.Add(netip.MustParsePrefix("8000::/1"))
-	if _, ok := set.NextFree(netip.MustParsePrefix("::/0"), netip.MustParseAddr("::")); ok {
+	set.add(netip.MustParsePrefix("8000::/1"))
+	if _, ok := set.nextFree(netip.MustParsePrefix("::/0"), netip.MustParseAddr("::")); ok {
 		t.Fatal("failed to coalesce full root")
 	}
 }
@@ -98,30 +97,17 @@ func TestIPPrefixSetLargeIPv6Reservation(t *testing.T) {
 func BenchmarkIPPrefixSetLookup(b *testing.B) {
 	for _, count := range []int{1, 1000, 10000} {
 		b.Run(fmt.Sprint(count), func(b *testing.B) {
-			var set IPPrefixSet
+			var set ipPrefixSet
 			for i := 0; i < count; i++ {
-				set.Add(netip.MustParsePrefix(fmt.Sprintf("2001:db8:%x::/64", i)))
+				set.add(netip.MustParsePrefix(fmt.Sprintf("2001:db8:%x::/64", i)))
 			}
 			target := netip.MustParseAddr("2001:db8:ffff::1")
 			b.ResetTimer()
 			for b.Loop() {
-				set.Lookup(target)
+				set.lookup(target)
 			}
 		})
 	}
-}
-
-func allocateOne(
-	a *IPAllocator,
-	ctx context.Context,
-	key string,
-	accept func(netip.Addr) bool,
-) (netip.Addr, error) {
-	addresses, err := a.AllocateBatch(ctx, []string{key}, 1, accept)
-	if err != nil {
-		return netip.Addr{}, err
-	}
-	return addresses[0], nil
 }
 
 func TestIPAllocator(t *testing.T) {
@@ -132,7 +118,7 @@ func TestIPAllocator(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ip, err := allocateOne(a, context.Background(), "node", nil)
+			ip, err := a.Next(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,23 +128,38 @@ func TestIPAllocator(t *testing.T) {
 			if err := a.Reserve(ip); err == nil {
 				t.Fatal("duplicate reservation succeeded")
 			}
-			b, err := NewIPAllocator(prefix, prefix, []netip.Addr{prefix.Addr().Next()})
-			if err != nil {
-				t.Fatal(err)
-			}
-			again, err := allocateOne(b, context.Background(), "node", nil)
-			if err != nil || ip != again {
-				t.Fatalf("unstable allocation: %s %v", again, err)
-			}
 			if !ip.Is4() {
-				if _, err := allocateOne(a, context.Background(), "other", nil); err != nil {
+				if _, err := a.Next(context.Background()); err != nil {
 					t.Fatal(err)
 				}
 			}
-			if _, err := allocateOne(a, context.Background(), "full", nil); err == nil {
+			if _, err := a.Next(context.Background()); err == nil {
 				t.Fatal("expected exhaustion")
 			}
 		})
+	}
+}
+
+func TestIPAllocatorNextBatch(t *testing.T) {
+	prefix := netip.MustParsePrefix("192.0.2.0/29")
+	allocator, err := NewIPAllocator(prefix, prefix, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addresses, err := allocator.NextBatch(context.Background(), 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []netip.Addr{
+		netip.MustParseAddr("192.0.2.1"),
+		netip.MustParseAddr("192.0.2.2"),
+		netip.MustParseAddr("192.0.2.3"),
+	}
+	if !slices.Equal(addresses, want) {
+		t.Fatalf("addresses = %v, want %v", addresses, want)
+	}
+	if _, err := allocator.NextBatch(context.Background(), -1); err == nil {
+		t.Fatal("accepted negative batch size")
 	}
 }
 
@@ -177,73 +178,34 @@ func TestIPAllocatorInvalidPools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := allocateOne(a, context.Background(), "full", nil); err == nil {
+	if _, err := a.Next(context.Background()); err == nil {
 		t.Fatal("allocated subnet boundary")
 	}
 }
 
-func TestIPAllocatorBoolCallback(t *testing.T) {
-	for _, subnet := range []string{"192.0.2.0/29", "2001:db8::/125"} {
-		prefix := netip.MustParsePrefix(subnet)
-		a, err := NewIPAllocator(prefix, prefix, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		seen := map[netip.Addr]bool{}
-		ip, err := allocateOne(a, context.Background(), "node", func(ip netip.Addr) bool {
-			if seen[ip] {
-				t.Fatalf("repeated rejected candidate %s", ip)
-			}
-			seen[ip] = true
-			return len(seen) == 3
-		})
-		if err != nil || !seen[ip] || len(seen) != 3 {
-			t.Fatalf("callback allocation: %s %v", ip, err)
-		}
-		if _, err := allocateOne(a, context.Background(), "full", func(netip.Addr) bool { return false }); err == nil {
-			t.Fatal("expected exhaustion")
-		}
-	}
-}
-
-func TestIPAllocatorCallbackCancellation(t *testing.T) {
-	prefix := netip.MustParsePrefix("2001:db8::/64")
+func TestIPAllocatorDADClient(t *testing.T) {
+	prefix := netip.MustParsePrefix("192.0.2.0/29")
 	a, err := NewIPAllocator(prefix, prefix, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancelCause(context.Background())
-	defer cancel(nil)
-	failure := errors.New("probe failed")
-	calls := 0
-	_, err = allocateOne(a, ctx, "node", func(netip.Addr) bool { calls++; cancel(failure); return false })
-	if !errors.Is(err, failure) || calls != 1 {
-		t.Fatalf("failed to abort retry: %v, %d calls", err, calls)
+	if _, err := a.Next(context.Background(), nil); err == nil {
+		t.Fatal("accepted a nil DAD client")
 	}
 }
 
-func TestIPAllocatorBatchDeterministic(t *testing.T) {
-	prefix := netip.MustParsePrefix("192.0.2.0/24")
-	keys := make([]string, 70)
-	for i := range keys {
-		keys[i] = "same-hash"
+func TestIPAllocatorSkipsDADConflict(t *testing.T) {
+	prefix := netip.MustParsePrefix("192.0.2.0/29")
+	a, err := NewIPAllocator(prefix, prefix, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	var want []netip.Addr
-	for _, concurrency := range []int{1, 4, 64} {
-		a, err := NewIPAllocator(prefix, prefix, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		got, err := a.AllocateBatch(context.Background(), keys, concurrency, func(ip netip.Addr) bool {
-			return ip.As4()[3]%3 != 0
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if want == nil {
-			want = got
-		} else if !reflect.DeepEqual(want, got) {
-			t.Fatal("completion order changed allocation")
-		}
+	dad := &DADClient{parent: "does-not-exist", cache: make(map[netip.Addr]struct{})}
+	for address := prefix.Addr().Next(); prefix.Contains(address.Next()); address = address.Next() {
+		dad.cache[address] = struct{}{}
+	}
+
+	if _, err := a.Next(context.Background(), dad); err == nil {
+		t.Fatal("allocated from an occupied pool")
 	}
 }

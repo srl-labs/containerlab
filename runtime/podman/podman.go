@@ -92,7 +92,10 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
-func (r *PodmanRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix) ([]runtime.NetworkAddress, error) {
+func (r *PodmanRuntime) NetworkAddresses(
+	ctx context.Context,
+	subnets []netip.Prefix,
+) ([]runtime.NetworkAddress, error) {
 	if len(subnets) == 0 {
 		return nil, nil
 	}
@@ -128,13 +131,24 @@ func (r *PodmanRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 		}
 		details, err := network.Inspect(ctx, listed.ID, &network.InspectOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("inspect occupied addresses on Podman network %s: %w", listed.Name, err)
+			return nil, fmt.Errorf(
+				"inspect occupied addresses on Podman network %s: %w",
+				listed.Name,
+				err,
+			)
 		}
 		add := func(ip netip.Addr, containerID string) {
 			ip = ip.Unmap()
 			for _, subnet := range subnets {
 				if subnet.Contains(ip) {
-					addresses = append(addresses, runtime.NetworkAddress{NetworkName: details.Name, ContainerID: containerID, Address: ip})
+					addresses = append(
+						addresses,
+						runtime.NetworkAddress{
+							NetworkName: details.Name,
+							ContainerID: containerID,
+							Address:     ip,
+						},
+					)
 					break
 				}
 			}
@@ -157,12 +171,19 @@ func (r *PodmanRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 	return addresses, nil
 }
 
+func (*PodmanRuntime) SyncMgmtHostRoutes(context.Context) error {
+	return fmt.Errorf("macvlan management host routes are not implemented for Podman runtime")
+}
+
 // CreateNet used to create a new bridge for clab mgmt network.
-func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
+func (r *PodmanRuntime) CreateNet(
+	ctx context.Context,
+	_ ...clabruntime.NetworkCreateOptions,
+) error {
 	if err := r.mgmt.Validate(); err != nil {
 		return err
 	}
-	if r.mgmt.Driver == "macvlan" {
+	if r.mgmt.Driver == types.MgmtDriverMacvlan {
 		return fmt.Errorf("macvlan management networks are not implemented for Podman runtime")
 	}
 
@@ -189,21 +210,15 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		}
 		log.Debugf("Create network response was: %+v", resp)
 	}
-	containerlabIPAM := r.mgmt.IPAM.Provider != types.IPAMProviderRuntime
-	if r.mgmt.Bridge == "" || containerlabIPAM {
-		details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
-		if err != nil {
-			return err
-		}
-		if r.mgmt.Bridge == "" {
-			r.mgmt.Bridge = details.NetworkInterface
-		}
-
-		if containerlabIPAM {
-			if err := setMgmtIPAMFromPodmanSubnets(r.mgmt, details.Subnets); err != nil {
-				return err
-			}
-		}
+	details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
+	if err != nil {
+		return err
+	}
+	if r.mgmt.Bridge == "" {
+		r.mgmt.Bridge = details.NetworkInterface
+	}
+	if err := setMgmtIPAMFromPodmanSubnets(r.mgmt, details.Subnets); err != nil {
+		return err
 	}
 
 	return nil

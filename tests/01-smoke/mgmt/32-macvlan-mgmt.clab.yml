@@ -4,7 +4,7 @@ mgmt:
   network: clab-smoke32
   driver: macvlan
   macvlan-parent: clab-smoke32
-  macvlan-aux: 198.18.32.129/25
+  macvlan-aux: true
   ipv4-subnet: 198.18.32.0/24
   ipv4-gw: 198.18.32.1
   ipv4-range: 198.18.32.128/25

@@ -205,6 +205,9 @@ func (c *CLab) deploy( //nolint: funlen
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
 		return nil, err
 	}
+	if err := c.syncMgmtHostRoutes(ctx); err != nil {
+		return nil, err
+	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
 	// vxlan stitched endpoints).
@@ -311,6 +314,7 @@ func (c *CLab) allocateLabManagementIPs(ctx context.Context, existing []clabtype
 	if err != nil {
 		log.Warn("Ignoring preferred management addresses", "error", err)
 	}
+
 	if state != nil {
 		for name, node := range state.Nodes {
 			if node.IPAM != nil {
@@ -356,9 +360,11 @@ func (c *CLab) collectReservedManagementAddresses(
 			reused[ownerAddress{entry.ContainerID, entry.Address}] = true
 		}
 	}
+
 	var reserved []netip.Addr
 	for _, entry := range occupied {
-		if entry.NetworkName == c.Config.Mgmt.Network && reused[ownerAddress{entry.ContainerID, entry.Address}] {
+		if entry.NetworkName == c.Config.Mgmt.Network &&
+			reused[ownerAddress{entry.ContainerID, entry.Address}] {
 			continue
 		}
 		reserved = append(reserved, entry.Address)

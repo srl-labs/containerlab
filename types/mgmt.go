@@ -11,15 +11,16 @@ func (m *MgmtNet) Validate() error {
 	if !m.IPAM.Provider.IsValid() {
 		return fmt.Errorf("unsupported mgmt.ipam.provider %q", m.IPAM.Provider)
 	}
+	if !m.Driver.IsValid() {
+		return fmt.Errorf("unsupported management network driver %q", m.Driver)
+	}
 	switch m.Driver {
-	case "", "bridge":
-		if m.MacvlanParent != "" || m.MacvlanMode != "" || m.MacvlanAux != "" {
+	case "", MgmtDriverBridge:
+		if m.MacvlanParent != "" || m.MacvlanMode != "" || m.MacvlanAux != nil {
 			return fmt.Errorf("macvlan options require mgmt.driver: macvlan")
 		}
 		return nil
-	case "macvlan":
-	default:
-		return fmt.Errorf("unsupported management network driver %q", m.Driver)
+	case MgmtDriverMacvlan:
 	}
 
 	if m.MacvlanParent == "" {
@@ -36,8 +37,8 @@ func (m *MgmtNet) Validate() error {
 	if m.ExternalAccess != nil && !*m.ExternalAccess {
 		return fmt.Errorf("mgmt.external-access: false is not supported for macvlan networks")
 	}
-	switch m.MacvlanMode {
-	case "", "bridge", "private", "vepa", "passthru":
+	switch m.EffectiveMacvlanMode() {
+	case "bridge", "private", "vepa", "passthru":
 	default:
 		return fmt.Errorf("unsupported mgmt.macvlan-mode %q", m.MacvlanMode)
 	}
@@ -58,33 +59,12 @@ func (m *MgmtNet) Validate() error {
 			return fmt.Errorf("macvlan IPv6 configuration: %w", err)
 		}
 	}
-	if m.MacvlanAux != "" {
-		if m.EffectiveMacvlanMode() != "bridge" {
-			return fmt.Errorf(
-				"mgmt.macvlan-aux requires macvlan-mode: bridge for host connectivity",
-			)
-		}
-
-		if m.MacvlanAux == "auto" {
-			if m.IPAM.Provider == IPAMProviderRuntime {
-				return fmt.Errorf("mgmt.macvlan-aux auto requires the containerlab IPAM provider")
-			} else {
-				return nil
-			}
-		}
-
-		aux, err := netip.ParseAddr(m.MacvlanAux)
-		if prefix, prefixErr := netip.ParsePrefix(m.MacvlanAux); prefixErr == nil {
-			aux, err = prefix.Addr(), nil
-		}
-		if err == nil && aux.IsGlobalUnicast() && !aux.Is4In6() && aux.Zone() == "" &&
-			((aux.Is4() && m.IPv4Subnet == "") || (aux.Is6() && m.IPv6Subnet == "")) {
-			return nil
-		}
-		_, _, err = m.MacvlanHostAddress()
-		return err
-	}
 	return nil
+}
+
+// MacvlanAuxEnabled reports whether auxiliary host connectivity is enabled.
+func (m *MgmtNet) MacvlanAuxEnabled() bool {
+	return m.EffectiveMacvlanMode() == "bridge" && (m.MacvlanAux == nil || *m.MacvlanAux)
 }
 
 // EffectiveMacvlanMode returns Docker's default mode when no mode was specified.
@@ -93,12 +73,6 @@ func (m *MgmtNet) EffectiveMacvlanMode() string {
 		return "bridge"
 	}
 	return m.MacvlanMode
-}
-
-// WireDADEnabled reports whether management addresses can be probed on a macvlan parent.
-func (m *MgmtNet) WireDADEnabled() bool {
-	return m.IPAM.Provider != IPAMProviderRuntime && m.IPAM.DADEnabled() &&
-		m.Driver == "macvlan" && m.EffectiveMacvlanMode() == "bridge"
 }
 
 func validateMacvlanSubnet(subnet, gateway, ipRange string, ipv4 bool) error {
@@ -129,58 +103,4 @@ func validateMacvlanSubnet(subnet, gateway, ipRange string, ipv4 bool) error {
 		}
 	}
 	return nil
-}
-
-// MacvlanHostAddress returns the reserved address and destination for the host
-// route. The interface uses /32 for IPv4 or /128 for IPv6.
-func (m *MgmtNet) MacvlanHostAddress() (netip.Addr, netip.Prefix, error) {
-	var ip netip.Addr
-	var route netip.Prefix
-	var err error
-	if strings.Contains(m.MacvlanAux, "/") {
-		var aux netip.Prefix
-		aux, err = netip.ParsePrefix(m.MacvlanAux)
-		ip, route = aux.Addr(), aux.Masked()
-	} else {
-		ip, err = netip.ParseAddr(m.MacvlanAux)
-	}
-	if err != nil || !ip.IsGlobalUnicast() || ip.Is4In6() || ip.Zone() != "" {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux %q must be a unicast IPv4 or IPv6 address", m.MacvlanAux)
-	}
-	subnetText, gatewayText := m.IPv6Subnet, m.IPv6Gw
-	if ip.Is4() {
-		subnetText, gatewayText = m.IPv4Subnet, m.IPv4Gw
-	}
-	subnet, err := netip.ParsePrefix(subnetText)
-	if err != nil || subnet.Addr().BitLen() != ip.BitLen() || !subnet.Contains(ip) {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux %s requires a containing subnet of the same address family", ip)
-	}
-	if !route.IsValid() {
-		route = subnet.Masked()
-	}
-	if route.Bits() < subnet.Bits() {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux route %s must be contained in %s", route, subnet)
-	}
-	if route.Bits() == ip.BitLen() {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"Invalid mask length for mgmt.macvlan-aux /%d",
-			ip.BitLen(),
-		)
-	}
-	// Docker reserves the subnet's first usable address as the default gateway.
-	gateway := subnet.Masked().Addr().Next()
-	if gatewayText != "" {
-		gateway, err = netip.ParseAddr(gatewayText)
-		if err != nil {
-			return netip.Addr{}, netip.Prefix{}, fmt.Errorf("invalid gateway: %w", err)
-		}
-	}
-	if ip == gateway || ip == subnet.Masked().Addr() || (ip.Is4() && !subnet.Contains(ip.Next())) {
-		return netip.Addr{}, netip.Prefix{}, fmt.Errorf(
-			"mgmt.macvlan-aux %s conflicts with the gateway or a reserved subnet address", ip)
-	}
-	return ip, route, nil
 }

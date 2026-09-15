@@ -27,31 +27,19 @@ func TestNodeConfigManagementIPAMEligible(t *testing.T) {
 	}
 }
 
-func TestMacvlanManagementAcceptsPrivateAddresses(t *testing.T) {
+func TestMgmtDriverValidation(t *testing.T) {
 	for _, tc := range []struct {
-		name, subnet, gateway, aux string
-		ipv6                       bool
+		driver MgmtDriver
+		valid  bool
 	}{
-		{name: "RFC1918 10/8", subnet: "10.1.0.0/24", gateway: "10.1.0.1", aux: "10.1.0.2"},
-		{name: "RFC1918 172.16/12", subnet: "172.16.1.0/24", gateway: "172.16.1.1", aux: "172.16.1.2"},
-		{name: "RFC1918 192.168/16", subnet: "192.168.1.0/24", gateway: "192.168.1.1", aux: "192.168.1.2"},
-		{name: "IPv6 ULA", subnet: "fd00:1::/64", gateway: "fd00:1::1", aux: "fd00:1::2", ipv6: true},
+		{valid: true},
+		{driver: MgmtDriverBridge, valid: true},
+		{driver: MgmtDriverMacvlan, valid: true},
+		{driver: "ipvlan"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			m := &MgmtNet{Driver: "macvlan", MacvlanParent: "eth0", MacvlanAux: tc.aux}
-			if tc.ipv6 {
-				m.IPv6Subnet, m.IPv6Gw = tc.subnet, tc.gateway
-			} else {
-				m.IPv4Subnet, m.IPv4Gw = tc.subnet, tc.gateway
-			}
-			if err := m.Validate(); err != nil {
-				t.Fatalf("private management addresses rejected: %v", err)
-			}
-			ip, route, err := m.MacvlanHostAddress()
-			if err != nil || ip.String() != tc.aux || route.String() != tc.subnet {
-				t.Fatalf("MacvlanHostAddress() = %s, %s, %v; want %s, %s", ip, route, err, tc.aux, tc.subnet)
-			}
-		})
+		if got := tc.driver.IsValid(); got != tc.valid {
+			t.Fatalf("MgmtDriver(%q).IsValid() = %v, want %v", tc.driver, got, tc.valid)
+		}
 	}
 }
 
@@ -62,6 +50,10 @@ func TestMacvlanManagementValidation(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "bridge mode default"},
+		{
+			name:   "auxiliary connectivity disabled",
+			change: func(m *MgmtNet) { m.MacvlanAux = new(false) },
+		},
 		{
 			name:    "long parent",
 			change:  func(m *MgmtNet) { m.MacvlanParent = "0123456789012345" },
@@ -77,12 +69,6 @@ func TestMacvlanManagementValidation(t *testing.T) {
 			change:  func(m *MgmtNet) { m.IPv4Gw = "192.0.2.255" },
 			wantErr: true,
 		},
-		{
-			name:    "aux host-only route",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "192.0.2.10/32" },
-			wantErr: true,
-		},
-		{name: "auxiliary CIDR", change: func(m *MgmtNet) { m.MacvlanAux = "192.0.2.129/26" }},
 		{name: "dual stack", change: func(m *MgmtNet) { m.IPv6Subnet = "2001:db8::/64" }},
 		{
 			name:   "IPv6 only",
@@ -111,26 +97,12 @@ func TestMacvlanManagementValidation(t *testing.T) {
 			change:  func(m *MgmtNet) { m.MacvlanMode = "invalid" },
 			wantErr: true,
 		},
-		{name: "private without aux", change: func(m *MgmtNet) { m.MacvlanMode = "private" }},
 		{
-			name:    "private with aux",
-			change:  func(m *MgmtNet) { m.MacvlanMode = "private"; m.MacvlanAux = "192.0.2.10" },
-			wantErr: true,
+			name:   "private mode",
+			change: func(m *MgmtNet) { m.MacvlanMode = "private" },
 		},
-		{name: "automatic aux", change: func(m *MgmtNet) { m.MacvlanAux = "auto" }},
-		{
-			name: "automatic aux with runtime IPAM",
-			change: func(m *MgmtNet) {
-				m.MacvlanAux = "auto"
-				m.IPAM.Provider = IPAMProviderRuntime
-			},
-			wantErr: true,
-		},
-		{
-			name:    "automatic aux in private mode",
-			change:  func(m *MgmtNet) { m.MacvlanMode = "private"; m.MacvlanAux = "auto" },
-			wantErr: true,
-		},
+		{name: "vepa mode", change: func(m *MgmtNet) { m.MacvlanMode = "vepa" }},
+		{name: "passthru mode", change: func(m *MgmtNet) { m.MacvlanMode = "passthru" }},
 		{
 			name:    "parent override",
 			change:  func(m *MgmtNet) { m.DriverOpts = map[string]string{"parent": "eth1"} },
@@ -155,41 +127,6 @@ func TestMacvlanManagementValidation(t *testing.T) {
 			change:  func(m *MgmtNet) { m.IPv4Range = "192.0.0.0/16" },
 			wantErr: true,
 		},
-		{name: "invalid aux", change: func(m *MgmtNet) { m.MacvlanAux = "bad" }, wantErr: true},
-		{
-			name:   "IPv6 aux with inferred subnet",
-			change: func(m *MgmtNet) { m.MacvlanAux = "2001:db8::10/64" },
-		},
-		{
-			name:    "aux outside subnet",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "198.51.100.10" },
-			wantErr: true,
-		},
-		{
-			name:    "aux route too broad",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "192.0.2.10/16" },
-			wantErr: true,
-		},
-		{
-			name:    "aux implicit gateway",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "192.0.2.1" },
-			wantErr: true,
-		},
-		{
-			name:    "aux explicit gateway",
-			change:  func(m *MgmtNet) { m.IPv4Gw = "192.0.2.10"; m.MacvlanAux = m.IPv4Gw },
-			wantErr: true,
-		},
-		{
-			name:    "aux network address",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "192.0.2.0" },
-			wantErr: true,
-		},
-		{
-			name:    "aux broadcast",
-			change:  func(m *MgmtNet) { m.MacvlanAux = "192.0.2.255" },
-			wantErr: true,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -204,58 +141,24 @@ func TestMacvlanManagementValidation(t *testing.T) {
 	}
 }
 
-func TestMacvlanHostAddress(t *testing.T) {
-	for _, tc := range []struct{ aux, route string }{
-		{"192.0.2.129", "192.0.2.0/24"},
-		{"192.0.2.129/26", "192.0.2.128/26"},
-	} {
-		m := &MgmtNet{IPv4Subnet: "192.0.2.0/24", MacvlanAux: tc.aux}
-		ip, route, err := m.MacvlanHostAddress()
-		if err != nil || ip.String() != "192.0.2.129" || route.String() != tc.route {
-			t.Errorf("MacvlanHostAddress(%s) = %s, %s, %v", tc.aux, ip, route, err)
-		}
-	}
-}
-
-func TestMacvlanIPv6HostAddress(t *testing.T) {
+func TestMacvlanAuxEnabled(t *testing.T) {
 	for _, tc := range []struct {
-		name, aux, subnet, gw, route string
-		deferValidation              bool
-		wantErr                      bool
+		name string
+		mode string
+		aux  *bool
+		want bool
 	}{
-		{name: "plain", aux: "2001:db8::2", subnet: "2001:db8::/64", route: "2001:db8::/64"},
-		{name: "narrow route", aux: "2001:db8::8000:2/97", subnet: "2001:db8::/64", route: "2001:db8::8000:0/97"},
-		{name: "ULA", aux: "fd00::2", subnet: "fd00::/64", route: "fd00::/64"},
-		{name: "last address is not broadcast", aux: "2001:db8::ffff", subnet: "2001:db8::/112", route: "2001:db8::/112"},
-		{name: "missing IPv6 subnet", aux: "2001:db8::2", wantErr: true, deferValidation: true},
-		{name: "outside subnet", aux: "2001:db8:1::2", subnet: "2001:db8::/64", wantErr: true},
-		{name: "wide route", aux: "2001:db8::2/48", subnet: "2001:db8::/64", wantErr: true},
-		{name: "host-only route", aux: "2001:db8::2/128", subnet: "2001:db8::/64", wantErr: true},
-		{name: "default gateway", aux: "2001:db8::1", subnet: "2001:db8::/64", wantErr: true},
-		{name: "explicit gateway", aux: "2001:db8::2", subnet: "2001:db8::/64", gw: "2001:db8::2", wantErr: true},
-		{name: "subnet-router anycast", aux: "2001:db8::", subnet: "2001:db8::/64", wantErr: true},
-		{name: "link local", aux: "fe80::2", subnet: "fe80::/64", wantErr: true},
-		{name: "scoped", aux: "2001:db8::2%eth0", subnet: "2001:db8::/64", wantErr: true},
-		{name: "mapped IPv4", aux: "::ffff:192.0.2.2", subnet: "::ffff:192.0.2.0/120", wantErr: true},
+		{name: "bridge default", want: true},
+		{name: "bridge enabled", aux: new(true), want: true},
+		{name: "bridge disabled", aux: new(false)},
+		{name: "private", mode: "private"},
+		{name: "vepa enabled", mode: "vepa", aux: new(true)},
+		{name: "passthru", mode: "passthru"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			m := &MgmtNet{
-				Driver:        "macvlan",
-				MacvlanParent: "eth0",
-				IPv4Subnet:    "192.0.2.0/24",
-				IPv6Subnet:    tc.subnet,
-				IPv6Gw:        tc.gw,
-				MacvlanAux:    tc.aux,
-			}
-			if err := m.Validate(); (err != nil) != (tc.wantErr && !tc.deferValidation) {
-				t.Fatalf("Validate() = %v", err)
-			}
-			ip, route, err := m.MacvlanHostAddress()
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("MacvlanHostAddress() = %v", err)
-			}
-			if !tc.wantErr && (!ip.Is6() || route.String() != tc.route) {
-				t.Fatalf("address = %s, route = %s", ip, route)
+			m := &MgmtNet{MacvlanMode: tc.mode, MacvlanAux: tc.aux}
+			if got := m.MacvlanAuxEnabled(); got != tc.want {
+				t.Fatalf("MacvlanAuxEnabled() = %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -276,57 +179,6 @@ func TestDADValidation(t *testing.T) {
 	}
 }
 
-func TestWireDADEnabled(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		change func(*MgmtNet)
-		want   bool
-	}{
-		{name: "defaults", want: true},
-		{
-			name: "containerlab provider",
-			change: func(m *MgmtNet) {
-				m.IPAM.Provider = IPAMProviderContainerlab
-			},
-			want: true,
-		},
-		{
-			name: "runtime provider",
-			change: func(m *MgmtNet) {
-				m.IPAM.Provider = IPAMProviderRuntime
-			},
-		},
-		{
-			name: "DAD disabled",
-			change: func(m *MgmtNet) {
-				m.IPAM.DAD = new(false)
-			},
-		},
-		{
-			name: "bridge driver",
-			change: func(m *MgmtNet) {
-				m.Driver = "bridge"
-			},
-		},
-		{
-			name: "private mode",
-			change: func(m *MgmtNet) {
-				m.MacvlanMode = "private"
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			m := &MgmtNet{Driver: "macvlan"}
-			if tc.change != nil {
-				tc.change(m)
-			}
-			if got := m.WireDADEnabled(); got != tc.want {
-				t.Fatalf("WireDADEnabled() = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
 func TestManagementIPAMYAML(t *testing.T) {
 	var m MgmtNet
 	if err := yaml.UnmarshalStrict(
@@ -337,5 +189,15 @@ func TestManagementIPAMYAML(t *testing.T) {
 	}
 	if m.IPAM.Provider != IPAMProviderRuntime || !m.IPAM.DADEnabled() {
 		t.Fatalf("incorrect IPAM config: %+v", m.IPAM)
+	}
+	if !m.MacvlanAuxEnabled() {
+		t.Fatal("macvlan auxiliary connectivity is not enabled by default")
+	}
+	if err := yaml.UnmarshalStrict([]byte("macvlan-aux: false\n"), &m); err != nil ||
+		m.MacvlanAuxEnabled() {
+		t.Fatalf("boolean macvlan-aux was not accepted: %+v, %v", m, err)
+	}
+	if err := yaml.UnmarshalStrict([]byte("macvlan-aux: 192.0.2.2\n"), &m); err == nil {
+		t.Fatal("address-valued macvlan-aux was accepted")
 	}
 }

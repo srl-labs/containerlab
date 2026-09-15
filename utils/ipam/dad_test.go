@@ -1,4 +1,4 @@
-package mgmt
+package ipam
 
 import (
 	"bytes"
@@ -8,16 +8,21 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"os"
+	goruntime "runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/afpacket"
 	"github.com/gopacket/gopacket/layers"
-	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 	"golang.org/x/net/bpf"
+	"golang.org/x/sys/unix"
 )
 
 func TestDADFrames(t *testing.T) {
@@ -59,7 +64,12 @@ func TestDADFrames(t *testing.T) {
 			} else {
 				ipv6 := packet.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
 				ipv6.SrcIP = ip.AsSlice()
-				icmp := &layers.ICMPv6{TypeCode: layers.CreateICMPv6TypeCode(layers.ICMPv6TypeNeighborAdvertisement, 0)}
+				icmp := &layers.ICMPv6{
+					TypeCode: layers.CreateICMPv6TypeCode(
+						layers.ICMPv6TypeNeighborAdvertisement,
+						0,
+					),
+				}
 				if err := icmp.SetNetworkLayerForChecksum(ipv6); err != nil {
 					t.Fatal(err)
 				}
@@ -129,7 +139,7 @@ func TestDADCaptureFilter(t *testing.T) {
 }
 
 func TestDADDropDeltas(t *testing.T) {
-	p := &macvlanProbe{}
+	p := &DADClient{}
 	if err := p.checkDrops(0); err != nil {
 		t.Fatal(err)
 	}
@@ -146,80 +156,30 @@ func TestDADDropDeltas(t *testing.T) {
 	}
 }
 
-func TestDADSnapshotLookups(t *testing.T) {
-	d := &dadChecker{loaded: true}
-	for _, prefix := range []string{"192.0.2.0/24", "2001:db8::53/128"} {
-		d.local.Add(netip.MustParsePrefix(prefix))
+func TestDADCachedConflicts(t *testing.T) {
+	d := &DADClient{
+		parent: "does-not-exist",
+		cache: map[netip.Addr]struct{}{
+			netip.MustParseAddr("192.0.2.123"):  {},
+			netip.MustParseAddr("2001:db8::53"): {},
+		},
 	}
-	m := &clabtypes.MgmtNet{Driver: "bridge", Bridge: "does-not-exist"}
 	for _, ip := range []string{"192.0.2.123", "2001:db8::53"} {
-		err := d.Check(context.Background(), m, netip.MustParseAddr(ip))
-		var occupied *occupiedPrefix
-		if !errors.As(err, &occupied) || !errors.Is(err, ErrDuplicateAddress) {
-			t.Fatalf("missed indexed conflict %s: %v", ip, err)
+		available, err := d.Probe(context.Background(), netip.MustParseAddr(ip))
+		if err != nil || available {
+			t.Fatalf("cached address %s available=%t: %v", ip, available, err)
 		}
 	}
-	if err := d.Check(context.Background(), m, netip.MustParseAddr("198.51.100.2")); err != nil {
-		t.Fatal(err)
-	}
-	if d.wire != nil {
-		t.Fatal("non-macvlan check opened a wire probe")
+	if d.socket != nil {
+		t.Fatal("opened wire probe for a cached conflict")
 	}
 	if err := d.Close(); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestDADSnapshotToleratesMissingBridge(t *testing.T) {
-	const bridge = "does-not-exist"
-	if _, err := netlink.LinkByName(bridge); !errors.As(err, &netlink.LinkNotFoundError{}) {
-		t.Skipf("test bridge unexpectedly exists or lookup failed differently: %v", err)
-	}
-	d := &dadChecker{}
-	if err := d.load(&clabtypes.MgmtNet{
-		Driver:     "bridge",
-		Bridge:     bridge,
-		IPv4Subnet: "192.0.2.0/24",
-	}); err != nil {
-		t.Fatalf("missing deferred bridge blocked DAD snapshot: %v", err)
-	}
-}
-
-func TestDADRouteReservations(t *testing.T) {
-	route := func(cidr string, scope netlink.Scope, index int) netlink.Route {
-		_, dst, _ := net.ParseCIDR(cidr)
-		return netlink.Route{Dst: dst, Scope: scope, LinkIndex: index}
-	}
-	d := &dadChecker{loaded: true}
-	d.addRoutes([]netlink.Route{
-		route("192.0.2.0/24", netlink.SCOPE_LINK, 7),
-		route("198.51.100.0/24", netlink.SCOPE_LINK, 8),
-		route("172.16.0.0/12", netlink.SCOPE_LINK, 9),
-		route("10.0.0.0/8", netlink.SCOPE_UNIVERSE, 9),
-		route("0.0.0.0/0", netlink.SCOPE_UNIVERSE, 9),
-	}, 7, netip.MustParsePrefix("172.20.20.0/24"))
-	for _, tc := range []struct {
-		ip       string
-		reserved bool
-	}{{"192.0.2.5", false}, {"198.51.100.5", true}, {"172.20.20.5", false}, {"10.0.0.5", false}, {"203.0.113.5", false}} {
-		_, got := d.local.Lookup(netip.MustParseAddr(tc.ip))
-		if got != tc.reserved {
-			t.Fatalf("%s reserved=%t, want %t", tc.ip, got, tc.reserved)
-		}
-	}
-
-	d = &dadChecker{loaded: true}
-	subnet := netip.MustParsePrefix("172.20.20.0/24")
-	d.addRoutes([]netlink.Route{
-		route(subnet.String(), netlink.SCOPE_LINK, 9),
-	}, 7, subnet)
-	if _, reserved := d.local.Lookup(netip.MustParseAddr("172.20.20.5")); !reserved {
-		t.Fatal("ignored an equal-prefix route on another interface")
-	}
-}
-
 func TestDADNeighbourCache(t *testing.T) {
-	d := &dadChecker{loaded: true}
+	d := &DADClient{parent: "does-not-exist", cache: make(map[netip.Addr]struct{})}
 	entries := []netlink.Neigh{}
 	states := []int{
 		netlink.NUD_REACHABLE,
@@ -252,28 +212,21 @@ func TestDADNeighbourCache(t *testing.T) {
 	)
 	d.addNeighbours(entries, map[int]bool{7: true})
 	for i, state := range states {
-		_, got := d.local.Lookup(netip.MustParseAddr(fmt.Sprintf("192.0.2.%d", i+1)))
+		_, got := d.cache[netip.MustParseAddr(fmt.Sprintf("192.0.2.%d", i+1))]
 		want := state == netlink.NUD_REACHABLE || state == netlink.NUD_PERMANENT
 		if got != want {
 			t.Fatalf("state %d reserved=%t, want %t", state, got, want)
 		}
 	}
-	if _, got := d.local.Lookup(netip.MustParseAddr("2001:db8::1")); got {
+	if _, got := d.cache[netip.MustParseAddr("2001:db8::1")]; got {
 		t.Fatal("used neighbour from unrelated interface")
 	}
 	// A cached hit must return without trying to create a probe interface.
-	m := &clabtypes.MgmtNet{Driver: "macvlan", MacvlanParent: "does-not-exist"}
-	if err := d.Check(
-		context.Background(),
-		m,
-		netip.MustParseAddr("192.0.2.1"),
-	); !errors.Is(
-		err,
-		ErrDuplicateAddress,
-	) {
-		t.Fatalf("cache was not checked first: %v", err)
+	available, err := d.Probe(context.Background(), netip.MustParseAddr("192.0.2.1"))
+	if err != nil || available {
+		t.Fatalf("cached address available=%t: %v", available, err)
 	}
-	if d.wire != nil {
+	if d.socket != nil {
 		t.Fatal("opened wire probe for a cached occupied address")
 	}
 }
@@ -460,10 +413,200 @@ func TestDADSchedulerRateAndWindows(t *testing.T) {
 	}
 }
 
+func TestDADClientConcurrentScale(t *testing.T) {
+	for _, count := range []int{10, 100, 500, 1000} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			var enteredOnce, releaseOnce sync.Once
+			var sends atomic.Int64
+			scheduler := newDADScheduler(
+				func(netip.Addr) error {
+					enteredOnce.Do(func() { close(entered) })
+					<-release
+					sends.Add(1)
+					return nil
+				},
+				func() error { return nil },
+				0,
+				time.Millisecond,
+			)
+			defer scheduler.Close()
+			unblock := func() { releaseOnce.Do(func() { close(release) }) }
+			defer unblock()
+			dad := &DADClient{
+				cache:     make(map[netip.Addr]struct{}),
+				socket:    &afpacket.TPacket{},
+				scheduler: scheduler,
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			results := make(chan error, count)
+			for i := 2; i < count+2; i++ {
+				ip := netip.AddrFrom4([4]byte{198, 19, byte(i / 256), byte(i % 256)})
+				go func() {
+					_, err := dad.Probe(ctx, ip)
+					results <- err
+				}()
+			}
+
+			select {
+			case <-entered:
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			for {
+				scheduler.mu.Lock()
+				pending := len(scheduler.pending)
+				scheduler.mu.Unlock()
+				if pending == count {
+					break
+				}
+				select {
+				case <-ctx.Done():
+					t.Fatalf("only %d of %d probes were pending concurrently", pending, count)
+				default:
+					time.Sleep(time.Millisecond)
+				}
+			}
+
+			unblock()
+			for range count {
+				if err := <-results; err != nil {
+					t.Fatal(err)
+				}
+			}
+			if sends.Load() != int64(count*dadProbeAttempts) {
+				t.Fatalf("sent %d probes, want %d", sends.Load(), count*dadProbeAttempts)
+			}
+		})
+	}
+}
+
+func TestDADClientIPv6NDScale(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires root for network namespace and packet socket access")
+	}
+
+	goruntime.LockOSThread()
+	hostNS, err := netns.Get()
+	if err != nil {
+		goruntime.UnlockOSThread()
+		t.Fatal(err)
+	}
+	peerNS, err := netns.New()
+	if err != nil {
+		hostNS.Close()
+		goruntime.UnlockOSThread()
+		t.Fatal(err)
+	}
+	if err := netns.Set(hostNS); err != nil {
+		peerNS.Close()
+		hostNS.Close()
+		goruntime.UnlockOSThread()
+		t.Fatal(err)
+	}
+	hostNS.Close()
+	goruntime.UnlockOSThread()
+	defer peerNS.Close()
+
+	parentName := fmt.Sprintf("dadp%x", os.Getpid())
+	peerName := fmt.Sprintf("dadx%x", os.Getpid())
+	veth := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: parentName},
+		PeerName:  peerName,
+	}
+	if err := netlink.LinkAdd(veth); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := netlink.LinkByName(parentName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer netlink.LinkDel(parent)
+	peer, err := netlink.LinkByName(peerName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := netlink.LinkSetNsFd(peer, int(peerNS)); err != nil {
+		t.Fatal(err)
+	}
+	if err := netlink.LinkSetUp(parent); err != nil {
+		t.Fatal(err)
+	}
+
+	peerLinks, err := netlink.NewHandleAt(peerNS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer peerLinks.Close()
+	peer, err = peerLinks.LinkByName(peerName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := peerLinks.LinkSetUp(peer); err != nil {
+		t.Fatal(err)
+	}
+
+	addresses := make([]netip.Addr, 1000)
+	address := netip.MustParseAddr("fd00:dad::")
+	for i := range addresses {
+		address = address.Next()
+		addresses[i] = address
+		linkAddress := &netlink.Addr{
+			IPNet: &net.IPNet{
+				IP:   net.IP(addresses[i].AsSlice()),
+				Mask: net.CIDRMask(64, 128),
+			},
+			Flags: unix.IFA_F_NODAD,
+		}
+		if err := peerLinks.AddrAdd(peer, linkAddress); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, count := range []int{10, 100, 500, 1000} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			dad, err := NewDADClient(parentName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer dad.Close()
+
+			started := time.Now()
+			results := make(chan error, count)
+			var probes sync.WaitGroup
+			for _, ip := range addresses[:count] {
+				probes.Go(func() {
+					available, err := dad.Probe(context.Background(), ip)
+					if err == nil && available {
+						err = fmt.Errorf("occupied address %s reported available", ip)
+					}
+					results <- err
+				})
+			}
+			probes.Wait()
+			close(results)
+			for err := range results {
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Logf("%d IPv6 ND probes completed in %s", count, time.Since(started))
+		})
+	}
+}
+
 func TestDADSchedulerCancellationAndLateConflict(t *testing.T) {
 	ip := netip.MustParseAddr("192.0.2.2")
 	sent := make(chan netip.Addr, 10)
-	s := newDADScheduler(func(ip netip.Addr) error { sent <- ip; return nil }, func() error { return nil }, time.Millisecond, 20*time.Millisecond)
+	s := newDADScheduler(
+		func(ip netip.Addr) error { sent <- ip; return nil },
+		func() error { return nil },
+		time.Millisecond,
+		20*time.Millisecond,
+	)
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -494,8 +637,8 @@ func TestDADSchedulerCancellationAndLateConflict(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	s.conflict(ip.Next(), ErrDuplicateAddress)
-	if err := <-result; !errors.Is(err, ErrDuplicateAddress) {
+	s.conflict(ip.Next(), errDuplicateAddress)
+	if err := <-result; !errors.Is(err, errDuplicateAddress) {
 		t.Fatalf("late conflict: %v", err)
 	}
 }
@@ -513,7 +656,7 @@ func TestDADSchedulerErrorsAndDrain(t *testing.T) {
 				return nil
 			}, func() error {
 				if stage == "late-drain" {
-					s.conflict(ip, ErrDuplicateAddress)
+					s.conflict(ip, errDuplicateAddress)
 					return nil
 				}
 				return failure
@@ -523,7 +666,7 @@ func TestDADSchedulerErrorsAndDrain(t *testing.T) {
 			defer cancel()
 			want := failure
 			if stage == "late-drain" {
-				want = ErrDuplicateAddress
+				want = errDuplicateAddress
 			}
 			if err := s.Check(ctx, ip); !errors.Is(err, want) {
 				t.Fatalf("%s: %v", stage, err)
@@ -582,7 +725,7 @@ func TestDADSchedulerSendDoesNotBlockConflicts(t *testing.T) {
 	<-entered
 	conflicted := make(chan struct{})
 	go func() {
-		s.conflict(ip, ErrDuplicateAddress)
+		s.conflict(ip, errDuplicateAddress)
 		close(conflicted)
 	}()
 	select {
@@ -592,7 +735,7 @@ func TestDADSchedulerSendDoesNotBlockConflicts(t *testing.T) {
 		t.Fatal("socket write held the scheduler mutex")
 	}
 	close(release)
-	if err := <-result; !errors.Is(err, ErrDuplicateAddress) {
+	if err := <-result; !errors.Is(err, errDuplicateAddress) {
 		t.Fatalf("conflict result: %v", err)
 	}
 }

@@ -72,17 +72,18 @@ type DeviceMapping struct {
 func init() {
 	clabruntime.Register(RuntimeName, func() clabruntime.ContainerRuntime {
 		return &DockerRuntime{
-			mgmt: new(clabtypes.MgmtNet),
+			mgmt:        new(clabtypes.MgmtNet),
+			macvlanHost: clabutils.MacvlanHost{Links: &netlink.Handle{}},
 		}
 	})
 }
 
 type DockerRuntime struct {
-	config         clabruntime.RuntimeConfig
-	Client         *dockerC.Client
-	mgmt           *clabtypes.MgmtNet
-	version        string
-	macvlanNetlink clabutils.MacvlanHostNetlink
+	config      clabruntime.RuntimeConfig
+	Client      *dockerC.Client
+	mgmt        *clabtypes.MgmtNet
+	version     string
+	macvlanHost clabutils.MacvlanHost
 }
 
 func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
@@ -129,7 +130,7 @@ func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
-	if n.Driver == "macvlan" {
+	if n.Driver == clabtypes.MgmtDriverMacvlan {
 		return
 	}
 	// return if MTU value was set by a user via config file
@@ -195,7 +196,8 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
-func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix) ([]clabruntime.NetworkAddress, error) {
+func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix,
+) ([]clabruntime.NetworkAddress, error) {
 	if len(subnets) == 0 {
 		return nil, nil
 	}
@@ -223,7 +225,11 @@ func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 		ip = ip.Unmap()
 		for _, subnet := range subnets {
 			if subnet.Contains(ip) {
-				address := clabruntime.NetworkAddress{NetworkName: networkName, ContainerID: containerID, Address: ip}
+				address := clabruntime.NetworkAddress{
+					NetworkName: networkName,
+					ContainerID: containerID,
+					Address:     ip,
+				}
 				if !seen[address] {
 					addresses = append(addresses, address)
 					seen[address] = true
@@ -254,7 +260,11 @@ func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 		}
 		details, err := d.Client.NetworkInspect(ctx, network.ID, networkapi.InspectOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("inspect occupied addresses on Docker network %s: %w", network.Name, err)
+			return nil, fmt.Errorf(
+				"inspect occupied addresses on Docker network %s: %w",
+				network.Name,
+				err,
+			)
 		}
 		matchedNetworks[details.Name] = true
 		// Endpoint addresses include a prefix length; gateways and aux entries do not.
@@ -299,12 +309,19 @@ func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Pr
 }
 
 // CreateNet creates a docker network or reusing if it exists.
-func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
+func (d *DockerRuntime) CreateNet(
+	ctx context.Context,
+	options ...clabruntime.NetworkCreateOptions,
+) (err error) {
 	if err := d.mgmt.Validate(); err != nil {
 		return err
 	}
-	if d.mgmt.Driver == "macvlan" {
-		return d.createMacvlanNetwork(ctx)
+	if d.mgmt.Driver == clabtypes.MgmtDriverMacvlan {
+		var excluded []netip.Addr
+		for _, option := range options {
+			excluded = append(excluded, option.StaticAddresses...)
+		}
+		return d.createMacvlanNetwork(ctx, excluded)
 	}
 
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
@@ -321,12 +338,16 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
-		netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		netResource, err = d.Client.NetworkInspect(
+			nctx,
+			d.mgmt.Network,
+			networkapi.InspectOptions{},
+		)
 		if err != nil {
 			return err
 		}
 	case err == nil:
-		if d.mgmt.Driver != "" && d.mgmt.Driver != netResource.Driver {
+		if d.mgmt.Driver != "" && string(d.mgmt.Driver) != netResource.Driver {
 			return fmt.Errorf("network %q uses driver %q, requested %q",
 				d.mgmt.Network, netResource.Driver, d.mgmt.Driver)
 		}
@@ -344,8 +365,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		d.mgmt.Bridge = bridgeName
 	}
 
-	// default docker bridge rejects user-specified endpoint addresses (ie. clab ipam generated addr)
-	if d.mgmt.Network == defaultDockerNetwork && d.mgmt.IPAM.Provider != clabtypes.IPAMProviderRuntime {
+	// default docker bridge rejects user-specified endpoint addresses (ie. clab ipam generated
+	// addr)
+	if d.mgmt.Network == defaultDockerNetwork &&
+		d.mgmt.IPAM.Provider != clabtypes.IPAMProviderRuntime {
 		log.Info("Using runtime IPAM for default bridge network")
 		d.mgmt.IPAM.Provider = clabtypes.IPAMProviderRuntime
 	}
@@ -705,7 +728,8 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 // DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
-	if network == "bridge" || d.config.KeepMgmtNet {
+	if network == "bridge" ||
+		(d.config.KeepMgmtNet && d.mgmt.Driver != clabtypes.MgmtDriverMacvlan) {
 		log.Debugf("Skipping deletion of %q network", network)
 		return nil
 	}
@@ -723,9 +747,20 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		log.Debugf("network %q was not created by containerlab, deletion skipped", network)
 		return nil
 	}
+	if d.config.KeepMgmtNet {
+		if nres.Driver == "macvlan" {
+			return d.syncMacvlanHostRoutes(&nres)
+		}
+		return nil
+	}
 
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
+		if nres.Driver == "macvlan" {
+			if err := d.syncMacvlanHostRoutes(&nres); err != nil {
+				return err
+			}
+		}
 		if d.config.Debug {
 			log.Debugf(
 				"network %q has %d active endpoints, deletion skipped",
@@ -746,7 +781,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 
 	if nres.Driver == "macvlan" {
-		return d.macvlanHost().Remove(nres.ID)
+		return d.managementMacvlanHost().Remove(nres.ID)
 	}
 
 	if err = d.deleteMgmtNetworkFwdRule(); err != nil {

@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
@@ -12,6 +13,7 @@ import (
 
 	networkapi "github.com/docker/docker/api/types/network"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -53,7 +55,7 @@ func (f *fakeMacvlanNetlink) LinkAdd(link netlink.Link) error {
 	f.links[link.Attrs().Name] = link
 	if f.concurrent {
 		// Simulate a competing deploy that has already marked its new link.
-		link.Attrs().Alias = clabutils.MacvlanHostAlias("network-id")
+		link.Attrs().Alias = testMacvlanHostAlias("network-id")
 		return unix.EEXIST
 	}
 	return nil
@@ -132,6 +134,28 @@ func (f *fakeMacvlanNetlink) RouteAdd(route *netlink.Route) error {
 	return nil
 }
 
+func (f *fakeMacvlanNetlink) RouteDel(route *netlink.Route) error {
+	for i := range f.routes {
+		if f.routes[i].Dst.String() == route.Dst.String() &&
+			f.routes[i].LinkIndex == route.LinkIndex {
+			f.routes = append(f.routes[:i], f.routes[i+1:]...)
+			return nil
+		}
+	}
+	return unix.ESRCH
+}
+
+const testMacvlanAuxIPv4 = "192.0.2.129"
+
+func testMacvlanHostName(networkID string) string {
+	hash := sha256.Sum256([]byte(networkID))
+	return fmt.Sprintf("cm-%x", hash[:6])
+}
+
+func testMacvlanHostAlias(networkID string) string {
+	return "containerlab:macvlan:" + networkID
+}
+
 func testMacvlanConfig() *clabtypes.MgmtNet {
 	return &clabtypes.MgmtNet{
 		// Fake netlink cannot support wire probes.
@@ -144,7 +168,6 @@ func testMacvlanConfig() *clabtypes.MgmtNet {
 		IPv4Subnet:    "192.0.2.0/24",
 		IPv4Gw:        "192.0.2.1",
 		IPv4Range:     "192.0.2.128/26",
-		MacvlanAux:    "192.0.2.129/26",
 	}
 }
 
@@ -153,14 +176,21 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 		f := newFakeMacvlanNetlink()
 		f.concurrent = concurrent
 		host := clabutils.MacvlanHost{Links: f}
-		ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
+		ip := netip.MustParseAddr(testMacvlanAuxIPv4)
+		nodeIP := netip.MustParseAddr("192.0.2.140")
 		for range 2 {
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				ip,
-				prefix,
+				[]netip.Addr{ip},
+			); err != nil {
+				t.Fatal(err)
+			}
+			if err := host.SyncRoutes(
+				"network-id",
+				[]netip.Addr{ip},
+				[]netip.Addr{nodeIP},
 			); err != nil {
 				t.Fatal(err)
 			}
@@ -170,13 +200,19 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 		}
 		// Reuse must repair missing routes and a down interface even if the IP exists.
 		f.routes = nil
-		f.links[clabutils.MacvlanHostName("network-id")].Attrs().Flags = 0
+		f.links[testMacvlanHostName("network-id")].Attrs().Flags = 0
 		if err := host.Ensure(
 			context.Background(),
 			"network-id",
 			f.links["eth0"],
-			ip,
-			prefix,
+			[]netip.Addr{ip},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if err := host.SyncRoutes(
+			"network-id",
+			[]netip.Addr{ip},
+			[]netip.Addr{nodeIP},
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -186,7 +222,7 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 		if len(f.addrs) != 1 || f.addrs[0].String() != "192.0.2.129/32" {
 			t.Fatalf("addresses = %v", f.addrs)
 		}
-		if f.routes[0].Dst.String() != "192.0.2.128/26" {
+		if f.routes[0].Dst.String() != "192.0.2.140/32" {
 			t.Fatalf("route = %v", f.routes[0])
 		}
 		if err := host.Remove("network-id"); err != nil {
@@ -205,12 +241,12 @@ func TestMacvlanHostOwnership(t *testing.T) {
 	for _, kind := range []string{"foreign macvlan", "wrong type", "wrong parent", "wrong mode"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newFakeMacvlanNetlink()
-			name := clabutils.MacvlanHostName("network-id")
+			name := testMacvlanHostName("network-id")
 			attrs := netlink.LinkAttrs{
 				Name:        name,
 				Index:       2,
 				ParentIndex: 1,
-				Alias:       clabutils.MacvlanHostAlias("network-id"),
+				Alias:       testMacvlanHostAlias("network-id"),
 			}
 			link := &netlink.Macvlan{LinkAttrs: attrs, Mode: netlink.MACVLAN_MODE_BRIDGE}
 			f.links[name] = link
@@ -224,14 +260,13 @@ func TestMacvlanHostOwnership(t *testing.T) {
 			case "wrong mode":
 				link.Mode = netlink.MACVLAN_MODE_PRIVATE
 			}
-			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
+			ip := netip.MustParseAddr(testMacvlanAuxIPv4)
 			host := clabutils.MacvlanHost{Links: f}
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				ip,
-				prefix,
+				[]netip.Addr{ip},
 			); err == nil {
 				t.Fatal("accepted incompatible host interface")
 			}
@@ -251,7 +286,7 @@ func TestMacvlanHostOwnership(t *testing.T) {
 }
 
 func TestMacvlanHostFailuresAreRetryable(t *testing.T) {
-	for _, operation := range []string{"lookup", "address", "route", "route list"} {
+	for _, operation := range []string{"lookup", "address"} {
 		t.Run(operation, func(t *testing.T) {
 			f := newFakeMacvlanNetlink()
 			switch operation {
@@ -264,14 +299,13 @@ func TestMacvlanHostFailuresAreRetryable(t *testing.T) {
 			case "route list":
 				f.routeListErr = unix.EPERM
 			}
-			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
+			ip := netip.MustParseAddr(testMacvlanAuxIPv4)
 			host := clabutils.MacvlanHost{Links: f}
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				ip,
-				prefix,
+				[]netip.Addr{ip},
 			); !errors.Is(
 				err,
 				unix.EPERM,
@@ -286,8 +320,7 @@ func TestMacvlanHostFailuresAreRetryable(t *testing.T) {
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				ip,
-				prefix,
+				[]netip.Addr{ip},
 			); err != nil {
 				t.Fatal(err)
 			}
@@ -300,20 +333,27 @@ func TestMacvlanRouteConflicts(t *testing.T) {
 		route    string
 		conflict bool
 	}{
-		{"0.0.0.0/0", false}, {"192.0.2.0/24", false}, {"198.51.100.0/24", false},
-		{"192.0.2.128/26", true}, {"192.0.2.128/27", true},
+		{"0.0.0.0/0", false}, {"192.0.2.0/24", false}, {"198.51.100.140/32", false},
+		{"192.0.2.140/32", true},
 	} {
 		t.Run(tc.route, func(t *testing.T) {
 			f := newFakeMacvlanNetlink()
 			_, dst, _ := net.ParseCIDR(tc.route)
-			f.routes = []netlink.Route{{Dst: dst, LinkIndex: 1}}
-			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
-			err := (clabutils.MacvlanHost{Links: f}).Ensure(
+			f.routes = []netlink.Route{{Dst: dst, LinkIndex: 1, Table: unix.RT_TABLE_MAIN}}
+			ip := netip.MustParseAddr(testMacvlanAuxIPv4)
+			host := clabutils.MacvlanHost{Links: f}
+			if err := host.Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				ip,
-				prefix,
+				[]netip.Addr{ip},
+			); err != nil {
+				t.Fatal(err)
+			}
+			err := host.SyncRoutes(
+				"network-id",
+				[]netip.Addr{ip},
+				[]netip.Addr{netip.MustParseAddr("192.0.2.140")},
 			)
 			if (err != nil) != tc.conflict {
 				t.Fatalf("ensure() = %v, want conflict %v", err, tc.conflict)
@@ -325,25 +365,16 @@ func TestMacvlanRouteConflicts(t *testing.T) {
 	}
 }
 
-func TestMacvlanHostName(t *testing.T) {
-	a := clabutils.MacvlanHostName(strings.Repeat("a", 64))
-	b := clabutils.MacvlanHostName(strings.Repeat("b", 64))
-	if len(a) > 15 || a == b || a != clabutils.MacvlanHostName(strings.Repeat("a", 64)) {
-		t.Fatalf("invalid names: %q, %q", a, b)
-	}
-}
-
 func TestMacvlanHostAddressConflicts(t *testing.T) {
 	for _, index := range []int{1, 2} {
 		f := newFakeMacvlanNetlink()
 		host := clabutils.MacvlanHost{Links: f}
-		ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
+		ip := netip.MustParseAddr(testMacvlanAuxIPv4)
 		if err := host.Ensure(
 			context.Background(),
 			"network-id",
 			f.links["eth0"],
-			ip,
-			prefix,
+			[]netip.Addr{ip},
 		); err != nil {
 			t.Fatal(err)
 		}
@@ -360,8 +391,7 @@ func TestMacvlanHostAddressConflicts(t *testing.T) {
 			context.Background(),
 			"network-id",
 			f.links["eth0"],
-			ip,
-			prefix,
+			[]netip.Addr{ip},
 		); err == nil {
 			t.Fatal("accepted conflicting host address")
 		}
@@ -375,13 +405,12 @@ func TestMacvlanHostAliasFailure(t *testing.T) {
 	f := newFakeMacvlanNetlink()
 	f.aliasErr = unix.EPERM
 	host := clabutils.MacvlanHost{Links: f}
-	ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
+	ip := netip.MustParseAddr(testMacvlanAuxIPv4)
 	if err := host.Ensure(
 		context.Background(),
 		"network-id",
 		f.links["eth0"],
-		ip,
-		prefix,
+		[]netip.Addr{ip},
 	); !errors.Is(
 		err,
 		unix.EPERM,
@@ -396,71 +425,161 @@ func TestMacvlanHostAliasFailure(t *testing.T) {
 		context.Background(),
 		"network-id",
 		f.links["eth0"],
-		ip,
-		prefix,
+		[]netip.Addr{ip},
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCreateMacvlanNetwork(t *testing.T) {
-	for _, aux := range []string{"", "192.0.2.129/26"} {
-		t.Run(aux, func(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	rt.mgmt.IPv6Subnet, rt.mgmt.IPv6Gw = "2001:db8::/64", "2001:db8::1"
+	f := newFakeMacvlanNetlink()
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+	for range 2 {
+		if err := rt.CreateNet(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if fake.creates.Load() != 1 || f.adds != 1 || f.addrAdds != 2 || f.routeAdds != 0 {
+		t.Fatalf("network or host resources were not reused: %+v", f)
+	}
+	ipv4 := fake.info.Labels[clabconstants.MacvlanAuxIPv4]
+	ipv6 := fake.info.Labels[clabconstants.MacvlanAuxIPv6]
+	if ipv4 == "" || ipv6 == "" ||
+		fake.info.IPAM.Config[0].AuxAddress["host"] != ipv4 ||
+		fake.info.IPAM.Config[1].AuxAddress["host"] != ipv6 {
+		t.Fatalf("dual-stack auxiliary configuration was not persisted: %+v", fake.info)
+	}
+}
+
+func TestCreateMacvlanNetworkAuxExclusions(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	f := newFakeMacvlanNetlink()
+	parentAddress, err := netlink.ParseAddr("192.0.2.3/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentAddress.LinkIndex = 1
+	f.addrs = []netlink.Addr{*parentAddress}
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+	staticAddress := netip.MustParseAddr("192.0.2.2")
+	if err := rt.CreateNet(context.Background(), clabruntime.NetworkCreateOptions{
+		StaticAddresses: []netip.Addr{staticAddress},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if auxiliary := fake.info.Labels[clabconstants.MacvlanAuxIPv4]; auxiliary != "192.0.2.4" {
+		t.Fatalf("auxiliary address = %s, want 192.0.2.4", auxiliary)
+	}
+}
+
+func TestCreateMacvlanNetworkWithoutAux(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	rt.mgmt.MacvlanAux = new(false)
+	f := newFakeMacvlanNetlink()
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if f.adds != 0 || f.addrAdds != 0 {
+		t.Fatalf("created auxiliary host resources: %+v", f)
+	}
+	if fake.info.Labels[clabconstants.MacvlanAuxIPv4] != "" ||
+		fake.info.IPAM.Config[0].AuxAddress["host"] != "" {
+		t.Fatalf("persisted auxiliary configuration: %+v", fake.info)
+	}
+}
+
+func TestCreateMacvlanNetworkNonBridgeSkipsAux(t *testing.T) {
+	for _, mode := range []string{"private", "vepa", "passthru"} {
+		t.Run(mode, func(t *testing.T) {
 			rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 			defer cleanup()
 			rt.mgmt = testMacvlanConfig()
-			rt.mgmt.MacvlanAux = aux
-			rt.mgmt.IPv6Subnet, rt.mgmt.IPv6Gw = "2001:db8::/64", "2001:db8::1"
+			rt.mgmt.MacvlanMode = mode
 			f := newFakeMacvlanNetlink()
-			rt.macvlanNetlink = f
-			for range 2 {
-				if err := rt.CreateNet(context.Background()); err != nil {
-					t.Fatal(err)
-				}
+			rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+			if err := rt.CreateNet(context.Background()); err != nil {
+				t.Fatal(err)
 			}
-			if fake.creates.Load() != 1 {
-				t.Fatal("recreated Docker network")
+			if fake.info.Options["macvlan_mode"] != mode || f.adds != 0 || f.addrAdds != 0 {
+				t.Fatalf("mode %q created auxiliary host resources: %+v", mode, f)
 			}
-			if rt.mgmt.Bridge != "" || rt.mgmt.IPv6Gw != "2001:db8::1" {
-				t.Fatalf("mgmt = %+v", rt.mgmt)
-			}
-			if aux == "" && f.adds != 0 {
-				t.Fatal("created unsolicited host interface")
-			}
-			if aux != "" &&
-				(f.adds != 1 || fake.info.IPAM.Config[0].AuxAddress["host"] != "192.0.2.129") {
-				t.Fatalf("host address not reserved/configured: %+v", fake.info)
+			if fake.info.Labels[clabconstants.MacvlanAuxIPv4] != "" ||
+				fake.info.IPAM.Config[0].AuxAddress["host"] != "" {
+				t.Fatalf("mode %q persisted auxiliary configuration: %+v", mode, fake.info)
 			}
 		})
 	}
 }
 
-func TestCreateMacvlanNetworkAutoAux(t *testing.T) {
+func TestSyncMacvlanHostRoutes(t *testing.T) {
 	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 	defer cleanup()
 	rt.mgmt = testMacvlanConfig()
-	rt.mgmt.MacvlanAux = "auto"
+	rt.mgmt.IPv6Subnet, rt.mgmt.IPv6Gw = "2001:db8::/64", "2001:db8::1"
 	f := newFakeMacvlanNetlink()
-	rt.macvlanNetlink = f
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
 	if err := rt.CreateNet(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	ip, route, err := rt.mgmt.MacvlanHostAddress()
-	if err != nil {
+	fake.mu.Lock()
+	fake.info.Containers = map[string]networkapi.EndpointResource{
+		"node1": {IPv4Address: "192.0.2.140/24", IPv6Address: "2001:db8::140/64"},
+		"node2": {IPv4Address: "192.0.2.141/24", IPv6Address: "2001:db8::141/64"},
+	}
+	fake.mu.Unlock()
+	if err := rt.SyncMgmtHostRoutes(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if route != netip.MustParsePrefix(rt.mgmt.IPv4Range) ||
-		fake.info.IPAM.Config[0].AuxAddress["host"] != ip.String() ||
-		fake.info.Labels[clabconstants.MacvlanAux] != rt.mgmt.MacvlanAux {
-		t.Fatalf("automatic auxiliary configuration was not persisted: %+v", fake.info)
+	if len(f.routes) != 4 {
+		t.Fatalf("routes = %v", f.routes)
+	}
+	fake.mu.Lock()
+	delete(fake.info.Containers, "node1")
+	fake.mu.Unlock()
+	if err := rt.SyncMgmtHostRoutes(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.routes) != 2 {
+		t.Fatalf("stale routes were not removed: %v", f.routes)
+	}
+	for _, route := range f.routes {
+		bits, width := route.Dst.Mask.Size()
+		if bits != width {
+			t.Fatalf("route is not exact: %v", route)
+		}
 	}
 }
 
-func TestReuseMacvlanNetworkAutoAux(t *testing.T) {
+func TestCreateMacvlanNetworkRuntimeIPAM(t *testing.T) {
 	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 	defer cleanup()
 	rt.mgmt = testMacvlanConfig()
-	opts, err := macvlanNetworkOptions(rt.mgmt)
+	rt.mgmt.IPAM.Provider = clabtypes.IPAMProviderRuntime
+	rt.macvlanHost = clabutils.MacvlanHost{Links: newFakeMacvlanNetlink()}
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	aux := fake.info.Labels[clabconstants.MacvlanAuxIPv4]
+	if aux == "" || fake.info.IPAM.Config[0].AuxAddress["host"] != aux {
+		t.Fatalf("runtime IPAM did not reserve an auxiliary address: %+v", fake.info)
+	}
+}
+
+func TestReuseMacvlanNetworkAux(t *testing.T) {
+	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	auxiliary := []netip.Addr{netip.MustParseAddr(testMacvlanAuxIPv4)}
+	opts, err := macvlanNetworkOptions(rt.mgmt, auxiliary)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,14 +591,31 @@ func TestReuseMacvlanNetworkAutoAux(t *testing.T) {
 		Labels:  opts.Labels,
 	}
 	fake.created = true
-	rt.mgmt.MacvlanAux = "auto"
 	f := newFakeMacvlanNetlink()
-	rt.macvlanNetlink = f
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
 	if err := rt.CreateNet(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if rt.mgmt.MacvlanAux != "192.0.2.129/26" || fake.creates.Load() != 0 {
-		t.Fatalf("existing automatic auxiliary configuration was not reused: %+v", rt.mgmt)
+	if fake.creates.Load() != 0 || f.addrAdds != 1 ||
+		!f.addrs[0].IP.Equal(net.ParseIP(testMacvlanAuxIPv4)) {
+		t.Fatalf("existing auxiliary configuration was not reused: %+v", f)
+	}
+}
+
+func TestReuseExternalMacvlanNetworkWithoutAux(t *testing.T) {
+	m := testMacvlanConfig()
+	m.MacvlanAux = new(false)
+	opts, err := macvlanNetworkOptions(m, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := networkapi.Inspect{
+		Driver:  "macvlan",
+		Options: opts.Options,
+		IPAM:    *opts.IPAM,
+	}
+	if err := validateMacvlanNetwork(&n, opts); err != nil {
+		t.Fatalf("external network without auxiliary connectivity was rejected: %v", err)
 	}
 }
 
@@ -498,7 +634,8 @@ func TestMacvlanNetworkReuseValidation(t *testing.T) {
 		{"gateway", func(n *networkapi.Inspect) { n.IPAM.Config[0].Gateway = "192.0.2.2" }},
 		{"pool", func(n *networkapi.Inspect) { n.IPAM.Config[0].IPRange = "192.0.2.0/25" }},
 		{"reservation", func(n *networkapi.Inspect) { n.IPAM.Config[0].AuxAddress = nil }},
-		{"host route", func(n *networkapi.Inspect) { n.Labels[clabconstants.MacvlanAux] = "192.0.2.129/24" }},
+		{"legacy network", func(n *networkapi.Inspect) { delete(n.Labels, clabconstants.MacvlanAuxIPv4) }},
+		{"auxiliary label", func(n *networkapi.Inspect) { n.Labels[clabconstants.MacvlanAuxIPv4] = "192.0.2.130" }},
 		{"external ownership", func(n *networkapi.Inspect) { delete(n.Labels, clabconstants.Containerlab) }},
 	} {
 		for _, concurrent := range []bool{false, true} {
@@ -507,8 +644,9 @@ func TestMacvlanNetworkReuseValidation(t *testing.T) {
 				defer cleanup()
 				rt.mgmt = testMacvlanConfig()
 				f := newFakeMacvlanNetlink()
-				rt.macvlanNetlink = f
-				opts, err := macvlanNetworkOptions(rt.mgmt)
+				rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+				auxiliary := []netip.Addr{netip.MustParseAddr(testMacvlanAuxIPv4)}
+				opts, err := macvlanNetworkOptions(rt.mgmt, auxiliary)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -536,9 +674,10 @@ func TestMacvlanNetworkConcurrentCreate(t *testing.T) {
 	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 	defer cleanup()
 	rt.mgmt = testMacvlanConfig()
+	auxiliary := []netip.Addr{netip.MustParseAddr("192.0.2.2")}
 	f := newFakeMacvlanNetlink()
-	rt.macvlanNetlink = f
-	opts, err := macvlanNetworkOptions(rt.mgmt)
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+	opts, err := macvlanNetworkOptions(rt.mgmt, auxiliary)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -579,14 +718,13 @@ func TestDeleteMacvlanNetwork(t *testing.T) {
 				Labels: map[string]string{clabconstants.Containerlab: ""},
 			}
 			f := newFakeMacvlanNetlink()
-			rt.macvlanNetlink = f
-			host := rt.macvlanHost()
+			rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+			host := rt.managementMacvlanHost()
 			if err := host.Ensure(
 				context.Background(),
 				"network-id",
 				f.links["eth0"],
-				netip.MustParseAddr("192.0.2.129"),
-				netip.MustParsePrefix("192.0.2.128/26"),
+				[]netip.Addr{netip.MustParseAddr("192.0.2.129")},
 			); err != nil {
 				t.Fatal(err)
 			}
@@ -634,7 +772,6 @@ func TestCreateMacvlanIPv6Host(t *testing.T) {
 		t.Cleanup(cleanup)
 		rt.mgmt = testMacvlanConfig()
 		rt.mgmt.IPv6Subnet, rt.mgmt.IPv6Gw = "2001:db8::/64", "2001:db8::1"
-		rt.mgmt.MacvlanAux = "2001:db8::8000:2/97"
 		if !dualStack {
 			rt.mgmt.IPv4Subnet, rt.mgmt.IPv4Gw, rt.mgmt.IPv4Range = "", "", ""
 		}
@@ -642,29 +779,32 @@ func TestCreateMacvlanIPv6Host(t *testing.T) {
 		linkLocal, _ := netlink.ParseAddr("fe80::2/64")
 		linkLocal.LinkIndex = 2
 		f.addrs = []netlink.Addr{*linkLocal}
-		rt.macvlanNetlink = f
+		rt.macvlanHost = clabutils.MacvlanHost{Links: f}
 		for range 2 {
 			if err := rt.CreateNet(context.Background()); err != nil {
 				t.Fatal(err)
 			}
 		}
+		ipv4 := fake.info.Labels[clabconstants.MacvlanAuxIPv4]
+		ipv6 := fake.info.Labels[clabconstants.MacvlanAuxIPv6]
 		for _, pool := range fake.info.IPAM.Config {
 			if strings.Contains(pool.Subnet, ":") {
-				if pool.AuxAddress["host"] != "2001:db8::8000:2" {
+				if pool.AuxAddress["host"] != ipv6 {
 					t.Fatalf("IPv6 reservation = %v", pool)
 				}
-			} else if len(pool.AuxAddress) != 0 {
-				t.Fatalf("IPv6 reserved in IPv4 pool: %v", pool)
+			} else if pool.AuxAddress["host"] != ipv4 {
+				t.Fatalf("IPv4 reservation = %v", pool)
 			}
 		}
-		if f.adds != 1 || f.addrAdds != 1 || f.routeAdds != 1 {
+		wantAddresses := 1
+		if dualStack {
+			wantAddresses = 2
+		}
+		if f.adds != 1 || f.addrAdds != wantAddresses || f.routeAdds != 0 {
 			t.Fatalf("non-idempotent setup: %+v", f)
 		}
-		if f.addrs[1].IPNet.String() != "2001:db8::8000:2/128" {
-			t.Fatalf("address = %v", f.addrs[1])
-		}
-		if f.routes[0].Dst.String() != "2001:db8::8000:0/97" {
-			t.Fatalf("route = %v", f.routes[0])
+		if f.addrs[len(f.addrs)-1].IPNet.String() != ipv6+"/128" {
+			t.Fatalf("addresses = %v", f.addrs)
 		}
 		fake.info.IPAM.Config[len(fake.info.IPAM.Config)-1].AuxAddress = nil
 		if err := rt.CreateNet(context.Background()); err == nil {
@@ -686,8 +826,7 @@ func TestMacvlanIPv6DAD(t *testing.T) {
 			ctx,
 			"network-id",
 			f.links["eth0"],
-			ip,
-			netip.MustParsePrefix("2001:db8::/64"),
+			[]netip.Addr{ip},
 		)
 		if err == nil {
 			t.Fatal("accepted unusable IPv6 address")
@@ -704,84 +843,35 @@ func TestMacvlanIPv6DAD(t *testing.T) {
 	}
 }
 
-func TestMacvlanIPv6RouteConflict(t *testing.T) {
+func TestMacvlanIPv6HostRouteOverridesParentRoute(t *testing.T) {
 	f := newFakeMacvlanNetlink()
 	_, dst, _ := net.ParseCIDR("2001:db8::/64")
 	f.routes = []netlink.Route{{Dst: dst, LinkIndex: 1}}
-	err := (clabutils.MacvlanHost{Links: f}).Ensure(
+	host := clabutils.MacvlanHost{Links: f}
+	source := netip.MustParseAddr("2001:db8::2")
+	if err := host.Ensure(
 		context.Background(),
 		"network-id",
 		f.links["eth0"],
-		netip.MustParseAddr("2001:db8::2"),
-		netip.MustParsePrefix("2001:db8::/64"),
-	)
-	if err == nil || f.routeAdds != 0 {
-		t.Fatal("accepted conflicting IPv6 route")
-	}
-}
-
-func TestMacvlanNetworkReuseRejectsRemovedAux(t *testing.T) {
-	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
-	defer cleanup()
-	rt.mgmt = testMacvlanConfig()
-	f := newFakeMacvlanNetlink()
-	rt.macvlanNetlink = f
-	ctx := context.Background()
-	if err := rt.CreateNet(ctx); err != nil {
+		[]netip.Addr{source},
+	); err != nil {
 		t.Fatal(err)
 	}
-	rt.mgmt.MacvlanAux = ""
-	if err := rt.CreateNet(ctx); err == nil {
-		t.Fatal("reused network with unwanted host connectivity")
-	}
-	if fake.creates.Load() != 1 || fake.removes.Load() != 0 || f.deletes != 0 {
-		t.Fatal("changed network while rejecting incompatible settings")
-	}
-}
-
-func TestMacvlanHostProbeBeforeAssignment(t *testing.T) {
-	for _, occupied := range []bool{false, true} {
-		t.Run(fmt.Sprint(occupied), func(t *testing.T) {
-			f := newFakeMacvlanNetlink()
-			ip, prefix, _ := testMacvlanConfig().MacvlanHostAddress()
-			conflict := errors.New("occupied address")
-			calls := 0
-			host := clabutils.MacvlanHost{Links: f, Probe: func(_ context.Context, link *netlink.LinkAttrs, candidate netip.Addr) error {
-				calls++
-				if f.addrAdds != 0 || candidate != ip || link.Index == 0 {
-					t.Fatal("probe must receive the live interface and candidate before assignment")
-				}
-				if occupied {
-					return conflict
-				}
-				return nil
-			}}
-			err := host.Ensure(context.Background(), "network-id", f.links["eth0"], ip, prefix)
-			if occupied {
-				if !errors.Is(err, conflict) || f.addrAdds != 0 || f.routeAdds != 0 {
-					t.Fatalf("rejected probe changed addresses or routes: %v", err)
-				}
-			} else {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := host.Ensure(context.Background(), "network-id", f.links["eth0"], ip, prefix); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if calls != 1 {
-				t.Fatalf("probe calls = %d, want 1", calls)
-			}
-		})
+	if err := host.SyncRoutes(
+		"network-id",
+		[]netip.Addr{source},
+		[]netip.Addr{netip.MustParseAddr("2001:db8::140")},
+	); err != nil || f.routeAdds != 1 {
+		t.Fatalf("exact host route did not override parent route: %v", err)
 	}
 }
 
 func TestMacvlanParentSubnetDiscovery(t *testing.T) {
 	for _, tc := range []struct {
-		name                       string
-		addresses                  []string
-		v4, v6, gateway, pool, aux string
-		want4, want6, wantErr      string
+		name                  string
+		addresses             []string
+		v4, v6, gateway, pool string
+		want4, want6, wantErr string
 	}{
 		{name: "IPv4", addresses: []string{"192.0.2.10/24"}, want4: "192.0.2.0/24"},
 		{name: "IPv6", addresses: []string{"2001:db8::10/64", "fe80::1/64"}, want6: "2001:db8::/64"},
@@ -800,14 +890,12 @@ func TestMacvlanParentSubnetDiscovery(t *testing.T) {
 		{name: "do not infer unrequested IPv4", addresses: []string{"192.0.2.10/24"}, v6: "2001:db8::/64", want6: "2001:db8::/64"},
 		{name: "wrong gateway", addresses: []string{"192.0.2.10/24"}, gateway: "198.51.100.1", wantErr: "gateway"},
 		{name: "wrong pool", addresses: []string{"192.0.2.10/24"}, pool: "198.51.100.0/25", wantErr: "IP range"},
-		{name: "wrong auxiliary", addresses: []string{"192.0.2.10/24"}, aux: "198.51.100.5", wantErr: "containing subnet"},
-		{name: "IPv6 auxiliary", addresses: []string{"2001:db8::10/64"}, aux: "2001:db8::20/96", want6: "2001:db8::/64"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 			defer cleanup()
 			f := newFakeMacvlanNetlink()
-			rt.macvlanNetlink = f
+			rt.macvlanHost = clabutils.MacvlanHost{Links: f}
 			for _, value := range tc.addresses {
 				addr, err := netlink.ParseAddr(value)
 				if err != nil {
@@ -816,9 +904,16 @@ func TestMacvlanParentSubnetDiscovery(t *testing.T) {
 				addr.LinkIndex = f.links["eth0"].Attrs().Index
 				f.addrs = append(f.addrs, *addr)
 			}
-			rt.mgmt = &clabtypes.MgmtNet{Network: "macvlan-test", Driver: "macvlan", MacvlanParent: "eth0",
-				IPv4Subnet: tc.v4, IPv6Subnet: tc.v6, IPv4Gw: tc.gateway, IPv4Range: tc.pool, MacvlanAux: tc.aux,
-				IPAM: clabtypes.MgmtIPAM{DAD: new(false)}}
+			rt.mgmt = &clabtypes.MgmtNet{
+				Network:       "macvlan-test",
+				Driver:        "macvlan",
+				MacvlanParent: "eth0",
+				IPv4Subnet:    tc.v4,
+				IPv6Subnet:    tc.v6,
+				IPv4Gw:        tc.gateway,
+				IPv4Range:     tc.pool,
+				IPAM:          clabtypes.MgmtIPAM{DAD: new(false)},
+			}
 			err := rt.CreateNet(context.Background())
 			if tc.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {

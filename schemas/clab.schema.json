@@ -2129,10 +2129,9 @@
                     "description": "Macvlan mode; macvlan-aux requires bridge mode"
                 },
                 "macvlan-aux": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Reserved IPv4 or IPv6 host address, optionally with a prefix limiting the host route within the matching subnet",
-                    "markdownDescription": "[Host connectivity](https://containerlab.dev/manual/network/#macvlan-management-networks): IPv4 or IPv6 address or CIDR; requires macvlan bridge mode"
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable automatic auxiliary host interface (for MACVLAN bridge mode only)"
                 },
                 "external-access": {
                     "type": "boolean",

@@ -44,9 +44,6 @@ Runtime provider skips DAD even when it is enabled
 Shared MACVLAN network reserves other labs addresses with DAD disabled
     Shared Network Preserves Unique Addresses    macvlan
 
-Shared bridge network reserves other labs addresses with DAD disabled
-    Shared Network Preserves Unique Addresses    bridge
-
 
 *** Keywords ***
 Setup

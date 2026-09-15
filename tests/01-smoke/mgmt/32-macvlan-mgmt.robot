@@ -11,10 +11,9 @@ Suite Teardown      Cleanup
 ${runtime}                     docker
 ${topo}                        ${CURDIR}/32-macvlan-mgmt.clab.yml
 ${inferred-topo}               ${CURDIR}/32-macvlan-mgmt-inferred.clab.yml
-${auto-topo}                   ${CURDIR}/32-macvlan-mgmt-auto.clab.yml
-${auto-vars}                   /tmp/clab-smoke32-auto-vars.json
+${no-aux-topo}                 ${CURDIR}/32-macvlan-mgmt-no-aux.clab.yml
 ${network}                     clab-smoke32
-${auto-network}                clab-smoke32-auto
+${no-aux-network}              clab-smoke32-no-aux
 ${parent}                      clab-smoke32
 ${peer-ns}                     clab-smoke32-peer
 ${dynamic-node}                clab-32-macvlan-mgmt-dynamic
@@ -36,7 +35,6 @@ Deploy dual-stack MACVLAN management network
     Should Be True    ${in-pool}
     ${in-pool} =    Evaluate    ipaddress.ip_address($ipv6) in ipaddress.ip_network('fd00:32::/120')    modules=ipaddress
     Should Be True    ${in-pool}
-    Should Not Be Equal    ${ipv4}    198.18.32.129
     Set Suite Variable    ${preferred-v4}    ${ipv4}
     Set Suite Variable    ${preferred-v6}    ${ipv6}
     ${static-v4}    ${static-v6} =    Node Addresses    ${static-node}    ${network}
@@ -56,7 +54,7 @@ MACVLAN nodes inherit MTU and communicate over both families
     Wait Until Keyword Succeeds    10s    1s
     ...    Command Should Succeed    docker exec ${dynamic-node} ping -6 -c 1 -W 1 fd00:32::20
 
-Auxiliary interface provides host connectivity
+Enabled auxiliary interface provides host connectivity
     ${output} =    Command Should Succeed    ip -j route get ${preferred-v4}
     ${aux} =    Evaluate    json.loads($output)[0]['dev']    modules=json
     Should Not Be Equal    ${aux}    ${parent}
@@ -65,7 +63,14 @@ Auxiliary interface provides host connectivity
     ${assignment} =    Command Should Succeed    cat /sys/class/net/${aux}/addr_assign_type
     Should Be Equal As Integers    ${assignment}    3
     Set Suite Variable    ${aux-interface}    ${aux}
-    Command Should Succeed    ping -I 198.18.32.129 -c 1 -W 2 ${preferred-v4}
+    Route Prefix Should Use Interface    ${preferred-v4}    32    ${aux}
+    Route Prefix Should Use Interface    ${preferred-v6}    128    ${aux}
+    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -c 1 -W 1 ${preferred-v4}
+    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -6 -c 1 -W 1 ${preferred-v6}
+    Wait Until Keyword Succeeds    10s    1s
+    ...    Command Should Succeed    sudo ip netns exec ${peer-ns} ping -c 1 -W 1 ${preferred-v4}
+    Wait Until Keyword Succeeds    10s    1s
+    ...    Command Should Succeed    sudo ip netns exec ${peer-ns} ping -6 -c 1 -W 1 ${preferred-v6}
 
 DAD replaces preferred addresses occupied by an external peer
     Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${topo}
@@ -114,36 +119,39 @@ Runtime IPAM infers IPv4 and IPv6 subnets from the parent
     Should Be True    ${in-subnet}
     ${in-subnet} =    Evaluate    ipaddress.ip_address($ipv6) in ipaddress.ip_network('fd00:32::/64')    modules=ipaddress
     Should Be True    ${in-subnet}
+    ${route-interface} =    Route Interface    ${ipv4}
+    Should Not Be Equal    ${route-interface}    ${parent}
+    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -c 1 -W 1 ${ipv4}
+    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -6 -c 1 -W 1 ${ipv6}
     Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
 
-Automatic auxiliary interface enables host connectivity
-    Write Auto Aux Vars    ${EMPTY}
-    Command Should Succeed
-    ...    ${CLAB_BIN} --runtime docker deploy -t ${auto-topo} --vars ${auto-vars}
-    ${n1-v4}    ${n1-v6} =    Node Addresses    clab-32-macvlan-auto-n1    ${auto-network}
-    ${n2-v4}    ${n2-v6} =    Node Addresses    clab-32-macvlan-auto-n2    ${auto-network}
-    Wait Until Keyword Succeeds    10s    1s
-    ...    Command Should Succeed    docker exec clab-32-macvlan-auto-n1 ping -6 -c 1 -W 1 ${n2-v6}
+Auxiliary host connectivity can be disabled
+    Command Should Succeed    ${CLAB_BIN} --runtime docker deploy -t ${no-aux-topo}
+    ${n1-v4}    ${n1-v6} =    Node Addresses    clab-32-macvlan-no-aux-n1    ${no-aux-network}
+    ${n2-v4}    ${n2-v6} =    Node Addresses    clab-32-macvlan-no-aux-n2    ${no-aux-network}
+    ${info} =    Inspect Network    ${no-aux-network}
+    ${aux-interface} =    Evaluate
+    ...    'cm-' + hashlib.sha256($info['Id'].encode()).hexdigest()[:12]
+    ...    modules=hashlib
+    Interface Should Not Exist    ${aux-interface}
+    Route Prefix Should Not Exist    ${n1-v4}    32
+    Route Prefix Should Not Exist    ${n2-v4}    32
+    Route Prefix Should Not Exist    ${n1-v6}    128
+    Route Prefix Should Not Exist    ${n2-v6}    128
+    ${route-interface} =    Route Interface    ${n1-v4}
+    Should Be Equal    ${route-interface}    ${parent}
     ${route-interface} =    Route Interface    ${n1-v6}
     Should Be Equal    ${route-interface}    ${parent}
+    Host Should Not Reach    ${n1-v4}
+    Host Should Not Reach    ${n2-v4}
     Host Should Not Reach    ${n1-v6}
     Host Should Not Reach    ${n2-v6}
+    Wait Until Keyword Succeeds    10s    1s
+    ...    Command Should Succeed    docker exec clab-32-macvlan-no-aux-n1 ping -c 1 -W 1 ${n2-v4}
+    Wait Until Keyword Succeeds    10s    1s
+    ...    Command Should Succeed    docker exec clab-32-macvlan-no-aux-n1 ping -6 -c 1 -W 1 ${n2-v6}
     Command Should Succeed
-    ...    ${CLAB_BIN} --runtime docker destroy -t ${auto-topo} --vars ${auto-vars} --cleanup
-
-    Write Auto Aux Vars    auto
-    Command Should Succeed
-    ...    ${CLAB_BIN} --runtime docker deploy -t ${auto-topo} --vars ${auto-vars}
-    ${n1-v4}    ${n1-v6} =    Node Addresses    clab-32-macvlan-auto-n1    ${auto-network}
-    ${n2-v4}    ${n2-v6} =    Node Addresses    clab-32-macvlan-auto-n2    ${auto-network}
-    ${route-interface} =    Route Interface    ${n1-v6}
-    Should Not Be Equal    ${route-interface}    ${parent}
-    ${output} =    Command Should Succeed    ip -d link show ${route-interface}
-    Should Contain    ${output}    macvlan mode bridge
-    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -6 -c 1 -W 1 ${n1-v6}
-    Wait Until Keyword Succeeds    10s    1s    Command Should Succeed    ping -6 -c 1 -W 1 ${n2-v6}
-    Command Should Succeed
-    ...    ${CLAB_BIN} --runtime docker destroy -t ${auto-topo} --vars ${auto-vars} --cleanup
+    ...    ${CLAB_BIN} --runtime docker destroy -t ${no-aux-topo} --cleanup
 
 Reject inferred IPv4 /31 before creating the network
     Command Should Succeed    sudo ip addr flush dev ${parent} scope global
@@ -181,7 +189,8 @@ Setup
     Command Should Succeed    sudo ip link set ${parent} mtu 1400 up
     Command Should Succeed    sudo ip addr add 198.18.32.1/24 dev ${parent}
     Command Should Succeed    sudo ip -6 addr add fd00:32::1/64 dev ${parent} nodad
-    Write Auto Aux Vars    auto
+    Command Should Succeed    sudo ip -n ${peer-ns} addr add 198.18.32.2/24 dev eth0
+    Command Should Succeed    sudo ip -n ${peer-ns} -6 addr add fd00:32::2/64 dev eth0 nodad
 
 Cleanup
     IF    ${parent-created}
@@ -190,35 +199,48 @@ Cleanup
         Run Keyword And Continue On Failure
         ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${inferred-topo} --cleanup
         Run Keyword And Continue On Failure
-        ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${auto-topo} --vars ${auto-vars} --cleanup
+        ...    Command Should Succeed    ${CLAB_BIN} --runtime docker destroy -t ${no-aux-topo} --cleanup
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
         Run Keyword And Continue On Failure    Network Should Not Exist    ${network}
         Run Keyword And Continue On Failure    Network Should Not Exist    clab-smoke32-inferred
-        Run Keyword And Continue On Failure    Network Should Not Exist    ${auto-network}
+        Run Keyword And Continue On Failure    Network Should Not Exist    ${no-aux-network}
     END
     IF    ${peer-created}
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip netns del ${peer-ns}
     END
-    Remove File    ${auto-vars}
-
-Write Auto Aux Vars
-    [Arguments]    ${aux}
-    ${vars} =    Evaluate    json.dumps(dict(aux=$aux))    modules=json
-    Create File    ${auto-vars}    ${vars}
-
-Host Should Not Reach
-    [Arguments]    ${address}
-    FOR    ${attempt}    IN RANGE    3
-        ${rc}    ${output} =    Run And Return Rc And Output    ping -6 -c 1 -W 1 ${address} 2>&1
-        Log    ${output}
-        Should Not Be Equal As Integers    ${rc}    0
-    END
 
 Route Interface
     [Arguments]    ${address}
-    ${output} =    Command Should Succeed    ip -j -6 route get ${address}
+    ${family} =    Set Variable If    ':' in '${address}'    -6    -4
+    ${output} =    Command Should Succeed    ip -j ${family} route get ${address}
     ${interface} =    Evaluate    json.loads($output)[0]['dev']    modules=json
     RETURN    ${interface}
+
+Route Prefix Should Use Interface
+    [Arguments]    ${address}    ${prefix}    ${interface}
+    ${family} =    Set Variable If    ':' in '${address}'    -6    -4
+    ${output} =    Command Should Succeed    ip -j ${family} route show exact ${address}/${prefix}
+    ${routes} =    Evaluate    json.loads($output)    modules=json
+    Length Should Be    ${routes}    1
+    Should Be Equal    ${routes}[0][dev]    ${interface}
+
+Route Prefix Should Not Exist
+    [Arguments]    ${address}    ${prefix}
+    ${family} =    Set Variable If    ':' in '${address}'    -6    -4
+    ${output} =    Command Should Succeed    ip -j ${family} route show exact ${address}/${prefix}
+    ${routes} =    Evaluate    json.loads($output)    modules=json
+    Should Be Empty    ${routes}
+
+Host Should Not Reach
+    [Arguments]    ${address}
+    ${command} =    Set Variable If
+    ...    ':' in '${address}'    ping -6 -c 1 -W 1 ${address}
+    ...    ping -c 1 -W 1 ${address}
+    FOR    ${attempt}    IN RANGE    3
+        ${rc}    ${output} =    Run And Return Rc And Output    ${command} 2>&1
+        Log    ${output}
+        Should Not Be Equal As Integers    ${rc}    0
+    END
 
 Command Should Succeed
     [Arguments]    ${command}
