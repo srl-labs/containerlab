@@ -49,7 +49,7 @@ var (
 	cfgTemplate string
 
 	// IntfRegexp with named capture groups for extracting slot and port.
-	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
+	CapturingIntfRegexp = regexp.MustCompile(`^(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	// ethX naming is the "raw" or "default" interface naming.
 	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9]\d*$`)
 	// Matches on any allowed/legal interface name.
