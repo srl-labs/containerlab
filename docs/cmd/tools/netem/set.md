@@ -40,13 +40,7 @@ containerlab tools netem set [local-flags]
 
 ### node
 
-With the `--node | -n` flag a user specifies the node name as defined in the topology file. This flag requires a topology file to be provided via `--topo | -t` (or a lab name via `--name`).
-
-### container
-
-With the `--container | -c` flag a user specifies the container name directly. This mode does not require a topology file.
-
-One of `--node` or `--container` must be specified. These flags are mutually exclusive.
+With `--topo | -t` or `--name`, the mandatory `--node | -n` flag specifies a node name from the topology. Without topology context, it accepts a container name for backward compatibility.
 
 ### interface
 
@@ -93,7 +87,7 @@ containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --delay 5ms --jitte
 For container `clab-netem-r1` and its `eth1` interface, set delay of 5ms and jitter of 1ms:
 
 ```bash
-containerlab tools netem set -c clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
+containerlab tools netem set -n clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
 ```
 
 ### Setting packet loss
@@ -103,13 +97,13 @@ containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --loss 10
 ```
 
 ```bash title="setting packet loss at 10% rate using container name"
-containerlab tools netem set -c clab-netem-r1 -i eth1 --loss 10
+containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
 ```
 
 ### Clear any existing impairments
 
 ```bash
-containerlab tools netem set -c clab-netem-r1 -i eth1
+containerlab tools netem set -n clab-netem-r1 -i eth1
 +-----------+-------+--------+-------------+-------------+
 | Interface | Delay | Jitter | Packet Loss | Rate (kbit) |
 +-----------+-------+--------+-------------+-------------+

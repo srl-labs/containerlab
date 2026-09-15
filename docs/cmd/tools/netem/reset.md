@@ -12,13 +12,7 @@ containerlab tools netem reset [local-flags]
 
 ### node
 
-With the `--node | -n` flag a user specifies the node name as defined in the topology file. This flag requires a topology file to be provided via `--topo | -t` (or a lab name via `--name`).
-
-### container
-
-With the `--container | -c` flag a user specifies the container name directly. This mode does not require a topology file.
-
-One of `--node` or `--container` must be specified. These flags are mutually exclusive.
+With `--topo | -t` or `--name`, the mandatory `--node | -n` flag specifies a node name from the topology. Without topology context, it accepts a container name for backward compatibility.
 
 ### interface
 
@@ -45,7 +39,7 @@ Reset impairments on node "r1", interface "eth1"
 This example resets the impairments on the interface `eth1` of container `clab-netem-r1`:
 
 ```bash
-containerlab tools netem reset -c clab-netem-r1 -i eth1
+containerlab tools netem reset -n clab-netem-r1 -i eth1
 ```
 
 Output:
@@ -59,7 +53,7 @@ Reset impairments on node "clab-netem-r1", interface "eth1"
 If no impairments are configured on the specified interface, the command will complete without error:
 
 ```bash
-containerlab tools netem reset -c clab-netem-r1 -i eth0
+containerlab tools netem reset -n clab-netem-r1 -i eth0
 ```
 
 Output:

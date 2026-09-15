@@ -14,15 +14,9 @@ containerlab tools netem show [local-flags]
 
 ### node
 
-With the `--node | -n` flag a user specifies the node name as defined in the topology file. This flag requires a topology file to be provided via `--topo | -t` (or a lab name via `--name`).
+With `--topo | -t` or `--name`, the `--node | -n` flag specifies a node name from the topology. Without topology context, it accepts a container name for backward compatibility.
 
-### container
-
-With the `--container | -c` flag a user specifies the container name directly. This mode does not require a topology file.
-
-One of `--node` or `--container` must be specified to show impairments for a single node. These flags are mutually exclusive.
-
-When neither `--node` nor `--container` is specified, but a topology is provided via `--topo | -t`, the command shows impairments for all nodes in the topology.
+When `--node` is omitted but a topology is provided via `--topo | -t`, the command shows impairments for all nodes in the topology.
 
 ### format
 
@@ -46,7 +40,7 @@ containerlab tools netem show -n r1 -t netem.clab.yml
 ### Showing link impairments for a node using container name
 
 ```bash
-containerlab tools netem show -c clab-netem-r1
+containerlab tools netem show -n clab-netem-r1
 ```
 
 ### Showing link impairments for a node in json format
@@ -114,7 +108,7 @@ containerlab tools netem show -n srl -t netem.clab.yml --format json
 
 ### Showing impairments for all nodes in a topology
 
-When neither `--node` nor `--container` is specified, but `--topo` is provided, the command displays impairments for all nodes in the topology:
+When `--node` is omitted but `--topo` is provided, the command displays impairments for all nodes in the topology:
 
 ```bash
 containerlab tools netem show -t netem.clab.yml
