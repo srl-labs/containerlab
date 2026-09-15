@@ -484,7 +484,7 @@ func TestDADClientConcurrentScale(t *testing.T) {
 	}
 }
 
-func TestDADClientIPv6NDScale(t *testing.T) {
+func TestDADClientWireScale(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("requires root for network namespace and packet socket access")
 	}
@@ -549,51 +549,89 @@ func TestDADClientIPv6NDScale(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addresses := make([]netip.Addr, 1000)
-	address := netip.MustParseAddr("fd00:dad::")
-	for i := range addresses {
-		address = address.Next()
-		addresses[i] = address
-		linkAddress := &netlink.Addr{
-			IPNet: &net.IPNet{
-				IP:   net.IP(addresses[i].AsSlice()),
-				Mask: net.CIDRMask(64, 128),
-			},
-			Flags: unix.IFA_F_NODAD,
-		}
-		if err := peerLinks.AddrAdd(peer, linkAddress); err != nil {
-			t.Fatal(err)
+	ipv4Addresses := make([]netip.Addr, 1000)
+	ipv6Addresses := make([]netip.Addr, 1000)
+	ipv4 := netip.MustParseAddr("198.19.0.0")
+	ipv6 := netip.MustParseAddr("fd00:dad::")
+	for i := range ipv4Addresses {
+		ipv4 = ipv4.Next()
+		ipv6 = ipv6.Next()
+		ipv4Addresses[i], ipv6Addresses[i] = ipv4, ipv6
+		for _, address := range []struct {
+			ip    netip.Addr
+			bits  int
+			flags int
+		}{
+			{ip: ipv4, bits: 16},
+			{ip: ipv6, bits: 64, flags: unix.IFA_F_NODAD},
+		} {
+			linkAddress := &netlink.Addr{
+				IPNet: &net.IPNet{
+					IP:   net.IP(address.ip.AsSlice()),
+					Mask: net.CIDRMask(address.bits, address.ip.BitLen()),
+				},
+				Flags: address.flags,
+			}
+			if err := peerLinks.AddrAdd(peer, linkAddress); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
-	for _, count := range []int{10, 100, 500, 1000} {
-		t.Run(fmt.Sprint(count), func(t *testing.T) {
-			dad, err := NewDADClient(parentName)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer dad.Close()
-
-			started := time.Now()
-			results := make(chan error, count)
-			var probes sync.WaitGroup
-			for _, ip := range addresses[:count] {
-				probes.Go(func() {
-					available, err := dad.Probe(context.Background(), ip)
-					if err == nil && available {
-						err = fmt.Errorf("occupied address %s reported available", ip)
+	families := []struct {
+		name      string
+		addresses func(int) []netip.Addr
+	}{
+		{name: "IPv4", addresses: func(count int) []netip.Addr {
+			return ipv4Addresses[:count]
+		}},
+		{name: "IPv6", addresses: func(count int) []netip.Addr {
+			return ipv6Addresses[:count]
+		}},
+		{name: "dual-stack", addresses: func(count int) []netip.Addr {
+			addresses := append([]netip.Addr(nil), ipv4Addresses[:count]...)
+			return append(addresses, ipv6Addresses[:count]...)
+		}},
+	}
+	for _, family := range families {
+		t.Run(family.name, func(t *testing.T) {
+			for _, count := range []int{10, 100, 500, 1000} {
+				t.Run(fmt.Sprint(count), func(t *testing.T) {
+					dad, err := NewDADClient(parentName)
+					if err != nil {
+						t.Fatal(err)
 					}
-					results <- err
+					defer dad.Close()
+
+					targets := family.addresses(count)
+					started := time.Now()
+					results := make(chan error, len(targets))
+					var probes sync.WaitGroup
+					for _, ip := range targets {
+						probes.Go(func() {
+							available, err := dad.Probe(context.Background(), ip)
+							if err == nil && available {
+								err = fmt.Errorf("occupied address %s reported available", ip)
+							}
+							results <- err
+						})
+					}
+					probes.Wait()
+					close(results)
+					for err := range results {
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					t.Logf(
+						"%s scale %d (%d probes) completed in %s",
+						family.name,
+						count,
+						len(targets),
+						time.Since(started),
+					)
 				})
 			}
-			probes.Wait()
-			close(results)
-			for err := range results {
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			t.Logf("%d IPv6 ND probes completed in %s", count, time.Since(started))
 		})
 	}
 }
