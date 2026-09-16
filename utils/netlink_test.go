@@ -409,6 +409,25 @@ func TestMacvlanHostSyncRoutes(t *testing.T) {
 	}
 }
 
+func TestMacvlanHostSyncRoutesListsTableOncePerFamily(t *testing.T) {
+	f := newHostNetlink()
+	host := MacvlanHost{Links: f}
+	source := netip.MustParseAddr("192.0.2.129")
+	if err := host.Ensure(context.Background(), "network-id", hostParent(), []netip.Addr{source}); err != nil {
+		t.Fatal(err)
+	}
+	destinations := make([]netip.Addr, 32)
+	for i := range destinations {
+		destinations[i] = netip.AddrFrom4([4]byte{192, 0, 2, byte(i + 10)})
+	}
+	if err := host.SyncRoutes("network-id", []netip.Addr{source}, destinations); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls["list-routes"] != 2 {
+		t.Fatalf("listed routing table %d times for %d destinations", f.calls["list-routes"], len(destinations))
+	}
+}
+
 func TestMacvlanHostSyncRoutesReconcilesMainTable(t *testing.T) {
 	source := netip.MustParseAddr("192.0.2.129")
 	destination := netip.MustParseAddr("192.0.2.140")

@@ -40,9 +40,8 @@ type MacvlanHost struct {
 	Links MacvlanHostNetlink
 }
 
-func addMacvlan(links macvlanNetlink, attrs netlink.LinkAttrs, mode netlink.MacvlanMode) (*netlink.Macvlan, error) {
-	link := &netlink.Macvlan{LinkAttrs: attrs, Mode: mode}
-	return link, links.LinkAdd(link)
+func addMacvlan(links macvlanNetlink, attrs netlink.LinkAttrs, mode netlink.MacvlanMode) error {
+	return links.LinkAdd(&netlink.Macvlan{LinkAttrs: attrs, Mode: mode})
 }
 
 func macvlanHostName(networkID string) string {
@@ -104,7 +103,7 @@ func (h MacvlanHost) Ensure(
 		return fmt.Errorf("look up host interface %q: %w", name, err)
 	}
 	if err != nil {
-		link, err = addMacvlan(h.Links, netlink.LinkAttrs{
+		err = addMacvlan(h.Links, netlink.LinkAttrs{
 			Name: name, ParentIndex: parent.Attrs().Index,
 			MTU: parent.Attrs().MTU, HardwareAddr: macvlanHostMAC(networkID),
 		}, netlink.MACVLAN_MODE_BRIDGE)
@@ -247,28 +246,34 @@ func (h MacvlanHost) SyncRoutes(networkID string, sources, destinations []netip.
 	}
 
 	var stale []netlink.Route
+	tables := map[int][]netlink.Route{}
 	for _, family := range []int{netlink.FAMILY_V4, netlink.FAMILY_V6} {
-		routes, err := h.Links.RouteList(link, family)
+		routes, err := h.Links.RouteList(nil, family)
 		if err != nil {
 			return fmt.Errorf("list host routes for synchronization: %w", err)
 		}
+		kept := make([]netlink.Route, 0, len(routes))
 		for i := range routes {
 			route := &routes[i]
 			if !ownedMacvlanHostRoute(route, link.Attrs().Index) {
+				kept = append(kept, *route)
 				continue
 			}
 			destination, ok := netip.AddrFromSlice(route.Dst.IP)
 			if !ok {
+				kept = append(kept, *route)
 				continue
 			}
 			destination = destination.Unmap()
 			source := desired[destination]
 			if source.IsValid() && route.Src.Equal(net.IP(source.AsSlice())) {
 				delete(desired, destination)
+				kept = append(kept, *route)
 				continue
 			}
 			stale = append(stale, *route)
 		}
+		tables[family] = kept
 	}
 
 	for i := range stale {
@@ -281,6 +286,7 @@ func (h MacvlanHost) SyncRoutes(networkID string, sources, destinations []netip.
 			link,
 			source,
 			netip.PrefixFrom(destination, destination.BitLen()),
+			tables[netlinkFamily(destination)],
 		); err != nil {
 			return err
 		}
@@ -334,7 +340,12 @@ func (h MacvlanHost) waitAddressReady(ctx context.Context, link netlink.Link, ip
 	}
 }
 
-func (h MacvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.Prefix) error {
+func (h MacvlanHost) ensureRoute(
+	link netlink.Link,
+	ip netip.Addr,
+	prefix netip.Prefix,
+	routes []netlink.Route,
+) error {
 	want := &netlink.Route{
 		LinkIndex: link.Attrs().Index,
 		Dst: &net.IPNet{
@@ -351,13 +362,17 @@ func (h MacvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.
 		// Linux represents IPv6 on-link routes with universe scope.
 		want.Scope = netlink.SCOPE_UNIVERSE
 	}
-	found, err := h.checkRoute(want)
+	found, err := checkRoute(want, routes)
 	if err != nil || found {
 		return err
 	}
 	if err := h.Links.RouteAdd(want); err != nil {
 		if errors.Is(err, unix.EEXIST) {
-			found, checkErr := h.checkRoute(want)
+			routes, listErr := h.Links.RouteList(nil, netlinkFamily(ip))
+			if listErr != nil {
+				return fmt.Errorf("list host routes: %w", listErr)
+			}
+			found, checkErr := checkRoute(want, routes)
 			if checkErr != nil {
 				return checkErr
 			}
@@ -370,15 +385,7 @@ func (h MacvlanHost) ensureRoute(link netlink.Link, ip netip.Addr, prefix netip.
 	return nil
 }
 
-func (h MacvlanHost) checkRoute(want *netlink.Route) (bool, error) {
-	family := netlink.FAMILY_V4
-	if want.Dst.IP.To4() == nil {
-		family = netlink.FAMILY_V6
-	}
-	routes, err := h.Links.RouteList(nil, family)
-	if err != nil {
-		return false, fmt.Errorf("list host routes: %w", err)
-	}
+func checkRoute(want *netlink.Route, routes []netlink.Route) (bool, error) {
 	found := false
 	wantBits, _ := want.Dst.Mask.Size()
 	for _, route := range routes {

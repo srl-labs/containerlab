@@ -674,9 +674,9 @@ func podmanLeaseRangePrefix(lease *netTypes.LeaseRange) (string, error) {
 	}
 	for bits := 0; bits <= start.BitLen(); bits++ {
 		prefix := netip.PrefixFrom(start, bits).Masked()
-		_, network, err := net.ParseCIDR(prefix.String())
-		if err != nil {
-			return "", err
+		network := &net.IPNet{
+			IP:   net.IP(prefix.Addr().AsSlice()),
+			Mask: net.CIDRMask(prefix.Bits(), prefix.Addr().BitLen()),
 		}
 		first, err := netUtil.FirstIPInSubnet(network)
 		if err != nil {
