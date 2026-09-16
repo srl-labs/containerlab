@@ -41,7 +41,7 @@ type MacvlanHost struct {
 	Links MacvlanHostNetlink
 	// TCPChecksumFill installs or removes software TCP checksum fill on the aux iface.
 	// Nil skips the rule (tests).
-	TCPChecksumFill func(name string, enable bool) error
+	TCPChecksumFill func(name string, family int, enable bool) error
 }
 
 func addMacvlan(links macvlanNetlink, attrs netlink.LinkAttrs, mode netlink.MacvlanMode) error {
@@ -161,8 +161,10 @@ func (h MacvlanHost) Ensure(
 		}
 	}
 	if h.TCPChecksumFill != nil {
-		if err := h.TCPChecksumFill(name, true); err != nil {
-			log.Warnf("failed to install TCP checksum fill on %s: %v", name, err)
+		for _, address := range addresses {
+			if err := h.TCPChecksumFill(name, netlinkFamily(address), true); err != nil {
+				return fmt.Errorf("install TCP checksum fill on %q: %w", name, err)
+			}
 		}
 	}
 	return nil
@@ -443,8 +445,10 @@ func (h MacvlanHost) Remove(networkID string) error {
 		return err
 	}
 	if h.TCPChecksumFill != nil {
-		if err := h.TCPChecksumFill(name, false); err != nil {
-			log.Debugf("remove TCP checksum fill on %s: %v", name, err)
+		for _, family := range []int{netlink.FAMILY_V4, netlink.FAMILY_V6} {
+			if err := h.TCPChecksumFill(name, family, false); err != nil {
+				log.Debugf("remove TCP checksum fill on %s: %v", name, err)
+			}
 		}
 	}
 	// The kernel removes the interface's addresses and routes with the link.

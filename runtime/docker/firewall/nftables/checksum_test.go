@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
+	"golang.org/x/sys/unix"
 )
 
 func TestChecksumFillExprs(t *testing.T) {
@@ -21,50 +22,43 @@ func TestChecksumFillExprs(t *testing.T) {
 	}
 }
 
-func TestSetTCPChecksumFillSingleStack(t *testing.T) {
+func TestSetTCPChecksumFillFamily(t *testing.T) {
 	orig := checksumFillFamily
 	t.Cleanup(func() { checksumFillFamily = orig })
 
-	errV4 := errors.New("ipv4 unavailable")
-	errV6 := errors.New("ipv6 unavailable")
-
+	var got nftables.TableFamily
+	wantErr := errors.New("checksum unavailable")
+	checksumFillFamily = func(
+		_ *nftables.Conn,
+		family nftables.TableFamily,
+		_ string,
+		_ bool,
+	) error {
+		got = family
+		return wantErr
+	}
 	for _, tc := range []struct {
-		name    string
-		fail    map[nftables.TableFamily]error
-		wantErr bool
+		name string
+		af   int
+		want nftables.TableFamily
 	}{
-		{"dual stack", nil, false},
-		{"v4 only", map[nftables.TableFamily]error{nftables.TableFamilyIPv6: errV6}, false},
-		{"v6 only", map[nftables.TableFamily]error{nftables.TableFamilyIPv4: errV4}, false},
-		{"none", map[nftables.TableFamily]error{
-			nftables.TableFamilyIPv4: errV4,
-			nftables.TableFamilyIPv6: errV6,
-		}, true},
+		{"IPv4", unix.AF_INET, nftables.TableFamilyIPv4},
+		{"IPv6", unix.AF_INET6, nftables.TableFamilyIPv6},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fail := tc.fail
-			checksumFillFamily = func(
-				_ *nftables.Conn,
-				family nftables.TableFamily,
-				_ string,
-				_ bool,
-			) error {
-				return fail[family]
+			if err := SetTCPChecksumFill("cm-test", tc.af, true); !errors.Is(err, wantErr) {
+				t.Fatalf("error = %v; want %v", err, wantErr)
 			}
-			err := SetTCPChecksumFill("cm-test", true)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
+			if got != tc.want {
+				t.Fatalf("family = %v; want %v", got, tc.want)
 			}
 		})
 	}
 
-	if err := SetTCPChecksumFill("bad name", true); err == nil {
+	if err := SetTCPChecksumFill("bad name", unix.AF_INET, true); err == nil {
 		t.Fatal("accepted invalid interface name")
+	}
+	if err := SetTCPChecksumFill("cm-test", unix.AF_UNSPEC, true); err == nil {
+		t.Fatal("accepted unsupported address family")
 	}
 }

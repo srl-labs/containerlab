@@ -1,7 +1,6 @@
 package nftables
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -12,34 +11,29 @@ import (
 )
 
 const (
-	checksumTable = "containerlab"
+	checksumTable = "mangle"
 	checksumChain = "csum"
 )
 
 // SetTCPChecksumFill installs or removes a postrouting CHECKSUM fill rule on iface.
-func SetTCPChecksumFill(iface string, enable bool) error {
+func SetTCPChecksumFill(iface string, family int, enable bool) error {
 	if iface == "" || strings.ContainsAny(iface, " \t\n") {
 		return fmt.Errorf("invalid interface name %q", iface)
+	}
+	var tableFamily nftables.TableFamily
+	switch family {
+	case unix.AF_INET:
+		tableFamily = nftables.TableFamilyIPv4
+	case unix.AF_INET6:
+		tableFamily = nftables.TableFamilyIPv6
+	default:
+		return fmt.Errorf("unsupported address family %d", family)
 	}
 	conn, err := nftables.New()
 	if err != nil {
 		return err
 	}
-	var errs error
-	ok := false
-	for _, family := range []nftables.TableFamily{
-		nftables.TableFamilyIPv4, nftables.TableFamilyIPv6,
-	} {
-		if err := checksumFillFamily(conn, family, iface, enable); err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-		ok = true
-	}
-	if ok {
-		return nil
-	}
-	return errs
+	return checksumFillFamily(conn, tableFamily, iface, enable)
 }
 
 var checksumFillFamily = setTCPChecksumFill

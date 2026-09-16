@@ -563,12 +563,12 @@ func TestMacvlanHostChecksumFill(t *testing.T) {
 	var ops []string
 	host := MacvlanHost{
 		Links: f,
-		TCPChecksumFill: func(name string, enable bool) error {
+		TCPChecksumFill: func(name string, family int, enable bool) error {
 			op := "off"
 			if enable {
 				op = "on"
 			}
-			ops = append(ops, name+":"+op)
+			ops = append(ops, name+":"+strconv.Itoa(family)+":"+op)
 			return nil
 		},
 	}
@@ -579,20 +579,24 @@ func TestMacvlanHostChecksumFill(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := macvlanHostName("network-id")
-	if len(ops) != 2 || ops[0] != want+":on" || ops[1] != want+":off" {
+	if len(ops) != 3 ||
+		ops[0] != want+":"+strconv.Itoa(netlink.FAMILY_V4)+":on" ||
+		ops[1] != want+":"+strconv.Itoa(netlink.FAMILY_V4)+":off" ||
+		ops[2] != want+":"+strconv.Itoa(netlink.FAMILY_V6)+":off" {
 		t.Fatalf("checksum fill ops = %v", ops)
 	}
 }
 
-func TestMacvlanHostChecksumFillFailureIsNonFatal(t *testing.T) {
+func TestMacvlanHostChecksumFillFailure(t *testing.T) {
+	wantErr := errors.New("checksum unavailable")
 	host := MacvlanHost{
 		Links: newHostNetlink(),
-		TCPChecksumFill: func(string, bool) error {
-			return errors.New("checksum unavailable")
+		TCPChecksumFill: func(string, int, bool) error {
+			return wantErr
 		},
 	}
-	if err := ensureTestHost(context.Background(), host, false); err != nil {
-		t.Fatalf("checksum fill failure aborted setup: %v", err)
+	if err := ensureTestHost(context.Background(), host, false); !errors.Is(err, wantErr) {
+		t.Fatalf("error = %v; want %v", err, wantErr)
 	}
 }
 
