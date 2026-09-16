@@ -485,6 +485,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return nil
 	}
 
+	if err := n.RequireMgmtReachable(); err != nil {
+		return err
+	}
+
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	deadline := time.Now().Add(readyTimeout)
 	var lastHealthErr error

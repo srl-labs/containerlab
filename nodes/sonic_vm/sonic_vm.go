@@ -128,6 +128,10 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 		return nil
 	}
 
+	if err := n.RequireMgmtReachable(); err != nil {
+		return err
+	}
+
 	deadlineCtx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
 

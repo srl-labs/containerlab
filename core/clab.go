@@ -49,6 +49,7 @@ type CLab struct {
 
 	dependencyManager clabcoredependency_manager.DependencyManager
 	m                 *sync.RWMutex
+	mgmtRouteMu       sync.Mutex
 	timeout           time.Duration
 	globalRuntimeName string
 	// nodeFilter is a list of node names to be deployed,
@@ -412,6 +413,14 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			}
 
 			if !skipPostDeploy {
+				if err = c.SyncMgmtHostRoutes(ctx); err != nil {
+					err = fmt.Errorf("node %q post-deploy: synchronize management host routes: %w", node.Config().ShortName, err)
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
+				}
+
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
 					err = fmt.Errorf("node %q post-deploy: %w", node.Config().ShortName, err)

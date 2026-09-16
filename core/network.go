@@ -35,10 +35,13 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 
 // SyncMgmtHostRoutes reconciles host routes to current macvlan management endpoints.
 func (c *CLab) SyncMgmtHostRoutes(ctx context.Context) error {
-	if c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan ||
+	if c.Config == nil || c.Config.Mgmt == nil ||
+		c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan ||
 		!c.Config.Mgmt.MacvlanAuxEnabled() {
 		return nil
 	}
+	c.mgmtRouteMu.Lock()
+	defer c.mgmtRouteMu.Unlock()
 	return c.globalRuntime().SyncMgmtHostRoutes(ctx)
 }
 
