@@ -38,13 +38,19 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	if err := c.WriteState(); err != nil {
 		t.Fatal(err)
 	}
+	data, err := os.ReadFile(paths.StateFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "ipam:\n  node:\n    ipv4: 192.0.2.5\n") {
+		t.Fatalf("unexpected state format:\n%s", data)
+	}
 	state, err := c.LoadState()
 	if err != nil {
 		t.Fatal(err)
 	}
-	preferred := state.Nodes["node"].IPAM
-	if preferred == nil || preferred.IPv4 != cfg.MgmtIPv4Address ||
-		preferred.IPv6 != cfg.MgmtIPv6Address {
+	preferred := state.IPAM["node"]
+	if preferred.IPv4 != cfg.MgmtIPv4Address || preferred.IPv6 != cfg.MgmtIPv6Address {
 		t.Fatalf("missing preferred allocation: %+v", preferred)
 	}
 	if state.Topology.Nodes["node"].MgmtIPv4 != "" || topology.Nodes["node"].MgmtIPv4 != "" {
@@ -59,7 +65,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Nodes["node"].IPAM.IPv4 != "192.0.2.5" {
+	if state.IPAM["node"].IPv4 != "192.0.2.5" {
 		t.Fatal("no-op write lost allocation")
 	}
 	// Explicit configuration is kept solely in the desired topology.
@@ -71,7 +77,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Nodes["node"].IPAM.IPv4 != "" || state.Topology.Nodes["node"].MgmtIPv4 != "192.0.2.9" {
+	if state.IPAM["node"].IPv4 != "" || state.Topology.Nodes["node"].MgmtIPv4 != "192.0.2.9" {
 		t.Fatal("explicit address was not kept separate")
 	}
 	entries, err := os.ReadDir(filepath.Dir(paths.StateFile()))
@@ -89,7 +95,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 		t.Fatal(err)
 	}
 	state, err = c.LoadState()
-	if err != nil || len(state.Nodes) != 0 {
+	if err != nil || len(state.IPAM) != 0 {
 		t.Fatalf("deleted node retained: %+v, %v", state, err)
 	}
 }
@@ -108,7 +114,7 @@ func TestLegacyStateWithoutAllocationPreferences(t *testing.T) {
 	}
 	c := &CLab{TopoPaths: paths}
 	state, err := c.LoadState()
-	if err != nil || state.Topology.Nodes["node"].Kind != "linux" || len(state.Nodes) != 0 {
+	if err != nil || state.Topology.Nodes["node"].Kind != "linux" || len(state.IPAM) != 0 {
 		t.Fatalf("legacy state: %+v, %v", state, err)
 	}
 }

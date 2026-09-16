@@ -306,7 +306,7 @@ func TestPrepareManagementNetworkLoadsPreferredAddress(t *testing.T) {
 	}
 	if err := os.WriteFile(
 		paths.StateFile(),
-		[]byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"),
+		[]byte("ipam:\n  node:\n    ipv4: 192.0.2.5\n"),
 		0644,
 	); err != nil {
 		t.Fatal(err)
@@ -357,7 +357,7 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			}
 			if err := os.WriteFile(
 				paths.StateFile(),
-				[]byte("nodes:\n  node:\n    ipam:\n      ipv4: 192.0.2.5\n"),
+				[]byte("ipam:\n  node:\n    ipv4: 192.0.2.5\n"),
 				0644,
 			); err != nil {
 				t.Fatal(err)

@@ -14,12 +14,8 @@ import (
 )
 
 type LabState struct {
-	Topology *clabtypes.Topology     `yaml:"topology"`
-	Nodes    map[string]labNodeState `yaml:"nodes,omitempty"`
-}
-
-type labNodeState struct {
-	IPAM *clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
+	Topology *clabtypes.Topology                `yaml:"topology"`
+	IPAM     map[string]clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
 }
 
 // WriteState saves the topology to the state file.
@@ -67,7 +63,7 @@ func (c *CLab) WriteState() error {
 }
 
 func (c *CLab) writeIPAMState(state *LabState) {
-	state.Nodes = make(map[string]labNodeState)
+	state.IPAM = make(map[string]clabtypes.NodeAddresses)
 	if c.Config.Mgmt == nil || c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return
 	}
@@ -81,8 +77,8 @@ func (c *CLab) writeIPAMState(state *LabState) {
 			continue
 		}
 		addresses := clabtypes.NodeAddresses{}
-		if previous != nil && previous.Nodes[name].IPAM != nil {
-			addresses = *previous.Nodes[name].IPAM
+		if previous != nil {
+			addresses = previous.IPAM[name]
 		}
 		if cfg.MgmtIPv4Address != "" {
 			addresses.IPv4 = cfg.MgmtIPv4Address
@@ -107,7 +103,7 @@ func (c *CLab) writeIPAMState(state *LabState) {
 			}
 		}
 		if addresses.IPv4 != "" || addresses.IPv6 != "" {
-			state.Nodes[name] = labNodeState{IPAM: &addresses}
+			state.IPAM[name] = addresses
 		}
 	}
 }

@@ -316,10 +316,8 @@ func (c *CLab) allocateLabManagementIPs(ctx context.Context, existing []clabtype
 	}
 
 	if state != nil {
-		for name, node := range state.Nodes {
-			if node.IPAM != nil {
-				preferred[name] = *node.IPAM
-			}
+		for name, addresses := range state.IPAM {
+			preferred[name] = addresses
 		}
 	}
 
