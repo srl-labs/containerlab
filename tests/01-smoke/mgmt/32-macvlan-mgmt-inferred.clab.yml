@@ -1,0 +1,15 @@
+name: 32-macvlan-inferred
+
+mgmt:
+  network: clab-smoke32-inferred
+  driver: macvlan
+  macvlan-parent: clab-smoke32
+  ipam:
+    provider: runtime
+
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+      cmd: sleep 9999

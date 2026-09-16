@@ -856,6 +856,64 @@ func TestNamespaceNodeUsesDefaultLifecycle(t *testing.T) {
 	require.NoError(t, holder.Delete(ctx))
 }
 
+func TestDeployFabricUsesResolvedManagementAddresses(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		{Slot: slotAName}, {Slot: "1"},
+	})
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
+
+	n.Cfg.MgmtIPv4Address = "172.20.20.10"
+	n.Cfg.MgmtIPv4PrefixLength = 24
+	n.Cfg.MgmtIPv4Gateway = "172.20.20.1"
+	n.Cfg.MgmtIPv6Address = "3fff:172:20:20::10"
+	n.Cfg.MgmtIPv6PrefixLength = 64
+	n.Cfg.MgmtIPv6Gateway = "3fff:172:20:20::1"
+
+	var components []clabnodes.Node
+	for _, slot := range []string{slotAName, "1"} {
+		component := clabmocksmocknodes.NewMockNode(ctrl)
+		component.EXPECT().Config().Return(&clabtypes.NodeConfig{
+			Env: map[string]string{envNokiaSrosSlot: slot},
+		}).AnyTimes()
+		component.EXPECT().GetShortName().Return("n1-" + strings.ToLower(slot)).AnyTimes()
+		component.EXPECT().PreDeploy(ctx, gomock.Any()).Return(nil)
+		component.EXPECT().Deploy(ctx, gomock.Any()).Return(nil)
+		components = append(components, component)
+	}
+	n.componentNodes = components
+
+	mockRuntime.EXPECT().
+		CreateContainer(ctx, gomock.Any()).
+		DoAndReturn(func(_ context.Context, cfg *clabtypes.NodeConfig) (string, error) {
+			assert.Equal(t, n.Cfg.MgmtIPv4Address, cfg.MgmtIPv4Address)
+			assert.Equal(t, n.Cfg.MgmtIPv4PrefixLength, cfg.MgmtIPv4PrefixLength)
+			assert.Equal(t, n.Cfg.MgmtIPv4Gateway, cfg.MgmtIPv4Gateway)
+			assert.Equal(t, n.Cfg.MgmtIPv6Address, cfg.MgmtIPv6Address)
+			assert.Equal(t, n.Cfg.MgmtIPv6PrefixLength, cfg.MgmtIPv6PrefixLength)
+			assert.Equal(t, n.Cfg.MgmtIPv6Gateway, cfg.MgmtIPv6Gateway)
+			return "holder-id", nil
+		})
+	mockRuntime.EXPECT().StartContainer(ctx, "holder-id", gomock.Any()).Return(nil, nil)
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{{
+			ID: "holder-id",
+			NetworkSettings: clabruntime.GenericMgmtIPs{
+				IPv4addr: n.Cfg.MgmtIPv4Address,
+				IPv4pLen: n.Cfg.MgmtIPv4PrefixLength,
+				IPv4Gw:   n.Cfg.MgmtIPv4Gateway,
+				IPv6addr: n.Cfg.MgmtIPv6Address,
+				IPv6pLen: n.Cfg.MgmtIPv6PrefixLength,
+				IPv6Gw:   n.Cfg.MgmtIPv6Gateway,
+			},
+		}}, nil)
+
+	require.NoError(t, n.deployFabric(ctx, nil))
+}
+
 func TestNamespaceNodeOnlyForDistributedComponents(t *testing.T) {
 	tests := []struct {
 		name       string

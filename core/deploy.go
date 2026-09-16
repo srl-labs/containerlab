@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/srl-labs/containerlab/mgmt"
+	clabtypes "github.com/srl-labs/containerlab/types"
 
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
@@ -201,6 +205,9 @@ func (c *CLab) deploy( //nolint: funlen
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
 		return nil, err
 	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return nil, err
+	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
 	// vxlan stitched endpoints).
@@ -265,10 +272,17 @@ func waitForNodeDeploy(
 	return nil
 }
 
-func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
+func (c *CLab) prepareLabManagementNetwork(
+	ctx context.Context,
+	existing ...clabtypes.ExistingAddress,
+) (bool, error) {
 	skipMgmt := c.skipMgmtNetwork()
 	if !skipMgmt {
 		if err := c.CreateNetwork(ctx); err != nil {
+			return skipMgmt, err
+		}
+
+		if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
 			return skipMgmt, err
 		}
 	}
@@ -278,6 +292,82 @@ func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
 	}
 
 	return skipMgmt, nil
+}
+
+func (c *CLab) allocateLabManagementIPs(ctx context.Context, existing []clabtypes.ExistingAddress) error {
+	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+		return nil
+	}
+
+	configs := make([]*clabtypes.NodeConfig, 0, len(c.Nodes))
+	for _, node := range c.Nodes {
+		configs = append(configs, node.Config())
+	}
+
+	reserved, err := c.collectReservedManagementAddresses(ctx, existing)
+	if err != nil {
+		return err
+	}
+
+	preferred := make(map[string]clabtypes.NodeAddresses)
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Ignoring preferred management addresses", "error", err)
+	}
+
+	if state != nil {
+		for name, addresses := range state.IPAM {
+			preferred[name] = addresses
+		}
+	}
+
+	return mgmt.AllocateManagementIPs(
+		ctx,
+		c.Config.Mgmt,
+		configs,
+		clabtypes.AllocationOptions{Existing: existing, Preferred: preferred, Reserved: reserved},
+	)
+}
+
+func (c *CLab) collectReservedManagementAddresses(
+	ctx context.Context,
+	existing []clabtypes.ExistingAddress,
+) ([]netip.Addr, error) {
+	var subnets []netip.Prefix
+	for _, value := range []string{c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet} {
+		if value == "" {
+			continue
+		}
+		subnet, err := netip.ParsePrefix(value)
+		if err != nil {
+			return nil, fmt.Errorf("management subnet %q: %w", value, err)
+		}
+		subnets = append(subnets, subnet)
+	}
+	occupied, err := c.globalRuntime().NetworkAddresses(ctx, subnets)
+	if err != nil {
+		return nil, err
+	}
+	type ownerAddress struct {
+		containerID string
+		address     netip.Addr
+	}
+	reused := make(map[ownerAddress]bool, len(existing))
+	for _, entry := range existing {
+		if entry.ContainerID != "" {
+			reused[ownerAddress{entry.ContainerID, entry.Address}] = true
+		}
+	}
+
+	var reserved []netip.Addr
+	for _, entry := range occupied {
+		if entry.NetworkName == c.Config.Mgmt.Network &&
+			reused[ownerAddress{entry.ContainerID, entry.Address}] {
+			continue
+		}
+		reserved = append(reserved, entry.Address)
+	}
+	return reserved, nil
 }
 
 func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bool) error {
