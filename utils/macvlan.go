@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
@@ -38,6 +39,9 @@ type MacvlanHostNetlink interface {
 // MacvlanHost manages an owned auxiliary interface and its host routes.
 type MacvlanHost struct {
 	Links MacvlanHostNetlink
+	// TCPChecksumFill installs or removes software TCP checksum fill on the aux iface.
+	// Nil skips the rule (tests).
+	TCPChecksumFill func(name string, enable bool) error
 }
 
 func addMacvlan(links macvlanNetlink, attrs netlink.LinkAttrs, mode netlink.MacvlanMode) error {
@@ -154,6 +158,11 @@ func (h MacvlanHost) Ensure(
 	for _, address := range addresses {
 		if err := h.ensureAddress(ctx, link, address); err != nil {
 			return err
+		}
+	}
+	if h.TCPChecksumFill != nil {
+		if err := h.TCPChecksumFill(name, true); err != nil {
+			log.Warnf("failed to install TCP checksum fill on %s: %v", name, err)
 		}
 	}
 	return nil
@@ -432,6 +441,11 @@ func (h MacvlanHost) Remove(networkID string) error {
 	}
 	if err := macvlanHostRequireOwned(link, networkID); err != nil {
 		return err
+	}
+	if h.TCPChecksumFill != nil {
+		if err := h.TCPChecksumFill(name, false); err != nil {
+			log.Debugf("remove TCP checksum fill on %s: %v", name, err)
+		}
 	}
 	// The kernel removes the interface's addresses and routes with the link.
 	if err := h.Links.LinkDel(link); err != nil && !errors.Is(err, unix.ENODEV) {

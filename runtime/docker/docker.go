@@ -40,6 +40,7 @@ import (
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabnftables "github.com/srl-labs/containerlab/runtime/docker/firewall/nftables"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
@@ -72,8 +73,11 @@ type DeviceMapping struct {
 func init() {
 	clabruntime.Register(RuntimeName, func() clabruntime.ContainerRuntime {
 		return &DockerRuntime{
-			mgmt:        new(clabtypes.MgmtNet),
-			macvlanHost: clabutils.MacvlanHost{Links: &netlink.Handle{}},
+			mgmt: new(clabtypes.MgmtNet),
+			macvlanHost: clabutils.MacvlanHost{
+				Links:           &netlink.Handle{},
+				TCPChecksumFill: clabnftables.SetTCPChecksumFill,
+			},
 		}
 	})
 }

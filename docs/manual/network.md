@@ -525,7 +525,7 @@ mgmt:
 
 When enabled, containerlab selects an unused /32 or /128 auxiliary address checks it on the parent Layer 2 segment.
 
-After nodes attach to the network, containerlab adds an exact `/32` or `/128` host routes for each node so that the host may reach them via the auxiliary interface.
+After nodes attach to the network, containerlab adds exact `/32` or `/128` host routes via the auxiliary interface, and a postrouting TCP checksum rule which allows connectivity for NOSes verifying TCP checksums.
 
 ### Skipping the management network
 

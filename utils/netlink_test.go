@@ -558,6 +558,44 @@ func TestMacvlanHostIPv6Sysctl(t *testing.T) {
 	}
 }
 
+func TestMacvlanHostChecksumFill(t *testing.T) {
+	f := newHostNetlink()
+	var ops []string
+	host := MacvlanHost{
+		Links: f,
+		TCPChecksumFill: func(name string, enable bool) error {
+			op := "off"
+			if enable {
+				op = "on"
+			}
+			ops = append(ops, name+":"+op)
+			return nil
+		},
+	}
+	if err := ensureTestHost(context.Background(), host, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := host.Remove("network-id"); err != nil {
+		t.Fatal(err)
+	}
+	want := macvlanHostName("network-id")
+	if len(ops) != 2 || ops[0] != want+":on" || ops[1] != want+":off" {
+		t.Fatalf("checksum fill ops = %v", ops)
+	}
+}
+
+func TestMacvlanHostChecksumFillFailureIsNonFatal(t *testing.T) {
+	host := MacvlanHost{
+		Links: newHostNetlink(),
+		TCPChecksumFill: func(string, bool) error {
+			return errors.New("checksum unavailable")
+		},
+	}
+	if err := ensureTestHost(context.Background(), host, false); err != nil {
+		t.Fatalf("checksum fill failure aborted setup: %v", err)
+	}
+}
+
 func TestMacvlanHostRemoveOrphans(t *testing.T) {
 	f := newHostNetlink()
 	host := MacvlanHost{Links: f}

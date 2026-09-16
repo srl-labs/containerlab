@@ -10,6 +10,7 @@ import (
 	networkapi "github.com/docker/docker/api/types/network"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/srl-labs/containerlab/mgmt"
+	clabnftables "github.com/srl-labs/containerlab/runtime/docker/firewall/nftables"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/srl-labs/containerlab/utils/ipam"
@@ -17,7 +18,9 @@ import (
 
 func (d *DockerRuntime) managementMacvlanHost() clabutils.MacvlanHost {
 	if d.macvlanHost.Links == nil {
-		return mgmt.NewMacvlanHost(nil)
+		host := mgmt.NewMacvlanHost(nil)
+		host.TCPChecksumFill = clabnftables.SetTCPChecksumFill
+		return host
 	}
 	return d.macvlanHost
 }
