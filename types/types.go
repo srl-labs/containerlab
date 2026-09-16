@@ -517,6 +517,11 @@ type MgmtDriver string
 const (
 	MgmtDriverBridge  MgmtDriver = "bridge"
 	MgmtDriverMacvlan MgmtDriver = "macvlan"
+
+	MacvlanModeBridge   = "bridge"
+	MacvlanModePrivate  = "private"
+	MacvlanModeVEPA     = "vepa"
+	MacvlanModePassthru = "passthru"
 )
 
 // IsValid reports whether the driver is supported.

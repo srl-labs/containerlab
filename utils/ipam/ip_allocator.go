@@ -17,7 +17,7 @@ type ipPrefixNode struct {
 	children [2]*ipPrefixNode
 }
 
-// a generic IP allocator
+// IPAllocator assigns addresses from one subnet. It is not safe for concurrent use.
 type IPAllocator struct {
 	subnet netip.Prefix
 	pool   netip.Prefix
@@ -218,11 +218,16 @@ func isValidAllocationPool(subnet, pool netip.Prefix) bool {
 	return subnet.Contains(pool.Masked().Addr())
 }
 
-// Reserve excludes an explicit address, reporting duplicates and boundaries.
+// Reserve excludes an explicit address.
 func (a *IPAllocator) Reserve(ip netip.Addr) error {
-	_, occupied := a.used.lookup(ip)
-	if !a.subnet.Contains(ip) || occupied {
-		return fmt.Errorf("invalid, reserved or duplicate address %s in %s", ip, a.subnet)
+	if !ip.IsValid() || ip.Is4In6() {
+		return fmt.Errorf("invalid address %s", ip)
+	}
+	if !a.subnet.Contains(ip) {
+		return fmt.Errorf("address %s is outside subnet %s", ip, a.subnet)
+	}
+	if _, occupied := a.used.lookup(ip); occupied {
+		return fmt.Errorf("address %s is already reserved in %s", ip, a.subnet)
 	}
 	a.used.add(netip.PrefixFrom(ip, ip.BitLen()))
 	return nil
@@ -230,23 +235,15 @@ func (a *IPAllocator) Reserve(ip netip.Addr) error {
 
 // Next reserves and returns the first free address accepted by duplicate detection.
 func (a *IPAllocator) Next(ctx context.Context, clients ...*DADClient) (netip.Addr, error) {
-	addresses, err := a.NextBatch(ctx, 1, clients...)
+	dad, err := dadClient(clients)
+	if err != nil {
+		return netip.Addr{}, err
+	}
+	addresses, err := a.nextBatch(ctx, 1, dad)
 	if err != nil {
 		return netip.Addr{}, err
 	}
 	return addresses[0], nil
-}
-
-// NextBatch reserves addresses and probes each candidate batch concurrently.
-func (a *IPAllocator) NextBatch(ctx context.Context, count int, clients ...*DADClient) ([]netip.Addr, error) {
-	if count < 0 {
-		return nil, fmt.Errorf("address count must not be negative")
-	}
-	dad, err := dadClient(clients)
-	if err != nil {
-		return nil, err
-	}
-	return a.nextBatch(ctx, count, dad)
 }
 
 // NextPreferredBatch reserves available preferred addresses and replaces unavailable preferences from the pool.

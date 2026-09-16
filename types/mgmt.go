@@ -38,7 +38,7 @@ func (m *MgmtNet) Validate() error {
 		return fmt.Errorf("mgmt.external-access: false is not supported for macvlan networks")
 	}
 	switch m.EffectiveMacvlanMode() {
-	case "bridge", "private", "vepa", "passthru":
+	case MacvlanModeBridge, MacvlanModePrivate, MacvlanModeVEPA, MacvlanModePassthru:
 	default:
 		return fmt.Errorf("unsupported mgmt.macvlan-mode %q", m.MacvlanMode)
 	}
@@ -64,21 +64,18 @@ func (m *MgmtNet) Validate() error {
 
 // MacvlanAuxEnabled reports whether auxiliary host connectivity is enabled.
 func (m *MgmtNet) MacvlanAuxEnabled() bool {
-	return m.EffectiveMacvlanMode() == "bridge" && (m.MacvlanAux == nil || *m.MacvlanAux)
+	return m.EffectiveMacvlanMode() == MacvlanModeBridge && (m.MacvlanAux == nil || *m.MacvlanAux)
 }
 
 // EffectiveMacvlanMode returns Docker's default mode when no mode was specified.
 func (m *MgmtNet) EffectiveMacvlanMode() string {
 	if m.MacvlanMode == "" {
-		return "bridge"
+		return MacvlanModeBridge
 	}
 	return m.MacvlanMode
 }
 
 func validateMacvlanSubnet(subnet, gateway, ipRange string, ipv4 bool) error {
-	if subnet == "" && gateway == "" && ipRange == "" {
-		return nil
-	}
 	prefix, err := netip.ParsePrefix(subnet)
 	if err != nil || prefix.Addr().Is4() != ipv4 || prefix.Addr().Is4In6() {
 		return fmt.Errorf(

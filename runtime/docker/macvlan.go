@@ -134,16 +134,16 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context, excluded []net
 	if cerrdefs.IsNotFound(inspectErr) {
 		log.Info("Creating docker network", "name", d.mgmt.Network, "driver", "macvlan",
 			"parent", d.mgmt.MacvlanParent)
-		_, err = d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
-		if err != nil && !cerrdefs.IsConflict(err) {
+		if _, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts); err != nil &&
+			!cerrdefs.IsConflict(err) {
 			return fmt.Errorf("create macvlan network %q: %w", d.mgmt.Network, err)
 		}
 		// Both a successful create and a concurrent create must be inspected and
 		// validated before any host configuration is changed.
 		nres, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	}
-	if err != nil {
-		return fmt.Errorf("inspect macvlan network %q: %w", d.mgmt.Network, err)
+		if err != nil {
+			return fmt.Errorf("inspect macvlan network %q: %w", d.mgmt.Network, err)
+		}
 	}
 	if err := validateMacvlanNetwork(&nres, opts); err != nil {
 		return fmt.Errorf("cannot reuse network %q: %w", d.mgmt.Network, err)
@@ -152,7 +152,6 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context, excluded []net
 	if err := mgmt.EnsureMacvlanHost(nctx, d.mgmt, host, parent, nres.ID, auxiliary); err != nil {
 		return err
 	}
-	d.mgmt.Bridge = ""
 	setMgmtIPAMFromDockerPools(d.mgmt, nres.IPAM.Config, true)
 
 	return nil
@@ -229,7 +228,7 @@ func validateMacvlanNetwork(n *networkapi.Inspect, want networkapi.CreateOptions
 	for key, value := range want.Options {
 		actual := n.Options[key]
 		if key == "macvlan_mode" && actual == "" {
-			actual = "bridge"
+			actual = clabtypes.MacvlanModeBridge
 		}
 		if actual != value {
 			return fmt.Errorf("driver option %q is %q, requested %q", key, actual, value)

@@ -42,7 +42,7 @@ func AllocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 
 	var dad *ipam.DADClient
 	if m.IPAM.DADEnabled() && m.Driver == clabtypes.MgmtDriverMacvlan &&
-		m.EffectiveMacvlanMode() == "bridge" {
+		m.EffectiveMacvlanMode() == clabtypes.MacvlanModeBridge {
 		var err error
 		dad, err = ipam.NewDADClient(m.MacvlanParent)
 		if err != nil {
@@ -169,6 +169,14 @@ func AllocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*c
 			}
 			if owned[address] == assignment.node.ShortName {
 				continue
+			}
+			if !allocation.Contains(address) {
+				return fmt.Errorf(
+					"node %s: management address %s is outside IP range %s",
+					assignment.node.ShortName,
+					address,
+					allocation,
+				)
 			}
 			if err := allocator.Reserve(address); err != nil {
 				return fmt.Errorf("node %s: %w", assignment.node.ShortName, err)

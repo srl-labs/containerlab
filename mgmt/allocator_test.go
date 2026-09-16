@@ -90,6 +90,19 @@ func TestAllocateIPsReservationsAndExhaustion(t *testing.T) {
 	); err == nil {
 		t.Fatal("accepted gateway")
 	}
+	if err := AllocateManagementIPs(
+		context.Background(),
+		&clabtypes.MgmtNet{
+			IPAM:       clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab},
+			IPv4Subnet: "192.0.2.0/24",
+			IPv4Range:  "192.0.2.128/26",
+		},
+		[]*clabtypes.NodeConfig{{ShortName: "a", MgmtIPv4Address: "192.0.2.10"}},
+		clabtypes.AllocationOptions{},
+	); err == nil || !strings.Contains(err.Error(), "192.0.2.10") ||
+		!strings.Contains(err.Error(), "192.0.2.128/26") {
+		t.Fatalf("static address outside IP range: %v", err)
+	}
 	if err := AllocateManagementIPs(context.Background(),
 		m,
 		[]*clabtypes.NodeConfig{

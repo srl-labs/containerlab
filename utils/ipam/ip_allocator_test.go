@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"net/netip"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -146,7 +147,7 @@ func TestIPAllocatorNextBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	addresses, err := allocator.NextBatch(context.Background(), 3)
+	addresses, err := allocator.nextBatch(context.Background(), 3, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,8 +159,24 @@ func TestIPAllocatorNextBatch(t *testing.T) {
 	if !slices.Equal(addresses, want) {
 		t.Fatalf("addresses = %v, want %v", addresses, want)
 	}
-	if _, err := allocator.NextBatch(context.Background(), -1); err == nil {
-		t.Fatal("accepted negative batch size")
+}
+
+func TestIPAllocatorReserveErrors(t *testing.T) {
+	prefix := netip.MustParsePrefix("192.0.2.0/24")
+	a, err := NewIPAllocator(prefix, prefix, []netip.Addr{netip.MustParseAddr("192.0.2.1")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Reserve(netip.Addr{}); err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("Reserve(invalid) = %v", err)
+	}
+	if err := a.Reserve(netip.MustParseAddr("198.51.100.1")); err == nil ||
+		!strings.Contains(err.Error(), "outside subnet") {
+		t.Fatalf("Reserve(outside) = %v", err)
+	}
+	if err := a.Reserve(netip.MustParseAddr("192.0.2.1")); err == nil ||
+		!strings.Contains(err.Error(), "already reserved") {
+		t.Fatalf("Reserve(duplicate) = %v", err)
 	}
 }
 

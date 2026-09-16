@@ -75,6 +75,18 @@ func macvlanHostOwned(link netlink.Link, networkID string) bool {
 	return bytes.Equal(link.Attrs().HardwareAddr, macvlanHostMAC(networkID))
 }
 
+func macvlanHostRequireOwned(link netlink.Link, networkID string) error {
+	if macvlanHostOwned(link, networkID) {
+		return nil
+	}
+	return fmt.Errorf(
+		"interface %q (type %s, alias %q) is not owned by this containerlab network",
+		link.Attrs().Name,
+		link.Type(),
+		link.Attrs().Alias,
+	)
+}
+
 func disableMacvlanIPv6Autoconf(name string) error {
 	for _, key := range []string{"accept_ra", "autoconf"} {
 		path := "/proc/sys/net/ipv6/conf/" + name + "/" + key
@@ -117,15 +129,10 @@ func (h MacvlanHost) Ensure(
 			return fmt.Errorf("look up created host interface %q: %w", name, err)
 		}
 	}
-	macvlan, ok := link.(*netlink.Macvlan)
-	if !ok || !macvlanHostOwned(link, networkID) {
-		return fmt.Errorf(
-			"interface %q (type %s, alias %q) is not owned by this containerlab network",
-			name,
-			link.Type(),
-			link.Attrs().Alias,
-		)
+	if err := macvlanHostRequireOwned(link, networkID); err != nil {
+		return err
 	}
+	macvlan := link.(*netlink.Macvlan)
 	if macvlan.ParentIndex != parent.Attrs().Index || macvlan.Mode != netlink.MACVLAN_MODE_BRIDGE {
 		return fmt.Errorf("host interface %q has a different macvlan parent or mode", name)
 	}
@@ -223,23 +230,26 @@ func (h MacvlanHost) SyncRoutes(networkID string, sources, destinations []netip.
 		return fmt.Errorf("look up host interface for route synchronization: %w", err)
 	}
 
-	if _, ok := link.(*netlink.Macvlan); !ok ||
-		link.Attrs().Alias != macvlanHostAlias(networkID) {
-		return fmt.Errorf(
-			"interface %q is not owned by this containerlab network",
-			link.Attrs().Name,
-		)
+	if err := macvlanHostRequireOwned(link, networkID); err != nil {
+		return err
 	}
 
-	sourceByFamily := map[bool]netip.Addr{}
+	var source4, source6 netip.Addr
 	for _, source := range sources {
-		sourceByFamily[source.Is4()] = source
+		if source.Is4() {
+			source4 = source
+		} else {
+			source6 = source
+		}
 	}
 
 	desired := make(map[netip.Addr]netip.Addr, len(destinations))
 	for _, destination := range destinations {
-		source, ok := sourceByFamily[destination.Is4()]
-		if !ok {
+		source := source6
+		if destination.Is4() {
+			source = source4
+		}
+		if !source.IsValid() {
 			return fmt.Errorf("no macvlan auxiliary source for management address %s", destination)
 		}
 		desired[destination] = source
@@ -420,11 +430,8 @@ func (h MacvlanHost) Remove(networkID string) error {
 	if err != nil {
 		return fmt.Errorf("look up host interface %q for cleanup: %w", name, err)
 	}
-	if !macvlanHostOwned(link, networkID) {
-		return fmt.Errorf(
-			"refusing to remove interface %q: not owned by this containerlab network",
-			name,
-		)
+	if err := macvlanHostRequireOwned(link, networkID); err != nil {
+		return err
 	}
 	// The kernel removes the interface's addresses and routes with the link.
 	if err := h.Links.LinkDel(link); err != nil && !errors.Is(err, unix.ENODEV) {
