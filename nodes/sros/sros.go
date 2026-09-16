@@ -425,6 +425,9 @@ func (n *sros) DeployEndpoints(ctx context.Context) error {
 
 // PostDeployEndpoints runs SR-SIM endpoint fixups after dataplane links exist.
 func (n *sros) PostDeployEndpoints(ctx context.Context) error {
+	if n.Runtime.Mgmt().Driver == clabtypes.MgmtDriverMacvlan {
+		return nil
+	}
 	// Disable TX checksum offload on the host NS veth for the mgmt interface.
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
