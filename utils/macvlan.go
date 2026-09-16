@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
 	"net/netip"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/vishvananda/netlink"
@@ -21,6 +24,7 @@ type macvlanNetlink interface {
 // MacvlanHostNetlink provides address, route, and lifecycle operations for host macvlans.
 type MacvlanHostNetlink interface {
 	macvlanNetlink
+	LinkList() ([]netlink.Link, error)
 	LinkDel(netlink.Link) error
 	LinkSetUp(netlink.Link) error
 	LinkSetAlias(netlink.Link, string) error
@@ -47,9 +51,43 @@ func macvlanHostName(networkID string) string {
 	return fmt.Sprintf("cm-%x", hash[:6])
 }
 
+const macvlanHostAliasPrefix = "containerlab:macvlan:"
+
 func macvlanHostAlias(networkID string) string {
-	return "containerlab:macvlan:" + networkID
+	return macvlanHostAliasPrefix + networkID
 }
+
+func macvlanHostMAC(networkID string) net.HardwareAddr {
+	hash := sha256.Sum256([]byte(networkID))
+	mac := net.HardwareAddr(hash[:6])
+	mac[0] = (mac[0] & 0xfe) | 0x02
+	return mac
+}
+
+func macvlanHostOwned(link netlink.Link, networkID string) bool {
+	if _, ok := link.(*netlink.Macvlan); !ok {
+		return false
+	}
+	if link.Attrs().Alias == macvlanHostAlias(networkID) {
+		return true
+	}
+	// Name, type, and MAC are derived from the network ID, so a same-name
+	// macvlan is this network's even if LinkSetAlias never ran.
+	return bytes.Equal(link.Attrs().HardwareAddr, macvlanHostMAC(networkID))
+}
+
+func disableMacvlanIPv6Autoconf(name string) error {
+	for _, key := range []string{"accept_ra", "autoconf"} {
+		path := "/proc/sys/net/ipv6/conf/" + name + "/" + key
+		if err := os.WriteFile(path, []byte("0"), 0o600); err != nil &&
+			!errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("disable IPv6 %s on %q: %w", key, name, err)
+		}
+	}
+	return nil
+}
+
+var macvlanIPv6Sysctl = disableMacvlanIPv6Autoconf
 
 func (h MacvlanHost) Ensure(
 	ctx context.Context,
@@ -66,26 +104,12 @@ func (h MacvlanHost) Ensure(
 		return fmt.Errorf("look up host interface %q: %w", name, err)
 	}
 	if err != nil {
-		hash := sha256.Sum256([]byte(networkID))
-		mac := net.HardwareAddr(hash[:6])
-		mac[0] = (mac[0] & 0xfe) | 0x02
 		link, err = addMacvlan(h.Links, netlink.LinkAttrs{
 			Name: name, ParentIndex: parent.Attrs().Index,
-			MTU: parent.Attrs().MTU, HardwareAddr: mac,
+			MTU: parent.Attrs().MTU, HardwareAddr: macvlanHostMAC(networkID),
 		}, netlink.MACVLAN_MODE_BRIDGE)
 		if err != nil && !errors.Is(err, unix.EEXIST) {
 			return fmt.Errorf("create host interface %q: %w", name, err)
-		}
-		if err == nil {
-			// Set the alias explicitly: not all kernels retain IFLA_IFALIAS
-			// supplied during macvlan creation. Until this succeeds, other
-			// deploys must refuse to adopt the unmarked interface.
-			if err := h.Links.LinkSetAlias(link, macvlanHostAlias(networkID)); err != nil {
-				return errors.Join(
-					fmt.Errorf("mark host interface %q: %w", name, err),
-					h.Links.LinkDel(link),
-				)
-			}
 		}
 		// Re-read after creation (including EEXIST from another deploy) to obtain
 		// the kernel index and verify ownership before assigning addresses.
@@ -95,7 +119,7 @@ func (h MacvlanHost) Ensure(
 		}
 	}
 	macvlan, ok := link.(*netlink.Macvlan)
-	if !ok || link.Attrs().Alias != macvlanHostAlias(networkID) {
+	if !ok || !macvlanHostOwned(link, networkID) {
 		return fmt.Errorf(
 			"interface %q (type %s, alias %q) is not owned by this containerlab network",
 			name,
@@ -106,9 +130,18 @@ func (h MacvlanHost) Ensure(
 	if macvlan.ParentIndex != parent.Attrs().Index || macvlan.Mode != netlink.MACVLAN_MODE_BRIDGE {
 		return fmt.Errorf("host interface %q has a different macvlan parent or mode", name)
 	}
+	if link.Attrs().Alias != macvlanHostAlias(networkID) {
+		// Not all kernels retain IFLA_IFALIAS supplied during macvlan creation.
+		if err := h.Links.LinkSetAlias(link, macvlanHostAlias(networkID)); err != nil {
+			return fmt.Errorf("mark host interface %q: %w", name, err)
+		}
+	}
 
 	// Leave an owned, partially configured interface on failure. A retry can
 	// complete it; deleting it could disrupt another lab deploying concurrently.
+	if err := macvlanIPv6Sysctl(name); err != nil {
+		return err
+	}
 	if err := h.Links.LinkSetUp(link); err != nil {
 		return fmt.Errorf("bring host interface %q up: %w", name, err)
 	}
@@ -380,7 +413,7 @@ func (h MacvlanHost) Remove(networkID string) error {
 	if err != nil {
 		return fmt.Errorf("look up host interface %q for cleanup: %w", name, err)
 	}
-	if _, ok := link.(*netlink.Macvlan); !ok || link.Attrs().Alias != macvlanHostAlias(networkID) {
+	if !macvlanHostOwned(link, networkID) {
 		return fmt.Errorf(
 			"refusing to remove interface %q: not owned by this containerlab network",
 			name,
@@ -389,6 +422,39 @@ func (h MacvlanHost) Remove(networkID string) error {
 	// The kernel removes the interface's addresses and routes with the link.
 	if err := h.Links.LinkDel(link); err != nil && !errors.Is(err, unix.ENODEV) {
 		return fmt.Errorf("remove host interface %q: %w", name, err)
+	}
+	return nil
+}
+
+func macvlanHostNetworkID(link netlink.Link) (string, bool) {
+	if _, ok := link.(*netlink.Macvlan); !ok {
+		return "", false
+	}
+	alias := link.Attrs().Alias
+	if !strings.HasPrefix(alias, macvlanHostAliasPrefix) {
+		return "", false
+	}
+	id := alias[len(macvlanHostAliasPrefix):]
+	if id == "" || link.Attrs().Name != macvlanHostName(id) {
+		return "", false
+	}
+	return id, true
+}
+
+// RemoveOrphans deletes host macvlans whose Docker network no longer exists.
+func (h MacvlanHost) RemoveOrphans(alive func(networkID string) bool) error {
+	links, err := h.Links.LinkList()
+	if err != nil {
+		return fmt.Errorf("list host interfaces for macvlan cleanup: %w", err)
+	}
+	for _, link := range links {
+		id, ok := macvlanHostNetworkID(link)
+		if !ok || alive(id) {
+			continue
+		}
+		if err := h.Remove(id); err != nil {
+			return err
+		}
 	}
 	return nil
 }

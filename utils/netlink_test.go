@@ -105,6 +105,15 @@ func (f *hostNetlink) LinkByName(string) (netlink.Link, error) {
 	}
 	return f.link, nil
 }
+func (f *hostNetlink) LinkList() ([]netlink.Link, error) {
+	if err := f.call("list-links"); err != nil {
+		return nil, err
+	}
+	if f.link == nil {
+		return nil, nil
+	}
+	return []netlink.Link{f.link}, nil
+}
 func (f *hostNetlink) LinkAdd(link netlink.Link) error {
 	if err := f.call("create"); err != nil {
 		return err
@@ -307,11 +316,7 @@ func TestMacvlanHostSetupFailures(t *testing.T) {
 			) {
 				t.Fatalf("lost operation error: %v", err)
 			}
-			wantDeletes := 0
-			if operation == "alias" {
-				wantDeletes = 1
-			}
-			if f.calls["delete"] != wantDeletes {
+			if f.calls["delete"] != 0 {
 				t.Fatalf("unsafe rollback after %s: %+v", operation, f.calls)
 			}
 			delete(f.failures, operation)
@@ -456,7 +461,7 @@ func TestMacvlanHostSyncRoutesReconcilesMainTable(t *testing.T) {
 }
 
 func TestMacvlanHostRefusesForeignState(t *testing.T) {
-	for _, scenario := range []string{"alias", "type", "parent", "mode", "host-address", "extra-address"} {
+	for _, scenario := range []string{"type", "parent", "mode", "host-address", "extra-address"} {
 		t.Run(scenario, func(t *testing.T) {
 			f := newHostNetlink()
 			host := MacvlanHost{Links: f}
@@ -464,8 +469,6 @@ func TestMacvlanHostRefusesForeignState(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch scenario {
-			case "alias":
-				f.link.Attrs().Alias = "foreign"
 			case "type":
 				f.link = &netlink.Dummy{LinkAttrs: *f.link.Attrs()}
 			case "parent":
@@ -491,12 +494,68 @@ func TestMacvlanHostRefusesForeignState(t *testing.T) {
 				f.calls["delete"] != 0 {
 				t.Fatalf("foreign state modified: %+v", f.calls)
 			}
-			if scenario == "alias" || scenario == "type" {
+			if scenario == "type" {
 				if err := host.Remove("network-id"); err == nil || f.calls["delete"] != 0 {
 					t.Fatal("foreign interface removed")
 				}
 			}
 		})
+	}
+}
+
+func TestMacvlanHostAdoptsUnaliasedIdentity(t *testing.T) {
+	f := newHostNetlink()
+	host := MacvlanHost{Links: f}
+	if err := ensureTestHost(context.Background(), host, false); err != nil {
+		t.Fatal(err)
+	}
+	f.link.Attrs().Alias = ""
+	if err := ensureTestHost(context.Background(), host, false); err != nil {
+		t.Fatal(err)
+	}
+	if f.link.Attrs().Alias != macvlanHostAlias("network-id") || f.calls["create"] != 1 {
+		t.Fatalf("unaliased interface was not adopted: alias=%q calls=%v", f.link.Attrs().Alias, f.calls)
+	}
+	f.link.Attrs().Alias = ""
+	if err := host.Remove("network-id"); err != nil || f.calls["delete"] != 1 {
+		t.Fatalf("unaliased owned interface was not removed: %v calls=%v", err, f.calls)
+	}
+}
+
+func TestMacvlanHostIPv6Sysctl(t *testing.T) {
+	f := newHostNetlink()
+	var names []string
+	orig := macvlanIPv6Sysctl
+	t.Cleanup(func() { macvlanIPv6Sysctl = orig })
+	macvlanIPv6Sysctl = func(name string) error {
+		names = append(names, name)
+		return nil
+	}
+	if err := ensureTestHost(context.Background(), MacvlanHost{Links: f}, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 1 || names[0] != macvlanHostName("network-id") {
+		t.Fatalf("sysctl ifaces = %v", names)
+	}
+}
+
+func TestMacvlanHostRemoveOrphans(t *testing.T) {
+	f := newHostNetlink()
+	host := MacvlanHost{Links: f}
+	if err := ensureTestHost(context.Background(), host, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := host.RemoveOrphans(func(string) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls["delete"] != 0 {
+		t.Fatal("live network interface was deleted")
+	}
+	if err := host.RemoveOrphans(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
+	if f.calls["delete"] != 1 || f.link != nil {
+		t.Fatalf("orphan was not deleted: calls=%v link=%v", f.calls, f.link)
 	}
 }
 

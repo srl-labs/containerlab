@@ -738,7 +738,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 
 	nres, err := d.Client.NetworkInspect(nctx, network, networkapi.InspectOptions{})
 	if cerrdefs.IsNotFound(err) {
-		return nil
+		return d.removeOrphanMacvlanHosts(nctx)
 	}
 	if err != nil {
 		return err

@@ -49,6 +49,14 @@ func (f *fakeMacvlanNetlink) LinkByName(name string) (netlink.Link, error) {
 	return nil, netlink.LinkNotFoundError{}
 }
 
+func (f *fakeMacvlanNetlink) LinkList() ([]netlink.Link, error) {
+	links := make([]netlink.Link, 0, len(f.links))
+	for _, link := range f.links {
+		links = append(links, link)
+	}
+	return links, nil
+}
+
 func (f *fakeMacvlanNetlink) LinkAdd(link netlink.Link) error {
 	f.adds++
 	link.Attrs().Index = 2
@@ -417,8 +425,8 @@ func TestMacvlanHostAliasFailure(t *testing.T) {
 	) {
 		t.Fatalf("error = %v", err)
 	}
-	if f.deletes != 1 || len(f.links) != 1 || f.addrAdds != 0 {
-		t.Fatal("failed to roll back unmarked new interface")
+	if f.deletes != 0 || f.addrAdds != 0 {
+		t.Fatal("deleted unmarked interface on alias failure")
 	}
 	f.aliasErr = nil
 	if err := host.Ensure(
@@ -574,6 +582,29 @@ func TestCreateMacvlanNetworkRuntimeIPAM(t *testing.T) {
 	}
 }
 
+func TestCreateMacvlanNetworkRemovesOrphanHost(t *testing.T) {
+	rt, _, cleanup := newFakeDockerRuntime(t, "macvlan-test")
+	defer cleanup()
+	rt.mgmt = testMacvlanConfig()
+	f := newFakeMacvlanNetlink()
+	rt.macvlanHost = clabutils.MacvlanHost{Links: f}
+	orphanID := "dead-network-id"
+	if err := rt.managementMacvlanHost().Ensure(
+		context.Background(),
+		orphanID,
+		f.links["eth0"],
+		[]netip.Addr{netip.MustParseAddr(testMacvlanAuxIPv4)},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := rt.CreateNet(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.links[testMacvlanHostName(orphanID)]; ok {
+		t.Fatal("orphan host interface was not removed")
+	}
+}
+
 func TestReuseMacvlanNetworkAux(t *testing.T) {
 	rt, fake, cleanup := newFakeDockerRuntime(t, "macvlan-test")
 	defer cleanup()
@@ -704,7 +735,7 @@ func TestDeleteMacvlanNetwork(t *testing.T) {
 		wantErr            bool
 	}{
 		{"owned", 1, 1, false}, {"external", 0, 0, false}, {"shared", 0, 0, false},
-		{"keep", 0, 0, false}, {"remove fails", 1, 0, true}, {"missing", 0, 0, false},
+		{"keep", 0, 0, false}, {"remove fails", 1, 0, true}, {"missing", 0, 1, false},
 		{"concurrent removal", 1, 1, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

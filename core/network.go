@@ -16,10 +16,8 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 
 	var opts []clabruntime.NetworkCreateOptions
 
-	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderContainerlab {
-		if addresses := c.staticManagementAddresses(); len(addresses) != 0 {
-			opts = append(opts, clabruntime.NetworkCreateOptions{StaticAddresses: addresses})
-		}
+	if addresses := c.staticManagementAddresses(); len(addresses) != 0 {
+		opts = append(opts, clabruntime.NetworkCreateOptions{StaticAddresses: addresses})
 	}
 
 	// create docker network or use existing one
@@ -35,7 +33,8 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 	return nil
 }
 
-func (c *CLab) syncMgmtHostRoutes(ctx context.Context) error {
+// SyncMgmtHostRoutes reconciles host routes to current macvlan management endpoints.
+func (c *CLab) SyncMgmtHostRoutes(ctx context.Context) error {
 	if c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan ||
 		!c.Config.Mgmt.MacvlanAuxEnabled() {
 		return nil

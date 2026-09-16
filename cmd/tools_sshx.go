@@ -386,6 +386,9 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
 		return fmt.Errorf("failed to start SSHX container: %w", err)
 	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
+	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
 	time.Sleep(sshxWaitTime)
@@ -653,6 +656,9 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
 
 		return fmt.Errorf("failed to start SSHX container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)

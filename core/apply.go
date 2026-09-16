@@ -169,7 +169,7 @@ func (c *CLab) apply(
 				return nil, err
 			}
 		}
-		if err := c.syncMgmtHostRoutes(ctx); err != nil {
+		if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 			return nil, err
 		}
 		if options.finalizeNoop {
@@ -231,7 +231,7 @@ func (c *CLab) apply(
 	if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
 		return nil, err
 	}
-	if err := c.syncMgmtHostRoutes(ctx); err != nil {
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
 

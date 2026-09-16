@@ -39,6 +39,13 @@ func (d *DockerRuntime) SyncMgmtHostRoutes(ctx context.Context) error {
 	return d.syncMacvlanHostRoutes(&network)
 }
 
+func (d *DockerRuntime) removeOrphanMacvlanHosts(ctx context.Context) error {
+	return d.managementMacvlanHost().RemoveOrphans(func(id string) bool {
+		_, err := d.Client.NetworkInspect(ctx, id, networkapi.InspectOptions{})
+		return !cerrdefs.IsNotFound(err)
+	})
+}
+
 func (d *DockerRuntime) syncMacvlanHostRoutes(network *networkapi.Inspect) error {
 	sources := make([]netip.Addr, 0, 2)
 	for _, label := range []string{clabconstants.MacvlanAuxIPv4, clabconstants.MacvlanAuxIPv6} {
@@ -76,6 +83,11 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context, excluded []net
 	nres, inspectErr := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
 	if inspectErr != nil && !cerrdefs.IsNotFound(inspectErr) {
 		return fmt.Errorf("inspect macvlan network %q: %w", d.mgmt.Network, inspectErr)
+	}
+	if cerrdefs.IsNotFound(inspectErr) {
+		if err := d.removeOrphanMacvlanHosts(nctx); err != nil {
+			return err
+		}
 	}
 	parent, err := mgmt.PrepareMacvlanParent(d.mgmt, host.Links)
 	if err != nil {

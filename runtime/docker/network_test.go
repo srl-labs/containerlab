@@ -89,14 +89,16 @@ func (f *fakeDockerNetworkServer) handler() http.Handler {
 			writeJSON(w, http.StatusCreated, networkapi.CreateResponse{ID: f.info.ID})
 
 		case r.Method == http.MethodGet && strings.HasPrefix(path, "/networks/"):
+			id := strings.TrimPrefix(path, "/networks/")
 			f.mu.Lock()
 			created := f.created
 			info := f.info
+			netName := f.netName
 			f.mu.Unlock()
 
-			if !created {
+			if !created || (id != netName && id != info.ID && id != info.Name) {
 				writeJSON(w, http.StatusNotFound, map[string]string{
-					"message": "network " + f.netName + " not found",
+					"message": "network " + id + " not found",
 				})
 				return
 			}

@@ -9,7 +9,9 @@ import (
 	"errors"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
@@ -35,11 +37,39 @@ func TestInitMacvlanManagementNetwork(t *testing.T) {
 	}
 }
 
+// Brief-notation mgmt-net links are converted to LinkTypeMgmtNet during YAML
+// unmarshalling, so the macvlan guard must reject them.
+func TestInitMgmtNetworkRejectsMgmtNetLinkWithMacvlan(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "topo.clab.yml")
+	err := os.WriteFile(path, []byte(`
+name: mgmtnet-brief
+mgmt:
+  network: mgmtnet-brief-mgmt
+  driver: macvlan
+  macvlan-parent: eth0
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+  links:
+    - endpoints: ["mgmt-net:eth1", "n1:eth0"]
+`), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewContainerLab(WithTopoPath(path, nil))
+	if err == nil ||
+		!strings.Contains(err.Error(), "mgmt-net links require a bridge management network") {
+		t.Fatalf("macvlan guard accepted brief mgmt-net link: %v", err)
+	}
+}
+
 func TestCreateNetworkPassesStaticManagementAddresses(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	m := &clabtypes.MgmtNet{
-		IPAM: clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab},
+		IPAM: clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderRuntime},
 	}
 	cfg := &clabtypes.NodeConfig{
 		MgmtIPv4Address: "192.0.2.10",
@@ -82,7 +112,7 @@ func TestSyncMgmtHostRoutesReturnsRuntimeError(t *testing.T) {
 		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
 	}
 	rt.EXPECT().SyncMgmtHostRoutes(gomock.Any()).Return(failure)
-	if err := c.syncMgmtHostRoutes(context.Background()); !errors.Is(err, failure) {
+	if err := c.SyncMgmtHostRoutes(context.Background()); !errors.Is(err, failure) {
 		t.Fatalf("runtime error lost: %v", err)
 	}
 }
@@ -247,13 +277,17 @@ func TestPrepareManagementNetworkDelegatesRuntimeIPAM(t *testing.T) {
 				Labels:          map[string]string{},
 			}
 			node := clabmocksmocknodes.NewMockNode(ctrl)
-			node.EXPECT().Config().Return(cfg).Times(1)
+			node.EXPECT().Config().Return(cfg).AnyTimes()
 			c := &CLab{
 				Config: &Config{Mgmt: m}, globalRuntimeName: "test",
 				Runtimes: map[string]clabruntime.ContainerRuntime{"test": rt},
 				Nodes:    map[string]clabnodes.Node{"node": node},
 			}
-			rt.EXPECT().CreateNet(gomock.Any()).Return(nil)
+			if address != "" {
+				rt.EXPECT().CreateNet(gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				rt.EXPECT().CreateNet(gomock.Any()).Return(nil)
+			}
 			rt.EXPECT().Mgmt().Return(m)
 			if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
 				t.Fatal(err)

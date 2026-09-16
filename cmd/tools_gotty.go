@@ -397,6 +397,9 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
 	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
+	}
 
 	log.Infof(
 		"GoTTY container %s started. Waiting for GoTTY service to initialize...",
@@ -680,6 +683,9 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, gottyNode); err != nil {
 		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof(
