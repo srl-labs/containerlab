@@ -68,7 +68,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	if state.IPAM["node"].IPv4 != "192.0.2.5" {
 		t.Fatal("no-op write lost allocation")
 	}
-	// Explicit configuration is kept solely in the desired topology.
+	// Topology changes do not discard the last allocated address.
 	topology.Nodes["node"].MgmtIPv4 = "192.0.2.9"
 	if err := c.WriteState(); err != nil {
 		t.Fatal(err)
@@ -77,8 +77,9 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.IPAM["node"].IPv4 != "" || state.Topology.Nodes["node"].MgmtIPv4 != "192.0.2.9" {
-		t.Fatal("explicit address was not kept separate")
+	if state.IPAM["node"].IPv4 != "192.0.2.5" ||
+		state.Topology.Nodes["node"].MgmtIPv4 != "192.0.2.9" {
+		t.Fatal("topology change discarded preferred allocation")
 	}
 	entries, err := os.ReadDir(filepath.Dir(paths.StateFile()))
 	if err != nil {

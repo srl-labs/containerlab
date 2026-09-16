@@ -64,18 +64,12 @@ func (c *CLab) WriteState() error {
 
 func (c *CLab) writeIPAMState(state *LabState) {
 	state.IPAM = make(map[string]clabtypes.NodeAddresses)
-	if c.Config.Mgmt == nil || c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
-		return
-	}
 	previous, err := c.LoadState()
 	if err != nil {
 		log.Warn("Unable to preserve previous allocation preferences", "error", err)
 	}
 	for name, node := range c.Nodes {
 		cfg := node.Config()
-		if !cfg.ManagementIPAMEligible() {
-			continue
-		}
 		addresses := clabtypes.NodeAddresses{}
 		if previous != nil {
 			addresses = previous.IPAM[name]
@@ -86,25 +80,7 @@ func (c *CLab) writeIPAMState(state *LabState) {
 		if cfg.MgmtIPv6Address != "" {
 			addresses.IPv6 = cfg.MgmtIPv6Address
 		}
-		if c.Config.Mgmt.IPv4Subnet == "" {
-			addresses.IPv4 = ""
-		}
-		if c.Config.Mgmt.IPv6Subnet == "" {
-			addresses.IPv6 = ""
-		}
-		if c.Config.Topology != nil {
-			if def := c.Config.Topology.Nodes[name]; def != nil {
-				if def.MgmtIPv4 != "" {
-					addresses.IPv4 = ""
-				}
-				if def.MgmtIPv6 != "" {
-					addresses.IPv6 = ""
-				}
-			}
-		}
-		if addresses.IPv4 != "" || addresses.IPv6 != "" {
-			state.IPAM[name] = addresses
-		}
+		state.IPAM[name] = addresses
 	}
 }
 
