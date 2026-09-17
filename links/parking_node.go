@@ -123,6 +123,10 @@ type indexedIface struct {
 // When both ends of a link are parked, the peer's new name is not in the live
 // container ns. Resolve that peer from its parking ns (or from leftover old
 // names already restored into the live ns) and match by trailing port index.
+//
+// When several renames share an overlapping name set (FRR eth1→cJunosEvolved
+// eth4 while parked eth4 is destined for eth7), stage through temporary names
+// so LinkSetName does not fail with EEXIST.
 func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error {
 	desiredByPeerIndex := map[int]string{}
 	pendingByPeer := map[string][]pendingPeerRename{}
@@ -171,6 +175,8 @@ func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error
 		if err != nil {
 			return err
 		}
+
+		var renames []parkedIfaceRename
 		for _, parkedLink := range parkedLinks {
 			if parkedLink.Type() != "veth" {
 				continue
@@ -191,17 +197,91 @@ func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error
 			if !HasOwnershipAltNameFor(parkedLink, dst.GetShortName(), oldName) {
 				continue
 			}
-			if err := netlink.LinkSetName(parkedLink, newName); err != nil {
-				return fmt.Errorf("failed to rename parked interface %q to %q: %w", oldName, newName, err)
-			}
-			if err := replaceOwnershipAltName(parkedLink, dst.GetShortName(), oldName, newName); err != nil {
-				_ = netlink.LinkSetName(parkedLink, oldName)
-				return err
-			}
-			log.Infof("Renamed parked interface node=%s interface=%s new-interface=%s", dst.GetShortName(), oldName, newName)
+			renames = append(renames, parkedIfaceRename{
+				link:    parkedLink,
+				oldName: oldName,
+				newName: newName,
+			})
 		}
-		return nil
+
+		return applyParkedIfaceRenames(renames, dst.GetShortName())
 	})
+}
+
+type parkedIfaceRename struct {
+	link    netlink.Link
+	oldName string
+	newName string
+}
+
+// parkedRenamesNeedStaging reports whether any desired name is still occupied by
+// another parked iface in the same batch. That happens on NOS swaps that shift
+// the Linux ethN namespace (e.g. FRR eth1→cJunosEvolved eth4 while eth4 is still
+// parked and bound for eth7). A direct LinkSetName then fails with EEXIST.
+func parkedRenamesNeedStaging(renames []parkedIfaceRename) bool {
+	current := make(map[string]struct{}, len(renames))
+	for _, r := range renames {
+		if r.oldName == r.newName {
+			continue
+		}
+		current[r.oldName] = struct{}{}
+	}
+	for _, r := range renames {
+		if r.oldName == r.newName {
+			continue
+		}
+		if _, taken := current[r.newName]; taken {
+			return true
+		}
+	}
+	return false
+}
+
+func applyParkedIfaceRenames(renames []parkedIfaceRename, nodeName string) error {
+	if len(renames) == 0 {
+		return nil
+	}
+
+	if parkedRenamesNeedStaging(renames) {
+		for i := range renames {
+			tempName := genRandomIfName()
+			if err := netlink.LinkSetName(renames[i].link, tempName); err != nil {
+				return fmt.Errorf(
+					"failed to stage parked interface %q before rename to %q: %w",
+					renames[i].oldName,
+					renames[i].newName,
+					err,
+				)
+			}
+			// Refresh the handle; some kernels leave Attrs.Name stale after rename.
+			link, err := netlink.LinkByName(tempName)
+			if err != nil {
+				return fmt.Errorf(
+					"failed to lookup staged parked interface %q: %w",
+					tempName,
+					err,
+				)
+			}
+			renames[i].link = link
+		}
+	}
+
+	for _, r := range renames {
+		if err := netlink.LinkSetName(r.link, r.newName); err != nil {
+			return fmt.Errorf("failed to rename parked interface %q to %q: %w", r.oldName, r.newName, err)
+		}
+		if err := replaceOwnershipAltName(r.link, nodeName, r.oldName, r.newName); err != nil {
+			_ = netlink.LinkSetName(r.link, r.oldName)
+			return err
+		}
+		log.Infof(
+			"Renamed parked interface node=%s interface=%s new-interface=%s",
+			nodeName,
+			r.oldName,
+			r.newName,
+		)
+	}
+	return nil
 }
 
 func otherRuntimeEndpoint(desired Endpoint) (Endpoint, bool) {
