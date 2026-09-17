@@ -93,30 +93,3 @@ func TestMapParkedPeerIndexesSkipsAmbiguousPorts(t *testing.T) {
 		t.Fatalf("mapParkedPeerIndexes() = %v, want no mapping for ambiguous port 1", got)
 	}
 }
-
-func TestParkedRenamesNeedStaging(t *testing.T) {
-	t.Parallel()
-
-	// FRR → cJunosEvolved: WAN ports move ethN → eth(N+3); eth4 is both a
-	// parked source and another rename's target.
-	if !parkedRenamesNeedStaging([]parkedIfaceRename{
-		{oldName: "eth1", newName: "eth4"},
-		{oldName: "eth4", newName: "eth7"},
-	}) {
-		t.Fatal("expected staging when eth4 is both source and target")
-	}
-
-	// SRL → EOS: e1-N → etN never overlaps the parked name set.
-	if parkedRenamesNeedStaging([]parkedIfaceRename{
-		{oldName: "e1-1", newName: "et1"},
-		{oldName: "e1-2", newName: "et2"},
-	}) {
-		t.Fatal("did not expect staging when old and new namespaces are disjoint")
-	}
-
-	if parkedRenamesNeedStaging([]parkedIfaceRename{
-		{oldName: "eth1", newName: "eth1"},
-	}) {
-		t.Fatal("did not expect staging when names are unchanged")
-	}
-}

@@ -124,9 +124,10 @@ type indexedIface struct {
 // container ns. Resolve that peer from its parking ns (or from leftover old
 // names already restored into the live ns) and match by trailing port index.
 //
-// When several renames share an overlapping name set (FRR eth1→cJunosEvolved
-// eth4 while parked eth4 is destined for eth7), stage through temporary names
-// so LinkSetName does not fail with EEXIST.
+// Renames always go through a temporary clab-* name so overlapping ethN shifts
+// (FRR eth1→cJunosEvolved eth4 while parked eth4 still exists) cannot EEXIST.
+// Ownership altnames are netns-unique: drop the old markers first, then attach
+// the final ones after the interfaces land on their desired names.
 func (p *ParkingNode) renamePairedEndpoints(ctx context.Context, dst Node) error {
 	desiredByPeerIndex := map[int]string{}
 	pendingByPeer := map[string][]pendingPeerRename{}
@@ -214,65 +215,54 @@ type parkedIfaceRename struct {
 	newName string
 }
 
-// parkedRenamesNeedStaging reports whether any desired name is still occupied by
-// another parked iface in the same batch. That happens on NOS swaps that shift
-// the Linux ethN namespace (e.g. FRR eth1→cJunosEvolved eth4 while eth4 is still
-// parked and bound for eth7). A direct LinkSetName then fails with EEXIST.
-func parkedRenamesNeedStaging(renames []parkedIfaceRename) bool {
-	current := make(map[string]struct{}, len(renames))
-	for _, r := range renames {
-		if r.oldName == r.newName {
-			continue
-		}
-		current[r.oldName] = struct{}{}
-	}
-	for _, r := range renames {
-		if r.oldName == r.newName {
-			continue
-		}
-		if _, taken := current[r.newName]; taken {
-			return true
-		}
-	}
-	return false
-}
-
 func applyParkedIfaceRenames(renames []parkedIfaceRename, nodeName string) error {
 	if len(renames) == 0 {
 		return nil
 	}
 
-	if parkedRenamesNeedStaging(renames) {
-		for i := range renames {
-			tempName := genRandomIfName()
-			if err := netlink.LinkSetName(renames[i].link, tempName); err != nil {
-				return fmt.Errorf(
-					"failed to stage parked interface %q before rename to %q: %w",
-					renames[i].oldName,
-					renames[i].newName,
-					err,
-				)
-			}
-			// Refresh the handle; some kernels leave Attrs.Name stale after rename.
-			link, err := netlink.LinkByName(tempName)
-			if err != nil {
-				return fmt.Errorf(
-					"failed to lookup staged parked interface %q: %w",
-					tempName,
-					err,
-				)
-			}
-			renames[i].link = link
+	// Ownership altnames are unique in the netns. Free every marker this batch
+	// will rewrite before renaming: eth1→eth4 otherwise fails when parked eth4
+	// still holds the eth4 ownership altname ("file exists").
+	for _, r := range renames {
+		if err := linkDelAltName(r.link, ownershipAltNameFor(nodeName, r.oldName)); err != nil &&
+			!isAltNameNotSupportedErr(err) {
+			return fmt.Errorf("failed to remove containerlab ownership altname: %w", err)
 		}
 	}
 
-	for _, r := range renames {
+	// Always stage via a unique temporary name so source/target overlaps cannot
+	// collide (and so we do not need to reason about rename order).
+	for i := range renames {
+		tempName := genRandomIfName()
+		if err := netlink.LinkSetName(renames[i].link, tempName); err != nil {
+			return fmt.Errorf(
+				"failed to stage parked interface %q before rename to %q: %w",
+				renames[i].oldName,
+				renames[i].newName,
+				err,
+			)
+		}
+		link, err := netlink.LinkByName(tempName)
+		if err != nil {
+			return fmt.Errorf("failed to lookup staged parked interface %q: %w", tempName, err)
+		}
+		renames[i].link = link
+	}
+
+	for i := range renames {
+		r := &renames[i]
 		if err := netlink.LinkSetName(r.link, r.newName); err != nil {
 			return fmt.Errorf("failed to rename parked interface %q to %q: %w", r.oldName, r.newName, err)
 		}
-		if err := replaceOwnershipAltName(r.link, nodeName, r.oldName, r.newName); err != nil {
-			_ = netlink.LinkSetName(r.link, r.oldName)
-			return err
+		link, err := netlink.LinkByName(r.newName)
+		if err != nil {
+			return fmt.Errorf("failed to lookup renamed parked interface %q: %w", r.newName, err)
+		}
+		r.link = link
+		if err := linkAddAltName(r.link, ownershipAltNameFor(nodeName, r.newName)); err != nil {
+			if !isAltNameNotSupportedErr(err) {
+				return fmt.Errorf("failed to add containerlab ownership altname: %w", err)
+			}
 		}
 		log.Infof(
 			"Renamed parked interface node=%s interface=%s new-interface=%s",
