@@ -7,11 +7,14 @@ package fortinet_fortigate
 import (
 	"context"
 	"fmt"
+	"math"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 
 	"github.com/charmbracelet/log"
+	"github.com/dustin/go-humanize"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -76,6 +79,21 @@ func (n *fortigate) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 		"QEMU_MEMORY":        "2048",
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
+	}
+
+	if n.Cfg.CPU != 0 {
+		defEnv["QEMU_SMP"] = strconv.FormatFloat(n.Cfg.CPU, 'f', -1, 64)
+	}
+	if n.Cfg.Memory != "" {
+		memBytes, err := humanize.ParseBytes(n.Cfg.Memory)
+		if err != nil {
+			return fmt.Errorf("failed to parse memory %q: %w", n.Cfg.Memory, err)
+		}
+		if memBytes < 1024*1024 {
+			return fmt.Errorf("memory %q is below the 1MB QEMU minimum", n.Cfg.Memory)
+		}
+		defEnv["QEMU_MEMORY"] = strconv.FormatUint(
+			uint64(math.Ceil(float64(memBytes)/(1024*1024))), 10)
 	}
 
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
