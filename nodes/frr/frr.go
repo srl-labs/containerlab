@@ -185,9 +185,19 @@ func (n *frr) createFRRFiles() error {
 		cfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(filepath.Join(dir, frrConfFile), cfgTemplate)
+	confPath := filepath.Join(dir, frrConfFile)
+
+	err := n.GenerateConfig(confPath, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("node=%s, failed to generate config: %w", nodeCfg.ShortName, err)
+	}
+
+	// GenerateConfig keeps an existing frr.conf, which may be one a previous
+	// "write memory" left owned by frr and unreadable, so repair it here too
+	// rather than only on save.
+	err = normalizeConfigFile(confPath)
+	if err != nil {
+		return fmt.Errorf("node=%s: %w", nodeCfg.ShortName, err)
 	}
 
 	var daemons []string
@@ -288,6 +298,34 @@ func (n *frr) setPassword(ctx context.Context) error {
 	return nil
 }
 
+// normalizeConfigFile hands the node's frr.conf back to the user who ran
+// containerlab. FRR writes that file as frr:frr mode 0600 whenever the node is
+// asked to "write memory", and it is bind mounted, so the ownership lands on
+// the lab directory copy and leaves the user unable to read their own saved
+// configuration without root. Every other file containerlab puts in a lab
+// directory goes through CreateFile, which does the same thing.
+func normalizeConfigFile(path string) error {
+	// Nothing to fix up when the config was suppressed and never written.
+	if !clabutils.FileExists(path) {
+		return nil
+	}
+
+	err := clabutils.SetUIDAndGID(path)
+	if err != nil {
+		return fmt.Errorf("failed to set ownership of %s: %w", path, err)
+	}
+
+	// Both os.WriteFile and os.Create apply a mode only when they create the
+	// file, so a 0600 that FRR left behind survives the write and has to be
+	// reset explicitly.
+	err = os.Chmod(path, clabconstants.PermissionsFileDefault)
+	if err != nil {
+		return fmt.Errorf("failed to set permissions of %s: %w", path, err)
+	}
+
+	return nil
+}
+
 func (n *frr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 
@@ -308,6 +346,11 @@ func (n *frr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to write config by %s path from %s container: %w",
 			confPath, n.Cfg.ShortName, err)
+	}
+
+	err = normalizeConfigFile(confPath)
+	if err != nil {
+		return nil, fmt.Errorf("node=%s: %w", n.Cfg.ShortName, err)
 	}
 
 	log.Infof("saved FRR configuration from %s node to %s\n", n.Cfg.ShortName, confPath)

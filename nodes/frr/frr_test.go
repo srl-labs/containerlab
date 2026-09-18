@@ -17,6 +17,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/ssh"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -329,6 +330,79 @@ func TestPostDeploySkipsAbsentUser(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "nosuchuser")); !os.IsNotExist(err) {
 		t.Errorf("absent user was not skipped: %v", err)
 	}
+}
+
+// FRR leaves frr.conf mode 0600 after a "write memory", and the file is bind
+// mounted, so that mode lands on the lab directory copy. Both the deploy and
+// the save path have to put it back.
+func TestConfigFilePermissionsRestored(t *testing.T) {
+	const saved = "frr defaults traditional\nrouter bgp 65000\nexit\n"
+
+	writeLockedDown := func(t *testing.T, n *frr) string {
+		t.Helper()
+
+		dir := filepath.Join(n.Cfg.LabDir, cfgDir)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		path := filepath.Join(dir, frrConfFile)
+		if err := os.WriteFile(path, []byte(saved), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		return path
+	}
+
+	assertReadable := func(t *testing.T, path string) {
+		t.Helper()
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got := info.Mode().Perm(); got != clabconstants.PermissionsFileDefault {
+			t.Errorf("mode = %#o, want %#o", got, clabconstants.PermissionsFileDefault)
+		}
+	}
+
+	t.Run("on deploy", func(t *testing.T) {
+		n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+		path := writeLockedDown(t, n)
+
+		if err := n.createFRRFiles(); err != nil {
+			t.Fatal(err)
+		}
+
+		assertReadable(t, path)
+
+		// The repair must not cost the user the configuration it repairs.
+		if got := readConfigFile(t, n, frrConfFile); got != saved {
+			t.Errorf("frr.conf = %q, want the saved config %q", got, saved)
+		}
+	})
+
+	t.Run("on save", func(t *testing.T) {
+		n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+		path := writeLockedDown(t, n)
+
+		rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+		n.WithRuntime(rt)
+		rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+				res := clabexec.NewExecResult(cmd)
+				res.SetStdOut([]byte(saved))
+
+				return res, nil
+			})
+
+		if _, err := n.SaveConfig(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+
+		assertReadable(t, path)
+	})
 }
 
 // runPasswordScript runs the command PostDeploy asked for on the host, with
