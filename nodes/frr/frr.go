@@ -130,13 +130,18 @@ func (n *frr) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		o(n)
 	}
 
-	// The image ships neither frr.conf nor vtysh.conf, and vtysh refuses to
-	// start without them, so all three files are always mounted.
-	for _, f := range []string{frrConfFile, daemonsFile, vtyshConfFile} {
-		n.Cfg.Binds = append(n.Cfg.Binds,
-			fmt.Sprint(filepath.Join(n.Cfg.LabDir, cfgDir, f), ":", filepath.Join(etcFRR, f)),
-		)
-	}
+	// The whole directory is mounted rather than the three files individually.
+	// FRR saves a configuration by renaming frr.conf to frr.conf.sav and
+	// writing a new one, and a single-file bind mount cannot be renamed, so
+	// per-file mounts make every "write memory" report
+	//
+	//	Error renaming /etc/frr/frr.conf to /etc/frr/frr.conf.sav: Resource busy
+	//
+	// and lose the backup. Mounting the directory costs nothing: the image
+	// ships only daemons in /etc/frr, and containerlab writes that file too.
+	n.Cfg.Binds = append(n.Cfg.Binds,
+		fmt.Sprint(filepath.Join(n.Cfg.LabDir, cfgDir), ":", etcFRR),
+	)
 
 	// FRR programs routes into the kernel, which only forwards if asked to.
 	n.Cfg.Sysctls["net.ipv4.ip_forward"] = "1"

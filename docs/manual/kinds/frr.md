@@ -68,7 +68,7 @@ docker exec -it <node-name> bash
 
 ## Node configuration
 
--{{ kind_display_name }}- nodes are configured through three files, which containerlab writes into the node's lab directory under `config/` and bind mounts over the container's `/etc/frr`:
+-{{ kind_display_name }}- nodes are configured through three files, which containerlab writes into the node's lab directory under `config/`. That directory is bind mounted over the container's `/etc/frr`:
 
 | File | Contents |
 | --- | --- |
@@ -77,6 +77,8 @@ docker exec -it <node-name> bash
 | `vtysh.conf` | `service integrated-vtysh-config`, so `frr.conf` is the only config file |
 
 The official image ships none of `frr.conf` and `vtysh.conf`, and `vtysh` refuses to start without them, which is why all three are always written.
+
+Saving a configuration also leaves a `frr.conf.sav` next to them, which is the previous configuration: FRR keeps one backup by renaming the old file before writing the new one.
 
 ### Startup configuration
 

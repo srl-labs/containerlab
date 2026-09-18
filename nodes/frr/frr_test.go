@@ -53,26 +53,31 @@ func readConfigFile(t *testing.T, n *frr, name string) string {
 
 // Init must mount all three config files, since the image ships neither
 // frr.conf nor vtysh.conf and vtysh will not start without them.
-func TestInitBindsAllThreeConfigFiles(t *testing.T) {
+// The config directory is mounted as a directory, not as three separate files:
+// FRR renames frr.conf to frr.conf.sav when saving, and a single-file bind mount
+// cannot be renamed.
+func TestInitBindsConfigDirectory(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
-	for _, want := range []string{
-		"/etc/frr/frr.conf",
-		"/etc/frr/daemons",
-		"/etc/frr/vtysh.conf",
-	} {
-		found := false
+	want := filepath.Join(n.Cfg.LabDir, cfgDir) + ":" + etcFRR
 
-		for _, b := range n.Cfg.Binds {
-			if strings.HasSuffix(b, ":"+want) {
-				found = true
-				break
-			}
+	found := false
+
+	for _, b := range n.Cfg.Binds {
+		if b == want {
+			found = true
+			break
 		}
 
-		if !found {
-			t.Errorf("no bind mount for %s, got %v", want, n.Cfg.Binds)
+		// A per-file mount is what this replaces, and it is the failure worth
+		// naming: it looks like it works until the first "write memory".
+		if strings.HasPrefix(b, filepath.Join(n.Cfg.LabDir, cfgDir)+"/") {
+			t.Errorf("per-file bind mount %q; the directory must be mounted instead", b)
 		}
+	}
+
+	if !found {
+		t.Errorf("no bind mount %q, got %v", want, n.Cfg.Binds)
 	}
 }
 
