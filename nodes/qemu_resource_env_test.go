@@ -29,6 +29,7 @@ func TestVMQEMUResourceEnv(t *testing.T) {
 		name      string
 		kind      string
 		env       map[string]string
+		nodeCfg   *clabtypes.NodeConfig
 		wantSMP   string
 		wantMem   string
 		wantCPU   string
@@ -92,6 +93,40 @@ func TestVMQEMUResourceEnv(t *testing.T) {
 			wantMem:   "24576",
 			wantNoCLI: true,
 		},
+		{
+			name: "fortigate node cpu/memory settings",
+			kind: "fortinet_fortigate",
+			nodeCfg: &clabtypes.NodeConfig{
+				CPU:    4,
+				Memory: "4GiB",
+			},
+			wantSMP: "4",
+			wantMem: "4096",
+		},
+		{
+			name: "fortigate decimal GB memory stays within container limit",
+			kind: "fortinet_fortigate",
+			nodeCfg: &clabtypes.NodeConfig{
+				CPU:    4,
+				Memory: "4GB",
+			},
+			wantSMP: "4",
+			wantMem: "3815",
+		},
+		{
+			name: "fortigate env beats node cpu/memory settings",
+			kind: "fortinet_fortigate",
+			nodeCfg: &clabtypes.NodeConfig{
+				CPU:    4,
+				Memory: "4GiB",
+			},
+			env: map[string]string{
+				"QEMU_SMP":    "8",
+				"QEMU_MEMORY": "8192",
+			},
+			wantSMP: "8",
+			wantMem: "8192",
+		},
 	}
 
 	for _, tt := range tests {
@@ -109,6 +144,11 @@ func TestVMQEMUResourceEnv(t *testing.T) {
 					Username: "user",
 					Password: "password",
 				},
+			}
+			if tt.nodeCfg != nil {
+				cfg.CPU = tt.nodeCfg.CPU
+				cfg.CPUSet = tt.nodeCfg.CPUSet
+				cfg.Memory = tt.nodeCfg.Memory
 			}
 			err = node.Init(
 				cfg,
