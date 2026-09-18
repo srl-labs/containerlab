@@ -22,19 +22,30 @@ FRR publishes a containerlab flavour of its release image, tagged `containerlab-
 docker pull quay.io/frrouting/frr:containerlab-10.7.1
 ```
 
-It is the release image plus `openssh` and a start script that runs `sshd` alongside `watchfrr`. FRR itself is unchanged, and the image is built from [`docker/containerlab`](https://github.com/FRRouting/frr/tree/master/docker/containerlab) in the FRR repository on every release.
+It is the release image plus `openssh`, an `admin` user whose login shell is `vtysh`, an FRR-specific `/etc/motd`, and a start script that runs `sshd` alongside `watchfrr` and drops the management network's default route. FRR itself is unchanged, and the image is built from [`docker/containerlab`](https://github.com/FRRouting/frr/tree/master/docker/containerlab) in the FRR repository on every release.
 
 The plain `<version>` tags ship no SSH server, so their containers cannot be reached with `ssh`. They work with this kind otherwise, and everything else on this page behaves the same way with them.
 
 ## Managing -{{ kind_display_name }}- nodes
 
 /// tab | SSH
-The public keys detected on your host are added to the `root` user, so no password is needed:
+The public keys detected on your host are added to both the `admin` and the `root` user, so no password is needed either way.
+
+`admin` is the default user for these nodes, and its login shell is `vtysh`, so a bare `ssh` reaches the routing CLI:
+
+```bash
+ssh <node-name>
+```
+
+`root` gets a shell:
 
 ```bash
 ssh root@<node-name>
 ```
 
+`admin` can also log in with a password, which is `admin` unless the node's [`credentials`](../nodes.md#credentials) set another. The image ships no password for it; containerlab sets this one when it deploys the node, so changing `credentials` changes the password the node accepts. `root` has no password and accepts keys only.
+
+The `admin` user and its `vtysh` login shell come from the containerlab image below. With a plain release image only `root` exists, and `ssh root@<node-name>` is the way in.
 ///
 /// tab | vtysh
 FRR's integrated shell is available in the container:

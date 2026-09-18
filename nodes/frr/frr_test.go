@@ -199,6 +199,23 @@ func TestRegisterKindNames(t *testing.T) {
 	}
 }
 
+// The username is what containerlab writes into the generated ssh config and
+// the ansible and nornir inventories, so a bare "ssh <node>" reaches vtysh.
+func TestRegisterCredentials(t *testing.T) {
+	r := clabnodes.NewNodeRegistry()
+	Register(r)
+
+	creds := r.Kind("frr").GetCredentials()
+
+	if got := creds.GetUsername(); got != "admin" {
+		t.Errorf("username = %q, want %q", got, "admin")
+	}
+
+	if got := creds.GetPassword(); got != "admin" {
+		t.Errorf("password = %q, want %q", got, "admin")
+	}
+}
+
 // Exercise the shell command with multiple keys: Go string quoting must not
 // turn the newline separators into literal backslash-n sequences.
 func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
@@ -227,9 +244,13 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 			args := append([]string(nil), cmd.GetCmd()...)
-			// Keep the test unprivileged and restrict writes to its temporary directory.
-			args[2] = strings.ReplaceAll(args[2], "/root/.ssh", filepath.Join(dir, ".ssh"))
-			args[2] = strings.ReplaceAll(args[2], "chown root:root", "true")
+			// Keep the test unprivileged and restrict writes to its temporary
+			// directory. The existence guard goes too, so that both users are
+			// exercised although the host running the test has no admin.
+			args[2] = strings.ReplaceAll(args[2], authzKeysTargets,
+				"root:"+filepath.Join(dir, "root")+" admin:"+filepath.Join(dir, "admin"))
+			args[2] = strings.ReplaceAll(args[2], authzKeysGuard, "true")
+			args[2] = strings.ReplaceAll(args[2], authzKeysChown, "true")
 
 			out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
 			if err != nil {
@@ -243,12 +264,181 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, ".ssh", "authorized_keys"))
+	for _, user := range []string{"root", "admin"} {
+		data, err := os.ReadFile(filepath.Join(dir, user, ".ssh", "authorized_keys"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(data) != want.String() {
+			t.Fatalf("%s authorized_keys = %q, want %q", user, data, want.String())
+		}
+	}
+}
+
+// A plain release image has no admin user, and the keys still have to reach the
+// users that do exist rather than the script failing on the first absent one.
+func TestPostDeploySkipsAbsentUser(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(data) != want.String() {
-		t.Fatalf("authorized_keys = %q, want %q", data, want.String())
+	key, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n.sshPubKeys = append(n.sshPubKeys, key)
+
+	dir := t.TempDir()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			args := append([]string(nil), cmd.GetCmd()...)
+			// root stands in for the user that exists and "nosuchuser" for the
+			// one that does not, so the real guard is what is under test here.
+			args[2] = strings.ReplaceAll(args[2], authzKeysTargets,
+				"root:"+filepath.Join(dir, "root")+" nosuchuser:"+filepath.Join(dir, "nosuchuser"))
+			args[2] = strings.ReplaceAll(args[2], authzKeysChown, "true")
+
+			out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+			if err != nil {
+				t.Fatalf("SSH key script: %v: %s", err, out)
+			}
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.PostDeploy(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "root", ".ssh", "authorized_keys")); err != nil {
+		t.Errorf("keys not written for the user that exists: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "nosuchuser")); !os.IsNotExist(err) {
+		t.Errorf("absent user was not skipped: %v", err)
+	}
+}
+
+// runPasswordScript runs the command PostDeploy asked for on the host, with
+// chpasswd replaced by a file that records what it would have been fed. keepGuard
+// leaves the check for the user in place; without it the script runs as though
+// the user exists, since the host running the test has no admin.
+func runPasswordScript(
+	ctx context.Context,
+	t *testing.T,
+	cmd *clabexec.ExecCmd,
+	out string,
+	keepGuard bool,
+) {
+	t.Helper()
+
+	args := append([]string(nil), cmd.GetCmd()...)
+	if !keepGuard {
+		args[2] = strings.ReplaceAll(args[2], passwordGuard, "true")
+	}
+
+	args[2] = strings.ReplaceAll(args[2], "| chpasswd", "> "+out)
+
+	if b, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput(); err != nil {
+		t.Fatalf("password script: %v: %s", err, b)
+	}
+}
+
+// The image ships admin without a password, so the credentials only work for a
+// password login once PostDeploy has set them -- including on a host with no
+// ssh keys, where adding keys has nothing to do.
+func TestPostDeploySetsPassword(t *testing.T) {
+	// Every character here means something to a shell. It has to reach
+	// chpasswd exactly as written.
+	const password = `a'b"c$(touch /tmp/x);d` + "`e`" + `\f g`
+
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "admin", Password: password},
+	})
+
+	out := filepath.Join(t.TempDir(), "chpasswd-input")
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			runPasswordScript(ctx, t, cmd, out, false)
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.PostDeploy(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "admin:" + password + "\n"; string(got) != want {
+		t.Errorf("chpasswd input = %q, want %q", got, want)
+	}
+}
+
+// A plain release image has no admin, and the password step must not fail the
+// deploy there.
+func TestPostDeploySkipsPasswordForAbsentUser(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "nosuchuser", Password: "pw"},
+	})
+
+	out := filepath.Join(t.TempDir(), "chpasswd-input")
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			runPasswordScript(ctx, t, cmd, out, true)
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.PostDeploy(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("chpasswd ran for a user the image does not have: %v", err)
+	}
+}
+
+// chpasswd reads one user:password pair per line, so a line break in the
+// password would set a second user's password. It is refused before anything
+// runs in the container; the mock fails the test on any Exec.
+func TestPostDeployRejectsPasswordWithLineBreak(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "admin", Password: "pw\nroot:owned"},
+	})
+
+	n.WithRuntime(clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t)))
+
+	err := n.PostDeploy(context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "line break") {
+		t.Fatalf("PostDeploy error = %v, want one about the line break", err)
+	}
+}
+
+// With neither keys nor credentials there is nothing to do in the container.
+func TestPostDeployWithoutKeysOrCredentialsRunsNothing(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	n.WithRuntime(clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t)))
+
+	if err := n.PostDeploy(context.Background(), nil); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -37,7 +37,49 @@ const (
 
 	etcFRR = "/etc/frr"
 
-	authzKeysPath = "/root/.ssh/authorized_keys"
+	// authzKeysTargets are the "user:home" pairs whose authorized_keys file is
+	// populated: root for a shell and admin for vtysh, both reached with the
+	// same key.
+	authzKeysTargets = "root:/root admin:/home/admin"
+
+	// authzKeysGuard skips a user the image does not have. admin ships only in
+	// the containerlab flavour, so a plain release image still gets root's keys
+	// instead of an error.
+	authzKeysGuard = `id -u "$user" >/dev/null 2>&1 || continue`
+
+	// authzKeysChown hands the file to the user who logs in with it; sshd
+	// rejects an authorized_keys that user does not own.
+	authzKeysChown = `chown -R "$user:" "$home/.ssh"`
+
+	// authzKeysScript writes the public keys, passed to it as $1, to the
+	// authorized_keys of every user in authzKeysTargets that exists.
+	authzKeysScript = `set -e
+for entry in ` + authzKeysTargets + `; do
+	user=${entry%%:*}
+	home=${entry#*:}
+
+	` + authzKeysGuard + `
+
+	mkdir -p "$home/.ssh"
+	chmod 700 "$home/.ssh"
+	# The file is removed rather than truncated: a redirect onto an existing
+	# file keeps that file's ownership, and sshd rejects an authorized_keys
+	# that its user does not own.
+	rm -f "$home/.ssh/authorized_keys"
+	printf '%s\n' "$1" > "$home/.ssh/authorized_keys"
+	chmod 600 "$home/.ssh/authorized_keys"
+	` + authzKeysChown + `
+done`
+
+	// passwordGuard skips a user the image does not have. A plain release image
+	// has no admin, and root there is still reachable with the host's keys.
+	passwordGuard = `id -u "$1" >/dev/null 2>&1 || exit 0`
+
+	// passwordScript sets the password of the user named by $1 to $2. Both
+	// travel as arguments rather than in the script text, so no character in
+	// the password can be read as shell.
+	passwordScript = passwordGuard + `
+printf '%s:%s\n' "$1" "$2" | chpasswd`
 
 	// no-header keeps the "Building configuration..." preamble out of the
 	// saved file, which is written back as the node's frr.conf.
@@ -45,6 +87,12 @@ const (
 )
 
 var (
+	// defaultCredentials is the admin user the containerlab image ships, whose
+	// login shell is vtysh. It is what "ssh <node>" uses, so a bare ssh to a
+	// node reaches the routing CLI; "ssh root@<node>" still gets a shell. The
+	// image has no password for admin: PostDeploy sets this one.
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+
 	//go:embed frr.cfg
 	defaultCfgTemplate string
 
@@ -59,7 +107,8 @@ func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 
 	// FRR has no scrapli or napalm platform, so no PlatformAttrs are set.
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials, generateNodeAttributes, nil)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(frr)
@@ -159,30 +208,32 @@ func (n *frr) createFRRFiles() error {
 	return nil
 }
 
-// PostDeploy adds the public keys containerlab collected from the host to the
-// root user's authorized_keys, to enable passwordless ssh.
+// PostDeploy gives the node's users what they need to log in: the public keys
+// containerlab collected from the host, for root and admin, and a password for
+// the node's credentials user.
 func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
+	log.Debugf("Running postdeploy actions for frr %q node", n.Cfg.ShortName)
+
+	err := n.addSSHKeys(ctx)
+	if err != nil {
+		return err
+	}
+
+	return n.setPassword(ctx)
+}
+
+// addSSHKeys adds the public keys containerlab collected from the host to the
+// root and admin users' authorized_keys, to enable passwordless ssh. root gets
+// a shell and admin gets vtysh, and both are reached with the same key.
+func (n *frr) addSSHKeys(ctx context.Context) error {
 	if len(n.sshPubKeys) == 0 {
 		return nil
 	}
 
-	log.Debugf("Running postdeploy actions for frr %q node", n.Cfg.ShortName)
-
 	keys := strings.Join(clabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
 
-	// The file is removed rather than truncated: a redirect onto an existing
-	// file keeps that file's ownership, and sshd rejects an authorized_keys
-	// that root does not own.
-	script := fmt.Sprintf(`set -e
-mkdir -p %[1]s
-chmod 700 %[1]s
-rm -f %[2]s
-printf '%%s\n' "$1" > %[2]s
-chown root:root %[2]s
-chmod 600 %[2]s`,
-		filepath.Dir(authzKeysPath), authzKeysPath)
-
-	cmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-c", script, "--", keys})
+	cmd := clabexec.NewExecCmdFromSlice(
+		[]string{"bash", "-c", authzKeysScript, "--", keys})
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -191,6 +242,41 @@ chmod 600 %[2]s`,
 
 	if execResult.GetReturnCode() != 0 {
 		return fmt.Errorf("failed to add ssh keys to node %q: %s",
+			n.Cfg.ShortName, execResult.GetStdErrString())
+	}
+
+	return nil
+}
+
+// setPassword sets the password of the node's credentials user: admin with
+// password admin, unless the topology's credentials say otherwise. The image
+// ships admin without a password, so a well-known one is not baked into it;
+// this is what makes the kind's default, or a topology's own credentials, work
+// for a password login.
+func (n *frr) setPassword(ctx context.Context) error {
+	user := n.Cfg.Credentials.Username
+	password := n.Cfg.Credentials.Password
+
+	if user == "" || password == "" {
+		return nil
+	}
+
+	// chpasswd reads one user:password pair per line, so a line break in the
+	// password would start a second pair, for whichever user it names.
+	if strings.ContainsAny(password, "\r\n") {
+		return fmt.Errorf("node %q: password must not contain a line break", n.Cfg.ShortName)
+	}
+
+	cmd := clabexec.NewExecCmdFromSlice(
+		[]string{"bash", "-c", passwordScript, "--", user, password})
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("failed to set password on node %q: %w", n.Cfg.ShortName, err)
+	}
+
+	if execResult.GetReturnCode() != 0 {
+		return fmt.Errorf("failed to set password on node %q: %s",
 			n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
