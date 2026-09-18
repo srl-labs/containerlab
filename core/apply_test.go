@@ -1240,6 +1240,349 @@ func TestNeedsInitialDeployIgnoresRootNamespaceResources(t *testing.T) {
 	}
 }
 
+func TestNeedsInitialDeployDecision(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		nodes         map[string]*clabtypes.NodeConfig
+		current       map[string]*runtimeNodeGroup
+		state         string
+		stateIsDir    bool
+		wantInitial   bool
+		wantErrSubstr string
+	}{
+		{
+			name: "host group with retained state and managed nodes",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host":    {ShortName: "host", IsRootNamespaceBased: true},
+				"target":  {ShortName: "target"},
+				"sidecar": {ShortName: "sidecar", NetworkMode: "container:target"},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+			},
+			state:       "{}\n",
+			wantInitial: true,
+		},
+		{
+			name: "managed nodes without host or state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"target":  {ShortName: "target"},
+				"sidecar": {ShortName: "sidecar", NetworkMode: "container:target"},
+			},
+			current:     map[string]*runtimeNodeGroup{},
+			wantInitial: true,
+		},
+		{
+			name: "surviving stopped managed group keeps reconciliation",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"target":  {ShortName: "target"},
+				"sidecar": {ShortName: "sidecar", NetworkMode: "container:target"},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"target": {
+					name: "target",
+					containers: []clabruntime.GenericContainer{
+						{
+							Names: []string{"clab-lab-target"},
+							State: "exited",
+							Labels: map[string]string{
+								clabconstants.NodeName: "target",
+							},
+						},
+					},
+				},
+			},
+			state:       "{}\n",
+			wantInitial: false,
+		},
+		{
+			name: "empty runtime map selects initial deploy",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"target": {ShortName: "target"},
+			},
+			current:     map[string]*runtimeNodeGroup{},
+			state:       "{}\n",
+			wantInitial: true,
+		},
+		{
+			name: "root-namespace-only without state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+			},
+			wantInitial: true,
+		},
+		{
+			name: "root-namespace-only with state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+			},
+			state:       "{}\n",
+			wantInitial: false,
+		},
+		{
+			name: "external-only without state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"ext": {ShortName: "ext", SkipUniquenessCheck: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"ext": {name: "ext", external: true},
+			},
+			wantInitial: true,
+		},
+		{
+			name: "external-only with state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"ext": {ShortName: "ext", SkipUniquenessCheck: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"ext": {name: "ext", external: true},
+			},
+			state:       "{}\n",
+			wantInitial: false,
+		},
+		{
+			name: "mixed host and external without state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+				"ext":  {ShortName: "ext", SkipUniquenessCheck: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+				"ext":  {name: "ext", external: true},
+			},
+			wantInitial: true,
+		},
+		{
+			name: "mixed host and external with state",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+				"ext":  {ShortName: "ext", SkipUniquenessCheck: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+				"ext":  {name: "ext", external: true},
+			},
+			state:       "{}\n",
+			wantInitial: false,
+		},
+		{
+			name: "malformed state in fallback",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+			},
+			state:         ":\n",
+			wantErrSubstr: "failed to unmarshal state",
+		},
+		{
+			name: "state read failure in fallback",
+			nodes: map[string]*clabtypes.NodeConfig{
+				"host": {ShortName: "host", IsRootNamespaceBased: true},
+			},
+			current: map[string]*runtimeNodeGroup{
+				"host": {name: "host", rootNamespaceBased: true},
+			},
+			stateIsDir:    true,
+			wantErrSubstr: "failed to read state file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			nodes := make(map[string]clabnodes.Node, len(tt.nodes))
+			for name, cfg := range tt.nodes {
+				node := clabmocksmocknodes.NewMockNode(ctrl)
+				node.EXPECT().Config().Return(cfg).AnyTimes()
+				nodes[name] = node
+			}
+
+			c := newNeedsInitialDeployLab(t, nodes, tt.state, tt.stateIsDir)
+			initial, err := c.needsInitialDeploy(tt.current)
+			if tt.wantErrSubstr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrSubstr) {
+					t.Fatalf("error = %v, want substring %q", err, tt.wantErrSubstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if initial != tt.wantInitial {
+				t.Fatalf("needsInitialDeploy() = %v, want %v", initial, tt.wantInitial)
+			}
+		})
+	}
+}
+
+func TestNeedsInitialDeployAndApplyDryRunDestroyedLabWithHost(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	c := newDestroyedHostSidecarLab(t, ctrl, nil)
+
+	initial, err := c.NeedsInitialDeploy(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !initial {
+		t.Fatal("expected destroyed lab with host and retained state to need initial deploy")
+	}
+
+	result, err := c.Apply(context.Background(), &ApplyOptions{dryRun: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInitialDeployPlan(t, result, c.Config.Name)
+}
+
+func TestNeedsInitialDeployKeepsReconciliationForSurvivingManagedGroup(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	c := newDestroyedHostSidecarLab(t, ctrl, []clabruntime.GenericContainer{
+		{
+			Names: []string{"clab-host-sidecar-target"},
+			State: "exited",
+			Labels: map[string]string{
+				clabconstants.NodeName: "target",
+			},
+		},
+	})
+
+	initial, err := c.NeedsInitialDeploy(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if initial {
+		t.Fatal("expected a surviving stopped managed container to keep reconciliation")
+	}
+}
+
+const hostSidecarTopo = `
+name: host-sidecar
+topology:
+  nodes:
+    host:
+      kind: host
+    target:
+      kind: linux
+      image: alpine:latest
+    sidecar:
+      kind: linux
+      image: alpine:latest
+      network-mode: container:target
+`
+
+func newNeedsInitialDeployLab(
+	t *testing.T,
+	nodes map[string]clabnodes.Node,
+	state string,
+	stateIsDir bool,
+) *CLab {
+	t.Helper()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: lab\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDirByPrefix("lab"); err != nil {
+		t.Fatal(err)
+	}
+	if state != "" || stateIsDir {
+		if err := os.MkdirAll(topoPaths.TopologyLabDir(), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if stateIsDir {
+			if err := os.Mkdir(topoPaths.StateFile(), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		} else if err := os.WriteFile(topoPaths.StateFile(), []byte(state), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return &CLab{TopoPaths: topoPaths, Nodes: nodes}
+}
+
+func newDestroyedHostSidecarLab(
+	t *testing.T,
+	ctrl *gomock.Controller,
+	containers []clabruntime.GenericContainer,
+) *CLab {
+	t.Helper()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte(hostSidecarTopo), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := NewContainerLab(WithTopoPath(topoFile, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	c.Runtimes[clabruntimedocker.RuntimeName] = mockRuntime
+	c.globalRuntimeName = clabruntimedocker.RuntimeName
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return(containers, nil).
+		AnyTimes()
+
+	if err := os.MkdirAll(c.TopoPaths.TopologyLabDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c.TopoPaths.StateFile(), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	return c
+}
+
+func assertInitialDeployPlan(t *testing.T, result *ApplyResult, labName string) {
+	t.Helper()
+
+	if result == nil {
+		t.Fatal("expected apply result")
+	}
+	if !result.DryRun {
+		t.Fatal("expected dry-run result")
+	}
+	if !result.DeployedLab {
+		t.Fatal("expected initial lab deployment")
+	}
+	if result.LabName != labName {
+		t.Fatalf("planned lab name %q, want %q", result.LabName, labName)
+	}
+	if len(result.AddedNodes) != 0 ||
+		len(result.DeletedNodes) != 0 ||
+		len(result.RecreatedNodes) != 0 ||
+		len(result.StartedNodes) != 0 ||
+		len(result.AddedLinks) != 0 ||
+		len(result.DeletedEndpoints) != 0 ||
+		len(result.RestartedNodes) != 0 ||
+		len(result.NodeChangeReasons) != 0 {
+		t.Fatalf("expected no reconciliation plan, got %+v", result)
+	}
+}
+
 func TestSetMgmtBridgeFromRuntime(t *testing.T) {
 	t.Parallel()
 
