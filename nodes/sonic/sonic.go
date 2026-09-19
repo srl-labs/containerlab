@@ -97,8 +97,9 @@ func wireInterfaceCmds(ifNames []string) []string {
 // IPv6-off.
 //
 // A sonic-vs node has two kernel interfaces per link: the veth containerlab
-// creates (ethN, the wire) and the tap syncd derives from it (eth1 becomes
-// Ethernet0, eth2 becomes Ethernet4, and so on - the port SONiC configures).
+// creates (ethN, the wire) and the tap syncd creates for the port that veth is
+// mapped to (eth1 is mapped to Ethernet0, eth2 to Ethernet4, and so on - the
+// port SONiC configures). The veth is not renamed; both netdevs exist.
 // Left alone, the kernel answers ARP for the port's address on the wire with
 // the wire's MAC and brings up an IPv6 link-local there, so a neighbour can
 // cache the wrong MAC and learn a device that isn't the port. Quieting the wire
