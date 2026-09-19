@@ -784,6 +784,9 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 		Tmpfs:        map[string]string{"/run": "rw,nosuid"},
 		SecurityOpts: []string{"seccomp=unconfined"},
 	}
+	topo.Kinds["test"] = &clabtypes.NodeDefinition{
+		Extras: &clabtypes.Extras{CeosCopyToFlash: []string{"startup.cfg"}},
+	}
 
 	cfg := (&CLab{Reg: registry}).resolveNodeConfigFromTopology(topo, "n1")
 	if cfg.Privileged {
@@ -806,6 +809,9 @@ func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
 	}
 	if !slices.Equal(cfg.SecurityOpts, []string{"seccomp=unconfined"}) {
 		t.Fatalf("SecurityOpts = %v, want seccomp=unconfined", cfg.SecurityOpts)
+	}
+	if cfg.Extras == nil || !slices.Equal(cfg.Extras.CeosCopyToFlash, []string{"startup.cfg"}) {
+		t.Fatalf("reconciliation lost the inherited extras: %+v", cfg.Extras)
 	}
 }
 
