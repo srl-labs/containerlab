@@ -405,6 +405,46 @@ func TestConfigFilePermissionsRestored(t *testing.T) {
 	})
 }
 
+// containerlab's "save --copy" copies the file named by SaveConfigResult and
+// silently skips a node that reports none, so the path has to come back.
+func TestSaveConfigReportsPath(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	// SaveConfig writes into the config directory PreDeploy creates.
+	if err := os.MkdirAll(filepath.Join(n.Cfg.LabDir, cfgDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			res := clabexec.NewExecResult(cmd)
+			res.SetStdOut([]byte("frr defaults traditional\n"))
+
+			return res, nil
+		})
+
+	result, err := n.SaveConfig(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result == nil {
+		t.Fatal("SaveConfig returned no result; --copy would skip this node")
+	}
+
+	want := filepath.Join(n.Cfg.LabDir, cfgDir, frrConfFile)
+	if result.ConfigPath != want {
+		t.Errorf("ConfigPath = %q, want %q", result.ConfigPath, want)
+	}
+
+	// The path is only useful if it names the file that was actually written.
+	if _, err := os.Stat(result.ConfigPath); err != nil {
+		t.Errorf("ConfigPath does not exist: %v", err)
+	}
+}
+
 // runPasswordScript runs the command PostDeploy asked for on the host, with
 // chpasswd replaced by a file that records what it would have been fed. keepGuard
 // leaves the check for the user in place; without it the script runs as though

@@ -355,5 +355,11 @@ func (n *frr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, erro
 
 	log.Infof("saved FRR configuration from %s node to %s\n", n.Cfg.ShortName, confPath)
 
-	return nil, nil
+	// Reporting the path is what makes "containerlab save --copy" pick the file
+	// up. A nil result is how a kind says it cannot save at all, and copying is
+	// skipped for it without an error, so returning one here loses the config
+	// quietly.
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: confPath,
+	}, nil
 }
