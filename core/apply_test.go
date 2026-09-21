@@ -443,6 +443,36 @@ func TestApplyPlanPreservesFRRToCJunosevolvedVethByPeer(t *testing.T) {
 	}
 }
 
+func TestApplyPlanMatchesParkedVethByPeerWhenDesiredNameIsOccupied(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth2", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.addedNodeSet["dut"] = struct{}{}
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth4"}:  {},
+		{node: "dut", iface: "eth7"}:  {},
+		{node: "peer", iface: "eth2"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth4"}:  {Name: "eth4", Index: 11, PeerIndex: 31},
+		{node: "dut", iface: "eth7"}:  {Name: "eth7", Index: 19, PeerIndex: 22},
+		{node: "peer", iface: "eth2"}: {Name: "eth2", Index: 22, PeerIndex: 19},
+	}
+
+	if plan.linkNeedsDeploy(link) {
+		t.Fatal("expected desired dut:eth4 to preserve parked dut:eth7 paired with peer:eth2")
+	}
+}
+
 func TestApplyPlanRejectsReplacementVethForKeepLinksNode(t *testing.T) {
 	t.Parallel()
 

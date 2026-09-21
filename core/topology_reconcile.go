@@ -882,13 +882,16 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 
 func (p *applyPlan) liveEndpointCandidates(ep clablinks.Endpoint) []clablinks.OwnedInterface {
 	key := endpointKeyFromEndpoint(ep)
-	if info, ok := p.liveEndpointInfo[key]; ok {
-		return []clablinks.OwnedInterface{info}
-	}
 	if _, parked := p.parkedNodeSet[key.node]; !parked {
+		if info, ok := p.liveEndpointInfo[key]; ok {
+			return []clablinks.OwnedInterface{info}
+		}
 		return nil
 	}
 
+	// A parked interface's current name belongs to the old topology. Even when
+	// the desired name exists, it may be paired with a different peer and be
+	// destined for another name. Match every parked candidate by veth identity.
 	var candidates []clablinks.OwnedInterface
 	for liveKey, info := range p.liveEndpointInfo {
 		if liveKey.node == key.node {
