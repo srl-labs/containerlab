@@ -415,31 +415,63 @@ func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
 	}
 }
 
-func TestApplyPlanLinkNeedsDeployMatchesRenamedParkedVethByPeer(t *testing.T) {
+func TestApplyPlanPreservesFRRToCJunosevolvedVethByPeer(t *testing.T) {
 	t.Parallel()
 
 	dut := &applyFakeLinkNode{name: "dut"}
-	frr := &applyFakeLinkNode{name: "frr"}
+	peer := &applyFakeLinkNode{name: "peer"}
 	link := clablinks.NewLinkVEth()
 	link.Endpoints = []clablinks.Endpoint{
-		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "et1", link)),
-		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(frr, "eth1", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth1", link)),
 	}
 
 	plan := newApplyPlan(nil, nil)
 	plan.parkedNodeSet["dut"] = struct{}{}
 	plan.addedNodeSet["dut"] = struct{}{}
 	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
-		{node: "dut", iface: "e1-1"}: {},
-		{node: "frr", iface: "eth1"}: {},
+		{node: "dut", iface: "eth1"}:  {},
+		{node: "peer", iface: "eth1"}: {},
 	}
 	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
-		{node: "dut", iface: "e1-1"}: {Name: "e1-1", Index: 11, PeerIndex: 22},
-		{node: "frr", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+		{node: "dut", iface: "eth1"}:  {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "peer", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
 	}
 
 	if plan.linkNeedsDeploy(link) {
-		t.Fatal("expected desired dut:et1 to preserve parked dut:e1-1 paired with frr:eth1")
+		t.Fatal("expected cJunosEvolved dut:eth4 to preserve parked FRR dut:eth1 paired with peer:eth1")
+	}
+}
+
+func TestApplyPlanRejectsReplacementVethForKeepLinksNode(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth2", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.addedNodeSet["dut"] = struct{}{}
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth1"}:  {},
+		{node: "peer", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth1"}:  {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "peer", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+
+	if !plan.linkNeedsDeploy(link) {
+		t.Fatal("expected mismatched desired peer name to require link deployment")
+	}
+	err := plan.validatePreservedLinkDeploy(link)
+	if err == nil || !strings.Contains(err.Error(), "refusing to create a replacement veth") {
+		t.Fatalf("validatePreservedLinkDeploy() error = %v, want replacement-veth rejection", err)
 	}
 }
 

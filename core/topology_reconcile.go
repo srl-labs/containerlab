@@ -185,6 +185,9 @@ func (c *CLab) planApply(
 		if !plan.linkNeedsDeploy(link) {
 			continue
 		}
+		if err := plan.validatePreservedLinkDeploy(link); err != nil {
+			return nil, err
+		}
 
 		plan.addDeployApplyLink(linkIdx, link)
 
@@ -824,6 +827,29 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	}
 
 	return !p.linkIntact(link)
+}
+
+func (p *applyPlan) validatePreservedLinkDeploy(link clablinks.Link) error {
+	var keptNodes []string
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
+		nodeName := ep.GetNode().GetShortName()
+		if _, added := p.addedNodeSet[nodeName]; !added {
+			continue
+		}
+		if _, parked := p.parkedNodeSet[nodeName]; parked {
+			keptNodes = append(keptNodes, nodeName)
+		}
+	}
+	if len(keptNodes) == 0 {
+		return nil
+	}
+
+	sort.Strings(keptNodes)
+	return fmt.Errorf(
+		"cannot restore preserved link %q for node %q: parked veth does not match the desired endpoints; refusing to create a replacement veth",
+		applyLinkName(link),
+		keptNodes[0],
+	)
 }
 
 func (p *applyPlan) linkIntact(link clablinks.Link) bool {
