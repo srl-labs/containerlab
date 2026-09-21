@@ -12,6 +12,21 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func TestFortiProxyUsesFortigateImplementation(t *testing.T) {
+	registry := clabnodes.NewNodeRegistry()
+	Register(registry)
+
+	for _, kind := range []string{"fortinet_fortigate", "fortinet_fortiproxy"} {
+		node, err := registry.NewNodeOfKind(kind)
+		if err != nil {
+			t.Fatalf("failed to create %s node: %v", kind, err)
+		}
+		if _, ok := node.(*fortigate); !ok {
+			t.Fatalf("%s registered unexpected implementation %T", kind, node)
+		}
+	}
+}
+
 func TestFortigateInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints []*clablinks.EndpointVeth

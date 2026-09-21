@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"fortinet_fortigate"}
+	kindnames          = []string{"fortinet_fortigate", "fortinet_fortiproxy"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`port(?P<port>\d+)$`)
