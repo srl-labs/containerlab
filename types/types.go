@@ -313,6 +313,14 @@ type Extras struct {
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
 	// frr node specific options
 	FRR *FRRExtras `yaml:"frr,omitempty"`
+	// Cumulus VX virtual port layout.
+	CumulusVX *CumulusVXExtras `yaml:"cumulus-vx,omitempty"`
+}
+
+// CumulusVXExtras defines the base ports and simulated breakout widths for vrnetlab.
+type CumulusVXExtras struct {
+	Ports     int         `yaml:"ports"`
+	Breakouts map[int]int `yaml:"breakouts,omitempty"`
 }
 
 // FRRExtras represents the frr-specific extra options.

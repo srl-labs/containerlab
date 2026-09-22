@@ -745,6 +745,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		Memory:       topo.GetNodeMemory(nodeName),
 		License:      topo.GetNodeLicense(nodeName),
 		Components:   topo.GetComponents(nodeName),
+		Extras:       topo.GetNodeExtras(nodeName),
 	}
 }
 

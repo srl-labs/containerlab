@@ -577,6 +577,76 @@ topology:
 	}
 }
 
+func TestResolveLinksWithKindExtras(t *testing.T) {
+	const topology = `name: cumulus-breakout
+topology:
+  kinds:
+    nvidia_cumulusvx:
+      image: vrnetlab/nvidia_cumulus-vx:test
+      extras:
+        cumulus-vx:
+          ports: 64
+          breakouts:
+            10: 4
+            2: 2
+  nodes:
+    leaf1:
+      kind: nvidia_cumulusvx
+    leaf2:
+      kind: nvidia_cumulusvx
+      extras:
+        cumulus-vx:
+          ports: 8
+          breakouts:
+            1: 2
+    host:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["leaf1:swp10s3", "host:eth1"]
+    - endpoints: ["leaf1:swp2s0", "host:eth2"]
+    - endpoints: ["leaf2:swp1s1", "host:eth3"]
+`
+	filename := filepath.Join(t.TempDir(), "cumulus.clab.yml")
+	if err := os.WriteFile(filename, []byte(topology), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, err := NewContainerLab(WithTopoPath(filename, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A repeated resolution must preserve both the inherited layout and aliases.
+	for range 2 {
+		if err := c.ResolveLinks(); err != nil {
+			t.Fatal(err)
+		}
+		for name, want := range map[string][]string{
+			"leaf1": {"eth70", "eth65"},
+			"leaf2": {"eth10"},
+		} {
+			n := c.Nodes[name]
+			if err := n.CheckInterfaceName(); err != nil {
+				t.Fatal(err)
+			}
+			eps := n.GetEndpoints()
+			if len(eps) != len(want) {
+				t.Fatalf("%s has %d endpoints, want %d", name, len(eps), len(want))
+			}
+			for i, ep := range eps {
+				if ep.GetIfaceName() != want[i] {
+					t.Errorf(
+						"%s %s maps to %s, want %s",
+						name,
+						ep.GetIfaceAlias(),
+						ep.GetIfaceName(),
+						want[i],
+					)
+				}
+			}
+		}
+	}
+}
+
 func TestLabelsInit(t *testing.T) {
 	owner := os.Getenv("SUDO_USER")
 

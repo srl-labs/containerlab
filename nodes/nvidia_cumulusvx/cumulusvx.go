@@ -5,6 +5,7 @@
 package nvidia_cumulusvx
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -18,9 +19,9 @@ var (
 	kindNames          = []string{"nvidia_cumulusvx"}
 	defaultCredentials = clabnodes.NewCredentials("cumulus", "Clab123!")
 
-	InterfaceRegexp = regexp.MustCompile(`swp(?P<port>\d+)`)
+	InterfaceRegexp = regexp.MustCompile(`^swp(?P<port>[1-9]\d*)(?:s(?P<lane>\d+))?$`)
 	InterfaceOffset = 1
-	InterfaceHelp   = "swpX (where X >= 1) or ethX (where X >= 1)"
+	InterfaceHelp   = "swpN or ethN (N >= 1), or swpNsM with extras.cumulus-vx breakouts"
 )
 
 const (
@@ -44,6 +45,7 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type nvidiaCumulusVX struct {
 	clabnodes.VRNode
+	portLayout *portLayout
 }
 
 func (n *nvidiaCumulusVX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -53,6 +55,12 @@ func (n *nvidiaCumulusVX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.Node
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
+	}
+
+	var err error
+	n.portLayout, err = newPortLayout(cumulusExtras(cfg))
+	if err != nil {
+		return fmt.Errorf("node %q: %w", cfg.ShortName, err)
 	}
 
 	defEnv := map[string]string{
@@ -84,8 +92,9 @@ func (n *nvidiaCumulusVX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.Node
 	return nil
 }
 
-// CheckInterfaceName validates via VRNode (accepts ethX names after swp→eth mapping,
-// or swpX names when checked before mapping).
-func (n *nvidiaCumulusVX) CheckInterfaceName() error {
-	return n.VRNode.CheckInterfaceName()
+func (n *nvidiaCumulusVX) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	if err := n.VRNode.PreDeploy(ctx, params); err != nil {
+		return err
+	}
+	return n.writePortsConfig()
 }
