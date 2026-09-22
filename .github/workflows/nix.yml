@@ -23,7 +23,7 @@ jobs:
     # independently because they are maintenance builds, not release builds.
     if: >-
       github.event_name == 'pull_request' ||
-      github.event_name == 'schedule' ||
+      (github.event_name == 'schedule' && github.repository == 'srl-labs/containerlab') ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'workflow_run' &&
@@ -98,7 +98,7 @@ jobs:
       needs.nix-validation.result == 'success' &&
       needs.nix-validation.outputs.changed == 'true' &&
       (
-        github.event_name == 'schedule' ||
+        (github.event_name == 'schedule' && github.repository == 'srl-labs/containerlab') ||
         (
           github.event_name == 'workflow_dispatch' &&
           github.ref_type == 'branch'
