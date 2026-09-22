@@ -19,7 +19,7 @@ vrf definition clab-mgmt
  address-family ipv6
  !
 !
-interface Ethernet0/0
+interface {{ .MgmtIntf }}
 {{ if .IsL2Node }}
  no switchport
 {{ end }}
@@ -40,8 +40,8 @@ interface Ethernet{{ .Slot }}/{{ .Port }}
 !{{ end }}
 ip forward-protocol nd
 !
-ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 {{ .MgmtIPv4GW }}
-ipv6 route vrf clab-mgmt ::/0 Ethernet0/0 {{ .MgmtIPv6GW }}
+ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 {{ .MgmtIntf }} {{ .MgmtIPv4GW }}
+ipv6 route vrf clab-mgmt ::/0 {{ .MgmtIntf }} {{ .MgmtIPv6GW }}
 !
 ip ssh version 2
 crypto key generate rsa modulus 2048
