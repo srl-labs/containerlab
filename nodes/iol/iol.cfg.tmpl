@@ -44,7 +44,8 @@ ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 {{ .MgmtIPv4GW }}
 ipv6 route vrf clab-mgmt ::/0 Ethernet0/0 {{ .MgmtIPv6GW }}
 !
 ip ssh version 2
-crypto key generate rsa modulus 2048
+ip ssh server algorithm hostkey rsa-sha2-256 rsa-sha2-512
+crypto key generate rsa modulus 3072
 !
 line vty 0 4
  login local
