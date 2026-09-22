@@ -44,7 +44,7 @@ require (
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/steiler/acls v0.1.5
+	github.com/steiler/acls v0.1.6
 	github.com/stretchr/testify v1.12.1
 	github.com/tklauser/numcpus v0.12.0
 	github.com/vishvananda/netlink v1.3.1
@@ -53,7 +53,7 @@ require (
 	go.podman.io/podman/v6 v6.1.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.55.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/kind v0.32.0
