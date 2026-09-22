@@ -9,7 +9,7 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-// namespaceNode owns the shared network namespace of a components-based SR-SIM node
+// namespaceNode owns the shared network namespace of a components-based SR-SIM node.
 type namespaceNode struct {
 	clabnodes.DefaultNode
 }
@@ -27,7 +27,6 @@ func (n *namespaceNode) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOp
 }
 
 func (n *sros) newNetnsConfig() *clabtypes.NodeConfig {
-
 	labels := maps.Clone(n.Cfg.Labels)
 
 	if labels == nil {

@@ -602,7 +602,9 @@ func TestDADClientWireScale(t *testing.T) {
 		{
 			name: "dual-stack",
 			occupied: func(count int) []netip.Addr {
-				return append(append([]netip.Addr(nil), ipv4Addresses[:count]...), ipv6Addresses[:count]...)
+				return append(
+					append([]netip.Addr(nil), ipv4Addresses[:count]...),
+					ipv6Addresses[:count]...)
 			},
 			free: func(count int) []netip.Addr {
 				return append(

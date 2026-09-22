@@ -31,7 +31,8 @@ func TestAllocateIPs(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, n := range []*clabtypes.NodeConfig{a, b} {
-		if !netip.MustParsePrefix(m.IPv4Range).Contains(netip.MustParseAddr(n.MgmtIPv4Address)) ||
+		if !netip.MustParsePrefix(m.IPv4Range).Contains(
+			netip.MustParseAddr(n.MgmtIPv4Address)) ||
 			n.MgmtIPv4Address == "192.0.2.129" {
 			t.Fatalf("invalid allocation: %+v", n)
 		}
@@ -164,7 +165,8 @@ func TestAllocationPreservesExistingAddresses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("allocation: %v", err)
 	}
-	if retained.MgmtIPv4Address != existing.String() || added.MgmtIPv4Address == existing.String() {
+	if retained.MgmtIPv4Address != existing.String() ||
+		added.MgmtIPv4Address == existing.String() {
 		t.Fatal("existing allocation not preserved")
 	}
 }
@@ -270,7 +272,10 @@ func TestPreferredIPv6AndRuntimeOwnership(t *testing.T) {
 }
 
 func TestPreferredAddressReservedBeforeNewNodes(t *testing.T) {
-	m := &clabtypes.MgmtNet{IPv4Subnet: "192.0.2.0/29", IPAM: clabtypes.MgmtIPAM{DAD: new(false)}}
+	m := &clabtypes.MgmtNet{
+		IPv4Subnet: "192.0.2.0/29",
+		IPAM:       clabtypes.MgmtIPAM{DAD: new(false)},
+	}
 	newNode := &clabtypes.NodeConfig{ShortName: "a-new"}
 	if err := AllocateManagementIPs(
 		context.Background(),

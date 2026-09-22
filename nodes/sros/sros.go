@@ -71,7 +71,7 @@ const (
 	tlsCertFile                = "node.crt"
 	tlsCertProfileName         = "clab-grpc-certs"
 
-	// SR-SIM ENV VARS
+	// SR-SIM ENV VARS.
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -83,7 +83,7 @@ const (
 	envSrosIPv6Active         = "NOKIA_SROS_ADDRESS_IPV6_ACTIVE"
 	envSrosStaticRoutePrefix  = "NOKIA_SROS_STATIC_ROUTE_"
 
-	// CLAB SPECIFIC ENV VARS
+	// CLAB SPECIFIC ENV VARS.
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
 	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
 
@@ -728,7 +728,6 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
-
 	netnsConfig := n.netnsNode.Config()
 
 	netnsConfig.MgmtIPv4Address = n.Cfg.MgmtIPv4Address
@@ -776,7 +775,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	return nil
 }
 
-// set env vars for the CPMs so that they are aware of mgmt info
+// set env vars for the CPMs so that they are aware of mgmt info.
 func (n *sros) setComponentMgmtEnv(ips MgmtIP) {
 	for _, component := range n.componentNodes {
 		cfg := component.Config()

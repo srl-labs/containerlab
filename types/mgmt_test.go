@@ -109,8 +109,12 @@ func TestMacvlanManagementValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "mode override",
-			change:  func(m *MgmtNet) { m.DriverOpts = map[string]string{"macvlan_mode": "private"} },
+			name: "mode override",
+			change: func(m *MgmtNet) {
+				m.DriverOpts = map[string]string{
+					"macvlan_mode": "private",
+				}
+			},
 			wantErr: true,
 		},
 		{
