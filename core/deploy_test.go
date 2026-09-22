@@ -512,3 +512,27 @@ func TestCertificateAuthoritySetupUsesEnvironmentCAWithoutSettings(t *testing.T)
 		t.Fatal("certificateAuthoritySetup did not load the CA certificate from CLAB_CA_CERT_FILE")
 	}
 }
+
+func TestDeployDryRunDestroyedLabWithHostAndRetainedState(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	c := newDestroyedHostSidecarLab(t, ctrl, nil)
+
+	options, err := NewDeployOptions(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := c.Deploy(context.Background(), options.SetDryRun(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil || result.Apply == nil {
+		t.Fatal("expected dry-run deploy result")
+	}
+	if len(result.Containers) != 0 {
+		t.Fatalf("expected no runtime containers, got %d", len(result.Containers))
+	}
+	assertInitialDeployPlan(t, result.Apply, c.Config.Name)
+}

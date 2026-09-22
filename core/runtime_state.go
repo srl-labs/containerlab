@@ -116,14 +116,41 @@ func (c *CLab) needsInitialDeploy(currentNodes map[string]*runtimeNodeGroup) (bo
 	if len(currentNodes) == 0 {
 		return true, nil
 	}
+
+	// A surviving managed runtime group, even a stopped one, is reconciled in
+	// place.
 	for _, node := range currentNodes {
 		if !node.external && !node.rootNamespaceBased {
 			return false, nil
 		}
 	}
 
+	// Host and other root-namespace resources are synthesized even after all
+	// managed containers are gone. If the desired topology still has managed
+	// container nodes, that is a destroyed lab and needs a fresh deploy,
+	// regardless of a retained state file.
+	if c.hasDesiredManagedContainerNodes() {
+		return true, nil
+	}
+
 	state, err := c.LoadState()
 	return state == nil, err
+}
+
+// hasDesiredManagedContainerNodes reports whether the desired topology contains
+// nodes that containerlab itself creates, excluding host/root-namespace and
+// externally managed resources.
+func (c *CLab) hasDesiredManagedContainerNodes() bool {
+	for _, node := range c.Nodes {
+		cfg := node.Config()
+		if cfg == nil || cfg.IsRootNamespaceBased || cfg.SkipUniquenessCheck {
+			continue
+		}
+
+		return true
+	}
+
+	return false
 }
 
 func (c *CLab) setMgmtBridgeFromRuntime(
