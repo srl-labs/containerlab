@@ -312,8 +312,10 @@ func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Lin
 	return nil
 }
 
-// try to preserve the existing addressing instead of reallocation
-func (c *CLab) collectExistingManagementAddresses(currentNodes map[string]*runtimeNodeGroup) []clabtypes.ExistingAddress {
+// try to preserve the existing addressing instead of reallocation.
+func (c *CLab) collectExistingManagementAddresses(
+	currentNodes map[string]*runtimeNodeGroup,
+) []clabtypes.ExistingAddress {
 	var existing []clabtypes.ExistingAddress
 	for name, group := range currentNodes {
 		for _, ctr := range group.containers {

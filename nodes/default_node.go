@@ -98,7 +98,8 @@ func (d *DefaultNode) RequireMgmtReachable() error {
 	}
 
 	return fmt.Errorf(
-		"node %q post-deploy needs host-to-node management access, enable mgmt macvlan aux interface", d.Cfg.ShortName,
+		"node %q post-deploy needs host-to-node management access, enable mgmt macvlan aux interface",
+		d.Cfg.ShortName,
 	)
 }
 

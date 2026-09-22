@@ -294,7 +294,10 @@ func (c *CLab) prepareLabManagementNetwork(
 	return skipMgmt, nil
 }
 
-func (c *CLab) allocateLabManagementIPs(ctx context.Context, existing []clabtypes.ExistingAddress) error {
+func (c *CLab) allocateLabManagementIPs(
+	ctx context.Context,
+	existing []clabtypes.ExistingAddress,
+) error {
 	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return nil
 	}

@@ -246,7 +246,8 @@ func (a *IPAllocator) Next(ctx context.Context, clients ...*DADClient) (netip.Ad
 	return addresses[0], nil
 }
 
-// NextPreferredBatch reserves available preferred addresses and replaces unavailable preferences from the pool.
+// NextPreferredBatch reserves available preferred addresses and replaces unavailable preferences
+// from the pool.
 func (a *IPAllocator) NextPreferredBatch(
 	ctx context.Context,
 	preferred []netip.Addr,
@@ -308,7 +309,11 @@ func (a *IPAllocator) NextPreferredBatch(
 	return addresses, nil
 }
 
-func (a *IPAllocator) nextBatch(ctx context.Context, count int, dad *DADClient) ([]netip.Addr, error) {
+func (a *IPAllocator) nextBatch(
+	ctx context.Context,
+	count int,
+	dad *DADClient,
+) ([]netip.Addr, error) {
 	addresses := make([]netip.Addr, 0, count)
 	for len(addresses) < count {
 		if err := ctx.Err(); err != nil {

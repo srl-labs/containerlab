@@ -96,6 +96,7 @@ func (f *hostNetlink) call(operation string) error {
 	f.calls[operation]++
 	return f.failures[operation]
 }
+
 func (f *hostNetlink) LinkByName(string) (netlink.Link, error) {
 	if err := f.call("lookup"); err != nil {
 		return nil, err
@@ -105,6 +106,7 @@ func (f *hostNetlink) LinkByName(string) (netlink.Link, error) {
 	}
 	return f.link, nil
 }
+
 func (f *hostNetlink) LinkList() ([]netlink.Link, error) {
 	if err := f.call("list-links"); err != nil {
 		return nil, err
@@ -114,6 +116,7 @@ func (f *hostNetlink) LinkList() ([]netlink.Link, error) {
 	}
 	return []netlink.Link{f.link}, nil
 }
+
 func (f *hostNetlink) LinkAdd(link netlink.Link) error {
 	if err := f.call("create"); err != nil {
 		return err
@@ -125,6 +128,7 @@ func (f *hostNetlink) LinkAdd(link netlink.Link) error {
 	f.link = link
 	return nil
 }
+
 func (f *hostNetlink) LinkSetAlias(link netlink.Link, alias string) error {
 	if err := f.call("alias"); err != nil {
 		return err
@@ -132,6 +136,7 @@ func (f *hostNetlink) LinkSetAlias(link netlink.Link, alias string) error {
 	link.Attrs().Alias = alias
 	return nil
 }
+
 func (f *hostNetlink) LinkSetUp(link netlink.Link) error {
 	if err := f.call("up"); err != nil {
 		return err
@@ -139,6 +144,7 @@ func (f *hostNetlink) LinkSetUp(link netlink.Link) error {
 	link.Attrs().Flags |= net.FlagUp
 	return nil
 }
+
 func (f *hostNetlink) LinkDel(netlink.Link) error {
 	if err := f.call("delete"); err != nil {
 		return err
@@ -146,6 +152,7 @@ func (f *hostNetlink) LinkDel(netlink.Link) error {
 	f.link, f.addresses, f.routes = nil, nil, nil
 	return nil
 }
+
 func (f *hostNetlink) AddrList(link netlink.Link, family int) ([]netlink.Addr, error) {
 	if err := f.call("list-addresses"); err != nil {
 		return nil, err
@@ -159,6 +166,7 @@ func (f *hostNetlink) AddrList(link netlink.Link, family int) ([]netlink.Addr, e
 	}
 	return addresses, nil
 }
+
 func (f *hostNetlink) AddrAdd(link netlink.Link, address *netlink.Addr) error {
 	err := f.call("address")
 	if err == nil || f.addressRace {
@@ -168,6 +176,7 @@ func (f *hostNetlink) AddrAdd(link netlink.Link, address *netlink.Addr) error {
 	}
 	return err
 }
+
 func (f *hostNetlink) RouteList(_ netlink.Link, family int) ([]netlink.Route, error) {
 	var routes []netlink.Route
 	for _, route := range f.routes {
@@ -177,6 +186,7 @@ func (f *hostNetlink) RouteList(_ netlink.Link, family int) ([]netlink.Route, er
 	}
 	return routes, f.call("list-routes")
 }
+
 func (f *hostNetlink) RouteAdd(route *netlink.Route) error {
 	err := f.call("route")
 	if err == nil || f.routeRace {
@@ -184,6 +194,7 @@ func (f *hostNetlink) RouteAdd(route *netlink.Route) error {
 	}
 	return err
 }
+
 func (f *hostNetlink) RouteDel(route *netlink.Route) error {
 	if err := f.call("delete-route"); err != nil {
 		return err
@@ -413,7 +424,12 @@ func TestMacvlanHostSyncRoutesListsTableOncePerFamily(t *testing.T) {
 	f := newHostNetlink()
 	host := MacvlanHost{Links: f}
 	source := netip.MustParseAddr("192.0.2.129")
-	if err := host.Ensure(context.Background(), "network-id", hostParent(), []netip.Addr{source}); err != nil {
+	if err := host.Ensure(
+		context.Background(),
+		"network-id",
+		hostParent(),
+		[]netip.Addr{source},
+	); err != nil {
 		t.Fatal(err)
 	}
 	destinations := make([]netip.Addr, 32)
@@ -424,7 +440,11 @@ func TestMacvlanHostSyncRoutesListsTableOncePerFamily(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.calls["list-routes"] != 2 {
-		t.Fatalf("listed routing table %d times for %d destinations", f.calls["list-routes"], len(destinations))
+		t.Fatalf(
+			"listed routing table %d times for %d destinations",
+			f.calls["list-routes"],
+			len(destinations),
+		)
 	}
 }
 
@@ -438,11 +458,19 @@ func TestMacvlanHostSyncRoutesReconcilesMainTable(t *testing.T) {
 		if err := ensureTestHost(context.Background(), host, false); err != nil {
 			t.Fatal(err)
 		}
-		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+		if err := host.SyncRoutes(
+			"network-id",
+			[]netip.Addr{source},
+			[]netip.Addr{destination},
+		); err != nil {
 			t.Fatal(err)
 		}
 		f.routes[0].Src = net.ParseIP("192.0.2.130")
-		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+		if err := host.SyncRoutes(
+			"network-id",
+			[]netip.Addr{source},
+			[]netip.Addr{destination},
+		); err != nil {
 			t.Fatal(err)
 		}
 		if len(f.routes) != 1 || !f.routes[0].Src.Equal(net.IP(source.AsSlice())) ||
@@ -469,7 +497,11 @@ func TestMacvlanHostSyncRoutesReconcilesMainTable(t *testing.T) {
 			Protocol: unix.RTPROT_STATIC,
 			Type:     unix.RTN_UNICAST,
 		})
-		if err := host.SyncRoutes("network-id", []netip.Addr{source}, []netip.Addr{destination}); err != nil {
+		if err := host.SyncRoutes(
+			"network-id",
+			[]netip.Addr{source},
+			[]netip.Addr{destination},
+		); err != nil {
 			t.Fatal(err)
 		}
 		if len(f.routes) != 2 || f.routes[0].Table != 100 ||
@@ -533,7 +565,11 @@ func TestMacvlanHostAdoptsUnaliasedIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.link.Attrs().Alias != macvlanHostAlias("network-id") || f.calls["create"] != 1 {
-		t.Fatalf("unaliased interface was not adopted: alias=%q calls=%v", f.link.Attrs().Alias, f.calls)
+		t.Fatalf(
+			"unaliased interface was not adopted: alias=%q calls=%v",
+			f.link.Attrs().Alias,
+			f.calls,
+		)
 	}
 	f.link.Attrs().Alias = ""
 	if err := host.Remove("network-id"); err != nil || f.calls["delete"] != 1 {

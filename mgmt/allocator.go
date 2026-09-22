@@ -24,7 +24,12 @@ type managementAssignment struct {
 
 // AllocateManagementIPs assigns management addresses after the runtime resolves
 // the network's subnet and gateway.
-func AllocateManagementIPs(ctx context.Context, m *clabtypes.MgmtNet, nodes []*clabtypes.NodeConfig, options clabtypes.AllocationOptions) error {
+func AllocateManagementIPs(
+	ctx context.Context,
+	m *clabtypes.MgmtNet,
+	nodes []*clabtypes.NodeConfig,
+	options clabtypes.AllocationOptions,
+) error {
 	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return nil
 	}

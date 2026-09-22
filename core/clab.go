@@ -414,7 +414,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			if !skipPostDeploy {
 				if err = c.SyncMgmtHostRoutes(ctx); err != nil {
-					err = fmt.Errorf("node %q post-deploy: synchronize management host routes: %w", node.Config().ShortName, err)
+					err = fmt.Errorf(
+						"node %q post-deploy: synchronize management host routes: %w",
+						node.Config().ShortName,
+						err,
+					)
 					log.Error(err)
 					nodeFailCh <- err
 					cancelSchedule()

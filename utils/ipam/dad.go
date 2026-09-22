@@ -34,8 +34,10 @@ const (
 	dadDrainBatchSize       = 4096
 )
 
-var errDuplicateAddress = errors.New("duplicate address")
-var errDADObservationLost = errors.New("DAD observation lost")
+var (
+	errDuplicateAddress   = errors.New("duplicate address")
+	errDADObservationLost = errors.New("DAD observation lost")
+)
 
 // DADClient checks address availability on a macvlan parent segment.
 type DADClient struct {
@@ -220,6 +222,7 @@ func (d *DADClient) close() error {
 	}
 	return err
 }
+
 func (d *DADClient) check(ctx context.Context, ip netip.Addr) error {
 	err := d.scheduler.Check(ctx, ip)
 	log.Debug("DAD check completed", "mac", d.mac, "address", ip, "error", err)
@@ -423,7 +426,8 @@ func dadConflictAddress(frame []byte, mac net.HardwareAddr) (netip.Addr, bool) {
 	}
 	if ethernet.EthernetType == layers.EthernetTypeARP {
 		arp, ok := packet.Layer(layers.LayerTypeARP).(*layers.ARP)
-		if !ok || arp.AddrType != layers.LinkTypeEthernet || arp.Protocol != layers.EthernetTypeIPv4 ||
+		if !ok || arp.AddrType != layers.LinkTypeEthernet ||
+			arp.Protocol != layers.EthernetTypeIPv4 ||
 			arp.HwAddressSize != 6 ||
 			arp.ProtAddressSize != 4 ||
 			(arp.Operation != layers.ARPRequest && arp.Operation != layers.ARPReply) {
@@ -479,11 +483,13 @@ func (q dadQueue) Swap(i, j int) {
 	q[i].index = i
 	q[j].index = j
 }
+
 func (q *dadQueue) Push(x any) {
 	r := x.(*dadRequest)
 	r.index = len(*q)
 	*q = append(*q, r)
 }
+
 func (q *dadQueue) Pop() any {
 	old := *q
 	r := old[len(old)-1]
@@ -531,6 +537,7 @@ func newDADScheduler(
 	go s.run()
 	return s
 }
+
 func (s *dadScheduler) notify() {
 	select {
 	case s.wake <- struct{}{}:
@@ -591,6 +598,7 @@ func (s *dadScheduler) finish(r *dadRequest, err error) {
 	r.err = err
 	close(r.done)
 }
+
 func (s *dadScheduler) conflict(ip netip.Addr, err error) {
 	s.mu.Lock()
 	if r := s.pending[ip]; r != nil {
@@ -599,6 +607,7 @@ func (s *dadScheduler) conflict(ip netip.Addr, err error) {
 	s.mu.Unlock()
 	s.notify()
 }
+
 func (s *dadScheduler) restartPending() {
 	s.mu.Lock()
 	now := time.Now()
@@ -610,6 +619,7 @@ func (s *dadScheduler) restartPending() {
 	s.mu.Unlock()
 	s.notify()
 }
+
 func (s *dadScheduler) Close() error {
 	s.cancel(errDADClosed)
 	<-s.done
@@ -618,6 +628,7 @@ func (s *dadScheduler) Close() error {
 	}
 	return nil
 }
+
 func (s *dadScheduler) run() {
 	defer close(s.done)
 	timer := time.NewTimer(time.Hour)

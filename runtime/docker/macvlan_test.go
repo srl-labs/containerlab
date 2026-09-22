@@ -341,7 +341,9 @@ func TestMacvlanRouteConflicts(t *testing.T) {
 		route    string
 		conflict bool
 	}{
-		{"0.0.0.0/0", false}, {"192.0.2.0/24", false}, {"198.51.100.140/32", false},
+		{"0.0.0.0/0", false},
+		{"192.0.2.0/24", false},
+		{"198.51.100.140/32", false},
 		{"192.0.2.140/32", true},
 	} {
 		t.Run(tc.route, func(t *testing.T) {
@@ -665,9 +667,15 @@ func TestMacvlanNetworkReuseValidation(t *testing.T) {
 		{"gateway", func(n *networkapi.Inspect) { n.IPAM.Config[0].Gateway = "192.0.2.2" }},
 		{"pool", func(n *networkapi.Inspect) { n.IPAM.Config[0].IPRange = "192.0.2.0/25" }},
 		{"reservation", func(n *networkapi.Inspect) { n.IPAM.Config[0].AuxAddress = nil }},
-		{"legacy network", func(n *networkapi.Inspect) { delete(n.Labels, clabconstants.MacvlanAuxIPv4) }},
-		{"auxiliary label", func(n *networkapi.Inspect) { n.Labels[clabconstants.MacvlanAuxIPv4] = "192.0.2.130" }},
-		{"external ownership", func(n *networkapi.Inspect) { delete(n.Labels, clabconstants.Containerlab) }},
+		{"legacy network", func(n *networkapi.Inspect) {
+			delete(n.Labels, clabconstants.MacvlanAuxIPv4)
+		}},
+		{"auxiliary label", func(n *networkapi.Inspect) {
+			n.Labels[clabconstants.MacvlanAuxIPv4] = "192.0.2.130"
+		}},
+		{"external ownership", func(n *networkapi.Inspect) {
+			delete(n.Labels, clabconstants.Containerlab)
+		}},
 	} {
 		for _, concurrent := range []bool{false, true} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -734,8 +742,12 @@ func TestDeleteMacvlanNetwork(t *testing.T) {
 		remove, hostDelete int
 		wantErr            bool
 	}{
-		{"owned", 1, 1, false}, {"external", 0, 0, false}, {"shared", 0, 0, false},
-		{"keep", 0, 0, false}, {"remove fails", 1, 0, true}, {"missing", 0, 1, false},
+		{"owned", 1, 1, false},
+		{"external", 0, 0, false},
+		{"shared", 0, 0, false},
+		{"keep", 0, 0, false},
+		{"remove fails", 1, 0, true},
+		{"missing", 0, 1, false},
 		{"concurrent removal", 1, 1, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -906,7 +918,10 @@ func TestMacvlanParentSubnetDiscovery(t *testing.T) {
 	}{
 		{name: "IPv4", addresses: []string{"192.0.2.10/24"}, want4: "192.0.2.0/24"},
 		{name: "IPv6", addresses: []string{"2001:db8::10/64", "fe80::1/64"}, want6: "2001:db8::/64"},
-		{name: "dual stack", addresses: []string{"192.0.2.10/24", "2001:db8::10/64"}, want4: "192.0.2.0/24", want6: "2001:db8::/64"},
+		{
+			name: "dual stack", addresses: []string{"192.0.2.10/24", "2001:db8::10/64"},
+			want4: "192.0.2.0/24", want6: "2001:db8::/64",
+		},
 		{name: "same subnet", addresses: []string{"192.0.2.10/24", "192.0.2.20/24"}, want4: "192.0.2.0/24"},
 		{name: "IPv4 point to point", addresses: []string{"192.0.2.0/31"}, wantErr: "at least four"},
 		{name: "IPv4 host", addresses: []string{"192.0.2.1/32"}, wantErr: "at least four"},
@@ -916,9 +931,18 @@ func TestMacvlanParentSubnetDiscovery(t *testing.T) {
 		{name: "ambiguous IPv6", addresses: []string{"2001:db8::10/64", "2001:db8:1::10/64"}, wantErr: "multiple subnets"},
 		{name: "no addresses", wantErr: "no usable IP subnet"},
 		{name: "link local only", addresses: []string{"fe80::1/64", "169.254.1.1/16"}, wantErr: "no usable IP subnet"},
-		{name: "explicit overrides parent", addresses: []string{"192.0.2.1/32", "2001:db8::1/128"}, v4: "198.51.100.0/24", v6: "2001:db8:1::/64", want4: "198.51.100.0/24", want6: "2001:db8:1::/64"},
-		{name: "do not infer unrequested IPv6", addresses: []string{"2001:db8::10/64"}, v4: "192.0.2.0/24", want4: "192.0.2.0/24"},
-		{name: "do not infer unrequested IPv4", addresses: []string{"192.0.2.10/24"}, v6: "2001:db8::/64", want6: "2001:db8::/64"},
+		{
+			name: "explicit overrides parent", addresses: []string{"192.0.2.1/32", "2001:db8::1/128"},
+			v4: "198.51.100.0/24", v6: "2001:db8:1::/64", want4: "198.51.100.0/24", want6: "2001:db8:1::/64",
+		},
+		{
+			name: "do not infer unrequested IPv6", addresses: []string{"2001:db8::10/64"},
+			v4: "192.0.2.0/24", want4: "192.0.2.0/24",
+		},
+		{
+			name: "do not infer unrequested IPv4", addresses: []string{"192.0.2.10/24"},
+			v6: "2001:db8::/64", want6: "2001:db8::/64",
+		},
 		{name: "wrong gateway", addresses: []string{"192.0.2.10/24"}, gateway: "198.51.100.1", wantErr: "gateway"},
 		{name: "wrong pool", addresses: []string{"192.0.2.10/24"}, pool: "198.51.100.0/25", wantErr: "IP range"},
 	} {

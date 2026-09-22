@@ -100,10 +100,14 @@ func resolveMacvlanSubnets(
 		otherExplicit bool
 		requested     bool
 	}{
-		{"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range,
-			explicitIPv6, resolved.IPv4Gw != "" || resolved.IPv4Range != ""},
-		{"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range,
-			explicitIPv4, resolved.IPv6Gw != "" || resolved.IPv6Range != ""},
+		{
+			"IPv4", netlink.FAMILY_V4, &resolved.IPv4Subnet, resolved.IPv4Gw, resolved.IPv4Range,
+			explicitIPv6, resolved.IPv4Gw != "" || resolved.IPv4Range != "",
+		},
+		{
+			"IPv6", netlink.FAMILY_V6, &resolved.IPv6Subnet, resolved.IPv6Gw, resolved.IPv6Range,
+			explicitIPv4, resolved.IPv6Gw != "" || resolved.IPv6Range != "",
+		},
 	} {
 		if *family.subnet != "" {
 			continue

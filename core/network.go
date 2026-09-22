@@ -13,7 +13,6 @@ import (
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
-
 	var opts []clabruntime.NetworkCreateOptions
 
 	if addresses := c.staticManagementAddresses(); len(addresses) != 0 {
@@ -65,7 +64,10 @@ func (c *CLab) validateManagementLinks() error {
 	}
 	for _, link := range c.Config.Topology.Links {
 		if link.Link.GetType() == clablinks.LinkTypeMgmtNet {
-			return fmt.Errorf("mgmt-net links require a bridge management network and cannot be used with mgmt.driver %q", c.Config.Mgmt.Driver)
+			return fmt.Errorf(
+				"mgmt-net links require a bridge management network and cannot be used with mgmt.driver %q",
+				c.Config.Mgmt.Driver,
+			)
 		}
 	}
 	return nil
