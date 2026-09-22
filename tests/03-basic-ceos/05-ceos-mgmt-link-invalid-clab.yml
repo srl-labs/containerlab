@@ -1,0 +1,16 @@
+name: 03-05-ceos-mgmt-link-invalid
+
+# n1 wires its eth0 (the management interface) as a link without setting
+# network-mode: none. This is not allowed and deployment must fail.
+topology:
+  kinds:
+    arista_ceos:
+      image: ceos:4.32.0F
+  nodes:
+    n1:
+      kind: arista_ceos
+    n2:
+      kind: arista_ceos
+
+  links:
+    - endpoints: [ "n1:eth0", "n2:eth1" ]
