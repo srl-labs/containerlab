@@ -9,16 +9,18 @@ topology:
         CLAB_SROS_DISABLE_COMPONENT_CONFIG: "true"
 
   nodes:
-    sros1:
+    sros:
       kind: nokia_srsim
-      type: sr-1
+      type: sr-1-92s
+      components:
+        - slot: A
+        - slot: 1
       startup-config: |
-        /configure card 1 card-type iom-1
-        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
-        /configure port 1/1/c1 connector breakout c1-100g
-        /configure port 1/1/c1 admin-state enable
-        /configure port 1/1/c1/1 admin-state enable
-        /configure router "Base" interface "to-peer" port 1/1/c1/1
+        /configure port 1/1/c23 connector breakout c4-100g
+        /configure port 1/1/c23 admin-state enable
+        /configure port 1/1/c23/4 ethernet mode hybrid
+        /configure port 1/1/c23/4 admin-state enable
+        /configure router "Base" interface "to-peer" port 1/1/c23/4:0
         /configure router "Base" interface "to-peer" ipv4 primary address 10.0.0.1
         /configure router "Base" interface "to-peer" ipv4 primary prefix-length 24
 
@@ -38,7 +40,7 @@ topology:
   links:
     - type: veth-stitch
       endpoints:
-        - node: sros1
-          interface: 1/1/c1/1
+        - node: sros
+          interface: 1/1/c23/4
         - node: sros2
           interface: 1/1/c1/1

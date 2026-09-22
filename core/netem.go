@@ -28,6 +28,16 @@ type NetemNode struct {
 	lab, node string // from container labels; empty when unresolvable
 }
 
+// NewNetemNode creates a netem node from an already-resolved namespace and topology identity.
+func NewNetemNode(nsPath, name, lab, node string) *NetemNode {
+	return &NetemNode{
+		NSPath: nsPath,
+		name:   name,
+		lab:    lab,
+		node:   node,
+	}
+}
+
 // TopoIdentity returns the lab and node name recorded in a container's labels.
 // A component of a multi-container node (e.g. a multi-slot SR-SIM slot) yields
 // its root node name, the name topology links reference.
