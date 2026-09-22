@@ -425,6 +425,9 @@ func (n *sros) DeployEndpoints(ctx context.Context) error {
 
 // PostDeployEndpoints runs SR-SIM endpoint fixups after dataplane links exist.
 func (n *sros) PostDeployEndpoints(ctx context.Context) error {
+	if n.Runtime.Mgmt().Driver == clabtypes.MgmtDriverMacvlan {
+		return nil
+	}
 	// Disable TX checksum offload on the host NS veth for the mgmt interface.
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
@@ -480,6 +483,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	}
 	if !n.isCPM(slotAName) {
 		return nil
+	}
+
+	if err := n.RequireMgmtReachable(); err != nil {
+		return err
 	}
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
@@ -721,6 +728,16 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
+
+	netnsConfig := n.netnsNode.Config()
+
+	netnsConfig.MgmtIPv4Address = n.Cfg.MgmtIPv4Address
+	netnsConfig.MgmtIPv4PrefixLength = n.Cfg.MgmtIPv4PrefixLength
+	netnsConfig.MgmtIPv4Gateway = n.Cfg.MgmtIPv4Gateway
+	netnsConfig.MgmtIPv6Address = n.Cfg.MgmtIPv6Address
+	netnsConfig.MgmtIPv6PrefixLength = n.Cfg.MgmtIPv6PrefixLength
+	netnsConfig.MgmtIPv6Gateway = n.Cfg.MgmtIPv6Gateway
+
 	if err := n.netnsNode.Deploy(ctx, deployParams); err != nil {
 		return fmt.Errorf("deploy network namespace node %q: %w", n.netnsNode.GetShortName(), err)
 	}

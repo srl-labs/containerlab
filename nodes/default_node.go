@@ -91,6 +91,17 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
+func (d *DefaultNode) RequireMgmtReachable() error {
+	m := d.Runtime.Mgmt()
+	if m == nil || m.Driver != clabtypes.MgmtDriverMacvlan || m.MacvlanAuxEnabled() {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"node %q post-deploy needs host-to-node management access, enable mgmt macvlan aux interface", d.Cfg.ShortName,
+	)
+}
+
 func (d *DefaultNode) WithMgmtNet(mgmt *clabtypes.MgmtNet)                   { d.Mgmt = mgmt }
 func (d *DefaultNode) WithRuntime(r clabruntime.ContainerRuntime)            { d.Runtime = r }
 func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { return d.Runtime }

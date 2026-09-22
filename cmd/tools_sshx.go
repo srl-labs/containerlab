@@ -373,6 +373,9 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 		o.ToolsSSHX.MountSSHDir,
 	)
+	if err := c.AllocateToolManagementIPs(ctx, sshxNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate SSHX management address: %w", err)
+	}
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {
@@ -382,6 +385,9 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, sshxNode); err != nil {
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
 		return fmt.Errorf("failed to start SSHX container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
@@ -636,6 +642,9 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 		o.ToolsSSHX.MountSSHDir,
 	)
+	if err := c.AllocateToolManagementIPs(ctx, sshxNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate SSHX management address: %w", err)
+	}
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {
@@ -647,6 +656,9 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
 
 		return fmt.Errorf("failed to start SSHX container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)

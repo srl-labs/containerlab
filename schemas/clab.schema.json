@@ -2086,6 +2086,53 @@
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
                 },
+                "driver": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "macvlan"
+                    ],
+                    "description": "Network driver type (bridge or macvlan)"
+                },
+                "ipam": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "enum": ["containerlab", "runtime"],
+                            "default": "containerlab",
+                            "description": "Management IP allocation provider; runtime delegates to Docker or Podman"
+                        },
+                        "dad": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Duplicate Address Detection for allocated addresses. For Containerlab provider only. Checks using ARP/v6-ND DAD on the parent interface for macvlan mgmt net driver."
+                        }
+                    }
+                },
+                "macvlan-parent": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 15,
+                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
+                },
+                "macvlan-mode": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "vepa",
+                        "private",
+                        "passthru"
+                    ],
+                    "default": "bridge",
+                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
+                },
+                "macvlan-aux": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable automatic auxiliary host interface (for MACVLAN bridge mode only)"
+                },
                 "external-access": {
                     "type": "boolean",
                     "description": "controls whether the management network has external access or not",

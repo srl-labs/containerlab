@@ -27,6 +27,7 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
+	github.com/gopacket/gopacket v1.7.1
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hellt/envsubst v0.2.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
