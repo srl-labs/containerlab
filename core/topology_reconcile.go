@@ -846,10 +846,50 @@ func (p *applyPlan) validatePreservedLinkDeploy(link clablinks.Link) error {
 
 	sort.Strings(keptNodes)
 	return fmt.Errorf(
-		"cannot restore preserved link %q for node %q: parked veth does not match the desired endpoints; refusing to create a replacement veth",
+		"cannot restore preserved link %q for node %q: parked veth does not match the desired endpoints; refusing to create a replacement veth (%s)",
 		applyLinkName(link),
 		keptNodes[0],
+		p.preservedLinkMismatchDetail(link),
 	)
+}
+
+func (p *applyPlan) preservedLinkMismatchDetail(link clablinks.Link) string {
+	parts := make([]string, 0, len(clablinks.RuntimeEndpoints(link)))
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
+		key := endpointKeyFromEndpoint(ep)
+		candidates := p.liveEndpointCandidates(ep)
+		sort.Slice(candidates, func(i, j int) bool {
+			if candidates[i].Name != candidates[j].Name {
+				return candidates[i].Name < candidates[j].Name
+			}
+			return candidates[i].Index < candidates[j].Index
+		})
+
+		state := "live"
+		if _, parked := p.parkedNodeSet[key.node]; parked {
+			state = "parked"
+		}
+		if len(candidates) == 0 {
+			parts = append(parts, key.String()+" "+state+"=none")
+			continue
+		}
+
+		formatted := make([]string, len(candidates))
+		for i, candidate := range candidates {
+			formatted[i] = formatOwnedInterface(candidate)
+		}
+		parts = append(parts, key.String()+" "+state+"=["+strings.Join(formatted, ", ")+"]")
+	}
+
+	return strings.Join(parts, "; ")
+}
+
+func formatOwnedInterface(info clablinks.OwnedInterface) string {
+	desc := fmt.Sprintf("name=%s idx=%d peer=%d", info.Name, info.Index, info.PeerIndex)
+	if info.MasterName != "" {
+		desc += " master=" + info.MasterName
+	}
+	return desc
 }
 
 func (p *applyPlan) linkIntact(link clablinks.Link) bool {

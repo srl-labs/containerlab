@@ -503,6 +503,14 @@ func TestApplyPlanRejectsReplacementVethForKeepLinksNode(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "refusing to create a replacement veth") {
 		t.Fatalf("validatePreservedLinkDeploy() error = %v, want replacement-veth rejection", err)
 	}
+	for _, want := range []string{
+		"dut:eth4 parked=[name=eth1 idx=11 peer=22]",
+		"peer:eth2 live=none",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("validatePreservedLinkDeploy() error = %v, want %q", err, want)
+		}
+	}
 }
 
 func TestTreatAsAddedParkedNodeWithStaleRuntimeEntry(t *testing.T) {
