@@ -30,7 +30,7 @@ require (
 	github.com/gopacket/gopacket v1.7.1
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hellt/envsubst v0.2.0
-	github.com/jedib0t/go-pretty/v6 v6.7.8
+	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/jlaffaye/ftp v0.2.4
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
@@ -231,7 +231,7 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/mod v0.40.0
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/text v0.41.0 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
