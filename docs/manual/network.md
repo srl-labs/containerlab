@@ -545,6 +545,71 @@ topology:
 
 Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
 
+### Tailscale
+
+The management network can optionally be joined to a Tailscale tailnet. There are two modes:
+
+- **Sidecar mode**: Requires a tailscale auth-key. Each node will appear as a device in your tailnet.
+
+- **Proxy mode**: Uses SSO authentication, the lab appears as a single device in your tailnet, and exposed ports are user defined.
+
+#### Sidecar mode
+
+In the sidecar mode each node in your topology will get a tailscale sidecar container spun up which represents the node as a device in the tailnet. It will forward all traffic destined to itself to the nodes management IP.
+
+In sidecar mode you **must** authenticate using the `auth-key`. 
+
+The auth key is generated from the Tailscale admin panel, and should be reusable and ideally ephemeral.
+
+
+```yaml
+name: mylab
+mgmt:
+  tailscale:
+    auth-key: ${TS_AUTHKEY}
+
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+    srl2:
+      kind: nokia_srlinux
+```
+
+In the above topology, in our tailnet we will see devices `clab-mylab-srl1` and `clab-mylab-srl2`. In the background two tailscale containers are spun up on the host and they forward all traffic to the respectie nodes.
+
+#### Proxy mode
+
+In the proxy mode, the entire lab is represented by a single device in the tailnet. To access nodes/services in the lab, you must forward ports on a per-node basis.
+
+The proxy mode only supports SSO authentication.
+
+The proxy mode is recommended for users who don't have access to the tailscale admin panel to generate an authnetication key, or users who want to tightly control what services in their lab are exposed to the tailnet.
+
+```yaml
+name: mylab
+mgmt:
+  tailscale:
+    auth-mode: sso
+
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      ports:
+        - 8022:22/ts
+    srl2:
+      kind: nokia_srlinux
+      ports:
+        - 9022:22/ts
+```
+
+In the above topology we will see a single device in our tailnet as `clab-mylab`. We can connect to port 8022 of this device to SSH to srl1, or 9022 to SSH to srl2.
+
+/// info
+Currently only TCP ports are forwarded using the `/ts` port nomenclature. If you require other protocol support, please raise a [GitHub issue](https://github.com/srl-labs/containerlab/issues).
+///
+
 ## Point-to-point links
 
 Management network is used to provide management access to the NOS containers, it does not carry control or dataplane traffic. In containerlab we create additional point-to-point links between the containers to provide the datapath between the lab nodes.
