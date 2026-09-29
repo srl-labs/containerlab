@@ -54,7 +54,11 @@ func (c *CLab) injectTailscaleSidecars() error {
 	parents := make([]string, 0, len(c.Nodes))
 	for name, n := range c.Nodes {
 		if len(n.Config().TailscalePorts) > 0 {
-			log.Warn("Tailscale /ts ports are only used with auth-mode: sso, ignoring", "node", name)
+			log.Warn(
+				"Tailscale /ts ports are only used with auth-mode: sso, ignoring",
+				"node",
+				name,
+			)
 		}
 		if tailscaleSidecarEligible(n.Config()) {
 			parents = append(parents, name)
@@ -119,7 +123,8 @@ func (c *CLab) verifyTailscaleProxy() error {
 
 // syncTailscaleProxy reconciles the SSO proxy tool container with mgmt.tailscale. It removes
 // the proxy when SSO is off, using the Serve config file as a marker that a proxy was
-// created so labs without one skip the runtime lookup; otherwise it rewrites the Serve config from the nodes' current
+// created so labs without one skip the runtime lookup; otherwise it rewrites the Serve config from
+// the nodes' current
 // /ts ports and management IPs, which a running proxy reloads without a restart, and creates
 // the proxy when it is missing. Node runtime info must be current.
 func (c *CLab) syncTailscaleProxy(ctx context.Context) error {

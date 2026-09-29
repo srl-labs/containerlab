@@ -89,7 +89,11 @@ func writeAuthKey(cfg *clabtypes.NodeConfig, mgmt *clabtypes.MgmtNet) error {
 		return nil
 	}
 
-	return os.WriteFile(filepath.Join(cfg.LabDir, authKeyFile), []byte(mgmt.Tailscale.AuthKey), 0o600)
+	return os.WriteFile(
+		filepath.Join(cfg.LabDir, authKeyFile),
+		[]byte(mgmt.Tailscale.AuthKey),
+		0o600,
+	)
 }
 
 func (n *tailscale) Deploy(ctx context.Context, params *clabnodes.DeployParams) error {

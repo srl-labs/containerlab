@@ -317,6 +317,7 @@ topology:
 		t.Fatalf("reserved name error = %v", err)
 	}
 }
+
 func TestInjectTailscaleKeyModeIgnoresTSPorts(t *testing.T) {
 	path := writeTailscaleTopo(t, `
 name: mylab
@@ -379,7 +380,8 @@ func newTailscaleToolLab(
 	opts ...ClabOption,
 ) (*CLab, *clabmocksmockruntime.MockContainerRuntime) {
 	t.Helper()
-	c, err := NewContainerLab(append([]ClabOption{WithTopoPath(writeTailscaleTopo(t, topo), nil)}, opts...)...)
+	c, err := NewContainerLab(
+		append([]ClabOption{WithTopoPath(writeTailscaleTopo(t, topo), nil)}, opts...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -403,7 +405,9 @@ func filterMatch(filters []*clabtypes.GenericFilter, field string) string {
 
 func readServeConfig(t *testing.T, c *CLab) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(c.TopoPaths.NodeDir(clabnodestailscale.ProxyName), "serve.json"))
+	b, err := os.ReadFile(
+		filepath.Join(c.TopoPaths.NodeDir(clabnodestailscale.ProxyName), "serve.json"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +426,8 @@ func TestSyncTailscaleProxyCreates(t *testing.T) {
 			}
 			return nil, nil
 		})
-	rt.EXPECT().PullImage(gomock.Any(), clabnodestailscale.DefaultImage, clabtypes.PullPolicyIfNotPresent)
+	rt.EXPECT().
+		PullImage(gomock.Any(), clabnodestailscale.DefaultImage, clabtypes.PullPolicyIfNotPresent)
 	var created *clabtypes.NodeConfig
 	rt.EXPECT().CreateContainer(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, cfg *clabtypes.NodeConfig) (string, error) {
@@ -550,10 +555,13 @@ func TestDeleteToolContainersKeepsTailscaleOnFilter(t *testing.T) {
 
 			var tools []string
 			rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, f []*clabtypes.GenericFilter) ([]clabruntime.GenericContainer, error) {
+				func(_ context.Context, f []*clabtypes.GenericFilter) (
+					[]clabruntime.GenericContainer, error,
+				) {
 					tools = append(tools, filterMatch(f, clabconstants.ToolType))
 					return nil, nil
-				}).AnyTimes()
+				}).
+				AnyTimes()
 
 			c.deleteToolContainers(context.Background())
 
@@ -563,6 +571,7 @@ func TestDeleteToolContainersKeepsTailscaleOnFilter(t *testing.T) {
 		})
 	}
 }
+
 func TestPlanTailscaleSidecarRecreates(t *testing.T) {
 	path := writeTailscaleTopo(t, `
 name: mylab
