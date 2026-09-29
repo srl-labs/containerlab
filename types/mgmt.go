@@ -8,6 +8,9 @@ import (
 
 // Validate checks management driver options without accessing the runtime or host.
 func (m *MgmtNet) Validate() error {
+	if m.Tailscale.Proxy() && m.Tailscale.AuthKey != "" {
+		return fmt.Errorf("mgmt.tailscale.auth-key and auth-mode: sso are mutually exclusive")
+	}
 	if !m.IPAM.Provider.IsValid() {
 		return fmt.Errorf("unsupported mgmt.ipam.provider %q", m.IPAM.Provider)
 	}

@@ -343,8 +343,8 @@ func (t *Topology) GetNodeType(nodeName string) string {
 	return defaultType
 }
 
-func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
-	ports := getField(
+func (t *Topology) nodePortSpecs(nodeName string) []string {
+	return getField(
 		t,
 		nodeName,
 		func(node *NodeDefinition) []string { return node.Ports },
@@ -353,12 +353,23 @@ func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, erro
 		func(defaults *NodeDefinition) []string { return defaults.Ports },
 		func(v []string) bool { return len(v) > 0 },
 	)
+}
 
-	if ports != nil {
-		return nat.ParsePortSpecs(ports)
+func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
+	docker, _, err := SplitDockerAndTailscalePorts(t.nodePortSpecs(nodeName))
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(docker) > 0 {
+		return nat.ParsePortSpecs(docker)
 	}
 
 	return nil, nil, nil
+}
+
+func (t *Topology) GetNodeTailscalePorts(nodeName string) ([]TailscalePort, error) {
+	_, ts, err := SplitDockerAndTailscalePorts(t.nodePortSpecs(nodeName))
+	return ts, err
 }
 
 func (t *Topology) GetNodeEnv(nodeName string) map[string]string {

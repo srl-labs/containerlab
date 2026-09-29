@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -16,6 +18,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -163,7 +166,6 @@ func (c *CLab) makeCopyForDestroy(
 	if err != nil {
 		return nil, err
 	}
-
 	if labDir != "" && clabutils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
 		// we might be in a different Dir.
@@ -269,6 +271,8 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
 	if len(c.Nodes) > 0 {
+		c.preDestroyNodes(ctx, slices.Collect(maps.Values(c.Nodes)), maxWorkers)
+
 		err := clablinks.CleanupFilteredLinks(
 			ctx,
 			c.Config.Topology.Links,
@@ -335,11 +339,23 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	}
 	sort.Strings(nodeNames)
 
+	hookNodes := make([]clabnodes.Node, 0, len(nodeNames))
 	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode == nil {
 			return fmt.Errorf("runtime node %q not found", nodeName)
 		}
+		if runtimeNode.external || runtimeNode.rootNamespaceBased {
+			continue
+		}
+		if node, ok := c.Nodes[nodeName]; ok {
+			hookNodes = append(hookNodes, node)
+		}
+	}
+	c.preDestroyNodes(ctx, hookNodes, 0)
+
+	for _, nodeName := range nodeNames {
+		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode.external || runtimeNode.rootNamespaceBased {
 			continue
 		}
@@ -369,6 +385,37 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	}
 
 	return nil
+}
+
+// preDestroyNodes runs the PreDestroy stage of the given nodes concurrently, before any of them
+// is deleted. Nodes without a container are skipped. A workers value of 0 runs all hooks at once.
+func (*CLab) preDestroyNodes(ctx context.Context, nodes []clabnodes.Node, workers uint) {
+	if workers == 0 || workers > uint(len(nodes)) {
+		workers = uint(len(nodes))
+	}
+
+	sem := make(chan struct{}, workers)
+	wg := new(sync.WaitGroup)
+
+	for _, n := range nodes {
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if n.GetContainerStatus(ctx) == clabruntime.NotFound {
+				return
+			}
+
+			if err := n.PreDestroy(ctx); err != nil {
+				log.Warnf("node %q pre-destroy hook failed: %v", n.Config().ShortName, err)
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
@@ -446,6 +493,10 @@ func (c *CLab) deleteContainersDirect(
 
 func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
+
+	if len(c.nodeFilter) == 0 {
+		toolTypes = append(toolTypes, clabnodestailscale.ToolType)
+	}
 
 	for _, toolType := range toolTypes {
 		toolFilter := []*clabtypes.GenericFilter{

@@ -270,6 +270,7 @@ func (c *CLab) planApply(
 	// Link reconciliation can request additional recreations. Propagate namespace
 	// dependencies only after those decisions, then park every affected live node.
 	c.planNetworkModeCascade(plan)
+	c.planTailscaleSidecarRecreates(plan)
 	c.planParkedNodes(ctx, plan)
 	c.planRecreatedNodeLinks(plan)
 	for nodeName := range plan.recreatedNodeSet {

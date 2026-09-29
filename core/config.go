@@ -150,7 +150,7 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	return nil
+	return c.injectTailscaleSidecars()
 }
 
 // NewNode initializes a new node object.
@@ -418,6 +418,10 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	if err != nil {
 		return nil, err
 	}
+	nodeCfg.TailscalePorts, err = c.Config.Topology.GetNodeTailscalePorts(nodeName)
+	if err != nil {
+		return nil, err
+	}
 
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
@@ -500,6 +504,10 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	}
 
 	if err := c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
+
+	if err := c.verifyTailscaleProxy(); err != nil {
 		return err
 	}
 

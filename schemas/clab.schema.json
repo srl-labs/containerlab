@@ -2143,6 +2143,27 @@
                     "description": "skip management network creation when every node has network-mode: none",
                     "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
                 },
+                "tailscale": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Configuration for tailscale attachment of the management network.",
+                    "markdownDescription": "[Tailscale](https://containerlab.dev/manual/network/#tailscale) sidecars for lab nodes",
+                    "not": {
+                        "required": ["auth-key", "auth-mode"]
+                    },
+                    "properties": {
+                        "auth-key": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Tailscale auth key used to join nodes to the tailnet."
+                        },
+                        "auth-mode": {
+                            "type": "string",
+                            "enum": ["sso"],
+                            "description": "Set the authentication mode for tailscale."
+                        }
+                    }
+                },
                 "driver-opts": {
                     "type": "object",
                     "description": "overrides for container runtime network driver options",

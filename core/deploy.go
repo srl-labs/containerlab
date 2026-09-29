@@ -205,6 +205,9 @@ func (c *CLab) deploy( //nolint: funlen
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
 		return nil, err
 	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
+		return nil, err
+	}
 	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}

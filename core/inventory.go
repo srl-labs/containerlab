@@ -100,6 +100,10 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
+		if isInternalNode(n) {
+			continue
+		}
+
 		cfg := n.Config()
 		ansibleGroup := ansibleInventoryGroup(cfg)
 
@@ -327,6 +331,10 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 	platformNameSchema := os.Getenv(clabconstants.ClabEnvNornirPlatformNameSchema)
 
 	for _, n := range c.Nodes {
+		if isInternalNode(n) {
+			continue
+		}
+
 		cfg := n.Config()
 		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
 		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||

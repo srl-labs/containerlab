@@ -159,6 +159,14 @@ func (c *CLab) apply(
 	}
 
 	if plan.empty() {
+		if c.tailscaleProxyEnabled() {
+			if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
+				return nil, err
+			}
+		}
+		if err := c.syncTailscaleProxy(ctx); err != nil {
+			return nil, err
+		}
 		if options.finalizeNoop {
 			if err := c.prepareApply(
 				ctx,
@@ -231,6 +239,9 @@ func (c *CLab) apply(
 	if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
 		return nil, err
 	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
+		return nil, err
+	}
 	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
@@ -269,7 +280,11 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 		}
 	}
 
-	return c.verifyDuplicateAddresses()
+	if err := c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
+
+	return c.verifyTailscaleProxy()
 }
 
 func (c *CLab) prepareApply(

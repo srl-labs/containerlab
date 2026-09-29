@@ -109,6 +109,7 @@ func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { r
 func (d *DefaultNode) Config() *clabtypes.NodeConfig                         { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
 func (*DefaultNode) PreStop(context.Context) error                           { return nil }
+func (*DefaultNode) PreDestroy(context.Context) error                        { return nil }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {

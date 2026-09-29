@@ -521,6 +521,20 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, params)
 }
 
+// PreDestroy mocks base method.
+func (m *MockNode) PreDestroy(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreDestroy", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreDestroy indicates an expected call of PreDestroy.
+func (mr *MockNodeMockRecorder) PreDestroy(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDestroy", reflect.TypeOf((*MockNode)(nil).PreDestroy), arg0)
+}
+
 // PullImage mocks base method.
 func (m *MockNode) PullImage(ctx context.Context) error {
 	m.ctrl.T.Helper()
