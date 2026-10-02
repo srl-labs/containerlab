@@ -30,7 +30,12 @@ func manifestsTestRequest(t *testing.T) clablabruntime.DeployRequest {
 	t.Helper()
 
 	topologyDir := t.TempDir()
-	writeFile(t, filepath.Join(topologyDir, "configs", "leaf1.cfg"), "set / system name leaf1\n", 0o644)
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "leaf1.cfg"),
+		"set / system name leaf1\n",
+		0o644,
+	)
 	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
 	writeFile(t, topologyFile, manifestsTestDefinition, 0o644)
 
@@ -66,8 +71,17 @@ func assertManifestIsApplyInput(t *testing.T, manifest clablabruntime.Manifest) 
 	if manifest.APIVersion == "" || manifest.Kind == "" || manifest.Name == "" {
 		t.Fatalf("manifest identity is incomplete: %+v", manifest)
 	}
-	if got, _, _ := unstructured.NestedString(manifest.Object, "apiVersion"); got != manifest.APIVersion {
-		t.Fatalf("%s %s apiVersion = %q, want %q", manifest.Kind, manifest.Name, got, manifest.APIVersion)
+	if got, _, _ := unstructured.NestedString(
+		manifest.Object,
+		"apiVersion",
+	); got != manifest.APIVersion {
+		t.Fatalf(
+			"%s %s apiVersion = %q, want %q",
+			manifest.Kind,
+			manifest.Name,
+			got,
+			manifest.APIVersion,
+		)
 	}
 }
 
@@ -109,7 +123,8 @@ func TestManifestsTopologyBundle(t *testing.T) {
 		t.Fatalf("configmap namespace = %q, want c9s-lab1", configMap.Namespace)
 	}
 	configMapLabels, _, _ := unstructured.NestedStringMap(configMap.Object, "metadata", "labels")
-	if configMapLabels[labelTopologyOwner] != "lab1" || configMapLabels[labelTopologyNode] != "" {
+	if configMapLabels[labelTopologyOwner] != "lab1" ||
+		configMapLabels[labelTopologyNode] != "" {
 		t.Fatalf("unexpected configmap labels: %v", configMapLabels)
 	}
 	// A text file is emitted as plain data, not base64 binaryData, so the manifest is editable.
@@ -224,11 +239,18 @@ func TestManifestsMatchDeployedResources(t *testing.T) {
 
 	deployedTopology := getTestTopology(t, r, "lab-ns", "lab1")
 	emittedTopology := manifests[len(manifests)-1]
-	if !apiequality.Semantic.DeepEqual(emittedTopology.Object["spec"], deployedTopology.Object["spec"]) {
+	if !apiequality.Semantic.DeepEqual(
+		emittedTopology.Object["spec"],
+		deployedTopology.Object["spec"],
+	) {
 		t.Fatalf("emitted topology spec differs from the deployed one:\n%v\n%v",
 			emittedTopology.Object["spec"], deployedTopology.Object["spec"])
 	}
-	emittedLabels, _, _ := unstructured.NestedStringMap(emittedTopology.Object, "metadata", "labels")
+	emittedLabels, _, _ := unstructured.NestedStringMap(
+		emittedTopology.Object,
+		"metadata",
+		"labels",
+	)
 	if !apiequality.Semantic.DeepEqual(emittedLabels, deployedTopology.GetLabels()) {
 		t.Fatalf("emitted topology labels = %v, deployed %v",
 			emittedLabels, deployedTopology.GetLabels())

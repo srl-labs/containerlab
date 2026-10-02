@@ -37,7 +37,12 @@ func (r *Runtime) reconcilePrimitiveResources(
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := validatePrimitiveResourceOwnership(existing, desired, topologyName, namespace); err != nil {
+	if err := validatePrimitiveResourceOwnership(
+		existing,
+		desired,
+		topologyName,
+		namespace,
+	); err != nil {
 		return nil, nil, err
 	}
 
@@ -187,7 +192,9 @@ func reconciledPrimitiveObject(
 	}
 
 	updated.SetLabels(mergeDesiredMetadata(existing.GetLabels(), desired.GetLabels()))
-	updated.SetAnnotations(mergeDesiredMetadata(existing.GetAnnotations(), desired.GetAnnotations()))
+	updated.SetAnnotations(
+		mergeDesiredMetadata(existing.GetAnnotations(), desired.GetAnnotations()),
+	)
 	deleteLifecycleLabels(updated)
 
 	return updated

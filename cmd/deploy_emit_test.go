@@ -132,7 +132,11 @@ func testManifests() []clablabruntime.Manifest {
 
 func TestPrintLabRuntimeManifestsYAMLStream(t *testing.T) {
 	var out bytes.Buffer
-	if err := printLabRuntimeManifests(&out, testManifests(), clabconstants.FormatTable); err != nil {
+	if err := printLabRuntimeManifests(
+		&out,
+		testManifests(),
+		clabconstants.FormatTable,
+	); err != nil {
 		t.Fatal(err)
 	}
 
@@ -155,7 +159,11 @@ func TestPrintLabRuntimeManifestsYAMLStream(t *testing.T) {
 
 func TestPrintLabRuntimeManifestsJSONList(t *testing.T) {
 	var out bytes.Buffer
-	if err := printLabRuntimeManifests(&out, testManifests(), clabconstants.FormatJSON); err != nil {
+	if err := printLabRuntimeManifests(
+		&out,
+		testManifests(),
+		clabconstants.FormatJSON,
+	); err != nil {
 		t.Fatal(err)
 	}
 

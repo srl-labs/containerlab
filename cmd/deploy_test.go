@@ -65,7 +65,11 @@ func TestDeployExposeTypeFlag(t *testing.T) {
 			t.Fatalf("%s command missing expose-type flag", commandName)
 		}
 		if flag.DefValue != "" {
-			t.Fatalf("%s expose-type default = %q, want c9s CRD default", commandName, flag.DefValue)
+			t.Fatalf(
+				"%s expose-type default = %q, want c9s CRD default",
+				commandName,
+				flag.DefValue,
+			)
 		}
 	}
 }

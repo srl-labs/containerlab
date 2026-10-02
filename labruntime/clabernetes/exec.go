@@ -109,7 +109,10 @@ func (r *Runtime) deviceContainerName(
 	return "", err
 }
 
-func preferredDeviceContainerName(node *unstructured.Unstructured, nodeName string) (string, error) {
+func preferredDeviceContainerName(
+	node *unstructured.Unstructured,
+	nodeName string,
+) (string, error) {
 	containers, _, _ := unstructured.NestedSlice(node.Object, "status", "directContainers")
 
 	type deviceContainer struct {

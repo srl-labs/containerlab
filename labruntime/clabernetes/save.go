@@ -59,7 +59,13 @@ func (r *Runtime) Save(
 		if err != nil {
 			// Not every application container carries the lifecycle entrypoint (secondary
 			// chassis cards do not); fall back to any of this node's containers that does.
-			containerName, saveCommand = r.saveCapableContainer(ctx, pod, req.Name, namespace, nodeName)
+			containerName, saveCommand = r.saveCapableContainer(
+				ctx,
+				pod,
+				req.Name,
+				namespace,
+				nodeName,
+			)
 			if containerName == "" {
 				log.Info(
 					"Skipping save for clabernetes node without a save-capable container",

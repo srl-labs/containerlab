@@ -103,7 +103,10 @@ func TestDestroyWithLabRuntimeRejectsNodeFilterBeforeDeletion(t *testing.T) {
 		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
 	}
 
-	err := c.destroyWithLabRuntime(context.Background(), &DestroyOptions{nodeFilter: []string{"node1"}})
+	err := c.destroyWithLabRuntime(
+		context.Background(),
+		&DestroyOptions{nodeFilter: []string{"node1"}},
+	)
 	if err == nil || !strings.Contains(err.Error(), "no resources were deleted") {
 		t.Fatalf("destroyWithLabRuntime() error = %v, want safe node-filter rejection", err)
 	}

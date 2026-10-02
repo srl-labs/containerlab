@@ -684,14 +684,18 @@ func (r *Runtime) waitAndSweepDeleted(
 				}
 				remaining = true
 				resource := r.client.Resource(gvr).Namespace(namespace)
-				if err := runWithWorkers(list.Items, workers, func(item unstructured.Unstructured) error {
-					err := resource.Delete(ctx, item.GetName(), metav1.DeleteOptions{})
-					if err != nil && !apierrors.IsNotFound(err) {
-						return fmt.Errorf("failed to delete late c9s resource %s/%s: %w",
-							namespace, item.GetName(), err)
-					}
-					return nil
-				}); err != nil {
+				if err := runWithWorkers(
+					list.Items,
+					workers,
+					func(item unstructured.Unstructured) error {
+						err := resource.Delete(ctx, item.GetName(), metav1.DeleteOptions{})
+						if err != nil && !apierrors.IsNotFound(err) {
+							return fmt.Errorf("failed to delete late c9s resource %s/%s: %w",
+								namespace, item.GetName(), err)
+						}
+						return nil
+					},
+				); err != nil {
 					return false, err
 				}
 			}
@@ -713,14 +717,18 @@ func (r *Runtime) waitAndSweepDeleted(
 			if len(configMaps.Items) != 0 {
 				remaining = true
 				resource := r.kubeClient.CoreV1().ConfigMaps(namespace)
-				if err := runWithWorkers(configMaps.Items, workers, func(item corev1.ConfigMap) error {
-					err := resource.Delete(ctx, item.Name, metav1.DeleteOptions{})
-					if err != nil && !apierrors.IsNotFound(err) {
-						return fmt.Errorf("failed to delete late staged ConfigMap %s/%s: %w",
-							namespace, item.Name, err)
-					}
-					return nil
-				}); err != nil {
+				if err := runWithWorkers(
+					configMaps.Items,
+					workers,
+					func(item corev1.ConfigMap) error {
+						err := resource.Delete(ctx, item.Name, metav1.DeleteOptions{})
+						if err != nil && !apierrors.IsNotFound(err) {
+							return fmt.Errorf("failed to delete late staged ConfigMap %s/%s: %w",
+								namespace, item.Name, err)
+						}
+						return nil
+					},
+				); err != nil {
 					return false, err
 				}
 			}
