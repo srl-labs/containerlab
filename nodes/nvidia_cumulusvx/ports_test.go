@@ -2,6 +2,7 @@ package nvidia_cumulusvx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -339,6 +340,101 @@ func TestPortsConfigWithoutLayout(t *testing.T) {
 	got, err := os.ReadFile(filename)
 	if err != nil || string(got) != manual {
 		t.Fatalf("manual file changed: %q, %v", got, err)
+	}
+}
+
+func TestPreDeployPortsConfigErrors(t *testing.T) {
+	layout := &clabtypes.CumulusVXExtras{
+		Ports:     6,
+		Breakouts: []clabtypes.CumulusVXBreakout{{Port: "1", Channels: 4}},
+	}
+
+	t.Run("missing startup config preserves ports config", func(t *testing.T) {
+		n := testNode(t, layout, "")
+		filename := filepath.Join(n.Cfg.LabDir, configDirName, portsConfigName)
+		if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		const previous = "1=2x\n2=1x\n"
+		if err := os.WriteFile(filename, []byte(previous), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		n.Cfg.StartupConfig = filepath.Join(t.TempDir(), "missing.cfg")
+
+		err := n.PreDeploy(context.Background(), &clabnodes.PreDeployParams{})
+		var pathErr *os.PathError
+		if !errors.Is(err, os.ErrNotExist) || !errors.As(err, &pathErr) ||
+			pathErr.Path != n.Cfg.StartupConfig {
+			t.Fatalf("PreDeploy error = %v, want missing startup config %q", err, n.Cfg.StartupConfig)
+		}
+		got, err := os.ReadFile(filename)
+		if err != nil || string(got) != previous {
+			t.Fatalf("ports.conf changed after startup config failure: %q, %v", got, err)
+		}
+	})
+
+	t.Run("ports config write failure", func(t *testing.T) {
+		n := testNode(t, layout, "")
+		filename := filepath.Join(n.Cfg.LabDir, configDirName, portsConfigName)
+		// A directory at the output path rejects writes even when tests run as root.
+		if err := os.MkdirAll(filename, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		err := n.PreDeploy(context.Background(), &clabnodes.PreDeployParams{})
+		var pathErr *os.PathError
+		if err == nil || !strings.Contains(err.Error(), "writing ports.conf") ||
+			!errors.As(err, &pathErr) || pathErr.Path != filename {
+			t.Fatalf("PreDeploy error = %v, want wrapped write error for %q", err, filename)
+		}
+	})
+}
+
+func TestPortLayoutDiffWithoutConfig(t *testing.T) {
+	n := testNode(t, nil, "")
+	withLayout := &clabtypes.NodeConfig{Extras: &clabtypes.Extras{
+		CumulusVX: &clabtypes.CumulusVXExtras{
+			Ports:     6,
+			Breakouts: []clabtypes.CumulusVXBreakout{{Port: "1", Channels: 4}},
+		},
+	}}
+	for _, tc := range []struct {
+		name           string
+		oldCfg, newCfg *clabtypes.NodeConfig
+		wantFields     []string
+	}{
+		{name: "both configs missing"},
+		{name: "old config missing", newCfg: withLayout},
+		{name: "new config missing", oldCfg: withLayout},
+		{
+			name:   "both extras missing",
+			oldCfg: &clabtypes.NodeConfig{},
+			newCfg: &clabtypes.NodeConfig{},
+		},
+		{
+			name:   "empty extras",
+			oldCfg: &clabtypes.NodeConfig{},
+			newCfg: &clabtypes.NodeConfig{Extras: &clabtypes.Extras{}},
+		},
+		{
+			name:       "image change without layout",
+			oldCfg:     &clabtypes.NodeConfig{Image: "cumulus:old"},
+			newCfg:     &clabtypes.NodeConfig{Image: "cumulus:new"},
+			wantFields: []string{"Image"},
+		},
+		{
+			name:       "layout added",
+			oldCfg:     &clabtypes.NodeConfig{},
+			newCfg:     withLayout,
+			wantFields: []string{portLayoutDiffField},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			diff := n.ComputeDiff(tc.oldCfg, tc.newCfg)
+			if !slices.Equal(diff.Fields, tc.wantFields) {
+				t.Fatalf("diff fields = %v, want %v", diff.Fields, tc.wantFields)
+			}
+		})
 	}
 }
 
