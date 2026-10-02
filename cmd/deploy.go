@@ -236,34 +236,7 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 
 // deployFn function runs deploy sub command.
 func deployFn(cobraCmd *cobra.Command, o *Options) error {
-	if o.Deploy.DryRun && o.Deploy.Reconfigure {
-		return fmt.Errorf(
-			"--dry-run cannot be combined with --reconfigure: " +
-				"reconfigure always destroys and redeploys the full lab",
-		)
-	}
-
-	if o.Deploy.NoTopologyCR && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
-		return fmt.Errorf("--no-topology-cr is only supported with the %q runtime",
-			clablabruntime.ClabernetesRuntimeName)
-	}
-
-	if o.Deploy.ImagePullSecret != "" &&
-		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
-		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
-			clablabruntime.ClabernetesRuntimeName)
-	}
-
-	if err := normalizeExposeTypeFlag(o); err != nil {
-		return err
-	}
-
-	if o.Deploy.NoPersistence && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
-		return fmt.Errorf("--no-persistence is only supported with the %q runtime",
-			clablabruntime.ClabernetesRuntimeName)
-	}
-
-	if err := validateEmitCRsFlags(o); err != nil {
+	if err := validateDeployFlags(o); err != nil {
 		return err
 	}
 
@@ -360,6 +333,42 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// print table summary
 	return PrintContainerInspect(result.Containers, o)
+}
+
+// validateDeployFlags runs before either deploy or redeploy can change lab resources.
+func validateDeployFlags(o *Options) error {
+	if o.Deploy.DryRun && o.Deploy.Reconfigure {
+		return fmt.Errorf(
+			"--dry-run cannot be combined with --reconfigure: " +
+				"reconfigure always destroys and redeploys the full lab",
+		)
+	}
+
+	if o.Deploy.NoTopologyCR && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--no-topology-cr is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if o.Deploy.ImagePullSecret != "" &&
+		!clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--image-pull-secret is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if err := normalizeExposeTypeFlag(o); err != nil {
+		return err
+	}
+
+	if o.Deploy.NoPersistence && !clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("--no-persistence is only supported with the %q runtime",
+			clablabruntime.ClabernetesRuntimeName)
+	}
+
+	if err := validateEmitCRsFlags(o); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func normalizeExposeTypeFlag(o *Options) error {

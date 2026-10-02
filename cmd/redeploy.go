@@ -147,7 +147,7 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 }
 
 func redeployFn(cobraCmd *cobra.Command, o *Options) error {
-	if err := normalizeExposeTypeFlag(o); err != nil {
+	if err := validateDeployFlags(o); err != nil {
 		return err
 	}
 
