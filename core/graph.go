@@ -88,6 +88,10 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 
 	// Process the Nodes
 	for nodeName, node := range c.Nodes {
+		if isInternalNode(node) {
+			continue
+		}
+
 		attr = make(map[string]string)
 		attr["color"] = red
 		attr["style"] = "filled"
@@ -243,6 +247,9 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	log.Info("building graph from topology file")
 
 	for _, node := range c.Nodes {
+		if isInternalNode(node) {
+			continue
+		}
 		g.Nodes = append(g.Nodes, buildGraphNode(node))
 	}
 }
@@ -254,6 +261,9 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.
 		log.Debugf("looking for node name %s", containers[idx].Labels[clabconstants.NodeName])
 
 		if node, ok := c.Nodes[containers[idx].Labels[clabconstants.NodeName]]; ok {
+			if isInternalNode(node) {
+				continue
+			}
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, clabtypes.ContainerDetails{
 				Name:        node.Config().ShortName,
@@ -268,6 +278,9 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.
 	}
 
 	for _, node := range c.Nodes {
+		if isInternalNode(node) {
+			continue
+		}
 		if _, exist := containerNames[node.Config().ShortName]; !exist {
 			g.Nodes = append(g.Nodes, buildGraphNode(node))
 		}

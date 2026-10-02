@@ -71,6 +71,10 @@ func (c *CLab) addSSHConfig() error {
 	// add the data for all nodes to the template input.
 	// Usernames come from NodeConfig.Credentials (topology + kind registry merge in createNodeCfg).
 	for _, n := range c.Nodes {
+		if isInternalNode(n) {
+			continue
+		}
+
 		cfg := n.Config()
 		nodeData := SSHConfigNodeTmpl{
 			Names:        []string{cfg.LongName},

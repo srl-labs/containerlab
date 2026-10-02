@@ -150,7 +150,7 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	return nil
+	return c.injectTailscaleSidecars()
 }
 
 // NewNode initializes a new node object.
@@ -165,6 +165,10 @@ func (c *CLab) NewNode(
 		return err
 	}
 
+	return c.initNode(nodeCfg, nodeRuntime)
+}
+
+func (c *CLab) initNode(nodeCfg *clabtypes.NodeConfig, nodeRuntime string) error {
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
@@ -187,7 +191,7 @@ func (c *CLab) NewNode(
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	c.Nodes[nodeName] = n
+	c.Nodes[nodeCfg.ShortName] = n
 	// adding default labels 2nd time in case node init
 	// overwrote original values for the default labels
 	c.addDefaultLabels(n.Config())
@@ -414,7 +418,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 	nodeCfg.Volumes = volumes
 
-	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
+	nodeCfg.PortSet, nodeCfg.PortBindings, nodeCfg.TailscalePorts, err =
+		c.Config.Topology.GetNodePortMappings(nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -500,6 +505,10 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	}
 
 	if err := c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
+
+	if err := c.verifyTailscaleProxy(); err != nil {
 		return err
 	}
 

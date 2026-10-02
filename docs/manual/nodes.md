@@ -383,9 +383,12 @@ ports:
   - 80:8080 # tcp port 80 of the host is mapped to port 8080 of the container
   - 55555:43555/udp
   - 55554:43554/tcp
+  - 8022:22/ts
 ```
 
 The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--expose` flag](https://docs.docker.com/reference/cli/docker/container/run/#publish).
+
+A `/ts` suffix publishes the mapping on the lab Tailscale proxy instead of the container runtime. See [Tailscale](network.md#tailscale).
 
 This option is only configurable under the node level.
 

@@ -76,9 +76,24 @@ type MgmtNet struct {
 	IPAM MgmtIPAM `json:"ipam,omitempty" yaml:"ipam,omitempty"`
 
 	// Macvlan specific options.
-	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
-	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
-	MacvlanAux    *bool  `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
+	MacvlanParent string           `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string           `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    *bool            `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
+	Tailscale     *TailscaleConfig `json:"tailscale,omitempty" yaml:"tailscale,omitempty"`
+}
+
+type TailscaleConfig struct {
+	AuthKey  string `json:"-" yaml:"auth-key,omitempty"`
+	AuthMode string `json:"auth-mode,omitempty" yaml:"auth-mode,omitempty"`
+}
+
+func (t *TailscaleConfig) Proxy() bool {
+	return t != nil && strings.EqualFold(strings.TrimSpace(t.AuthMode), "sso")
+}
+
+type TailscalePort struct {
+	Listen uint16
+	Dest   uint16
 }
 
 // Interface compliance.
@@ -201,6 +216,8 @@ type NodeConfig struct {
 	ResultingPortBindings []*GenericPortBinding `json:"port-bindings,omitempty"`
 	// PortSet define the ports that should be exposed on a container
 	PortSet nat.PortSet `json:"portset,omitempty"`
+	// TailscalePorts are Serve mappings taken from ports: entries with a /ts suffix.
+	TailscalePorts []TailscalePort `json:"-"`
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`

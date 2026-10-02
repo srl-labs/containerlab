@@ -21,6 +21,7 @@ import (
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sync/errgroup"
@@ -230,6 +231,9 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
+		return nil, err
+	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
 		return nil, err
 	}
 	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
@@ -724,6 +728,9 @@ func (c *CLab) waitForNodeDeployTarget(
 		return err
 	}
 	target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
+	if target == "" {
+		target = c.Nodes[name].Config().Labels[clabnodestailscale.ParentLabel]
+	}
 	if completion, selected := completed[target]; selected {
 		select {
 		case <-completion.done:

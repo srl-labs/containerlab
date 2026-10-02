@@ -205,3 +205,48 @@ func TestManagementIPAMYAML(t *testing.T) {
 		t.Fatal("address-valued macvlan-aux was accepted")
 	}
 }
+
+func TestMgmtTailscaleYAML(t *testing.T) {
+	var m MgmtNet
+	if err := yaml.UnmarshalStrict([]byte(`
+tailscale:
+  auth-key: tskey-auth-test
+`), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.Tailscale == nil {
+		t.Fatal("tailscale config was not unmarshaled")
+	}
+	if m.Tailscale.AuthKey != "tskey-auth-test" {
+		t.Fatalf("auth-key = %q", m.Tailscale.AuthKey)
+	}
+}
+
+func TestMgmtTailscaleValidation(t *testing.T) {
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{}}).Validate(); err != nil {
+		t.Fatalf("empty tailscale config rejected: %v", err)
+	}
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthMode: "sso"}}).Validate(); err != nil {
+		t.Fatalf("sso tailscale config rejected: %v", err)
+	}
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthKey: "tskey"}}).Validate(); err != nil {
+		t.Fatalf("valid tailscale config rejected: %v", err)
+	}
+	if err := (&MgmtNet{}).Validate(); err != nil {
+		t.Fatalf("nil tailscale config rejected: %v", err)
+	}
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthMode: "sso", AuthKey: "tskey"}}).Validate(); err == nil {
+		t.Fatal("sso with auth-key accepted")
+	}
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthMode: " SSO "}}).Validate(); err != nil {
+		t.Fatalf("normalized sso mode rejected: %v", err)
+	}
+	for _, mode := range []string{"oauth", "ssoo", " "} {
+		for _, key := range []string{"", "tskey"} {
+			m := &MgmtNet{Tailscale: &TailscaleConfig{AuthMode: mode, AuthKey: key}}
+			if err := m.Validate(); err == nil {
+				t.Errorf("unsupported auth-mode %q with auth-key %q accepted", mode, key)
+			}
+		}
+	}
+}

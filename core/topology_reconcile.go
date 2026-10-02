@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -270,6 +272,7 @@ func (c *CLab) planApply(
 	// Link reconciliation can request additional recreations. Propagate namespace
 	// dependencies only after those decisions, then park every affected live node.
 	c.planNetworkModeCascade(plan)
+	c.planTailscaleSidecarRecreates(plan)
 	c.planParkedNodes(ctx, plan)
 	c.planRecreatedNodeLinks(plan)
 	for nodeName := range plan.recreatedNodeSet {
@@ -706,6 +709,12 @@ func (c *CLab) resolveNodeConfigFromTopology(
 ) *clabtypes.NodeConfig {
 	if topo == nil {
 		return nil
+	}
+	if topo.GetNodeKind(nodeName) == clabnodestailscale.KindName &&
+		topo.GetNodeLabels(nodeName)[clabconstants.InternalNode] == "true" {
+		topo = &clabtypes.Topology{Nodes: map[string]*clabtypes.NodeDefinition{
+			nodeName: topo.Nodes[nodeName],
+		}}
 	}
 
 	binds, _ := topo.GetNodeBinds(nodeName)
