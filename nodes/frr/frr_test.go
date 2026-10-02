@@ -17,6 +17,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/ssh"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -53,26 +54,31 @@ func readConfigFile(t *testing.T, n *frr, name string) string {
 
 // Init must mount all three config files, since the image ships neither
 // frr.conf nor vtysh.conf and vtysh will not start without them.
-func TestInitBindsAllThreeConfigFiles(t *testing.T) {
+// The config directory is mounted as a directory, not as three separate files:
+// FRR renames frr.conf to frr.conf.sav when saving, and a single-file bind mount
+// cannot be renamed.
+func TestInitBindsConfigDirectory(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
-	for _, want := range []string{
-		"/etc/frr/frr.conf",
-		"/etc/frr/daemons",
-		"/etc/frr/vtysh.conf",
-	} {
-		found := false
+	want := filepath.Join(n.Cfg.LabDir, cfgDir) + ":" + etcFRR
 
-		for _, b := range n.Cfg.Binds {
-			if strings.HasSuffix(b, ":"+want) {
-				found = true
-				break
-			}
+	found := false
+
+	for _, b := range n.Cfg.Binds {
+		if b == want {
+			found = true
+			break
 		}
 
-		if !found {
-			t.Errorf("no bind mount for %s, got %v", want, n.Cfg.Binds)
+		// A per-file mount is what this replaces, and it is the failure worth
+		// naming: it looks like it works until the first "write memory".
+		if strings.HasPrefix(b, filepath.Join(n.Cfg.LabDir, cfgDir)+"/") {
+			t.Errorf("per-file bind mount %q; the directory must be mounted instead", b)
 		}
+	}
+
+	if !found {
+		t.Errorf("no bind mount %q, got %v", want, n.Cfg.Binds)
 	}
 }
 
@@ -199,9 +205,26 @@ func TestRegisterKindNames(t *testing.T) {
 	}
 }
 
+// The username is what containerlab writes into the generated ssh config and
+// the ansible and nornir inventories, so a bare "ssh <node>" reaches vtysh.
+func TestRegisterCredentials(t *testing.T) {
+	r := clabnodes.NewNodeRegistry()
+	Register(r)
+
+	creds := r.Kind("frr").GetCredentials()
+
+	if got := creds.GetUsername(); got != "admin" {
+		t.Errorf("username = %q, want %q", got, "admin")
+	}
+
+	if got := creds.GetPassword(); got != "admin" {
+		t.Errorf("password = %q, want %q", got, "admin")
+	}
+}
+
 // Exercise the shell command with multiple keys: Go string quoting must not
 // turn the newline separators into literal backslash-n sequences.
-func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
+func TestAddSSHKeysWritesMultipleSSHKeys(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
 	var want strings.Builder
@@ -227,9 +250,13 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 			args := append([]string(nil), cmd.GetCmd()...)
-			// Keep the test unprivileged and restrict writes to its temporary directory.
-			args[2] = strings.ReplaceAll(args[2], "/root/.ssh", filepath.Join(dir, ".ssh"))
-			args[2] = strings.ReplaceAll(args[2], "chown root:root", "true")
+			// Keep the test unprivileged and restrict writes to its temporary
+			// directory. The existence guard goes too, so that both users are
+			// exercised although the host running the test has no admin.
+			args[2] = strings.ReplaceAll(args[2], authzKeysTargets,
+				"root:"+filepath.Join(dir, "root")+" admin:"+filepath.Join(dir, "admin"))
+			args[2] = strings.ReplaceAll(args[2], authzKeysGuard, "true")
+			args[2] = strings.ReplaceAll(args[2], authzKeysChown, "true")
 
 			out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
 			if err != nil {
@@ -239,16 +266,365 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 			return clabexec.NewExecResult(cmd), nil
 		})
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	if err := n.addSSHKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, ".ssh", "authorized_keys"))
+	for _, user := range []string{"root", "admin"} {
+		data, err := os.ReadFile(filepath.Join(dir, user, ".ssh", "authorized_keys"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(data) != want.String() {
+			t.Fatalf("%s authorized_keys = %q, want %q", user, data, want.String())
+		}
+	}
+}
+
+// A plain release image has no admin user, and the keys still have to reach the
+// users that do exist rather than the script failing on the first absent one.
+func TestAddSSHKeysSkipsAbsentUser(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(data) != want.String() {
-		t.Fatalf("authorized_keys = %q, want %q", data, want.String())
+	key, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n.sshPubKeys = append(n.sshPubKeys, key)
+
+	dir := t.TempDir()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			args := append([]string(nil), cmd.GetCmd()...)
+			// root stands in for the user that exists and "nosuchuser" for the
+			// one that does not, so the real guard is what is under test here.
+			args[2] = strings.ReplaceAll(args[2], authzKeysTargets,
+				"root:"+filepath.Join(dir, "root")+" nosuchuser:"+filepath.Join(dir, "nosuchuser"))
+			args[2] = strings.ReplaceAll(args[2], authzKeysChown, "true")
+
+			out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+			if err != nil {
+				t.Fatalf("SSH key script: %v: %s", err, out)
+			}
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.addSSHKeys(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "root", ".ssh", "authorized_keys")); err != nil {
+		t.Errorf("keys not written for the user that exists: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "nosuchuser")); !os.IsNotExist(err) {
+		t.Errorf("absent user was not skipped: %v", err)
+	}
+}
+
+// FRR leaves frr.conf mode 0600 after a "write memory", and the file is bind
+// mounted, so that mode lands on the lab directory copy. Both the deploy and
+// the save path have to put it back.
+func TestConfigFilePermissionsRestored(t *testing.T) {
+	const saved = "frr defaults traditional\nrouter bgp 65000\nexit\n"
+
+	writeLockedDown := func(t *testing.T, n *frr) string {
+		t.Helper()
+
+		dir := filepath.Join(n.Cfg.LabDir, cfgDir)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		path := filepath.Join(dir, frrConfFile)
+		if err := os.WriteFile(path, []byte(saved), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		return path
+	}
+
+	assertReadable := func(t *testing.T, path string) {
+		t.Helper()
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got := info.Mode().Perm(); got != clabconstants.PermissionsFileDefault {
+			t.Errorf("mode = %#o, want %#o", got, clabconstants.PermissionsFileDefault)
+		}
+	}
+
+	t.Run("on deploy", func(t *testing.T) {
+		n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+		path := writeLockedDown(t, n)
+
+		if err := n.createFRRFiles(); err != nil {
+			t.Fatal(err)
+		}
+
+		assertReadable(t, path)
+
+		// The repair must not cost the user the configuration it repairs.
+		if got := readConfigFile(t, n, frrConfFile); got != saved {
+			t.Errorf("frr.conf = %q, want the saved config %q", got, saved)
+		}
+	})
+
+	t.Run("on save", func(t *testing.T) {
+		n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+		path := writeLockedDown(t, n)
+
+		rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+		n.WithRuntime(rt)
+		rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+				res := clabexec.NewExecResult(cmd)
+				res.SetStdOut([]byte(saved))
+
+				return res, nil
+			})
+
+		if _, err := n.SaveConfig(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+
+		assertReadable(t, path)
+	})
+}
+
+// containerlab's "save --copy" copies the file named by SaveConfigResult and
+// silently skips a node that reports none, so the path has to come back.
+func TestSaveConfigReportsPath(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	// SaveConfig writes into the config directory PreDeploy creates.
+	if err := os.MkdirAll(filepath.Join(n.Cfg.LabDir, cfgDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			res := clabexec.NewExecResult(cmd)
+			res.SetStdOut([]byte("frr defaults traditional\n"))
+
+			return res, nil
+		})
+
+	result, err := n.SaveConfig(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result == nil {
+		t.Fatal("SaveConfig returned no result; --copy would skip this node")
+	}
+
+	want := filepath.Join(n.Cfg.LabDir, cfgDir, frrConfFile)
+	if result.ConfigPath != want {
+		t.Errorf("ConfigPath = %q, want %q", result.ConfigPath, want)
+	}
+
+	// The path is only useful if it names the file that was actually written.
+	if _, err := os.Stat(result.ConfigPath); err != nil {
+		t.Errorf("ConfigPath does not exist: %v", err)
+	}
+}
+
+// runPasswordScript runs the command PostDeploy asked for on the host, with
+// chpasswd replaced by a file that records what it would have been fed. keepGuard
+// leaves the check for the user in place; without it the script runs as though
+// the user exists, since the host running the test has no admin.
+func runPasswordScript(
+	ctx context.Context,
+	t *testing.T,
+	cmd *clabexec.ExecCmd,
+	out string,
+	keepGuard bool,
+) {
+	t.Helper()
+
+	args := append([]string(nil), cmd.GetCmd()...)
+	if !keepGuard {
+		args[2] = strings.ReplaceAll(args[2], passwordGuard, "true")
+	}
+
+	args[2] = strings.ReplaceAll(args[2], "| chpasswd", "> "+out)
+
+	if b, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput(); err != nil {
+		t.Fatalf("password script: %v: %s", err, b)
+	}
+}
+
+// The image ships admin without a password, so the credentials only work for a
+// password login once PostDeploy has set them -- including on a host with no
+// ssh keys, where adding keys has nothing to do.
+func TestSetPassword(t *testing.T) {
+	// Every character here means something to a shell. It has to reach
+	// chpasswd exactly as written.
+	const password = `a'b"c$(touch /tmp/x);d` + "`e`" + `\f g`
+
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "admin", Password: password},
+	})
+
+	out := filepath.Join(t.TempDir(), "chpasswd-input")
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			runPasswordScript(ctx, t, cmd, out, false)
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.setPassword(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "admin:" + password + "\n"; string(got) != want {
+		t.Errorf("chpasswd input = %q, want %q", got, want)
+	}
+}
+
+// A plain release image has no admin, and the password step must not fail the
+// deploy there.
+func TestSetPasswordSkipsAbsentUser(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "nosuchuser", Password: "pw"},
+	})
+
+	out := filepath.Join(t.TempDir(), "chpasswd-input")
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			runPasswordScript(ctx, t, cmd, out, true)
+
+			return clabexec.NewExecResult(cmd), nil
+		})
+
+	if err := n.setPassword(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("chpasswd ran for a user the image does not have: %v", err)
+	}
+}
+
+// chpasswd reads one user:password pair per line, so a line break in the
+// password would set a second user's password. It is refused before anything
+// runs in the container; the mock fails the test on any Exec.
+func TestPostDeployRejectsPasswordWithLineBreak(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{
+		ShortName:   "router1",
+		Credentials: clabtypes.NodeCredentials{Username: "admin", Password: "pw\nroot:owned"},
+	})
+
+	n.WithRuntime(clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t)))
+
+	err := n.PostDeploy(context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "line break") {
+		t.Fatalf("PostDeploy error = %v, want one about the line break", err)
+	}
+}
+
+// PostDeploy installs the save wrapper even when authentication needs no work.
+func TestPostDeployConfigSaveWrapper(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	dir := filepath.Join(t.TempDir(), "with spaces")
+	binDir := filepath.Join(dir, "bin")
+	configDir := filepath.Join(dir, "config")
+	for _, path := range []string{binDir, configDir} {
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Stand in for FRR's writer without requiring privileges or a container.
+	writer := `#!/bin/sh
+case "$*" in
+    -w|--writeconfig)
+        [ -z "$FRR_TEST_FAILURE" ] || exit "$FRR_TEST_FAILURE"
+        printf 'saved configuration\n' > "$FRR_TEST_CONFIG"
+        chmod 600 "$FRR_TEST_CONFIG"
+        ;;
+    *)
+        printf '%s\n' "$@"
+        ;;
+esac`
+	path := filepath.Join(binDir, "vtysh")
+	if err := os.WriteFile(path, []byte(writer), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	configPath := filepath.Join(configDir, frrConfFile)
+	t.Setenv("FRR_TEST_CONFIG", configPath)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			args := append([]string(nil), cmd.GetCmd()...)
+			for _, i := range []int{2, 4} {
+				args[i] = strings.ReplaceAll(args[i], "/usr/bin", binDir)
+				args[i] = strings.ReplaceAll(args[i], etcFRR, configDir)
+			}
+			if out, err := exec.CommandContext(ctx, args[0], args[1:]...).
+				CombinedOutput(); err != nil {
+				t.Fatalf("install save wrapper: %v: %s", err, out)
+			}
+
+			return clabexec.NewExecResult(cmd), nil
+		}).Times(2)
+
+	// Reinstalling must retain the binary, rather than wrapping the wrapper.
+	for _, arg := range []string{"-w", "--writeconfig"} {
+		if err := n.PostDeploy(context.Background(), nil); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command(path, arg).CombinedOutput(); err != nil {
+			t.Fatalf("save config: %v: %s", err, out)
+		}
+		info, err := os.Stat(configPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != clabconstants.PermissionsFileDefault {
+			t.Errorf("mode = %#o, want %#o", got, clabconstants.PermissionsFileDefault)
+		}
+	}
+
+	if out, err := exec.Command(path, "show version", "two words").CombinedOutput(); err != nil ||
+		string(out) != "show version\ntwo words\n" {
+		t.Fatalf("forwarded arguments: %q, error: %v", out, err)
+	}
+	t.Setenv("FRR_TEST_FAILURE", "42")
+	if err := exec.Command(path, "-w").Run(); err == nil {
+		t.Fatal("wrapper swallowed the binary's failure")
+	} else if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 42 {
+		t.Fatalf("exit error = %v, want exit code 42", err)
 	}
 }
