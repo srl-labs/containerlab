@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	// panics when closed twice, this way there can only be one signal handled context
+	// panics when closed twice, this way there can only be one signal handled context.
 	onlyOneSignalHandler = make(chan struct{}) //nolint: gochecknoglobals
 
 	// cancellationSignaled is closed once a SIGINT or SIGTERM has been received, letting
