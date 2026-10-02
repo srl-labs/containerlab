@@ -83,7 +83,7 @@ The example ports above would be mapped to the following Linux interfaces inside
 Data interfaces may take 5+ minutes to function correctly after the node boots.
 ///
 
-You must define interfaces in a contiguous manner in your toplogy file. For example, if you want to use `Gi1/0/4` you must define `Gi1/0/1`, `Gi1/0/2` and `Gi1/0/3`. See the example below.
+You must define interfaces in a contiguous manner in your topology file. For example, if you want to use `Gi1/0/4` you must define `Gi1/0/1`, `Gi1/0/2` and `Gi1/0/3`. See the example below.
 
 ```yaml
 name: my-cat9kv-lab

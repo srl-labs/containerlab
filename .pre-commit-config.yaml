@@ -1,12 +1,11 @@
 repos:
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.1.0
+    rev: v2.4.3
     hooks:
       - id: codespell
         args:
-          # Networking terms and the Go readiness variable are intentional.
+          # Networking terms are intentional.
           - --ignore-words-list=clos,nd,wan
-          - '--ignore-regex=\ballReady\b'
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.17
     hooks:

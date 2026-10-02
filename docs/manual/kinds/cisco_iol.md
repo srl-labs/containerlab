@@ -85,7 +85,7 @@ The example ports above would be mapped to the following Linux interfaces inside
 
 When containerlab launches -{{ kind_display_name }}-, the `Ethernet0/0` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. The `Ethernet0/0` interface is in it's own management VRF so that configuration in the global context will not affect the management interface.
 
-Interfaces can be defined in a non-contigous manner in your toplogy file. See the example below.
+Interfaces can be defined in a non-contiguous manner in your topology file. See the example below.
 
 ```yaml
 name: my-iol-lab
