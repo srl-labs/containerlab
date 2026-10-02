@@ -59,7 +59,13 @@ func TestL2Detection(t *testing.T) {
 			t.Fatalf("Init(%q, %q): %v", tt.nodeType, tt.image, err)
 		}
 		if n.isL2Node != tt.want {
-			t.Errorf("type=%q image=%q: isL2Node=%v, want %v", tt.nodeType, tt.image, n.isL2Node, tt.want)
+			t.Errorf(
+				"type=%q image=%q: isL2Node=%v, want %v",
+				tt.nodeType,
+				tt.image,
+				n.isL2Node,
+				tt.want,
+			)
 		}
 	}
 }
