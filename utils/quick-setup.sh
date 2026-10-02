@@ -21,12 +21,14 @@ function check_os {
             DISTRO_TYPE="ubuntu"
             if [ "$VERSION_ID" = "25.04" ] || [ "$VERSION_ID" = "25.10" ]; then
                 DOCKER_VERSION="28.5.2"
+            elif [ "$VERSION_ID" = "26.04" ]; then
+                DOCKER_VERSION="29.8.1"
             fi
         elif [ "$ID" = "fedora" ]; then
             DISTRO_TYPE="fedora"
         elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
             DISTRO_TYPE="rhel"
-            if [[ "$ID" = "rocky" ]] && [ "${VERSION_ID:0:2}" = "10" ]; then
+            if [[ "$ID" = "rocky" || "$ID" = "centos" ]] && [ "${VERSION_ID:0:2}" = "10" ]; then
                 DOCKER_VERSION="28.5.2"
             fi
         else
@@ -81,8 +83,7 @@ function install-docker-debian {
 
 function install-docker-ubuntu {
     # using instructions from:
-    # https://docs.docker.com/engine/install/debian/#install-using-the-repository
-    for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove -y $pkg; done
+    # https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
     # Add Docker's official GPG key:
     sudo apt-get update -y
@@ -96,16 +97,35 @@ function install-docker-ubuntu {
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
     $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update -y
+    if ! sudo apt-get update -y; then
+        echo "Could not refresh Docker's official repository for Ubuntu ${VERSION_ID} (${VERSION_CODENAME}). No Docker packages were removed." >&2
+        echo "Check https://docs.docker.com/engine/install/ubuntu/ for manual installation instructions." >&2
+        return 1
+    fi
 
     DOCKER_PKG_NAME=$(apt-cache madison docker-ce | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
+    DOCKER_CLI_PKG_NAME=$(apt-cache madison docker-ce-cli | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
 
-    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin  --allow-downgrades
+    if [ -z "$DOCKER_PKG_NAME" ] || [ -z "$DOCKER_CLI_PKG_NAME" ]; then
+        echo "Docker CE ${DOCKER_VERSION} is not available for Ubuntu ${VERSION_ID} (${VERSION_CODENAME}) from Docker's official repository." >&2
+        echo "No Docker packages were removed. Install Docker manually using https://docs.docker.com/engine/install/ubuntu/ or use a supported Ubuntu release." >&2
+        return 1
+    fi
+
+    for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove -y $pkg; done
+
+    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_CLI_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin  --allow-downgrades
 }
 
 function install-docker-rhel {
     # using instructions from:
     # https://docs.docker.com/engine/install/rhel/#install-using-the-repository
+    # https://docs.docker.com/engine/install/centos/#install-using-the-repository
+    local docker_repo="rhel"
+    if [ "$ID" = "centos" ]; then
+        docker_repo="centos"
+    fi
+
     sudo yum remove -y docker \
                   docker-client \
                   docker-client-latest \
@@ -118,7 +138,7 @@ function install-docker-rhel {
                   runc
 
     sudo yum install -y yum-utils
-    sudo yum-config-manager -y --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+    sudo yum-config-manager -y --add-repo "https://download.docker.com/linux/${docker_repo}/docker-ce.repo"
 
     DOCKER_PKG_NAME=$(yum list docker-ce --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
     DOCKER_CLI_PKG_NAME=$(yum list docker-ce-cli --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
@@ -312,7 +332,7 @@ function all {
         setup-sshd
     fi
 
-    install-docker
+    install-docker || return 1
     post-install-docker
 
     install-make

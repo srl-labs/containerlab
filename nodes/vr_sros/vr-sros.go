@@ -240,6 +240,9 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 
 	// apply the aggregated config snippets
 	if b.Len() > 0 {
+		if err := s.RequireMgmtReachable(); err != nil {
+			return err
+		}
 		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, s.scrapliPlatform(),
 			s.Cfg.Credentials.Username, s.Cfg.Credentials.Password,
 			b,

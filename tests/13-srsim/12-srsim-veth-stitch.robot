@@ -22,8 +22,8 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Ensure sros1 can ping sros2 over the veth-stitch link
-    Wait Until Keyword Succeeds    3 minutes    10 seconds    Ping succeeds    sros1    ${peer-ip}
+Ensure distributed sros can ping sros2 over the veth-stitch link
+    Wait Until Keyword Succeeds    3 minutes    10 seconds    Ping succeeds    sros    ${peer-ip}
 
 Verify inspect interfaces returns the host-side stitch interfaces
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -40,32 +40,40 @@ Verify events reports the host-side stitch interfaces
 
 Impair the veth-stitch link with 100% loss
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-sros1 -i 1/1/c1/1 --loss 100
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-sros-1 -i 1/1/c23/4 --loss 100
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    100.00%
 
 Verify netem show reports the impairment on the host interface
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-sros1
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-sros-1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    (host)
+    Should Contain    ${output}    100.00%
+
+Verify netem resolves the topology node name
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -t ${CURDIR}/${lab-file-name} -n sros
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    (host)
     Should Contain    ${output}    100.00%
 
 Verify ping fails while the link is impaired
-    ${output} =    Ping over SSH    sros1    ${peer-ip}
+    ${output} =    Ping over SSH    sros    ${peer-ip}
     Should Contain    ${output}    100% packet loss
 
 Reset the impairment on the veth-stitch link
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -n clab-${lab-name}-sros1 -i 1/1/c1/1
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -n clab-${lab-name}-sros-1 -i 1/1/c23/4
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    (host)
 
 Verify ping recovers after reset
-    Wait Until Keyword Succeeds    1 minute    5 seconds    Ping succeeds    sros1    ${peer-ip}
+    Wait Until Keyword Succeeds    1 minute    5 seconds    Ping succeeds    sros    ${peer-ip}
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output

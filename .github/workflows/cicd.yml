@@ -116,9 +116,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build-containerlab
     if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      needs.build-containerlab.result == 'success'
+      github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.build-containerlab.result == 'success'
     permissions:
       actions: read
       issues: write
@@ -155,7 +153,9 @@ jobs:
               }),
             );
 
+            const marker = '<!-- containerlab-binary-downloads -->';
             const body = [
+              marker,
               '<details>',
               `<summary>Download Containerlab binaries for commit ${context.payload.pull_request.head.sha}:</summary>`,
               '',
@@ -180,14 +180,50 @@ jobs:
               '</details>',
             ].join('\n');
 
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: issue_number,
+            });
+            if (
+              pr.state !== 'open' ||
+              pr.head.sha !== context.payload.pull_request.head.sha
+            ) {
+              core.info('Skipping binary comment for a closed PR or superseded commit.');
+              return;
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (comment) =>
+                comment.user?.login === 'github-actions[bot]' &&
+                comment.body?.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+              return;
+            }
+
             await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              owner,
+              repo,
+              issue_number,
               body,
             });
 
-  golangci-lint:
+  lint-and-format:
     uses: ./.github/workflows/golangci-lint.yml
     needs:
       - file-changes
@@ -524,6 +560,17 @@ jobs:
       uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  frr-tests:
+    uses: ./.github/workflows/frr-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
     needs:
@@ -574,6 +621,7 @@ jobs:
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
+      - frr-tests
       - download-tests
       - process-gitref
 
@@ -659,7 +707,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
-      - golangci-lint
+      - lint-and-format
       # docs tests are often flaky with 429 errors,
       # so don't require them to pass for the release to happen
       # - docs-test
@@ -676,6 +724,7 @@ jobs:
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
+      - frr-tests
       - download-tests
       - process-gitref
     steps:

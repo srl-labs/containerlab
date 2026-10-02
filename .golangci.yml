@@ -48,6 +48,10 @@ linters:
     goconst:
       min-len: 2
       min-occurrences: 3
+      ignore-tests: true
+      # file names in a lookup table are data, not magic constants
+      ignore-string-values:
+        - '\.yml$'
     gocritic:
       disabled-checks:
         - whyNoLint

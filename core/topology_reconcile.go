@@ -105,6 +105,88 @@ func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
 }
 
+// networkModeContainerTarget returns the referenced node name for a
+// "network-mode: container:<name>" config, or "" if networkMode does not
+// share another container's network namespace.
+func networkModeContainerTarget(networkMode string) string {
+	if target, shared := strings.CutPrefix(networkMode, "container:"); shared {
+		return target
+	}
+	return ""
+}
+
+// checkApplyNetworkModeTargets rejects apply when a node's network-mode:
+// container:<target> target is being removed from the topology while the
+// dependent node stays desired. Deleting the target would leave the
+// dependent silently attached to a defunct network namespace.
+func (c *CLab) checkApplyNetworkModeTargets(plan *applyPlan) error {
+	if plan == nil {
+		return nil
+	}
+
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		networkMode := c.Nodes[nodeName].Config().NetworkMode
+		target := networkModeContainerTarget(networkMode)
+		if target == "" {
+			continue
+		}
+		if _, deleted := plan.deletedNodeSet[target]; deleted {
+			return fmt.Errorf(
+				"node %q has network-mode %q, but %q is being removed from the topology; "+
+					"remove or retarget %q as well",
+				nodeName,
+				networkMode,
+				target,
+				nodeName,
+			)
+		}
+	}
+
+	return nil
+}
+
+// planNetworkModeCascade forces recreation of nodes whose network-mode:
+// container:<target> target is itself being recreated. Docker binds
+// NetworkMode to the target container's ID at creation time, so a plain
+// restart of the dependent cannot rebind it to the target's new container;
+// only recreating the dependent does. A reverse dependency graph visits each
+// node and dependency at most once, including long namespace-sharing chains.
+func (c *CLab) planNetworkModeCascade(plan *applyPlan) {
+	if plan == nil || len(plan.recreatedNodeSet) == 0 {
+		return
+	}
+
+	dependents := make(map[string][]string)
+	for name, node := range c.Nodes {
+		if target := networkModeContainerTarget(node.Config().NetworkMode); target != "" {
+			dependents[target] = append(dependents[target], name)
+		}
+	}
+	queue := make([]string, 0, len(c.Nodes))
+	for name := range plan.recreatedNodeSet {
+		queue = append(queue, name)
+	}
+	for i := 0; i < len(queue); i++ {
+		target := queue[i]
+		for _, nodeName := range dependents[target] {
+			if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
+				continue
+			}
+			if _, added := plan.addedNodeSet[nodeName]; added {
+				continue
+			}
+
+			plan.recreatedNodeSet[nodeName] = struct{}{}
+			delete(plan.restartNodeSet, nodeName)
+			delete(plan.linkRestartNodeSet, nodeName)
+			plan.nodeChangeReasons[nodeName] = fmt.Sprintf(
+				"network-mode target %q recreated", target,
+			)
+			queue = append(queue, nodeName)
+		}
+	}
+}
+
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
@@ -135,6 +217,10 @@ func (c *CLab) planApply(
 		if _, exists := c.Nodes[nodeName]; !exists {
 			plan.deletedNodeSet[nodeName] = struct{}{}
 		}
+	}
+
+	if err := c.checkApplyNetworkModeTargets(plan); err != nil {
+		return nil, err
 	}
 
 	if err := c.planNodeReconciliation(ctx, plan); err != nil {
@@ -181,10 +267,18 @@ func (c *CLab) planApply(
 		}
 	}
 
+	// Link reconciliation can request additional recreations. Propagate namespace
+	// dependencies only after those decisions, then park every affected live node.
+	c.planNetworkModeCascade(plan)
+	c.planParkedNodes(ctx, plan)
 	c.planRecreatedNodeLinks(plan)
 	for nodeName := range plan.recreatedNodeSet {
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
+		delete(plan.startNodeSet, nodeName)
+	}
+	if err := c.planNetworkModeRestarts(plan); err != nil {
+		return nil, err
 	}
 
 	return plan, nil
@@ -205,6 +299,9 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.recreatedNodeSet {
+		if _, parked := plan.parkedNodeSet[nodeName]; parked {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue

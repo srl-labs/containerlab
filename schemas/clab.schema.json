@@ -103,6 +103,8 @@
                         "ciena_saos",
                         "ext-container",
                         "rare",
+                        "frr",
+                        "frrouting",
                         "cisco_xrd",
                         "cisco_xrd_vrouter",
                         "cisco_c8000",
@@ -117,6 +119,7 @@
                         "freebsd",
                         "generic_vm",
                         "fortinet_fortigate",
+                        "fortinet_fortiproxy",
                         "k8s-kind",
                         "fdio_vpp",
                         "vyosnetworks_vyos",
@@ -636,12 +639,25 @@
                                     "ixr-6",
                                     "ixr6e",
                                     "ixr-6e",
+                                    "ixr-6e-gen2cp-qsfpdd",
+                                    "ixr-6e-gen2cp-qsfp28",
+                                    "ixr-6e-gen2cp-sync",
+                                    "ixr-6e-gen3-qsfpdd",
+                                    "ixr-6e-gen3-osfp",
                                     "ixr10",
                                     "ixr-10",
                                     "ixr10e",
                                     "ixr-10e",
+                                    "ixr-10e-gen2cp-qsfpdd",
+                                    "ixr-10e-gen2cp-qsfp28",
+                                    "ixr-10e-gen2cp-sync",
+                                    "ixr-10e-gen3-qsfpdd",
+                                    "ixr-10e-gen3-osfp",
                                     "ixr18e",
                                     "ixr-18e",
+                                    "ixr-18e-qsfpdd",
+                                    "ixr-18e-gen3-sync",
+                                    "ixr-18e-gen3-osfp",
                                     "sxr1x44s",
                                     "sxr-1x-44s",
                                     "sxr1d32d",
@@ -1280,6 +1296,47 @@
                         "type": "string"
                     },
                     "uniqueItems": true
+                },
+                "frr": {
+                    "type": "object",
+                    "description": "FRRouting-specific extra options",
+                    "markdownDescription": "[FRRouting-specific extra options](https://containerlab.dev/manual/kinds/frr/#daemons)",
+                    "properties": {
+                        "daemons": {
+                            "type": "array",
+                            "description": "list of FRR routing daemons to enable; when omitted, all daemons are enabled",
+                            "markdownDescription": "list of [FRR routing daemons](https://containerlab.dev/manual/kinds/frr/#daemons) to enable; when omitted, all daemons are enabled",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "bgpd",
+                                    "ospfd",
+                                    "ospf6d",
+                                    "ripd",
+                                    "ripngd",
+                                    "isisd",
+                                    "pimd",
+                                    "pim6d",
+                                    "ldpd",
+                                    "nhrpd",
+                                    "eigrpd",
+                                    "babeld",
+                                    "sharpd",
+                                    "pbrd",
+                                    "bfdd",
+                                    "fabricd",
+                                    "vrrpd",
+                                    "pathd",
+                                    "zebra",
+                                    "staticd",
+                                    "mgmtd",
+                                    "watchfrr"
+                                ]
+                            },
+                            "uniqueItems": true
+                        }
+                    },
+                    "additionalProperties": false
                 }
             },
             "additionalProperties": false
@@ -2030,6 +2087,53 @@
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
                 },
+                "driver": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "macvlan"
+                    ],
+                    "description": "Network driver type (bridge or macvlan)"
+                },
+                "ipam": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "enum": ["containerlab", "runtime"],
+                            "default": "containerlab",
+                            "description": "Management IP allocation provider; runtime delegates to Docker or Podman"
+                        },
+                        "dad": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Duplicate Address Detection for allocated addresses. For Containerlab provider only. Checks using ARP/v6-ND DAD on the parent interface for macvlan mgmt net driver."
+                        }
+                    }
+                },
+                "macvlan-parent": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 15,
+                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
+                },
+                "macvlan-mode": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "vepa",
+                        "private",
+                        "passthru"
+                    ],
+                    "default": "bridge",
+                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
+                },
+                "macvlan-aux": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable automatic auxiliary host interface (for MACVLAN bridge mode only)"
+                },
                 "external-access": {
                     "type": "boolean",
                     "description": "controls whether the management network has external access or not",
@@ -2235,6 +2339,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "rare": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "frr": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "frrouting": {
                             "$ref": "#/definitions/node-config"
                         },
                         "nvidia_cumulusvx": {

@@ -21,7 +21,7 @@ For example, on some RHEL 8 systems the following commands might be needed to ru
 ```bash
 dnf install kernel-debug-modules-extra
 dnf install kernel-modules-extra
-systemctl reboot now 
+systemctl reboot now
 ```
 
 ///
@@ -40,7 +40,7 @@ containerlab tools netem set [local-flags]
 
 ### node
 
-With the mandatory `--node | -n` flag a user specifies the name of the containerlab node to set link impairments on.
+With `--topo | -t` or `--name`, the mandatory `--node | -n` flag specifies a node name from the topology. Without topology context, it specifies a container name.
 
 ### interface
 
@@ -74,9 +74,17 @@ Example: corruption of 10 means 10% corruption probability for a traffic passing
 
 ## Examples
 
-### Setting delay and jitter
+### Setting delay and jitter using node name
 
-For `clab-netem-r1` node and its `eth1` interface set delay of 5ms and jitter of 1ms:
+For node `r1` defined in the topology and its `eth1` interface, set delay of 5ms and jitter of 1ms:
+
+```bash
+containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --delay 5ms --jitter 1ms
+```
+
+### Setting delay and jitter using container name
+
+For container `clab-netem-r1` and its `eth1` interface, set delay of 5ms and jitter of 1ms:
 
 ```bash
 containerlab tools netem set -n clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
@@ -84,7 +92,11 @@ containerlab tools netem set -n clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
 
 ### Setting packet loss
 
-```bash title="setting packet loss at 10% rate"
+```bash title="setting packet loss at 10% rate using node name"
+containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --loss 10
+```
+
+```bash title="setting packet loss at 10% rate using container name"
 containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
 ```
 
