@@ -1287,6 +1287,52 @@
             "type": "object",
             "description": "node's extra configurations",
             "properties": {
+                "cumulus-vx": {
+                    "type": "object",
+                    "description": "Cumulus VX base ports and simulated breakout widths",
+                    "markdownDescription": "[Cumulus VX breakout port layout](https://containerlab.dev/manual/kinds/nvidia_cumulusvx/#breakout-ports)",
+                    "required": ["ports", "breakouts"],
+                    "properties": {
+                        "ports": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 999,
+                            "description": "Base port count; breakout NICs are allocated after this range"
+                        },
+                        "breakouts": {
+                            "type": "array",
+                            "minItems": 1,
+                            "description": "Breakout channels for individual parent ports or inclusive port ranges; entries must not overlap",
+                            "items": {
+                                "type": "object",
+                                "required": ["port", "channels"],
+                                "properties": {
+                                    "port": {
+                                        "description": "Parent port number or inclusive range, for example 10 or 1..20, within the base port count",
+                                        "anyOf": [
+                                            {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 999
+                                            },
+                                            {
+                                                "type": "string",
+                                                "pattern": "^[1-9][0-9]{0,2}(\\.\\.[1-9][0-9]{0,2})?$"
+                                            }
+                                        ]
+                                    },
+                                    "channels": {
+                                        "type": "integer",
+                                        "enum": [2, 4, 8],
+                                        "description": "Number of breakout lanes for each selected port"
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "ceos-copy-to-flash": {
                     "type": "array",
                     "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup",

@@ -37,7 +37,7 @@ var sshConfigTemplate string
 // RemoveSSHConfig removes the lab specific ssh config file.
 func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 	err := os.Remove(topoPaths.SSHConfigPath())
-	// if there is an error, thats not "Not Exists", then return it
+	// if there is an error, that's not "Not Exists", then return it
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

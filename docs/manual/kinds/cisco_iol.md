@@ -85,7 +85,7 @@ The example ports above would be mapped to the following Linux interfaces inside
 
 When containerlab launches -{{ kind_display_name }}-, the `Ethernet0/0` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. The `Ethernet0/0` interface is in it's own management VRF so that configuration in the global context will not affect the management interface.
 
-Interfaces can be defined in a non-contigous manner in your toplogy file. See the example below.
+Interfaces can be defined in a non-contiguous manner in your topology file. See the example below.
 
 ```yaml
 name: my-iol-lab
@@ -173,7 +173,7 @@ Both types of startup configurations are only be applied on the **first boot** o
 
 The full startup configuration is used to fully replace/override the default startup configuration that is applied. This means you must define IP addressing and the SSH server in your configuration to access -{{ kind_short_display_name }}-.
 
-You can use the template variables that are defined in the [default startup confguration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
+You can use the template variables that are defined in the [default startup configuration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
 
 ```yaml
 name: iol_full_startup_cfg
