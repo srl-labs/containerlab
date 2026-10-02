@@ -49,13 +49,11 @@ var (
 	cfgTemplate string
 
 	// IntfRegexp with named capture groups for extracting slot and port.
-	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
+	CapturingIntfRegexp = regexp.MustCompile(`^(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	// ethX naming is the "raw" or "default" interface naming.
 	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9]\d*$`)
-	// Match on the management interface.
-	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
 	// Matches on any allowed/legal interface name.
-	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[123])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
+	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[0-3])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
@@ -90,6 +88,10 @@ type iol struct {
 	bootCfg           string
 	interfaces        []IOLInterface
 	firstBoot         bool
+	mgmtIntf          string
+	mgmtSlot          int
+	mgmtPort          int
+	mgmtLinuxIdx      int
 }
 
 func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -135,6 +137,10 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
 	}
 
+	if err := n.parseMgmtIntf(); err != nil {
+		return err
+	}
+
 	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
@@ -152,6 +158,68 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	return nil
 }
 
+// parseMgmtIntf reads CLAB_IOL_MGMT_INTF from the node env; unset keeps the default Ethernet0/0.
+func (n *iol) parseMgmtIntf() error {
+	if v, ok := n.Cfg.Env["CLAB_IOL_MGMT_INTF"]; ok && v != "" {
+		captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, v)
+		if err != nil {
+			return fmt.Errorf("invalid CLAB_IOL_MGMT_INTF %q: %w\n%s", v, err, IntfHelpMsg)
+		}
+
+		n.mgmtSlot, _ = strconv.Atoi(captureGroups["slot"])
+		n.mgmtPort, _ = strconv.Atoi(captureGroups["port"])
+
+		if n.mgmtSlot > 9 || n.mgmtPort > 3 {
+			return fmt.Errorf(
+				"invalid CLAB_IOL_MGMT_INTF %q: slot must be 0-9 and port must be 0-3", v)
+		}
+	}
+
+	n.mgmtIntf = fmt.Sprintf("Ethernet%d/%d", n.mgmtSlot, n.mgmtPort)
+	n.mgmtLinuxIdx = n.mgmtSlot*4 + n.mgmtPort
+
+	return nil
+}
+
+// swapMgmtIdx swaps linux interface index 0 with the management interface's index,
+// so Ethernet0/0 takes the index a relocated management interface vacated.
+func (n *iol) swapMgmtIdx(idx int) int {
+	switch idx {
+	case 0:
+		return n.mgmtLinuxIdx
+	case n.mgmtLinuxIdx:
+		return 0
+	}
+
+	return idx
+}
+
+// iolPortForLinuxIdx returns the IOL slot/port backed by linux interface index idx.
+func (n *iol) iolPortForLinuxIdx(idx int) (slot, port int) {
+	mapped := n.swapMgmtIdx(idx)
+	return mapped / 4, mapped % 4
+}
+
+// ensureNumSlotsEnv exports CLAB_IOL_NUM_SLOTS when the management interface is
+// relocated, so that its slot exists even when no link lands in it.
+func (n *iol) ensureNumSlotsEnv() {
+	if n.mgmtLinuxIdx == 0 || n.Cfg.Env["CLAB_IOL_NUM_SLOTS"] != "" {
+		return
+	}
+
+	intfIdxRegexp := regexp.MustCompile(`\d+`)
+	needed := n.mgmtSlot + 1
+
+	for _, ep := range n.Endpoints {
+		x, _ := strconv.Atoi(intfIdxRegexp.FindString(ep.GetIfaceName()))
+		if slot, _ := n.iolPortForLinuxIdx(x); slot+1 > needed {
+			needed = slot + 1
+		}
+	}
+
+	n.Cfg.Env["CLAB_IOL_NUM_SLOTS"] = strconv.Itoa(needed)
+}
+
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
@@ -159,6 +227,8 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	if err != nil {
 		return err
 	}
+
+	n.ensureNumSlotsEnv()
 
 	return n.CreateIOLFiles(ctx)
 }
@@ -209,9 +279,10 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 
 // Generate interfaces configuration for IOL (and iouyap/netmap).
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
-	// add default 'boilerplate' to NETMAP and iouyap.ini for management port (e0/0)
-	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:0/0]\neth_dev = eth0\n"
-	netmapdata := fmt.Sprintf("%s:0/0 513:0/0\n", n.Pid)
+	// add 'boilerplate' to NETMAP and iouyap.ini for the management port
+	iouyapData := fmt.Sprintf("[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
+		n.mgmtSlot, n.mgmtPort)
+	netmapdata := fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, n.mgmtSlot, n.mgmtPort, n.mgmtSlot, n.mgmtPort)
 
 	slot, port := 0, 0
 
@@ -223,8 +294,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
 
 		// Interface naming is Ethernet{slot}/{port}. Each slot contains max 4 ports
-		slot = x / 4
-		port = x % 4
+		slot, port = n.iolPortForLinuxIdx(x)
 
 		// append data to write to NETMAP and IOUYAP files
 		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = %s\n", slot, port, intf.GetIfaceName())
@@ -288,6 +358,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 	tpl := IOLTemplateData{
 		Hostname:           n.Cfg.ShortName,
 		IsL2Node:           n.isL2Node,
+		MgmtIntf:           n.mgmtIntf,
 		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
 		MgmtIPv4SubnetMask: clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		MgmtIPv4GW:         n.Cfg.MgmtIPv4Gateway,
@@ -314,6 +385,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 type IOLTemplateData struct {
 	Hostname           string
 	IsL2Node           bool
+	MgmtIntf           string
 	MgmtIPv4Addr       string
 	MgmtIPv4SubnetMask string
 	MgmtIPv4GW         string
@@ -336,7 +408,7 @@ type IOLInterface struct {
 	IPv6Addr  string
 }
 
-func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
+func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
 	captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
@@ -373,7 +445,8 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 
 	// return an ethX interface name. Slots are in 'groups' of 4 interfaces each
 	if foundIndices["slot"] && foundIndices["port"] {
-		return fmt.Sprintf("eth%d", (parsedIndices["slot"]*4)+parsedIndices["port"]), nil
+		idx := n.swapMgmtIdx((parsedIndices["slot"] * 4) + parsedIndices["port"])
+		return fmt.Sprintf("eth%d", idx), nil
 	} else {
 		return "", fmt.Errorf("%q missing slot or port index", ifName)
 	}
@@ -426,10 +499,12 @@ func (n *iol) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		IFaceName := e.GetIfaceName()
-		if MgmtIntfRegexp.MatchString(IFaceName) {
+		// eth0 always backs the management interface
+		if IFaceName == "eth0" {
 			return fmt.Errorf(
-				"IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed",
+				"IOL Node: %q. Management interface %s (eth0) is not allowed",
 				n.Cfg.ShortName,
+				n.mgmtIntf,
 			)
 		}
 
@@ -462,12 +537,15 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	// previous partial attempt before re-entering the command sequence.
 	// All IOS commands here are idempotent; repeating them is safe.
 	mgmt_str := fmt.Sprintf(
-		"\rend\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		"\rend\renable\rconfig terminal\rinterface %s\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
+		n.mgmtIntf,
 		n.Cfg.MgmtIPv4Address,
 		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		n.Cfg.MgmtIPv6Address,
 		n.Cfg.MgmtIPv6PrefixLength,
+		n.mgmtIntf,
 		n.Cfg.MgmtIPv4Gateway,
+		n.mgmtIntf,
 		n.Cfg.MgmtIPv6Gateway,
 	)
 	data := []byte(mgmt_str)

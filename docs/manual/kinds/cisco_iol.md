@@ -63,7 +63,7 @@ You can use [interfaces names](../topo-def-file.md#interface-naming) in the topo
 
 The interface naming convention is: `Ethernet0/X` (or `e0/X`), where `X` is the port number.
 
-With that naming convention in mind:
+With the default `Ethernet0/0` management interface:
 
 - `e0/1` - First data-plane interface available
 - `e0/2` - Second data-plane interface, and so on...
@@ -111,7 +111,33 @@ At minimum you will see all numerically-lower indexed interfaces in the CLI comp
 **Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.**
 ///
 
-Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
+### Management interface
+
+By default the containerlab reserves an interface on the router for containerlab management access.
+
+By default and for simplicity, this interface is set to `Ethernet0/0`.
+
+If you intend to use `Ethernet0/0` for links in your topology, the management interface can be changed by using the `CLAB_IOL_MGMT_INTF` environment variable.
+
+```yaml
+topology:
+  nodes:
+    iol1:
+      kind: cisco_iol
+      image: ...
+      env:
+        CLAB_IOL_MGMT_INTF: Ethernet3/3
+```
+
+With the example above the management VRF, addressing and default routes move to `Ethernet3/3`. Furthermore links on `Ethernet3/3` are rejected instead of `Ethernet0/0`, and `Ethernet0/0` becomes available to use as a data interface in the `links` section of the topology.
+
+/// note
+Automatic slot allocation requires an IOL image built with [srl-labs/vrnetlab PR #526](https://github.com/srl-labs/vrnetlab/pull/526) or later.
+
+Images built from an older vrnetlab revision are not compatible.
+///
+
+Data interfaces other than the selected management interface need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI. With the default management interface:
 
 ```
 iol#sh ip int br
