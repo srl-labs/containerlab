@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,7 +99,22 @@ func writeAuthKey(cfg *clabtypes.NodeConfig, mgmt *clabtypes.MgmtNet) error {
 }
 
 func (n *tailscale) Deploy(ctx context.Context, params *clabnodes.DeployParams) error {
-	setEnvDefault(n.Cfg, "TS_DEST_IP", parentMgmtIP(n.Cfg, params))
+	if parent := n.Cfg.Labels[ParentLabel]; parent != "" {
+		if params == nil || params.Nodes[parent] == nil {
+			return fmt.Errorf("Tailscale parent %q not found", parent)
+		}
+		// Existing parents may not have runtime-assigned addresses in their desired config.
+		if parentMgmtIP(n.Cfg, params) == "" {
+			if err := params.Nodes[parent].UpdateConfigWithRuntimeInfo(ctx); err != nil {
+				return fmt.Errorf("getting Tailscale parent %q management address: %w", parent, err)
+			}
+		}
+		ip := parentMgmtIP(n.Cfg, params)
+		if ip == "" {
+			return fmt.Errorf("Tailscale parent %q has no management address", parent)
+		}
+		setEnvDefault(n.Cfg, "TS_DEST_IP", ip)
+	}
 
 	return n.DefaultNode.Deploy(ctx, params)
 }

@@ -10,6 +10,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -116,6 +117,32 @@ func TestApplyTailscaleEnvKeepsExisting(t *testing.T) {
 	}
 	if cfg.Env["TS_AUTHKEY"] != "already-set" {
 		t.Fatalf("TS_AUTHKEY overwritten: %q", cfg.Env["TS_AUTHKEY"])
+	}
+}
+
+func TestDeployRefreshesParentManagementIP(t *testing.T) {
+	n, rt := newTestSidecar(t)
+	parent := clabmocksmocknodes.NewMockNode(gomock.NewController(t))
+	parentCfg := &clabtypes.NodeConfig{}
+	parent.EXPECT().Config().Return(parentCfg).AnyTimes()
+	parent.EXPECT().
+		UpdateConfigWithRuntimeInfo(gomock.Any()).
+		DoAndReturn(func(context.Context) error {
+			parentCfg.MgmtIPv4Address = "172.20.20.2"
+			return nil
+		})
+	rt.EXPECT().CreateContainer(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, cfg *clabtypes.NodeConfig) (string, error) {
+			if cfg.Env["TS_DEST_IP"] != parentCfg.MgmtIPv4Address {
+				t.Fatalf("TS_DEST_IP = %q", cfg.Env["TS_DEST_IP"])
+			}
+			return "id", nil
+		})
+	rt.EXPECT().StartContainer(gomock.Any(), "id", &n.DefaultNode)
+	if err := n.Deploy(context.Background(), &clabnodes.DeployParams{
+		Nodes: map[string]clabnodes.Node{"n1": parent},
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
