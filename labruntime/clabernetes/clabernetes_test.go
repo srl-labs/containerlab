@@ -799,7 +799,7 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	if strings.Contains(got, "node=node1") {
 		t.Fatalf("initial non-ready node should not produce a log line:\n%s", got)
 	}
-	if !strings.Contains(got, "Clabernetes node is ready") ||
+	if !strings.Contains(got, "C9s node is ready") ||
 		!strings.Contains(got, "node=node2") ||
 		!strings.Contains(got, "ready=1") ||
 		!strings.Contains(got, "total=2") {
@@ -812,7 +812,7 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 		{Name: "node2", State: "ready", Ready: true},
 	}})
 	got = output.String()
-	if strings.Count(got, "Clabernetes node is ready") != 1 ||
+	if strings.Count(got, "C9s node is ready") != 1 ||
 		!strings.Contains(got, "node=node1") ||
 		!strings.Contains(got, "ready=2") {
 		t.Fatalf("newly ready node progress was not reported exactly once:\n%s", got)
@@ -824,7 +824,7 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 		{Name: "node2", State: "notready"},
 	}})
 	got = output.String()
-	if !strings.Contains(got, "Clabernetes node is not ready") ||
+	if !strings.Contains(got, "C9s node is not ready") ||
 		!strings.Contains(got, "node=node2") ||
 		!strings.Contains(got, "state=notready") ||
 		!strings.Contains(got, "ready=1") {
@@ -838,6 +838,123 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	}})
 	if output.Len() != 0 {
 		t.Fatalf("unchanged readiness should not produce repeated log lines:\n%s", output.String())
+	}
+}
+
+func TestNodePhaseProgressDetails(t *testing.T) {
+	const containerName = "node-0250b96a-9888-4e67-a3f3-5079159d0fb6-primary-d0d6e77852"
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      "srl1",
+			"namespace": "lab-ns",
+			"labels":    map[string]any{labelTopologyOwner: "lab1"},
+		},
+	}}
+	r := newTestRuntime(node)
+	progress := nodePhaseProgress{}
+
+	var output bytes.Buffer
+	oldLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel)
+	log.SetOutput(&output)
+	t.Cleanup(func() {
+		log.SetLevel(oldLevel)
+		log.SetOutput(os.Stderr)
+	})
+
+	for _, tt := range []struct {
+		name      string
+		condition string
+		message   string
+		want      string
+	}{
+		{
+			name:      "application container",
+			condition: "ContainersReady",
+			message:   fmt.Sprintf("direct application container %q is not ready", containerName),
+			want: `phase="starting containers" container=` + containerName +
+				` details="container not ready"`,
+		},
+		{
+			name:      "another application container",
+			condition: "ContainersReady",
+			message:   `direct application container "node-secondary" is not ready`,
+			want: `phase="starting containers" container=node-secondary` +
+				` details="container not ready"`,
+		},
+		{
+			name:      "component container",
+			condition: "ContainersReady",
+			message:   `direct component "a" (container "node-cpm-a") is not ready`,
+			want: `phase="starting containers" container=node-cpm-a` +
+				` details="container not ready"`,
+		},
+		{
+			name:      "planner check command from legacy diagnostic",
+			condition: "Prepared",
+			message:   "required direct helper is not ready",
+			want: `phase="preparing device" details="waiting for planner container"` +
+				` check-cmd="kubectl -n lab-ns logs deploy/srl1 -c planner"`,
+		},
+		{
+			name:      "clabwire check command",
+			condition: "ConnectivityReady",
+			message: "waiting for clabwire container; " +
+				"check kubectl -n lab-ns logs deploy/srl1 -c clabwire",
+			want: `phase="wiring connectivity" details="waiting for clabwire container"` +
+				` check-cmd="kubectl -n lab-ns logs deploy/srl1 -c clabwire"`,
+		},
+		{
+			name:      "other diagnostic",
+			condition: "PlanApplied",
+			message:   "waiting for inventory",
+			want:      `phase="planning device" details="waiting for inventory"`,
+		},
+		{
+			name:      "no diagnostic",
+			condition: "ContainersReady",
+			want:      `phase="starting containers"`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			conditions := make([]any, 0, len(nodeConditionPhases))
+			for _, candidate := range nodeConditionPhases {
+				condition := map[string]any{"type": candidate.conditionType, "status": "True"}
+				if candidate.conditionType == tt.condition {
+					condition["status"] = "False"
+					condition["message"] = tt.message
+				}
+				conditions = append(conditions, condition)
+			}
+			if err := unstructured.SetNestedSlice(
+				node.Object, conditions, "status", "conditions",
+			); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").Update(
+				context.Background(), node, metav1.UpdateOptions{},
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			output.Reset()
+			progress.observe(context.Background(), r, "lab1", "lab-ns")
+			got := output.String()
+			if !strings.Contains(got, "C9s node progress node=srl1 "+tt.want+"\n") {
+				t.Fatalf("unexpected progress log:\n%s\nwant fields: %s", got, tt.want)
+			}
+			if strings.Contains(got, "detail=") || strings.Contains(got, "; check ") {
+				t.Fatalf("progress log contains the old field or embedded command:\n%s", got)
+			}
+
+			output.Reset()
+			progress.observe(context.Background(), r, "lab1", "lab-ns")
+			if output.Len() != 0 {
+				t.Fatalf("unchanged phase should not produce repeated log lines:\n%s", output.String())
+			}
+		})
 	}
 }
 
@@ -892,7 +1009,7 @@ func TestImagePullProgressReportsKubeletEvents(t *testing.T) {
 	progress := imagePullProgress{}
 	progress.observe(context.Background(), r, "lab-ns", state)
 	got := output.String()
-	if !strings.Contains(got, "Pulling clabernetes node image") ||
+	if !strings.Contains(got, "Pulling C9s node image") ||
 		!strings.Contains(got, "node=node1") ||
 		!strings.Contains(got, "image=example/node1:latest") ||
 		!strings.Contains(got, "kubernetes-node=worker-a") {
@@ -923,7 +1040,7 @@ func TestImagePullProgressReportsKubeletEvents(t *testing.T) {
 	output.Reset()
 	progress.observe(context.Background(), r, "lab-ns", state)
 	got = output.String()
-	if !strings.Contains(got, "Clabernetes node image pull completed") ||
+	if !strings.Contains(got, "C9s node image pull completed") ||
 		!strings.Contains(got, "node=node1") {
 		t.Fatalf("image pull completion was not reported:\n%s", got)
 	}

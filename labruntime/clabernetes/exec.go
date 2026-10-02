@@ -261,7 +261,7 @@ func (r *Runtime) devicePod(
 	}
 
 	if len(list.Items) > 1 {
-		log.Warn("multiple clabernetes device pods matched node, using newest",
+		log.Warn("multiple C9s device pods matched node, using newest",
 			"namespace", namespace,
 			"lab", name,
 			"node", nodeName,

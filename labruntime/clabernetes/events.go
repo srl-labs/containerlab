@@ -208,7 +208,7 @@ func (r *Runtime) forwardTopologyWatch(
 			return false
 		case ev, ok := <-watcher.ResultChan():
 			if !ok {
-				log.Debug("clabernetes topology watch closed, reconnecting")
+				log.Debug("C9s topology watch closed, reconnecting")
 				return true
 			}
 			if ev.Type == watch.Error {
@@ -287,7 +287,7 @@ func (r *Runtime) forwardPodWatch(
 			return false
 		case ev, ok := <-watcher.ResultChan():
 			if !ok {
-				log.Debug("clabernetes pod watch closed, reconnecting")
+				log.Debug("C9s pod watch closed, reconnecting")
 				return true
 			}
 			if ev.Type == watch.Error {

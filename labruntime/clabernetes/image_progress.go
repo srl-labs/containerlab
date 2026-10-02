@@ -23,7 +23,10 @@ type imagePullProgress struct {
 	listErrorReported  bool
 }
 
-var quotedImagePattern = regexp.MustCompile(`"([^"]+)"`)
+var (
+	quotedImagePattern       = regexp.MustCompile(`"([^"]+)"`)
+	notReadyContainerPattern = regexp.MustCompile(`container "([^"]+)"\)? is not ready$`)
+)
 
 func (p *imagePullProgress) observe(
 	ctx context.Context,
@@ -133,7 +136,7 @@ func (p *imagePullProgress) reportEvent(
 	switch event.Reason {
 	case "Pulling":
 		log.Info(
-			"Pulling clabernetes node image",
+			"Pulling C9s node image",
 			"node", pullContext.node,
 			"image", image,
 			"kubernetes-node", pullContext.kubernetesNode,
@@ -141,7 +144,7 @@ func (p *imagePullProgress) reportEvent(
 	case "Pulled":
 		if strings.Contains(event.Message, "already present") {
 			log.Info(
-				"Clabernetes node image already present on kubernetes node",
+				"C9s node image already present on kubernetes node",
 				"node", pullContext.node,
 				"image", image,
 				"kubernetes-node", pullContext.kubernetesNode,
@@ -150,7 +153,7 @@ func (p *imagePullProgress) reportEvent(
 			return
 		}
 		log.Info(
-			"Clabernetes node image pull completed",
+			"C9s node image pull completed",
 			"node", pullContext.node,
 			"image", image,
 			"kubernetes-node", pullContext.kubernetesNode,
@@ -160,7 +163,7 @@ func (p *imagePullProgress) reportEvent(
 			return
 		}
 		log.Warn(
-			"Clabernetes node image pull is failing",
+			"C9s node image pull is failing",
 			"node", pullContext.node,
 			"image", image,
 			"kubernetes-node", pullContext.kubernetesNode,
@@ -183,7 +186,7 @@ func (p *imagePullProgress) reportListError(err error) {
 	if p.listErrorReported {
 		return
 	}
-	log.Debug("Unable to inspect clabernetes image pulls", "error", err)
+	log.Debug("Unable to inspect C9s image pulls", "error", err)
 	p.listErrorReported = true
 }
 
@@ -245,7 +248,7 @@ func (p *nodePhaseProgress) observe(
 	nodes, err := r.nodesForTopology(ctx, name, namespace)
 	if err != nil {
 		if !p.listErrorReported {
-			log.Debug("Unable to inspect clabernetes node conditions", "error", err)
+			log.Debug("Unable to inspect C9s node conditions", "error", err)
 			p.listErrorReported = true
 		}
 
@@ -263,7 +266,7 @@ func (p *nodePhaseProgress) observe(
 
 	for idx := range nodes.Items {
 		node := &nodes.Items[idx]
-		phase, detail := nodeLifecyclePhase(node)
+		phase, details := nodeLifecyclePhase(node)
 
 		if p.terminalFailures == nil {
 			p.terminalFailures = map[string]string{}
@@ -279,11 +282,11 @@ func (p *nodePhaseProgress) observe(
 			delete(p.terminalFailures, node.GetName())
 		}
 
-		phaseDetail := phase + "\x00" + detail
-		if p.phases[node.GetName()] == phaseDetail {
+		phaseDetails := phase + "\x00" + details
+		if p.phases[node.GetName()] == phaseDetails {
 			continue
 		}
-		p.phases[node.GetName()] = phaseDetail
+		p.phases[node.GetName()] = phaseDetails
 
 		// Readiness transitions are reported by the readiness tracker; phases end here.
 		if phase == "ready" {
@@ -291,10 +294,18 @@ func (p *nodePhaseProgress) observe(
 		}
 
 		fields := []any{"node", node.GetName(), "phase", phase}
-		if detail != "" {
-			fields = append(fields, "detail", detail)
+		details, checkCmd, _ := strings.Cut(details, "; check ")
+		if match := notReadyContainerPattern.FindStringSubmatch(details); len(match) == 2 {
+			fields = append(fields, "container", match[1])
+			details = "container not ready"
 		}
-		log.Info("Clabernetes node progress", fields...)
+		if details != "" {
+			fields = append(fields, "details", details)
+		}
+		if checkCmd != "" {
+			fields = append(fields, "check-cmd", checkCmd)
+		}
+		log.Info("C9s node progress", fields...)
 	}
 }
 
@@ -364,12 +375,12 @@ func nodeLifecyclePhase(node *unstructured.Unstructured) (string, string) {
 			continue
 		}
 
-		detail := reason
+		details := reason
 		if reason == "waiting for "+candidate.conditionType {
-			detail = ""
+			details = ""
 		}
 
-		return candidate.phase, detail
+		return candidate.phase, details
 	}
 
 	return "waiting for device readiness", ""

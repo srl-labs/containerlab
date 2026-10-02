@@ -31,7 +31,7 @@ func (r *Runtime) pollInterfaceStats(
 			AllNamespaces: namespace == metav1.NamespaceAll,
 		})
 		if err != nil {
-			log.Debug("failed to list clabernetes topologies for interface stats", "error", err)
+			log.Debug("failed to list C9s topologies for interface stats", "error", err)
 			return
 		}
 
@@ -44,7 +44,7 @@ func (r *Runtime) pollInterfaceStats(
 
 				pod, err := r.devicePod(ctx, state.Name, state.Namespace, node.Name)
 				if err != nil {
-					log.Debug("failed to resolve clabernetes device pod for interface stats",
+					log.Debug("failed to resolve C9s device pod for interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,
@@ -74,7 +74,7 @@ func (r *Runtime) pollInterfaceStats(
 				stdout, stderr, rc, err := r.execInPod(ctx, pod, containerName,
 					[]string{"cat", "/proc/net/dev"})
 				if err != nil {
-					log.Debug("failed to collect clabernetes interface stats",
+					log.Debug("failed to collect C9s interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,
@@ -83,7 +83,7 @@ func (r *Runtime) pollInterfaceStats(
 					continue
 				}
 				if rc != 0 {
-					log.Debug("failed to collect clabernetes interface stats",
+					log.Debug("failed to collect C9s interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,
@@ -95,7 +95,7 @@ func (r *Runtime) pollInterfaceStats(
 
 				stats, err := parseProcNetDev(stdout)
 				if err != nil {
-					log.Debug("failed to parse clabernetes interface stats",
+					log.Debug("failed to parse C9s interface stats",
 						"namespace", state.Namespace,
 						"lab", state.Name,
 						"node", node.Name,

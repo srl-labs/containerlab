@@ -37,7 +37,7 @@ func (r *Runtime) Deploy(
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Preparing clabernetes lab", "name", req.Name, "namespace", namespace)
+	log.Info("Preparing C9s lab", "name", req.Name, "namespace", namespace)
 	topologyResource := r.client.Resource(topologyGVR).Namespace(namespace)
 
 	existingTopology, err := topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
@@ -71,7 +71,7 @@ func (r *Runtime) Deploy(
 	stagedConfigMaps := prepared.configMaps
 	primitives := prepared.primitives
 	log.Info(
-		"Staging clabernetes lab artifacts",
+		"Staging C9s lab artifacts",
 		"name", req.Name,
 		"namespace", namespace,
 		"config-maps", len(stagedConfigMaps),
@@ -125,7 +125,7 @@ func (r *Runtime) Deploy(
 		operation = "Reconciling"
 	}
 	log.Info(
-		operation+" clabernetes lab resources",
+		operation+" C9s lab resources",
 		"name", req.Name,
 		"namespace", namespace,
 		"nodes", len(primitives.nodes),
@@ -213,7 +213,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	}
 	selector := labels.Set{labelTopologyOwner: req.Name}.String()
 
-	log.Info("Deleting clabernetes lab resources", "name", req.Name, "namespace", namespace)
+	log.Info("Deleting C9s lab resources", "name", req.Name, "namespace", namespace)
 
 	var deleteErrors []error
 	workers, clientBurst := r.kubernetesWorkers(req.MaxWorkers)
@@ -375,7 +375,7 @@ func (r *Runtime) Inspect(
 	}
 
 	if err := r.enrichState(ctx, state); err != nil {
-		log.Debug("failed to enrich clabernetes lab state", "error", err)
+		log.Debug("failed to enrich C9s lab state", "error", err)
 	}
 
 	return state, nil
@@ -458,7 +458,7 @@ func (r *Runtime) List(
 	states := make([]*clablabruntime.LabState, 0, len(statesByLab))
 	for _, state := range statesByLab {
 		if err := r.enrichState(ctx, state); err != nil {
-			log.Debug("failed to enrich clabernetes lab state",
+			log.Debug("failed to enrich C9s lab state",
 				"name", state.Name,
 				"namespace", state.Namespace,
 				"error", err,
@@ -490,7 +490,7 @@ func (r *Runtime) waitReady(
 	readinessProgress := nodeReadinessProgress{}
 	imageProgress := imagePullProgress{}
 	phaseProgress := nodePhaseProgress{}
-	log.Info("Waiting for clabernetes lab to become ready", "name", name, "namespace", namespace)
+	log.Info("Waiting for C9s lab to become ready", "name", name, "namespace", namespace)
 
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
 		func(ctx context.Context) (bool, error) {
@@ -527,7 +527,7 @@ func (r *Runtime) waitReady(
 					namespace, name)
 			}
 
-			log.Debug("Waiting for clabernetes lab",
+			log.Debug("Waiting for C9s lab",
 				"name", name,
 				"namespace", namespace,
 				"state", state.State,
@@ -536,7 +536,7 @@ func (r *Runtime) waitReady(
 			return false, nil
 		})
 	if err == nil {
-		log.Info("Clabernetes lab is ready", "name", name, "namespace", namespace)
+		log.Info("C9s lab is ready", "name", name, "namespace", namespace)
 
 		return nil
 	}
@@ -615,7 +615,7 @@ func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
 
 		if node.Ready {
 			log.Info(
-				"Clabernetes node is ready",
+				"C9s node is ready",
 				"node", node.Name,
 				"ready", readyCount,
 				"total", len(state.Nodes),
@@ -628,7 +628,7 @@ func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
 			nodeState = "unknown"
 		}
 		log.Info(
-			"Clabernetes node is not ready",
+			"C9s node is not ready",
 			"node", node.Name,
 			"state", nodeState,
 			"ready", readyCount,

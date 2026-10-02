@@ -197,7 +197,7 @@ func mergeNodeSpecs(specs map[string]nodeSpec, definition string) {
 
 	var parsed containerlabDefinition
 	if err := yaml.Unmarshal([]byte(definition), &parsed); err != nil {
-		log.Debug("failed to parse clabernetes topology definition", "error", err)
+		log.Debug("failed to parse C9s topology definition", "error", err)
 		return
 	}
 

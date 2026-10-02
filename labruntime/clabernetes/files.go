@@ -1022,7 +1022,7 @@ func (r *Runtime) deleteStagedConfigMaps(
 		err := r.kubeClient.CoreV1().ConfigMaps(namespace).
 			Delete(ctx, staged.name, metav1.DeleteOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
-			log.Debug("failed to delete staged clabernetes ConfigMap",
+			log.Debug("failed to delete staged C9s ConfigMap",
 				"namespace", namespace,
 				"name", staged.name,
 				"error", err,

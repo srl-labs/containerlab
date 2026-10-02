@@ -88,7 +88,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 		return nil
 	}
 	log.Info(
-		"Waiting for clabernetes links to resolve",
+		"Waiting for C9s links to resolve",
 		"namespace", namespace,
 		"links", len(desiredLinks),
 	)
@@ -139,7 +139,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 		})
 	if err == nil {
 		log.Info(
-			"Clabernetes links are resolved",
+			"C9s links are resolved",
 			"namespace", namespace,
 			"links", len(desiredLinks),
 		)

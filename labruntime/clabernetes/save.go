@@ -68,7 +68,7 @@ func (r *Runtime) Save(
 			)
 			if containerName == "" {
 				log.Info(
-					"Skipping save for clabernetes node without a save-capable container",
+					"Skipping save for C9s node without a save-capable container",
 					"node", nodeName,
 				)
 
@@ -88,7 +88,7 @@ func (r *Runtime) Save(
 
 		if len(stdout) != 0 {
 			log.Info(
-				"clabernetes save output",
+				"C9s save output",
 				"node",
 				nodeName,
 				"stdout",
@@ -97,7 +97,7 @@ func (r *Runtime) Save(
 		}
 		if len(stderr) != 0 {
 			log.Info(
-				"clabernetes save output",
+				"C9s save output",
 				"node",
 				nodeName,
 				"stderr",
@@ -253,7 +253,7 @@ func (r *Runtime) collectSavedFiles(
 	if err != nil {
 		if missingExecutable(err) {
 			log.Info(
-				"Skipping save copy for clabernetes node without shell utilities in its image",
+				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)
 
@@ -267,7 +267,7 @@ func (r *Runtime) collectSavedFiles(
 	if err != nil {
 		if missingExecutable(err) {
 			log.Info(
-				"Skipping save copy for clabernetes node without shell utilities in its image",
+				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)
 
@@ -277,7 +277,7 @@ func (r *Runtime) collectSavedFiles(
 		return nil, err
 	}
 	if rc != 0 {
-		log.Debug("no clabernetes saved config directory found",
+		log.Debug("no C9s saved config directory found",
 			"node", nodeName,
 			"path", artifactDir,
 		)
@@ -295,7 +295,7 @@ func (r *Runtime) collectSavedFiles(
 		if findErr != nil {
 			if missingExecutable(findErr) {
 				log.Info(
-					"Skipping save copy for clabernetes node without shell utilities in its image",
+					"Skipping save copy for C9s node without shell utilities in its image",
 					"node", nodeName,
 				)
 
@@ -343,7 +343,7 @@ func (r *Runtime) collectSavedFiles(
 	if err != nil {
 		if missingExecutable(err) {
 			log.Info(
-				"Skipping save copy for clabernetes node without shell utilities in its image",
+				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)
 

@@ -385,7 +385,7 @@ func (r *Runtime) deployTopology(
 		operation = "Adopting"
 	}
 	log.Info(
-		operation+" clabernetes lab topology",
+		operation+" C9s lab topology",
 		"name", req.Name,
 		"namespace", namespace,
 		"nodes", len(prepared.primitives.nodes),
