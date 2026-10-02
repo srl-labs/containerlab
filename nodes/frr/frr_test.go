@@ -224,7 +224,7 @@ func TestRegisterCredentials(t *testing.T) {
 
 // Exercise the shell command with multiple keys: Go string quoting must not
 // turn the newline separators into literal backslash-n sequences.
-func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
+func TestAddSSHKeysWritesMultipleSSHKeys(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
 	var want strings.Builder
@@ -266,7 +266,7 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 			return clabexec.NewExecResult(cmd), nil
 		})
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	if err := n.addSSHKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -284,7 +284,7 @@ func TestPostDeployWritesMultipleSSHKeys(t *testing.T) {
 
 // A plain release image has no admin user, and the keys still have to reach the
 // users that do exist rather than the script failing on the first absent one.
-func TestPostDeploySkipsAbsentUser(t *testing.T) {
+func TestAddSSHKeysSkipsAbsentUser(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
@@ -319,7 +319,7 @@ func TestPostDeploySkipsAbsentUser(t *testing.T) {
 			return clabexec.NewExecResult(cmd), nil
 		})
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	if err := n.addSSHKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -473,7 +473,7 @@ func runPasswordScript(
 // The image ships admin without a password, so the credentials only work for a
 // password login once PostDeploy has set them -- including on a host with no
 // ssh keys, where adding keys has nothing to do.
-func TestPostDeploySetsPassword(t *testing.T) {
+func TestSetPassword(t *testing.T) {
 	// Every character here means something to a shell. It has to reach
 	// chpasswd exactly as written.
 	const password = `a'b"c$(touch /tmp/x);d` + "`e`" + `\f g`
@@ -493,7 +493,7 @@ func TestPostDeploySetsPassword(t *testing.T) {
 			return clabexec.NewExecResult(cmd), nil
 		})
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	if err := n.setPassword(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -509,7 +509,7 @@ func TestPostDeploySetsPassword(t *testing.T) {
 
 // A plain release image has no admin, and the password step must not fail the
 // deploy there.
-func TestPostDeploySkipsPasswordForAbsentUser(t *testing.T) {
+func TestSetPasswordSkipsAbsentUser(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{
 		ShortName:   "router1",
 		Credentials: clabtypes.NodeCredentials{Username: "nosuchuser", Password: "pw"},
@@ -525,7 +525,7 @@ func TestPostDeploySkipsPasswordForAbsentUser(t *testing.T) {
 			return clabexec.NewExecResult(cmd), nil
 		})
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	if err := n.setPassword(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -551,13 +551,80 @@ func TestPostDeployRejectsPasswordWithLineBreak(t *testing.T) {
 	}
 }
 
-// With neither keys nor credentials there is nothing to do in the container.
-func TestPostDeployWithoutKeysOrCredentialsRunsNothing(t *testing.T) {
+// PostDeploy installs the save wrapper even when authentication needs no work.
+func TestPostDeployConfigSaveWrapper(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
-	n.WithRuntime(clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t)))
+	dir := filepath.Join(t.TempDir(), "with spaces")
+	binDir := filepath.Join(dir, "bin")
+	configDir := filepath.Join(dir, "config")
+	for _, path := range []string{binDir, configDir} {
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	if err := n.PostDeploy(context.Background(), nil); err != nil {
+	// Stand in for FRR's writer without requiring privileges or a container.
+	writer := `#!/bin/sh
+case "$*" in
+    -w|--writeconfig)
+        [ -z "$FRR_TEST_FAILURE" ] || exit "$FRR_TEST_FAILURE"
+        printf 'saved configuration\n' > "$FRR_TEST_CONFIG"
+        chmod 600 "$FRR_TEST_CONFIG"
+        ;;
+    *)
+        printf '%s\n' "$@"
+        ;;
+esac`
+	path := filepath.Join(binDir, "vtysh")
+	if err := os.WriteFile(path, []byte(writer), 0o755); err != nil {
 		t.Fatal(err)
+	}
+
+	configPath := filepath.Join(configDir, frrConfFile)
+	t.Setenv("FRR_TEST_CONFIG", configPath)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			args := append([]string(nil), cmd.GetCmd()...)
+			for _, i := range []int{2, 4} {
+				args[i] = strings.ReplaceAll(args[i], "/usr/bin", binDir)
+				args[i] = strings.ReplaceAll(args[i], etcFRR, configDir)
+			}
+			if out, err := exec.CommandContext(ctx, args[0], args[1:]...).
+				CombinedOutput(); err != nil {
+				t.Fatalf("install save wrapper: %v: %s", err, out)
+			}
+
+			return clabexec.NewExecResult(cmd), nil
+		}).Times(2)
+
+	// Reinstalling must retain the binary, rather than wrapping the wrapper.
+	for _, arg := range []string{"-w", "--writeconfig"} {
+		if err := n.PostDeploy(context.Background(), nil); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command(path, arg).CombinedOutput(); err != nil {
+			t.Fatalf("save config: %v: %s", err, out)
+		}
+		info, err := os.Stat(configPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != clabconstants.PermissionsFileDefault {
+			t.Errorf("mode = %#o, want %#o", got, clabconstants.PermissionsFileDefault)
+		}
+	}
+
+	if out, err := exec.Command(path, "show version", "two words").CombinedOutput(); err != nil ||
+		string(out) != "show version\ntwo words\n" {
+		t.Fatalf("forwarded arguments: %q, error: %v", out, err)
+	}
+	t.Setenv("FRR_TEST_FAILURE", "42")
+	if err := exec.Command(path, "-w").Run(); err == nil {
+		t.Fatal("wrapper swallowed the binary's failure")
+	} else if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 42 {
+		t.Fatalf("exit error = %v, want exit code 42", err)
 	}
 }

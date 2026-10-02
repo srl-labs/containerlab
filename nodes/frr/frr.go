@@ -81,6 +81,20 @@ done`
 	passwordScript = passwordGuard + `
 printf '%s:%s\n' "$1" "$2" | chpasswd`
 
+	// watchfrr invokes vtysh -w for CLI saves. Repair the bind-mounted file
+	// before returning, while ordinary vtysh sessions still exec the binary.
+	configSaveWrapper = `#!/bin/sh
+case "$*" in
+    -w|--writeconfig)
+        "/usr/bin/vtysh.containerlab" "$@" || exit $?
+        chown %d:%d "/etc/frr/frr.conf" || exit $?
+        chmod %04o "/etc/frr/frr.conf"
+        ;;
+    *)
+        exec "/usr/bin/vtysh.containerlab" "$@"
+        ;;
+esac`
+
 	// no-header keeps the "Building configuration..." preamble out of the
 	// saved file, which is written back as the node's frr.conf.
 	saveCmd = `vtysh -c "show running-config no-header"`
@@ -223,9 +237,7 @@ func (n *frr) createFRRFiles() error {
 	return nil
 }
 
-// PostDeploy gives the node's users what they need to log in: the public keys
-// containerlab collected from the host, for root and admin, and a password for
-// the node's credentials user.
+// PostDeploy installs login credentials and keeps CLI-saved configs readable.
 func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for frr %q node", n.Cfg.ShortName)
 
@@ -234,7 +246,47 @@ func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 		return err
 	}
 
-	return n.setPassword(ctx)
+	err = n.setPassword(ctx)
+	if err != nil {
+		return err
+	}
+
+	return n.installConfigSaveWrapper(ctx)
+}
+
+func (n *frr) installConfigSaveWrapper(ctx context.Context) error {
+	uid, gid, err := clabutils.GetRealUserIDs()
+	if err != nil {
+		return err
+	}
+
+	// Keep the original binary across repeated PostDeploy calls, and replace
+	// the wrapper atomically so active sessions can continue using it.
+	script := `set -e
+if [ ! -f "/usr/bin/vtysh.containerlab" ]; then
+    mv "/usr/bin/vtysh" "/usr/bin/vtysh.containerlab"
+fi
+printf '%s\n' "$1" > "/usr/bin/vtysh.containerlab.tmp"
+chmod 755 "/usr/bin/vtysh.containerlab.tmp"
+mv -f "/usr/bin/vtysh.containerlab.tmp" "/usr/bin/vtysh"`
+
+	wrapper := fmt.Sprintf(configSaveWrapper, uid, gid, clabconstants.PermissionsFileDefault)
+	cmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-c", script, "--", wrapper})
+
+	result, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to install config save wrapper on node %q: %w",
+			n.Cfg.ShortName,
+			err,
+		)
+	}
+	if result.GetReturnCode() != 0 {
+		return fmt.Errorf("failed to install config save wrapper on node %q: %s",
+			n.Cfg.ShortName, result.GetStdErrString())
+	}
+
+	return nil
 }
 
 // addSSHKeys adds the public keys containerlab collected from the host to the
