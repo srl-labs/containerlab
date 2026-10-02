@@ -157,8 +157,11 @@ func (r *Runtime) Plan(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.DeployPlan, error) {
-	if err := r.Validate(ctx, req); err != nil {
-		return nil, err
+	if req.Name == "" {
+		return nil, fmt.Errorf("topology name is required")
+	}
+	if len(req.TopologyDefinition) == 0 {
+		return nil, fmt.Errorf("rendered containerlab topology is required")
 	}
 
 	namespace, err := r.namespaceForLab(req.Name, req.Namespace)
