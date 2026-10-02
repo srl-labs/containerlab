@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/charmbracelet/log v0.4.2
+	github.com/charmbracelet/log v1.0.0
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/containerd/errdefs v1.0.0
 	github.com/containernetworking/plugins v1.9.1
@@ -27,6 +27,7 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
+	github.com/gopacket/gopacket v1.7.1
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hellt/envsubst v0.2.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
@@ -89,7 +90,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsouza/go-dockerclient v1.13.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/go-containerregistry v0.21.6 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect

@@ -70,6 +70,15 @@ type MgmtNet struct {
 	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
+
+	Driver MgmtDriver `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	IPAM MgmtIPAM `json:"ipam,omitempty" yaml:"ipam,omitempty"`
+
+	// Macvlan specific options.
+	MacvlanParent string `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    *bool  `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
 }
 
 // Interface compliance.
@@ -255,6 +264,17 @@ func (n *NodeConfig) GetHostname() string {
 	return n.ShortName
 }
 
+// whether a node should participate in IPAM or not.
+func (n *NodeConfig) ManagementIPAMEligible() bool {
+	if n.IsRootNamespaceBased || n.SkipUniquenessCheck {
+		return false
+	}
+	if n.NetworkMode == "host" || n.NetworkMode == "none" {
+		return false
+	}
+	return !strings.HasPrefix(n.NetworkMode, "container:")
+}
+
 type GenericFilter struct {
 	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
@@ -291,6 +311,16 @@ type Extras struct {
 	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
 	// k8s-kind node specific options
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
+	// frr node specific options
+	FRR *FRRExtras `yaml:"frr,omitempty"`
+}
+
+// FRRExtras represents the frr-specific extra options.
+type FRRExtras struct {
+	// Daemons is the list of FRR routing daemons to enable. When empty, all
+	// daemons known to the kind are enabled. The always-on daemons (zebra,
+	// staticd, mgmtd, watchfrr) need not be listed.
+	Daemons []string `yaml:"daemons,omitempty"`
 }
 
 // K8sKindExtras represents the k8s-kind-specific extra options.
@@ -479,4 +509,22 @@ type ImpairmentData struct {
 	PacketLoss float64 `json:"packet_loss"`
 	Rate       int     `json:"rate"`
 	Corruption float64 `json:"corruption"`
+}
+
+// MgmtDriver selects the management network implementation.
+type MgmtDriver string
+
+const (
+	MgmtDriverBridge  MgmtDriver = "bridge"
+	MgmtDriverMacvlan MgmtDriver = "macvlan"
+
+	MacvlanModeBridge   = "bridge"
+	MacvlanModePrivate  = "private"
+	MacvlanModeVEPA     = "vepa"
+	MacvlanModePassthru = "passthru"
+)
+
+// IsValid reports whether the driver is supported.
+func (d MgmtDriver) IsValid() bool {
+	return d == "" || d == MgmtDriverBridge || d == MgmtDriverMacvlan
 }

@@ -1,0 +1,23 @@
+name: frr-native
+
+topology:
+  kinds:
+    frr:
+      enforce-startup-config: ${FRR_ENFORCE_STARTUP_CONFIG:=false}
+      image: quay.io/frrouting/frr:containerlab-10.7.1
+      extras:
+        frr:
+          daemons: [ospfd]
+  nodes:
+    r1:
+      kind: frr
+      startup-config: 01-frr.conf
+    r2:
+      kind: frr
+      startup-config: 01-frr.conf
+    defaults:
+      kind: frrouting
+      image: quay.io/frrouting/frr:containerlab-10.7.1
+
+  links:
+    - endpoints: [r1:eth1, r2:eth1]

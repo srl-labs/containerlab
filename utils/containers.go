@@ -15,6 +15,7 @@ func GetCanonicalImageName(imageName string) string {
 	//    foo/bar == docker.io/foo/bar:latest
 	//    foo.bar/baz == foo.bar/bar:latest
 	//    localhost/foo:bar == localhost/foo:bar
+	//    myregistry:5000/foo == myregistry:5000/foo:latest
 	// docker.elastic.co/elasticsearch/elasticsearch ==
 	// docker.elastic.co/elasticsearch/elasticsearch:latest
 	canonicalImageName := imageName
@@ -31,6 +32,9 @@ func GetCanonicalImageName(imageName string) string {
 		switch {
 		case strings.Contains(nameSplit[0], "."):
 			canonicalImageName = imageName
+		case strings.Contains(nameSplit[0], ":"):
+			// case of myregistry:5000/foo - a registry addressed by host and port
+			canonicalImageName = imageName
 		case strings.Contains(nameSplit[0], "localhost"):
 			// case of localhost/foo:bar - podman prefixes local images with "localhost"
 			canonicalImageName = imageName
@@ -38,8 +42,12 @@ func GetCanonicalImageName(imageName string) string {
 			canonicalImageName = "docker.io/" + imageName
 		}
 	}
-	// append latest tag if no tag was provided
-	if !strings.Contains(canonicalImageName, ":") {
+
+	// append latest tag if no tag was provided.
+	// only the last path element can carry a tag, a colon before it belongs
+	// to the registry port.
+	lastElement := canonicalImageName[strings.LastIndex(canonicalImageName, "/")+1:]
+	if !strings.Contains(lastElement, ":") {
 		canonicalImageName += ":latest"
 	}
 

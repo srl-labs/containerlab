@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../../schemas/clab.schema.json
-name: comp-sort-mgmt
+name: srsim-pause-ctr
 
 topology:
   kinds:

@@ -54,6 +54,7 @@ jobs:
           - "28*.robot"
           - "29*.robot"
           - "30*.robot"
+          - "mgmt"
 
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
@@ -102,8 +103,7 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Run smoke tests
-        run: |
-          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+        run: ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report
