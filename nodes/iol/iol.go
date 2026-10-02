@@ -667,11 +667,9 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	}
 	// --- End of prompt detection ---
 
-	// Since prompt detection guarantees the console is interactive and at the base prompt,
-	// we directly enter config mode and apply the management interface settings.
 	// All IOS commands applied here are idempotent and safe to re-run.
 	mgmt_str := fmt.Sprintf(
-		"enable\rconfig terminal\rinterface %s\r%sip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
+		"\rend\renable\rconfig terminal\rinterface %s\r%sip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
 		n.mgmtIntf,
 		switchportCmd,
 		n.Cfg.MgmtIPv4Address,
@@ -691,10 +689,11 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 		}
 		lastErr = n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, data)
-		if lastErr != nil {
-			log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
-				i+1, n.Cfg.ShortName, lastErr)
+		if lastErr == nil {
+			break
 		}
+		log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
+			i+1, n.Cfg.ShortName, lastErr)
 	}
 	return lastErr
 }
