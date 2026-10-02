@@ -418,11 +418,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 	nodeCfg.Volumes = volumes
 
-	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
-	if err != nil {
-		return nil, err
-	}
-	nodeCfg.TailscalePorts, err = c.Config.Topology.GetNodeTailscalePorts(nodeName)
+	nodeCfg.PortSet, nodeCfg.PortBindings, nodeCfg.TailscalePorts, err =
+		c.Config.Topology.GetNodePortMappings(nodeName)
 	if err != nil {
 		return nil, err
 	}

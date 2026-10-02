@@ -46,6 +46,61 @@ func TestSplitDockerAndTailscalePortsInvalid(t *testing.T) {
 	}
 }
 
+func TestGetNodePortMappings(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		ports   []string
+		docker  bool
+		ts      []TailscalePort
+		wantErr bool
+	}{
+		{name: "empty"},
+		{name: "Docker", ports: []string{"8080:80/tcp"}, docker: true},
+		{
+			name: "Tailscale range", ports: []string{"9000-9001:22-23/ts"},
+			ts: []TailscalePort{{Listen: 9000, Dest: 22}, {Listen: 9001, Dest: 23}},
+		},
+		{
+			name: "mixed", ports: []string{"8080:80/tcp", "8022:22/ts"}, docker: true,
+			ts: []TailscalePort{{Listen: 8022, Dest: 22}},
+		},
+		{name: "invalid Docker", ports: []string{"invalid/tcp"}, wantErr: true},
+		{name: "invalid Tailscale", ports: []string{"8022:0/ts"}, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			topo := NewTopology()
+			// Inherited port mappings must take the same path as per-node mappings.
+			topo.Defaults.Ports = tc.ports
+			topo.Nodes["n1"] = &NodeDefinition{Kind: "linux"}
+			ports, bindings, ts, err := topo.GetNodePortMappings("n1")
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("error = %v, wantErr = %v", err, tc.wantErr)
+			}
+			if tc.wantErr {
+				return
+			}
+			if !reflect.DeepEqual(ts, tc.ts) {
+				t.Fatalf("Tailscale mappings = %v, want %v", ts, tc.ts)
+			}
+			if tc.docker {
+				if _, ok := ports["80/tcp"]; !ok || len(ports) != 1 {
+					t.Fatalf("Docker ports = %v", ports)
+				}
+				if b := bindings["80/tcp"]; len(b) != 1 || b[0].HostPort != "8080" {
+					t.Fatalf("Docker bindings = %v", bindings)
+				}
+			} else if ports != nil || bindings != nil {
+				t.Fatalf("unexpected Docker ports %v or bindings %v", ports, bindings)
+			}
+			oldPorts, oldBindings, err := topo.GetNodePorts("n1")
+			if err != nil || !reflect.DeepEqual(oldPorts, ports) ||
+				!reflect.DeepEqual(oldBindings, bindings) {
+				t.Fatalf("GetNodePorts changed: %v, %v, %v", oldPorts, oldBindings, err)
+			}
+		})
+	}
+}
+
 func TestTailscaleConfigProxy(t *testing.T) {
 	if (&TailscaleConfig{AuthMode: "sso"}).Proxy() != true {
 		t.Fatal("sso should be proxy")
