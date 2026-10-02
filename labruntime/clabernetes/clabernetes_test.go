@@ -952,7 +952,10 @@ func TestNodePhaseProgressDetails(t *testing.T) {
 			output.Reset()
 			progress.observe(context.Background(), r, "lab1", "lab-ns")
 			if output.Len() != 0 {
-				t.Fatalf("unchanged phase should not produce repeated log lines:\n%s", output.String())
+				t.Fatalf(
+					"unchanged phase should not produce repeated log lines:\n%s",
+					output.String(),
+				)
 			}
 		})
 	}
