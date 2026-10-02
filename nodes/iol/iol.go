@@ -137,18 +137,6 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
 	}
 
-	// CLAB_IOL_BOOTSTRAP_CONFIG replaces the baseline config with a file, or disables it with "none".
-	if v, ok := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; ok && v != "" {
-		switch {
-		case strings.EqualFold(v, "none"):
-			n.bootstrapNone = true
-		case clabutils.FileExists(v):
-			n.bootstrapCfgFile = v
-		default:
-			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", v)
-		}
-	}
-
 	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
@@ -168,6 +156,17 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+
+	if v := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; v != "" {
+		switch p := clabutils.ResolvePath(v, params.TopoPaths.TopologyFileDir()); {
+		case strings.EqualFold(v, "none"):
+			n.bootstrapNone = true
+		case clabutils.FileExists(p):
+			n.bootstrapCfgFile = p
+		default:
+			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", p)
+		}
+	}
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -195,7 +194,9 @@ func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 		}
 	}
 
-	n.GenBootConfig(ctx)
+	if err := n.GenBootConfig(ctx); err != nil {
+		return fmt.Errorf("failed to generate boot config: %w", err)
+	}
 
 	// Must update mgmt IP if not first boot, unless the node boots without a baseline config
 	if !n.firstBoot && !n.bootstrapNone {
@@ -339,12 +340,15 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		tpl.PartialCfg = buf.String()
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+	IOLCfgTpl, err := template.New("clab-iol-default-config").Funcs(
 		clabutils.CreateFuncs()).Parse(n.bootCfg)
+	if err != nil {
+		return err
+	}
 
 	// generate the config
 	buf := new(bytes.Buffer)
-	err := IOLCfgTpl.Execute(buf, tpl)
+	err = IOLCfgTpl.Execute(buf, tpl)
 	if err != nil {
 		return err
 	}
