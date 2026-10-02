@@ -20,7 +20,7 @@
           pname = "containerlab";
           inherit version;
           src = ./.;
-          vendorHash = "sha256-mC2E00TTj5kyr1FI/7wRy/swFS87g56j5eHD+8yp8B8=";
+          vendorHash = "sha256-xp6YIoqJdUu1zEzw7s7+lh8iGJD4THokF5NPbxLH6zc=";
           env = {
             CGO_ENABLED = 0;
           };
@@ -77,7 +77,7 @@
             enable = lib.mkEnableOption "containerlab";
             package = lib.mkOption {
               type = lib.types.package;
-              default = self.packages.${pkgs.system}.containerlab;
+              default = self.packages.${pkgs.stdenv.hostPlatform.system}.containerlab;
               description = "The containerlab package to install.";
             };
           };
