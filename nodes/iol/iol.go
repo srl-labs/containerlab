@@ -88,6 +88,8 @@ type iol struct {
 	bootCfg           string
 	interfaces        []IOLInterface
 	firstBoot         bool
+	bootstrapNone     bool
+	bootstrapCfgFile  string
 	mgmtIntf          string
 	mgmtSlot          int
 	mgmtPort          int
@@ -223,6 +225,17 @@ func (n *iol) ensureNumSlotsEnv() {
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
+	if v := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; v != "" {
+		switch p := clabutils.ResolvePath(v, params.TopoPaths.TopologyFileDir()); {
+		case strings.EqualFold(v, "none"):
+			n.bootstrapNone = true
+		case clabutils.FileExists(p):
+			n.bootstrapCfgFile = p
+		default:
+			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", p)
+		}
+	}
+
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return err
@@ -251,10 +264,12 @@ func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 		}
 	}
 
-	n.GenBootConfig(ctx)
+	if err := n.GenBootConfig(ctx); err != nil {
+		return fmt.Errorf("failed to generate boot config: %w", err)
+	}
 
-	// Must update mgmt IP if not first boot
-	if !n.firstBoot {
+	// Must update mgmt IP if not first boot, unless the node boots without a baseline config
+	if !n.firstBoot && !n.bootstrapNone {
 		return n.UpdateMgmtIntf(ctx)
 	}
 
@@ -280,9 +295,19 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 // Generate interfaces configuration for IOL (and iouyap/netmap).
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	// add 'boilerplate' to NETMAP and iouyap.ini for the management port
-	iouyapData := fmt.Sprintf("[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
-		n.mgmtSlot, n.mgmtPort)
-	netmapdata := fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, n.mgmtSlot, n.mgmtPort, n.mgmtSlot, n.mgmtPort)
+	iouyapData := fmt.Sprintf(
+		"[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
+	netmapdata := fmt.Sprintf(
+		"%s:%d/%d 513:%d/%d\n",
+		n.Pid,
+		n.mgmtSlot,
+		n.mgmtPort,
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
 
 	slot, port := 0, 0
 
@@ -341,6 +366,18 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 func (n *iol) GenBootConfig(_ context.Context) error {
 	n.bootCfg = cfgTemplate
 
+	switch {
+	case n.bootstrapNone:
+		n.bootCfg = "{{ .PartialCfg }}"
+	case n.bootstrapCfgFile != "":
+		cfg, err := os.ReadFile(n.bootstrapCfgFile)
+		if err != nil {
+			return err
+		}
+
+		n.bootCfg = string(cfg)
+	}
+
 	if n.Cfg.StartupConfig != "" {
 		cfg, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -366,15 +403,33 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
 		DataIFaces:         n.interfaces,
-		PartialCfg:         n.partialStartupCfg,
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+	// render the partial startup config so template variables work in partials too
+	if n.partialStartupCfg != "" {
+		partialTpl, err := template.New("clab-iol-partial-config").Funcs(
+			clabutils.CreateFuncs()).Parse(n.partialStartupCfg)
+		if err != nil {
+			return err
+		}
+
+		buf := new(bytes.Buffer)
+		if err := partialTpl.Execute(buf, tpl); err != nil {
+			return err
+		}
+
+		tpl.PartialCfg = buf.String()
+	}
+
+	IOLCfgTpl, err := template.New("clab-iol-default-config").Funcs(
 		clabutils.CreateFuncs()).Parse(n.bootCfg)
+	if err != nil {
+		return err
+	}
 
 	// generate the config
 	buf := new(bytes.Buffer)
-	err := IOLCfgTpl.Execute(buf, tpl)
+	err = IOLCfgTpl.Execute(buf, tpl)
 	if err != nil {
 		return err
 	}
