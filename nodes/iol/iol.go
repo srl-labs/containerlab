@@ -5,6 +5,7 @@
 package cisco_iol
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
@@ -39,6 +40,8 @@ const (
 
 	scrapliPlatformName = "cisco_ios"
 	NapalmPlatformName  = "ios"
+
+	bootPromptTimeout = 60 * time.Second
 )
 
 var (
@@ -130,7 +133,9 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	// check if user submitted node type is valid
 	switch nodeType {
-	case "", typeIOL:
+	case "":
+		n.isL2Node = strings.Contains(strings.ToLower(path.Base(n.Cfg.Image)), "l2")
+	case typeIOL:
 		n.isL2Node = false
 	case typeL2:
 		n.isL2Node = true
@@ -577,23 +582,96 @@ func (n *iol) CheckInterfaceName() error {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
-	// ponytail: fixed sleep heuristic; proper fix is to read PTY output until
-	// an interactive prompt pattern is detected. Upgrade by implementing a
-	// PTY reader in WriteToStdinNoWait or adding a console-ready probe.
-	//
-	// IOL has a 5s startup countdown followed by NVRAM loading (~10-20s
-	// depending on config size and system load). Commands written to the PTY
-	// during NVRAM loading are consumed mid-boot and silently lost, which
-	// leaves the management interface unconfigured. Wait 25s so the first
-	// attempt lands after the console is interactive.
-	time.Sleep(25 * time.Second)
+	// L2 IOL images default to switchport mode, which rejects IP addresses.
+	switchportCmd := ""
+	if n.isL2Node {
+		switchportCmd = "no switchport\r"
+	}
 
-	// Prefix with \rend\r to exit any lingering config mode left by a
-	// previous partial attempt before re-entering the command sequence.
-	// All IOS commands here are idempotent; repeating them is safe.
+	waitCtx, cancel := context.WithTimeout(ctx, bootPromptTimeout)
+	defer cancel()
+
+	// 1. Start streaming container logs
+	logReader, err := n.Runtime.StreamLogs(waitCtx, n.Cfg.LongName)
+	if err != nil {
+		log.Warn("Skipping IOL mgmt interface update, cannot stream container logs",
+			"node", n.Cfg.ShortName, "error", err)
+		return nil
+	}
+	defer logReader.Close()
+
+	// Ticker to periodically send carriage returns (\r) to wake up the serial console
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	// Scanner to read the container log output line by line
+	scanner := bufio.NewScanner(logReader)
+
+	// Asynchronously send carriage returns since scanner.Scan() blocks
+	tickCtx, stopTicker := context.WithCancel(waitCtx)
+	defer stopTicker()
+	tickerDone := make(chan struct{})
+
+	go func() {
+		defer close(tickerDone)
+		for {
+			select {
+			case <-tickCtx.Done():
+				return
+			case <-ticker.C:
+				_ = n.Runtime.WriteToStdinNoWait(tickCtx, n.Cfg.LongName, []byte("\r"))
+			}
+		}
+	}()
+
+	bootComplete := false
+	for scanner.Scan() {
+		// Trim control characters and spaces from the log line
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		log.Debugf("[IOL Boot Log] %s", line)
+
+		// Match boot prompts (>, #, or initial config dialog)
+		if strings.HasSuffix(line, ">") ||
+			strings.HasSuffix(line, "#") ||
+			strings.Contains(line, "initial configuration dialog?") {
+
+			// Ignore syslog messages containing '>'
+			if strings.Contains(line, "%") {
+				continue
+			}
+
+			log.Infof("IOL boot prompt detected (%s). Proceeding with configuration.", line)
+			bootComplete = true
+			break
+		}
+	}
+
+	stopTicker()
+	<-tickerDone
+
+	if !bootComplete {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if waitCtx.Err() != nil {
+			return fmt.Errorf("node %q: timed out after %s waiting for IOL boot prompt",
+				n.Cfg.ShortName, bootPromptTimeout)
+		}
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("error reading IOL log stream: %w", err)
+		}
+	}
+	// --- End of prompt detection ---
+
+	// All IOS commands applied here are idempotent and safe to re-run.
 	mgmt_str := fmt.Sprintf(
-		"\rend\renable\rconfig terminal\rinterface %s\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
+		"\rend\renable\rconfig terminal\rinterface %s\r%sip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
 		n.mgmtIntf,
+		switchportCmd,
 		n.Cfg.MgmtIPv4Address,
 		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		n.Cfg.MgmtIPv6Address,
@@ -611,10 +689,11 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 		}
 		lastErr = n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, data)
-		if lastErr != nil {
-			log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
-				i+1, n.Cfg.ShortName, lastErr)
+		if lastErr == nil {
+			break
 		}
+		log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
+			i+1, n.Cfg.ShortName, lastErr)
 	}
 	return lastErr
 }
