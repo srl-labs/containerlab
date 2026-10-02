@@ -594,7 +594,9 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	// 1. Start streaming container logs
 	logReader, err := n.Runtime.StreamLogs(waitCtx, n.Cfg.LongName)
 	if err != nil {
-		return fmt.Errorf("failed to stream logs from container: %w", err)
+		log.Warn("Skipping IOL mgmt interface update, cannot stream container logs",
+			"node", n.Cfg.ShortName, "error", err)
+		return nil
 	}
 	defer logReader.Close()
 
