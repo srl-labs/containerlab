@@ -173,6 +173,7 @@ type RuntimeConfig struct {
 	GracefulShutdown bool
 	Debug            bool
 	KeepMgmtNet      bool
+	LabNamespace     string
 	VerifyLinkParams *clablinks.VerifyLinkParams
 }
 

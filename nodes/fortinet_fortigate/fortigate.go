@@ -119,7 +119,6 @@ func (n *fortigate) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 }
 
 func (n *fortigate) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-
 	err := n.VRNode.PreDeploy(ctx, params)
 	if err != nil {
 		return err
