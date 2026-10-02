@@ -226,8 +226,13 @@ func conditionPendingReason(obj *unstructured.Unstructured, conditionType string
 					helper = "clabwire"
 				}
 				if helper != "" {
-					return fmt.Sprintf("waiting for %s container; check kubectl -n %s logs deploy/%s -c %s",
-						helper, obj.GetNamespace(), obj.GetName(), helper)
+					return fmt.Sprintf(
+						"waiting for %s container; check kubectl -n %s logs deploy/%s -c %s",
+						helper,
+						obj.GetNamespace(),
+						obj.GetName(),
+						helper,
+					)
 				}
 			}
 			return message

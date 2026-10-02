@@ -24,7 +24,10 @@ func TestStageNodeFileReferences(t *testing.T) {
 	for _, tt := range []struct {
 		name, startupConfig, license, wantPath string
 	}{
-		{"remote startup", server.URL + "/router.partial.cfg", "", "/clabernetes/r1/startup-config/router.partial.cfg"},
+		{
+			"remote startup", server.URL + "/router.partial.cfg", "",
+			"/clabernetes/r1/startup-config/router.partial.cfg",
+		},
 		{"remote license", "", server.URL + "/license.txt", "/clabernetes/r1/license/license.txt"},
 		{"embedded license", "", content, "/clabernetes/r1/license/embedded.lic"},
 		{"embedded startup", content, "", inlineStartupConfigMountPath},
@@ -36,17 +39,24 @@ func TestStageNodeFileReferences(t *testing.T) {
 			config := &clabRuntimeConfig{
 				Name: "lab1",
 				Topology: &clabtypes.Topology{Nodes: map[string]*clabtypes.NodeDefinition{
-					"r1": {Kind: "nokia_srsim", StartupConfig: tt.startupConfig, License: tt.license},
+					"r1": {
+						Kind:          "nokia_srsim",
+						StartupConfig: tt.startupConfig,
+						License:       tt.license,
+					},
 				}},
 			}
 			definition, err := yaml.Marshal(config)
 			if err != nil {
 				t.Fatal(err)
 			}
-			rendered, staged, _, err := stageTopologyLocalFiles(context.Background(), clablabruntime.DeployRequest{
-				Name: "lab1", TopologyFile: filepath.Join(topologyDir, "lab.clab.yml"),
-				TopologyDefinition: definition,
-			})
+			rendered, staged, _, err := stageTopologyLocalFiles(
+				context.Background(),
+				clablabruntime.DeployRequest{
+					Name: "lab1", TopologyFile: filepath.Join(topologyDir, "lab.clab.yml"),
+					TopologyDefinition: definition,
+				},
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,7 +70,8 @@ func TestStageNodeFileReferences(t *testing.T) {
 			if gotPath != tt.wantPath {
 				t.Fatalf("rendered path = %q, want %q", gotPath, tt.wantPath)
 			}
-			if len(staged) != 1 || len(staged[0].mounts) != 1 || staged[0].mounts[0].filePath != gotPath {
+			if len(staged) != 1 || len(staged[0].mounts) != 1 ||
+				staged[0].mounts[0].filePath != gotPath {
 				t.Fatalf("staged mounts do not match rendered reference: %+v", staged)
 			}
 			gotContent, _ := staged[0].content("file")
@@ -73,8 +84,15 @@ func TestStageNodeFileReferences(t *testing.T) {
 
 func TestStageConfigMapFileRejectsOversizedEmbeddedContent(t *testing.T) {
 	t.Parallel()
-	err := stageConfigMapFile(map[string]*stagedConfigMap{}, "lab", "inline", "r1",
-		inlineStartupConfigMountPath, fileModeRead, []byte(strings.Repeat("x", maxConfigMapFileBytes+1)))
+	err := stageConfigMapFile(
+		map[string]*stagedConfigMap{},
+		"lab",
+		"inline",
+		"r1",
+		inlineStartupConfigMountPath,
+		fileModeRead,
+		[]byte(strings.Repeat("x", maxConfigMapFileBytes+1)),
+	)
 	if err == nil || !strings.Contains(err.Error(), "ConfigMap file limit") {
 		t.Fatalf("oversized inline content error = %v", err)
 	}
@@ -88,7 +106,14 @@ func TestResolveNodeFileReferenceHonorsCancellation(t *testing.T) {
 		t.Error("canceled download contacted server")
 	}))
 	defer server.Close()
-	_, _, err := resolveNodeFileReference(ctx, server.URL+"/startup.cfg", "startup-config", "r1", t.TempDir(), "")
+	_, _, err := resolveNodeFileReference(
+		ctx,
+		server.URL+"/startup.cfg",
+		"startup-config",
+		"r1",
+		t.TempDir(),
+		"",
+	)
 	if err == nil {
 		t.Fatal("canceled download succeeded")
 	}

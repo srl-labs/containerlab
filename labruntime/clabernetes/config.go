@@ -162,9 +162,15 @@ func (r *Runtime) deleteManagedLabNamespace(
 	// A namespace initially created for this lab may later host other labs through a
 	// namespace override. Deleting it must never cascade to those unrelated resources.
 	for _, gvr := range []schema.GroupVersionResource{topologyGVR, nodeGVR, linkGVR, nodeProfileGVR} {
-		resources, err := r.client.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		resources, err := r.client.Resource(gvr).
+			Namespace(namespace).
+			List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return false, fmt.Errorf("failed checking c9s namespace %q before deletion: %w", namespace, err)
+			return false, fmt.Errorf(
+				"failed checking c9s namespace %q before deletion: %w",
+				namespace,
+				err,
+			)
 		}
 		for idx := range resources.Items {
 			resource := &resources.Items[idx]
