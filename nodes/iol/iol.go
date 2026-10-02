@@ -40,6 +40,8 @@ const (
 
 	scrapliPlatformName = "cisco_ios"
 	NapalmPlatformName  = "ios"
+
+	bootPromptTimeout = 60 * time.Second
 )
 
 var (
@@ -586,11 +588,11 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		switchportCmd = "no switchport\r"
 	}
 
-	// --- Stream-based prompt detection to replace static 25-second sleep ---
-	log.Infof("Waiting for IOL boot prompt via stdio log stream...")
+	waitCtx, cancel := context.WithTimeout(ctx, bootPromptTimeout)
+	defer cancel()
 
 	// 1. Start streaming container logs
-	logReader, err := n.Runtime.StreamLogs(ctx, n.Cfg.LongName)
+	logReader, err := n.Runtime.StreamLogs(waitCtx, n.Cfg.LongName)
 	if err != nil {
 		return fmt.Errorf("failed to stream logs from container: %w", err)
 	}
@@ -607,10 +609,10 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-waitCtx.Done():
 				return
 			case <-ticker.C:
-				_ = n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.LongName, []byte("\r"))
+				_ = n.Runtime.WriteToStdinNoWait(waitCtx, n.Cfg.LongName, []byte("\r"))
 			}
 		}
 	}()
@@ -641,14 +643,17 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		}
 	}
 
-	if err := scanner.Err(); err != nil && !bootComplete {
-		if ctx.Err() == nil {
+	if !bootComplete {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if waitCtx.Err() != nil {
+			return fmt.Errorf("node %q: timed out after %s waiting for IOL boot prompt",
+				n.Cfg.ShortName, bootPromptTimeout)
+		}
+		if err := scanner.Err(); err != nil {
 			return fmt.Errorf("error reading IOL log stream: %w", err)
 		}
-	}
-
-	if ctx.Err() != nil {
-		return ctx.Err()
 	}
 	// --- End of prompt detection ---
 
