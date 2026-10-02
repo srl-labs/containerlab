@@ -27,7 +27,7 @@ func TestApplyTailscaleEnv(t *testing.T) {
 		ShortName: "srl1-ts",
 		Labels: map[string]string{
 			clabconstants.Containerlab: "mylab",
-			clabconstants.RootNodeName: "srl1",
+			ParentLabel:                "srl1",
 		},
 	}
 	mgmt := &clabtypes.MgmtNet{
@@ -61,7 +61,7 @@ func TestWriteAuthKey(t *testing.T) {
 	}
 	cfg := &clabtypes.NodeConfig{
 		LabDir: t.TempDir(),
-		Labels: map[string]string{clabconstants.RootNodeName: "n1"},
+		Labels: map[string]string{ParentLabel: "n1"},
 	}
 	applyTailscaleEnv(cfg, mgmt)
 	if err := writeAuthKey(cfg, mgmt); err != nil {
@@ -104,7 +104,7 @@ func TestApplyTailscaleEnvKeepsExisting(t *testing.T) {
 		},
 		Labels: map[string]string{
 			clabconstants.Containerlab: "lab",
-			clabconstants.RootNodeName: "n1",
+			ParentLabel:                "n1",
 		},
 	}
 	applyTailscaleEnv(cfg, &clabtypes.MgmtNet{
@@ -175,7 +175,7 @@ func TestParentMgmtIP(t *testing.T) {
 		MgmtIPv6Address: "2001:db8::2",
 	}
 	cfg := &clabtypes.NodeConfig{
-		Labels: map[string]string{clabconstants.RootNodeName: "n1"},
+		Labels: map[string]string{ParentLabel: "n1"},
 	}
 	params := &clabnodes.DeployParams{
 		Nodes: map[string]clabnodes.Node{"n1": parent},
@@ -194,7 +194,7 @@ func TestParentMgmtIP(t *testing.T) {
 		t.Fatalf("nil params = %q", got)
 	}
 	if got := parentMgmtIP(&clabtypes.NodeConfig{
-		Labels: map[string]string{clabconstants.RootNodeName: "missing"},
+		Labels: map[string]string{ParentLabel: "missing"},
 	}, params); got != "" {
 		t.Fatalf("missing parent = %q", got)
 	}
@@ -241,7 +241,7 @@ func newTestSidecar(t *testing.T) (*tailscale, *clabmocksmockruntime.MockContain
 	cfg := &clabtypes.NodeConfig{
 		ShortName: "n1-ts",
 		LongName:  "clab-mylab-n1-ts",
-		Labels:    map[string]string{clabconstants.RootNodeName: "n1"},
+		Labels:    map[string]string{ParentLabel: "n1"},
 	}
 	if err := n.Init(cfg, clabnodes.WithRuntime(rt)); err != nil {
 		t.Fatal(err)

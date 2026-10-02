@@ -71,8 +71,8 @@ func (c *CLab) injectTailscaleSidecars() error {
 			clabnodestailscale.SidecarName(parent),
 			c.nodeRuntime(parent),
 			map[string]string{
-				clabconstants.InternalNode: "true",
-				clabconstants.RootNodeName: parent,
+				clabconstants.InternalNode:     "true",
+				clabnodestailscale.ParentLabel: parent,
 			},
 			[]string{parent},
 		); err != nil {
@@ -219,7 +219,7 @@ func (c *CLab) planTailscaleSidecarRecreates(plan *applyPlan) {
 	for _, parent := range parents {
 		name := clabnodestailscale.SidecarName(parent)
 		sidecar, ok := c.Nodes[name]
-		if !ok || sidecar.Config().Labels[clabconstants.RootNodeName] != parent {
+		if !ok || sidecar.Config().Labels[clabnodestailscale.ParentLabel] != parent {
 			continue
 		}
 		if _, recreated := plan.recreatedNodeSet[name]; recreated {

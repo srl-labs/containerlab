@@ -18,6 +18,7 @@ import (
 const (
 	KindName      = "tailscale"
 	DefaultImage  = "tailscale/tailscale:stable"
+	ParentLabel   = "clab-tailscale-parent"
 	sidecarSuffix = "-ts"
 	tsStateDir    = "/var/lib/tailscale"
 	sidecarLabDir = "/clab"
@@ -167,7 +168,7 @@ func parentMgmtIP(cfg *clabtypes.NodeConfig, params *clabnodes.DeployParams) str
 	if cfg == nil || params == nil {
 		return ""
 	}
-	parentName := cfg.Labels[clabconstants.RootNodeName]
+	parentName := cfg.Labels[ParentLabel]
 	parent, ok := params.Nodes[parentName]
 	if !ok || parent == nil || parent.Config() == nil {
 		return ""
@@ -183,7 +184,7 @@ func mgmtIP(cfg *clabtypes.NodeConfig) string {
 }
 
 func tailscaleHostname(cfg *clabtypes.NodeConfig) string {
-	name := cfg.Labels[clabconstants.RootNodeName]
+	name := cfg.Labels[ParentLabel]
 	if name == "" {
 		name = cfg.ShortName
 	}

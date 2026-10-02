@@ -138,8 +138,8 @@ topology:
 	if sc.Labels[clabconstants.InternalNode] != "true" {
 		t.Fatal("sidecar is not labeled internal")
 	}
-	if sc.Labels[clabconstants.RootNodeName] != "n1" {
-		t.Fatalf("root node = %q", sc.Labels[clabconstants.RootNodeName])
+	if sc.Labels[clabnodestailscale.ParentLabel] != "n1" {
+		t.Fatalf("root node = %q", sc.Labels[clabnodestailscale.ParentLabel])
 	}
 	if sc.Env["TS_AUTHKEY"] != "file:/clab/authkey" {
 		t.Fatalf("TS_AUTHKEY = %q", sc.Env["TS_AUTHKEY"])
@@ -173,6 +173,43 @@ topology:
 	}
 	if _, ok := c.Nodes["n1-ts"]; ok {
 		t.Fatal("sidecar injected without mgmt.tailscale")
+	}
+}
+
+func TestTailscaleSidecarsAreIndependentRuntimeNodes(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  tailscale:
+    auth-key: tskey-auth-test
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+`), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	c.Runtimes = map[string]clabruntime.ContainerRuntime{c.globalRuntimeName: rt}
+	var containers []clabruntime.GenericContainer
+	for _, node := range c.Nodes {
+		cfg := node.Config()
+		containers = append(containers, clabruntime.GenericContainer{
+			Names: []string{cfg.LongName}, Labels: cfg.Labels,
+		})
+	}
+	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(containers, nil)
+	groups, err := c.runtimeNodeGroups(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"n1", "n1-ts"} {
+		group := groups[name]
+		if group == nil || group.distributed || len(group.containers) != 1 {
+			t.Fatalf("runtime group %q = %+v, want independent container", name, group)
+		}
 	}
 }
 
