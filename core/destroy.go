@@ -43,6 +43,11 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		containers, err = c.ListContainers(ctx)
 	case c.TopoPaths.TopologyFilenameAbsPath() != "":
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+		if err == nil {
+			var tailscaleContainers []clabruntime.GenericContainer
+			tailscaleContainers, err = c.discoverTailscaleContainers(ctx, opts.nodeFilter)
+			containers = append(containers, tailscaleContainers...)
+		}
 	default:
 		var listOpts []ListOption
 
@@ -248,6 +253,7 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 
 func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
 	var containers []clabruntime.GenericContainer
+	var orphanSidecars []clabruntime.GenericContainer
 	var err error
 
 	// If we have nodes defined (from topology file), list containers by node.
@@ -260,6 +266,22 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	if err != nil {
 		return err
+	}
+
+	if len(c.Nodes) > 0 {
+		tailscaleContainers, err := c.discoverTailscaleContainers(ctx, c.nodeFilter)
+		if err != nil {
+			return err
+		}
+		for _, ctr := range tailscaleContainers {
+			if _, desired := c.Nodes[ctr.Labels[clabconstants.NodeName]]; desired {
+				continue
+			}
+			containers = append(containers, ctr)
+			if ctr.Labels[clabconstants.ToolType] == "" {
+				orphanSidecars = append(orphanSidecars, ctr)
+			}
+		}
 	}
 
 	if len(containers) == 0 {
@@ -287,6 +309,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			return err
 		}
 		c.deleteNodes(ctx, maxWorkers)
+		c.deleteContainersDirect(ctx, orphanSidecars)
 	} else {
 		c.deleteContainersDirect(ctx, containers)
 	}
@@ -344,6 +367,7 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	sort.Strings(nodeNames)
 
 	hookNodes := make([]clabnodes.Node, 0, len(nodeNames))
+	var tailscaleContainers []clabruntime.GenericContainer
 	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode == nil {
@@ -352,11 +376,21 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 		if runtimeNode.external || runtimeNode.rootNamespaceBased {
 			continue
 		}
+		if len(runtimeNode.containers) > 0 &&
+			runtimeNode.containers[0].Labels[clabconstants.NodeKind] == clabnodestailscale.KindName {
+			tailscaleContainers = append(tailscaleContainers, runtimeNode.containers...)
+			continue
+		}
 		if node, ok := c.Nodes[nodeName]; ok {
 			hookNodes = append(hookNodes, node)
 		}
 	}
+	var logoutWg sync.WaitGroup
+	for _, ctr := range tailscaleContainers {
+		logoutWg.Go(func() { c.logoutTailscaleContainer(ctx, ctr) })
+	}
 	c.preDestroyNodes(ctx, hookNodes, 0)
+	logoutWg.Wait()
 
 	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
@@ -488,7 +522,12 @@ func (c *CLab) deleteContainersDirect(
 		name := cont.Names[0]
 		log.Infof("Removing container: %s", name)
 
-		err := c.globalRuntime().DeleteContainer(ctx, name)
+		c.logoutTailscaleContainer(ctx, cont)
+		rt := cont.Runtime
+		if rt == nil {
+			rt = c.globalRuntime()
+		}
+		err := rt.DeleteContainer(ctx, name)
 		if err != nil {
 			log.Errorf("could not remove container %q: %v", name, err)
 		}
@@ -537,6 +576,7 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
 
+			c.logoutTailscaleContainer(ctx, containers[idx])
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
 				log.Error("Failed to remove tool container", "tool", toolType,
 					"container", containerName, "error", err)

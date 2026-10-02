@@ -10,6 +10,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -54,23 +55,28 @@ type tailscale struct {
 
 // PreDestroy logs the sidecar out of the tailnet. Best effort.
 func (n *tailscale) PreDestroy(ctx context.Context) error {
+	Logout(ctx, n.GetRuntime(), n.Cfg.LongName)
+	return nil
+}
+
+// Logout disconnects a Tailscale container before deletion. Ephemeral nodes are also
+// removed from the tailnet. Failures are logged so container cleanup can continue.
+func Logout(ctx context.Context, rt clabruntime.ContainerRuntime, containerName string) {
 	ctx, cancel := context.WithTimeout(ctx, logoutTimeout)
 	defer cancel()
 
-	res, err := n.RunExec(ctx, clabexec.NewExecCmdFromSlice(
+	res, err := rt.Exec(ctx, containerName, clabexec.NewExecCmdFromSlice(
 		[]string{"tailscale", "--socket=" + tsSocket, "logout"},
 	))
 	switch {
 	case err != nil:
-		log.Warn("Tailscale logout failed", "node", n.Cfg.ShortName, "error", err)
+		log.Warn("Tailscale logout failed", "container", containerName, "error", err)
 	case res.GetReturnCode() != 0:
-		log.Warn("Tailscale logout failed", "node", n.Cfg.ShortName,
+		log.Warn("Tailscale logout failed", "container", containerName,
 			"error", strings.TrimSpace(res.GetStdErrString()))
 	default:
-		log.Info("Logged out of the tailnet", "node", n.Cfg.ShortName)
+		log.Info("Logged out of the tailnet", "container", containerName)
 	}
-
-	return nil
 }
 
 func (*tailscale) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {

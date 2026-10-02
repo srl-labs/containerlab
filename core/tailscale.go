@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -87,6 +88,47 @@ func (c *CLab) tailscaleProxyEnabled() bool {
 	return c.Config.Mgmt != nil && c.Config.Mgmt.Tailscale.Proxy()
 }
 
+func (c *CLab) logoutTailscaleContainer(ctx context.Context, ctr clabruntime.GenericContainer) {
+	if len(ctr.Names) == 0 || (ctr.Labels[clabconstants.NodeKind] != clabnodestailscale.KindName &&
+		ctr.Labels[clabconstants.ToolType] != clabnodestailscale.ToolType) {
+		return
+	}
+	rt := ctr.Runtime
+	if rt == nil {
+		rt = c.globalRuntime()
+	}
+	clabnodestailscale.Logout(ctx, rt, strings.TrimPrefix(ctr.Names[0], "/"))
+}
+
+// discoverTailscaleContainers finds generated containers even when the topology no longer
+// enables Tailscale (for example, when the auth-key environment variable is unset on destroy).
+func (c *CLab) discoverTailscaleContainers(ctx context.Context, filter []string) (
+	[]clabruntime.GenericContainer, error,
+) {
+	containers, err := c.ListContainers(ctx,
+		WithListLabName(c.Config.Name),
+		WithListFromCliArgs([]string{clabconstants.InternalNode + "=true"}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	var result []clabruntime.GenericContainer
+	for _, ctr := range containers {
+		proxy := ctr.Labels[clabconstants.ToolType] == clabnodestailscale.ToolType
+		sidecar := ctr.Labels[clabconstants.NodeKind] == clabnodestailscale.KindName &&
+			ctr.Labels[clabconstants.InternalNode] == "true"
+		if !proxy && !sidecar {
+			continue
+		}
+		if len(filter) > 0 &&
+			(proxy || !slices.Contains(filter, ctr.Labels[clabnodestailscale.ParentLabel])) {
+			continue
+		}
+		result = append(result, ctr)
+	}
+	return result, nil
+}
+
 // verifyTailscaleProxy checks that the SSO proxy container name is free and that every
 // /ts listen port is unique on the proxy.
 func (c *CLab) verifyTailscaleProxy() error {
@@ -147,6 +189,7 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 		for idx := range existing {
 			name := strings.TrimPrefix(existing[idx].Names[0], "/")
 			log.Info("Removing Tailscale proxy", "container", name)
+			c.logoutTailscaleContainer(ctx, existing[idx])
 			if err := c.globalRuntime().DeleteContainer(ctx, name); err != nil {
 				return fmt.Errorf("removing Tailscale proxy %q: %w", name, err)
 			}

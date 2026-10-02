@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -555,7 +556,12 @@ func TestSyncTailscaleProxyRemovesWhenDisabled(t *testing.T) {
 	}
 
 	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).
-		Return([]clabruntime.GenericContainer{{Names: []string{"/clab-mylab-ts"}}}, nil)
+		Return([]clabruntime.GenericContainer{{
+			Names:  []string{"/clab-mylab-ts"},
+			Labels: map[string]string{clabconstants.ToolType: clabnodestailscale.ToolType},
+		}}, nil)
+	rt.EXPECT().Exec(gomock.Any(), "clab-mylab-ts", gomock.Any()).
+		Return(&clabexec.ExecResult{}, nil)
 	rt.EXPECT().DeleteContainer(gomock.Any(), "clab-mylab-ts")
 
 	if err := c.syncTailscaleProxy(context.Background()); err != nil {
@@ -600,6 +606,99 @@ func TestDeleteApplyNodesRunsPreDestroy(t *testing.T) {
 
 	if err := c.deleteApplyNodes(context.Background(), plan); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDeleteApplyNodesLogsOutRemovedSidecar(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	otherRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	c := &CLab{
+		Nodes:             map[string]clabnodes.Node{},
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"docker": rt},
+		globalRuntimeName: "docker",
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"gone-ts": {containers: []clabruntime.GenericContainer{{
+			Names:   []string{"clab-mylab-gone-ts"},
+			Labels:  map[string]string{clabconstants.NodeKind: clabnodestailscale.KindName},
+			Runtime: otherRuntime,
+		}}},
+	}, nil)
+	plan.deletedNodeSet["gone-ts"] = struct{}{}
+	gomock.InOrder(
+		otherRuntime.EXPECT().Exec(gomock.Any(), "clab-mylab-gone-ts", gomock.Any()).
+			Return(&clabexec.ExecResult{}, nil),
+		otherRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-mylab-gone-ts"),
+	)
+	if err := c.deleteApplyNodes(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDiscoverTailscaleContainersWithoutAuthKey(t *testing.T) {
+	for _, filter := range [][]string{nil, {"n1"}} {
+		ctrl := gomock.NewController(t)
+		rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+		c := &CLab{
+			Config:   &Config{Name: "mylab"},
+			Runtimes: map[string]clabruntime.ContainerRuntime{"docker": rt},
+		}
+		containers := []clabruntime.GenericContainer{{
+			Names:  []string{"clab-mylab-n1"},
+			Labels: map[string]string{clabconstants.NodeKind: "linux"},
+		}, {
+			Names:  []string{"clab-mylab-ts"},
+			Labels: map[string]string{clabconstants.ToolType: clabnodestailscale.ToolType},
+		}}
+		for _, parent := range []string{"n1", "n2"} {
+			containers = append(containers, clabruntime.GenericContainer{
+				Names: []string{"clab-mylab-" + parent + "-ts"},
+				Labels: map[string]string{
+					clabconstants.NodeKind:         clabnodestailscale.KindName,
+					clabconstants.InternalNode:     "true",
+					clabnodestailscale.ParentLabel: parent,
+				},
+			})
+		}
+		rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, filters []*clabtypes.GenericFilter) (
+				[]clabruntime.GenericContainer, error,
+			) {
+				if filterMatch(filters, clabconstants.Containerlab) != "mylab" {
+					t.Fatal("discovery must be scoped to the lab")
+				}
+				return containers, nil
+			})
+		found, err := c.discoverTailscaleContainers(context.Background(), filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filter == nil && len(found) != 3 {
+			t.Fatalf("found %d Tailscale containers, want 3", len(found))
+		}
+		if filter != nil && (len(found) != 1 || found[0].Names[0] != "clab-mylab-n1-ts") {
+			t.Fatalf("filtered discovery = %+v", found)
+		}
+	}
+}
+
+func TestDeleteContainersDirectLogsOutTailscale(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	c := &CLab{}
+	for _, labels := range []map[string]string{
+		{clabconstants.NodeKind: clabnodestailscale.KindName},
+		{clabconstants.ToolType: clabnodestailscale.ToolType},
+	} {
+		gomock.InOrder(
+			rt.EXPECT().Exec(gomock.Any(), "clab-mylab-ts", gomock.Any()).
+				Return(&clabexec.ExecResult{}, nil),
+			rt.EXPECT().DeleteContainer(gomock.Any(), "clab-mylab-ts"),
+		)
+		c.deleteContainersDirect(context.Background(), []clabruntime.GenericContainer{{
+			Names: []string{"clab-mylab-ts"}, Labels: labels, Runtime: rt,
+		}})
 	}
 }
 
