@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -67,6 +68,15 @@ func TestStageNodeFileReferences(t *testing.T) {
 				t.Fatalf("staged content = %q, want %q", gotContent, content)
 			}
 		})
+	}
+}
+
+func TestStageConfigMapFileRejectsOversizedEmbeddedContent(t *testing.T) {
+	t.Parallel()
+	err := stageConfigMapFile(map[string]*stagedConfigMap{}, "lab", "inline", "r1",
+		inlineStartupConfigMountPath, fileModeRead, []byte(strings.Repeat("x", maxConfigMapFileBytes+1)))
+	if err == nil || !strings.Contains(err.Error(), "ConfigMap file limit") {
+		t.Fatalf("oversized inline content error = %v", err)
 	}
 }
 

@@ -718,6 +718,10 @@ func stageConfigMapFile(
 	mode string,
 	content []byte,
 ) error {
+	if len(content) > maxConfigMapFileBytes {
+		return fmt.Errorf("file %q is %d bytes, larger than the supported ConfigMap file limit of %d bytes",
+			filePath, len(content), maxConfigMapFileBytes)
+	}
 	identity = filepath.ToSlash(filepath.Clean(identity))
 	configMap, ok := configMaps[identity]
 	if ok {
