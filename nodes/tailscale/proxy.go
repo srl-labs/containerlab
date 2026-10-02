@@ -76,17 +76,22 @@ func WriteServeConfig(labDir string, nodes map[string]clabnodes.Node) error {
 	if err != nil {
 		return err
 	}
+	return writeFile(labDir, ServeFile, b, clabconstants.PermissionsFileDefault)
+}
 
-	tmp, err := os.CreateTemp(labDir, "."+ServeFile+"-*")
+// writeFile atomically replaces the destination, including existing symlinks, and sets
+// permissions on a new file rather than retaining those of an existing auth-key file.
+func writeFile(labDir, name string, data []byte, mode os.FileMode) error {
+	tmp, err := os.CreateTemp(labDir, "."+name+"-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(b); err != nil {
+	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
 		return err
 	}
-	if err := tmp.Chmod(clabconstants.PermissionsFileDefault); err != nil {
+	if err := tmp.Chmod(mode); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -94,5 +99,5 @@ func WriteServeConfig(labDir string, nodes map[string]clabnodes.Node) error {
 		return err
 	}
 
-	return os.Rename(tmp.Name(), filepath.Join(labDir, ServeFile))
+	return os.Rename(tmp.Name(), filepath.Join(labDir, name))
 }

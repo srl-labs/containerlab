@@ -3,8 +3,6 @@ package tailscale
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -91,8 +89,8 @@ func writeAuthKey(cfg *clabtypes.NodeConfig, mgmt *clabtypes.MgmtNet) error {
 		return nil
 	}
 
-	return os.WriteFile(
-		filepath.Join(cfg.LabDir, authKeyFile),
+	return writeFile(
+		cfg.LabDir, authKeyFile,
 		[]byte(mgmt.Tailscale.AuthKey),
 		0o600,
 	)

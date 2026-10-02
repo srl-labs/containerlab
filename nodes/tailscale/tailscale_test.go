@@ -120,6 +120,40 @@ func TestApplyTailscaleEnvKeepsExisting(t *testing.T) {
 	}
 }
 
+func TestWriteAuthKeyReplacesExistingFile(t *testing.T) {
+	for _, symlink := range []bool{false, true} {
+		cfg := &clabtypes.NodeConfig{LabDir: t.TempDir()}
+		mgmt := &clabtypes.MgmtNet{Tailscale: &clabtypes.TailscaleConfig{AuthKey: "secret"}}
+		applyTailscaleEnv(cfg, mgmt)
+		path := filepath.Join(cfg.LabDir, authKeyFile)
+		target := path
+		if symlink {
+			target = filepath.Join(t.TempDir(), "unrelated")
+		}
+		if err := os.WriteFile(target, []byte("original"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if symlink {
+			if err := os.Symlink(target, path); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := writeAuthKey(cfg, mgmt); err != nil {
+			t.Fatal(err)
+		}
+		st, err := os.Lstat(path)
+		if err != nil || !st.Mode().IsRegular() || st.Mode().Perm() != 0o600 {
+			t.Fatalf("auth-key file must be a regular file with mode 600: %v, %v", st, err)
+		}
+		if symlink {
+			b, err := os.ReadFile(target)
+			if err != nil || string(b) != "original" {
+				t.Fatalf("symlink target changed: %q, %v", b, err)
+			}
+		}
+	}
+}
+
 func TestDeployRefreshesParentManagementIP(t *testing.T) {
 	n, rt := newTestSidecar(t)
 	parent := clabmocksmocknodes.NewMockNode(gomock.NewController(t))
