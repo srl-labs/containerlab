@@ -173,7 +173,7 @@ Both types of startup configurations are only be applied on the **first boot** o
 
 The full startup configuration is used to fully replace/override the default startup configuration that is applied. This means you must define IP addressing and the SSH server in your configuration to access -{{ kind_short_display_name }}-.
 
-You can use the template variables that are defined in the [default startup confguration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
+You can use the template variables that are defined in the [default startup configuration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
 
 ```yaml
 name: iol_full_startup_cfg
