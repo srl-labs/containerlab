@@ -279,10 +279,11 @@ func (p *nodePhaseProgress) observe(
 			delete(p.terminalFailures, node.GetName())
 		}
 
-		if p.phases[node.GetName()] == phase {
+		phaseDetail := phase + "\x00" + detail
+		if p.phases[node.GetName()] == phaseDetail {
 			continue
 		}
-		p.phases[node.GetName()] = phase
+		p.phases[node.GetName()] = phaseDetail
 
 		// Readiness transitions are reported by the readiness tracker; phases end here.
 		if phase == "ready" {

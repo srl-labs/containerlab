@@ -214,6 +214,22 @@ func conditionPendingReason(obj *unstructured.Unstructured, conditionType string
 		}
 
 		if message, ok := condition["message"].(string); ok && message != "" {
+			// Older controllers omit the helper's identity from these diagnostics. Name the
+			// container and give a concrete log command for the lifecycle phase it blocks.
+			if message == "required direct helper is not ready" ||
+				message == "required direct helper has no container status" {
+				helper := ""
+				switch conditionType {
+				case "Prepared":
+					helper = "planner"
+				case "ConnectivityReady":
+					helper = "clabwire"
+				}
+				if helper != "" {
+					return fmt.Sprintf("waiting for %s container; check kubectl -n %s logs deploy/%s -c %s",
+						helper, obj.GetNamespace(), obj.GetName(), helper)
+				}
+			}
 			return message
 		}
 		if reason, ok := condition["reason"].(string); ok && reason != "" {
