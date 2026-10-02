@@ -608,13 +608,18 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	scanner := bufio.NewScanner(logReader)
 
 	// Asynchronously send carriage returns since scanner.Scan() blocks
+	tickCtx, stopTicker := context.WithCancel(waitCtx)
+	defer stopTicker()
+	tickerDone := make(chan struct{})
+
 	go func() {
+		defer close(tickerDone)
 		for {
 			select {
-			case <-waitCtx.Done():
+			case <-tickCtx.Done():
 				return
 			case <-ticker.C:
-				_ = n.Runtime.WriteToStdinNoWait(waitCtx, n.Cfg.LongName, []byte("\r"))
+				_ = n.Runtime.WriteToStdinNoWait(tickCtx, n.Cfg.LongName, []byte("\r"))
 			}
 		}
 	}()
@@ -644,6 +649,9 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 			break
 		}
 	}
+
+	stopTicker()
+	<-tickerDone
 
 	if !bootComplete {
 		if ctx.Err() != nil {
