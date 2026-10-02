@@ -71,7 +71,7 @@ set chassis fpc 0 pic 0 number-of-ports 96
 * `eth1` - first data interface, mapped to a first data port of vJunos-router VM, which is `ge-0/0/0` **and not `ge-0/0/1`**.
 * `eth2+` - second and subsequent data interface
 
-When containerlab launches -{{ kind_display_name }}- node the management interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
+When containerlab launches -{{ kind_display_name }}- node the management interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server, unless you use the **[Transparent Management](../vrnetlab.md#management-interface)**, in which case the management interface will use the same network as the container host. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
 
 Data interfaces `ge-0/0/0+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 
