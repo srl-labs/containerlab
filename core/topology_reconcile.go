@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -707,6 +709,12 @@ func (c *CLab) resolveNodeConfigFromTopology(
 ) *clabtypes.NodeConfig {
 	if topo == nil {
 		return nil
+	}
+	if topo.GetNodeKind(nodeName) == clabnodestailscale.KindName &&
+		topo.GetNodeLabels(nodeName)[clabconstants.InternalNode] == "true" {
+		topo = &clabtypes.Topology{Nodes: map[string]*clabtypes.NodeDefinition{
+			nodeName: topo.Nodes[nodeName],
+		}}
 	}
 
 	binds, _ := topo.GetNodeBinds(nodeName)

@@ -165,6 +165,10 @@ func (c *CLab) NewNode(
 		return err
 	}
 
+	return c.initNode(nodeCfg, nodeRuntime)
+}
+
+func (c *CLab) initNode(nodeCfg *clabtypes.NodeConfig, nodeRuntime string) error {
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
@@ -187,7 +191,7 @@ func (c *CLab) NewNode(
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	c.Nodes[nodeName] = n
+	c.Nodes[nodeCfg.ShortName] = n
 	// adding default labels 2nd time in case node init
 	// overwrote original values for the default labels
 	c.addDefaultLabels(n.Config())

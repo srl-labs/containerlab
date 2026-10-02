@@ -213,6 +213,41 @@ topology:
 	}
 }
 
+func TestTailscaleSidecarsIgnoreNodeDefaults(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  tailscale:
+    auth-key: tskey-auth-test
+topology:
+  defaults:
+    cmd: sleep infinity
+    entrypoint: /bin/sh
+    network-mode: none
+    ports: [8080:80]
+    env:
+      TS_USERSPACE: "true"
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+      network-mode: bridge
+`), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := c.Nodes["n1-ts"].Config()
+	if cfg.Cmd != "" || cfg.Entrypoint != "" || cfg.NetworkMode != "" ||
+		len(cfg.PortBindings) != 0 || cfg.Env["TS_USERSPACE"] != "false" {
+		t.Fatalf("sidecar inherited node defaults: %+v", cfg)
+	}
+	resolved := c.resolveNodeConfigFromTopology(c.Config.Topology, "n1-ts")
+	if resolved.Cmd != "" || resolved.Entrypoint != "" || resolved.NetworkMode != "" ||
+		len(resolved.PortSet) != 0 || len(resolved.Env) != 0 {
+		t.Fatalf("apply comparison inherited node defaults: %+v", resolved)
+	}
+}
+
 func TestInjectTailscaleSidecarsNameCollision(t *testing.T) {
 	path := writeTailscaleTopo(t, `
 name: mylab

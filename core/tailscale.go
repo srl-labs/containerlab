@@ -264,6 +264,7 @@ func (c *CLab) addTailscaleNode(
 		Image:         clabnodestailscale.DefaultImage,
 		RestartPolicy: "always",
 		Labels:        labels,
+		Stages:        clabtypes.NewStages(),
 	}
 	if len(waitFor) > 0 {
 		wf := make(clabtypes.WaitForList, 0, len(waitFor))
@@ -273,15 +274,25 @@ func (c *CLab) addTailscaleNode(
 				Stage: clabtypes.WaitForCreate,
 			})
 		}
-		def.Stages = &clabtypes.Stages{
-			Create: &clabtypes.StageCreate{
-				StageBase: clabtypes.StageBase{WaitFor: wf},
-			},
-		}
+		def.Stages.Create.WaitFor = wf
 	}
 	c.Config.Topology.Nodes[name] = def
 
-	if err := c.NewNode(name, runtime, def, len(c.Nodes)); err != nil {
+	// Generated sidecars must not inherit node commands, ports, binds, or network modes.
+	cfg := &clabtypes.NodeConfig{
+		ShortName:     name,
+		LongName:      c.nodeLongName(name),
+		Fqdn:          strings.Join([]string{name, c.Config.Name, "io"}, "."),
+		LabDir:        c.TopoPaths.NodeDir(name),
+		Index:         len(c.Nodes),
+		Kind:          def.Kind,
+		Image:         def.Image,
+		Runtime:       runtime,
+		RestartPolicy: def.RestartPolicy,
+		Labels:        labels,
+		Stages:        def.Stages,
+	}
+	if err := c.initNode(cfg, runtime); err != nil {
 		return fmt.Errorf("creating Tailscale sidecar %q: %w", name, err)
 	}
 
