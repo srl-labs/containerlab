@@ -295,9 +295,19 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 // Generate interfaces configuration for IOL (and iouyap/netmap).
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	// add 'boilerplate' to NETMAP and iouyap.ini for the management port
-	iouyapData := fmt.Sprintf("[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
-		n.mgmtSlot, n.mgmtPort)
-	netmapdata := fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, n.mgmtSlot, n.mgmtPort, n.mgmtSlot, n.mgmtPort)
+	iouyapData := fmt.Sprintf(
+		"[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
+	netmapdata := fmt.Sprintf(
+		"%s:%d/%d 513:%d/%d\n",
+		n.Pid,
+		n.mgmtSlot,
+		n.mgmtPort,
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
 
 	slot, port := 0, 0
 
