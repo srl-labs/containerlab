@@ -238,4 +238,15 @@ func TestMgmtTailscaleValidation(t *testing.T) {
 	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthMode: "sso", AuthKey: "tskey"}}).Validate(); err == nil {
 		t.Fatal("sso with auth-key accepted")
 	}
+	if err := (&MgmtNet{Tailscale: &TailscaleConfig{AuthMode: " SSO "}}).Validate(); err != nil {
+		t.Fatalf("normalized sso mode rejected: %v", err)
+	}
+	for _, mode := range []string{"oauth", "ssoo", " "} {
+		for _, key := range []string{"", "tskey"} {
+			m := &MgmtNet{Tailscale: &TailscaleConfig{AuthMode: mode, AuthKey: key}}
+			if err := m.Validate(); err == nil {
+				t.Errorf("unsupported auth-mode %q with auth-key %q accepted", mode, key)
+			}
+		}
+	}
 }
