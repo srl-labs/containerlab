@@ -131,7 +131,9 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	// check if user submitted node type is valid
 	switch nodeType {
-	case "", typeIOL:
+	case "":
+		n.isL2Node = strings.Contains(strings.ToLower(path.Base(n.Cfg.Image)), "l2")
+	case typeIOL:
 		n.isL2Node = false
 	case typeL2:
 		n.isL2Node = true
@@ -579,9 +581,8 @@ func (n *iol) CheckInterfaceName() error {
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	// L2 IOL images default to switchport mode, which rejects IP addresses.
-	// We inject "no switchport" if the image name contains "l2" (case-insensitive).
 	switchportCmd := ""
-	if strings.Contains(strings.ToLower(n.Cfg.Image), "l2") {
+	if n.isL2Node {
 		switchportCmd = "no switchport\r"
 	}
 
