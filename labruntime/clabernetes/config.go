@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -141,7 +142,7 @@ func (r *Runtime) deleteManagedLabNamespace(
 	namespace string,
 ) (bool, error) {
 	canonicalNamespace, err := canonicalNamespaceForLab(name)
-	if err != nil || namespace != canonicalNamespace {
+	if err != nil || namespace != canonicalNamespace || r.labNamespaceOverride != "" {
 		return false, nil
 	}
 
@@ -156,6 +157,25 @@ func (r *Runtime) deleteManagedLabNamespace(
 	if existing.Labels[labelRuntime] != clabernetesAppValue ||
 		existing.Labels[labelTopologyOwner] != name {
 		return false, nil
+	}
+
+	// A namespace initially created for this lab may later host other labs through a
+	// namespace override. Deleting it must never cascade to those unrelated resources.
+	for _, gvr := range []schema.GroupVersionResource{topologyGVR, nodeGVR, linkGVR, nodeProfileGVR} {
+		resources, err := r.client.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, fmt.Errorf("failed checking c9s namespace %q before deletion: %w", namespace, err)
+		}
+		for idx := range resources.Items {
+			resource := &resources.Items[idx]
+			if gvr == topologyGVR {
+				if resource.GetName() != name {
+					return false, nil
+				}
+			} else if resource.GetLabels()[labelTopologyOwner] != name {
+				return false, nil
+			}
+		}
 	}
 
 	err = namespaces.Delete(ctx, namespace, metav1.DeleteOptions{})
