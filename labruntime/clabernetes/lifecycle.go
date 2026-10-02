@@ -64,7 +64,7 @@ func (r *Runtime) Deploy(
 		return nil, err
 	}
 
-	prepared, err := prepareDesiredDeployment(req, namespace)
+	prepared, err := prepareDesiredDeployment(ctx, req, namespace)
 	if err != nil {
 		return nil, err
 	}

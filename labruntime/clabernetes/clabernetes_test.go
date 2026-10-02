@@ -1993,7 +1993,7 @@ topology:
     r1: {}
 `
 
-	rendered, configMaps, _, err := stageTopologyLocalFiles(clablabruntime.DeployRequest{
+	rendered, configMaps, _, err := stageTopologyLocalFiles(context.Background(), clablabruntime.DeployRequest{
 		Name:               "lab1",
 		TopologyFile:       filepath.Join(topologyDir, "lab.clab.yml"),
 		TopologyDefinition: []byte(definition),

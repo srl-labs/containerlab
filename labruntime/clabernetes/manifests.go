@@ -21,7 +21,7 @@ import (
 // the runtime relies on to discover the lab later, so a bundle applied by hand stays
 // manageable with inspect, destroy, and the node lifecycle commands.
 func (r *Runtime) Manifests(
-	_ context.Context,
+	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) ([]clablabruntime.Manifest, error) {
 	if req.Name == "" {
@@ -35,7 +35,7 @@ func (r *Runtime) Manifests(
 	if err != nil {
 		return nil, err
 	}
-	prepared, err := prepareDesiredDeployment(req, namespace)
+	prepared, err := prepareDesiredDeployment(ctx, req, namespace)
 	if err != nil {
 		return nil, err
 	}

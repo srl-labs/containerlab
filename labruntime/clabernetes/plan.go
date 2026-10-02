@@ -23,6 +23,7 @@ type preparedDeployment struct {
 }
 
 func prepareDesiredDeployment(
+	ctx context.Context,
 	req clablabruntime.DeployRequest,
 	namespace string,
 ) (*preparedDeployment, error) {
@@ -30,7 +31,12 @@ func prepareDesiredDeployment(
 	if err != nil {
 		return nil, err
 	}
-	topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(req)
+	if req.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	}
+	topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +133,7 @@ func validatePrimitiveNodeNames(primitives *primitiveResourceSet) error {
 // Validate compiles the containerlab/c9s subset and stages all local-path inputs in memory.
 // Lossy-but-deployable fields produce warnings; structurally impossible constructs remain
 // errors. Validation deliberately performs no Kubernetes reads or writes.
-func (r *Runtime) Validate(_ context.Context, req clablabruntime.DeployRequest) error {
+func (r *Runtime) Validate(ctx context.Context, req clablabruntime.DeployRequest) error {
 	if req.Name == "" {
 		return fmt.Errorf("topology name is required")
 	}
@@ -140,7 +146,7 @@ func (r *Runtime) Validate(_ context.Context, req clablabruntime.DeployRequest) 
 		return err
 	}
 
-	_, err = prepareDesiredDeployment(req, namespace)
+	_, err = prepareDesiredDeployment(ctx, req, namespace)
 
 	return err
 }
@@ -159,7 +165,7 @@ func (r *Runtime) Plan(
 	if err != nil {
 		return nil, err
 	}
-	prepared, err := prepareDesiredDeployment(req, namespace)
+	prepared, err := prepareDesiredDeployment(ctx, req, namespace)
 	if err != nil {
 		return nil, err
 	}

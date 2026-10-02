@@ -116,6 +116,7 @@ type stagedLocalFile struct {
 }
 
 func stageTopologyLocalFiles(
+	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) ([]byte, []stagedConfigMap, string, error) {
 	config := &clabRuntimeConfig{}
@@ -151,6 +152,7 @@ func stageTopologyLocalFiles(
 
 		for _, nodeName := range nodeNames {
 			if err := stageStartupConfig(
+				ctx,
 				config,
 				req.Name,
 				nodeName,
@@ -163,12 +165,14 @@ func stageTopologyLocalFiles(
 			}
 
 			if err := stageLicenseFile(
+				ctx,
 				config,
 				req.Name,
 				nodeName,
 				topologyFileDir,
 				topologyLabDir,
 				configMaps,
+				&definitionChanged,
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -314,6 +318,7 @@ func clabernetesNamingMode(config *clabRuntimeConfig) string {
 }
 
 func stageStartupConfig(
+	ctx context.Context,
 	config *clabRuntimeConfig,
 	topologyName,
 	nodeName,
@@ -347,14 +352,13 @@ func stageStartupConfig(
 		)
 	}
 
-	files, err := resolveLocalFiles(startupConfig, nodeName, topologyFileDir, topologyLabDir)
+	resolvedStartupConfig, files, err := resolveNodeFileReference(
+		ctx, startupConfig, "startup-config", nodeName, topologyFileDir, topologyLabDir,
+	)
 	if err != nil {
 		return fmt.Errorf("failed staging startup-config for node %q: %w", nodeName, err)
 	}
 
-	resolvedStartupConfig := filepath.ToSlash(
-		replaceClabPathVariables(startupConfig, nodeName, topologyLabDir),
-	)
 	if resolvedStartupConfig != startupConfig {
 		nodeDefinition := config.Topology.Nodes[nodeName]
 		if nodeDefinition == nil {
@@ -375,26 +379,83 @@ func stageStartupConfig(
 }
 
 func stageLicenseFile(
+	ctx context.Context,
 	config *clabRuntimeConfig,
 	topologyName,
 	nodeName,
 	topologyFileDir,
 	topologyLabDir string,
 	configMaps map[string]*stagedConfigMap,
+	definitionChanged *bool,
 ) error {
 	license := config.Topology.GetNodeLicense(nodeName)
 	if license == "" {
 		return nil
 	}
 
-	return stageSourcePathIntoConfigMaps(
-		configMaps,
-		topologyName,
-		license,
-		nodeName,
-		topologyFileDir,
-		topologyLabDir,
+	resolvedLicense, files, err := resolveNodeFileReference(
+		ctx, license, "license", nodeName, topologyFileDir, topologyLabDir,
 	)
+	if err != nil {
+		return fmt.Errorf("failed staging license for node %q: %w", nodeName, err)
+	}
+	if resolvedLicense != license {
+		nodeDefinition := config.Topology.Nodes[nodeName]
+		if nodeDefinition == nil {
+			nodeDefinition = &clabtypes.NodeDefinition{}
+			config.Topology.Nodes[nodeName] = nodeDefinition
+		}
+		nodeDefinition.License = resolvedLicense
+		*definitionChanged = true
+	}
+	for _, file := range files {
+		if err := stageLocalFile(configMaps, topologyName, nodeName, file); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// resolveNodeFileReference uses the shared downloader for every supported URL scheme and
+// preserves the filename (including .partial) that node implementations use to select formats.
+func resolveNodeFileReference(
+	ctx context.Context,
+	sourcePath, field, nodeName, topologyFileDir, topologyLabDir string,
+) (string, []stagedLocalFile, error) {
+	sourcePath = filepath.ToSlash(replaceClabPathVariables(sourcePath, nodeName, topologyLabDir))
+	if strings.Contains(sourcePath, "\n") {
+		mountPath := filepath.Join("/clabernetes", nodeName, field, "embedded.lic")
+		return mountPath, []stagedLocalFile{{
+			filePath: mountPath, mode: fileModeRead, content: []byte(sourcePath),
+		}}, nil
+	}
+	if !clabutils.IsDownloadableURL(sourcePath) {
+		files, err := resolveLocalFiles(sourcePath, nodeName, topologyFileDir, topologyLabDir)
+		return sourcePath, files, err
+	}
+
+	file, err := os.CreateTemp("", "clab-c9s-download-*")
+	if err != nil {
+		return "", nil, err
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	if err := clabutils.CopyFileContents(ctx, sourcePath, file); err != nil {
+		return "", nil, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return "", nil, err
+	}
+	mountPath := filepath.Join("/clabernetes", nodeName, field,
+		filepath.Base(clabutils.FilenameForURL(ctx, sourcePath)))
+	staged, err := loadStagedLocalFile(mountPath, file.Name(), info)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return mountPath, []stagedLocalFile{staged}, nil
 }
 
 func stageBindFiles(

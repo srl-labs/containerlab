@@ -553,6 +553,12 @@ currently limited to 950 KB. These projections are snapshots taken at deploy
 time, not mutable host bind mounts; run deploy again after changing a source
 file.
 
+Remote startup-config and license URLs use the same HTTP(S), S3, FTP, SFTP,
+and SCP download support as local runtimes. Containerlab downloads them before
+creating cluster resources and includes their contents in the staged ConfigMaps;
+the cluster does not need access to those URLs. Remote startup-config filenames
+retain their `.partial` marker. Licenses can also be embedded as multiline strings.
+
 ### Device state persistence
 
 By default, deploy enables [Clabernetes persistence](https://github.com/clabernetes/clabernetes/blob/main/docs/guides/persistence.md)
