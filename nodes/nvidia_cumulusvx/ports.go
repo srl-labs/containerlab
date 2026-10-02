@@ -54,32 +54,36 @@ func newPortLayout(cfg *clabtypes.CumulusVXExtras) (*portLayout, error) {
 
 	layout := &portLayout{
 		ports:     cfg.Ports,
-		breakouts: maps.Clone(cfg.Breakouts),
-		starts:    make(map[int]int, len(cfg.Breakouts)),
+		breakouts: make(map[int]int),
+		starts:    make(map[int]int),
 		lastIndex: cfg.Ports,
+	}
+	for _, breakout := range cfg.Breakouts {
+		first, last, err := breakoutPortRange(breakout.Port, cfg.Ports)
+		if err != nil {
+			return nil, err
+		}
+		switch breakout.Channels {
+		case 2, 4, 8:
+		default:
+			return nil, fmt.Errorf(
+				"breakout port %q must have 2, 4, or 8 channels, got %d",
+				breakout.Port,
+				breakout.Channels,
+			)
+		}
+		for parent := first; parent <= last; parent++ {
+			if _, exists := layout.breakouts[parent]; exists {
+				return nil, fmt.Errorf("breakout port %d is configured more than once", parent)
+			}
+			layout.breakouts[parent] = breakout.Channels
+		}
 	}
 	// Match vrnetlab's _compute_renames: append all lanes after the base ports,
 	// processing parents numerically, including lanes with no connected link.
 	for _, parent := range slices.Sorted(maps.Keys(layout.breakouts)) {
-		width := layout.breakouts[parent]
-		if parent < 1 || parent > cfg.Ports {
-			return nil, fmt.Errorf(
-				"breakout port %d is outside the base port range 1..%d",
-				parent,
-				cfg.Ports,
-			)
-		}
-		switch width {
-		case 2, 4, 8:
-		default:
-			return nil, fmt.Errorf(
-				"breakout port %d must have 2, 4, or 8 lanes, got %d",
-				parent,
-				width,
-			)
-		}
 		layout.starts[parent] = layout.lastIndex + 1
-		layout.lastIndex += width
+		layout.lastIndex += layout.breakouts[parent]
 		if layout.lastIndex > maxInterfaceIndex {
 			return nil, fmt.Errorf(
 				"base ports plus breakout lanes exceed vrnetlab's %d interface indices",
@@ -88,6 +92,24 @@ func newPortLayout(cfg *clabtypes.CumulusVXExtras) (*portLayout, error) {
 		}
 	}
 	return layout, nil
+}
+
+func breakoutPortRange(port string, ports int) (int, int, error) {
+	firstText, lastText, isRange := strings.Cut(port, "..")
+	if !isRange {
+		lastText = firstText
+	}
+	first, firstErr := strconv.Atoi(firstText)
+	last, lastErr := strconv.Atoi(lastText)
+	if firstErr != nil || lastErr != nil ||
+		strconv.Itoa(first) != firstText || strconv.Itoa(last) != lastText ||
+		first < 1 || last < first || last > ports {
+		return 0, 0, fmt.Errorf(
+			"breakout port %q must be a port number or an ascending range within 1..%d",
+			port, ports,
+		)
+	}
+	return first, last, nil
 }
 
 // CalculateInterfaceIndex maps native names using the same layout as ports.conf.
@@ -199,7 +221,13 @@ func (n *nvidiaCumulusVX) ComputeDiff(
 	if a == nil && b == nil {
 		return diff
 	}
-	if a == nil || b == nil || a.Ports != b.Ports || !maps.Equal(a.Breakouts, b.Breakouts) {
+	if a == nil || b == nil || a.Ports != b.Ports {
+		diff.Fields = append(diff.Fields, portLayoutDiffField)
+		return diff
+	}
+	oldLayout, oldErr := newPortLayout(a)
+	newLayout, newErr := newPortLayout(b)
+	if oldErr != nil || newErr != nil || !maps.Equal(oldLayout.breakouts, newLayout.breakouts) {
 		diff.Fields = append(diff.Fields, portLayoutDiffField)
 	}
 	return diff

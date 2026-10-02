@@ -2,6 +2,7 @@ package nvidia_cumulusvx
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -54,25 +55,88 @@ func TestPortLayoutValidation(t *testing.T) {
 			"must define at least one breakout",
 		},
 		"zero parent": {
-			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{0: 4}},
-			"outside the base port range",
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "0", Channels: 4}},
+			},
+			"ascending range within 1..64",
 		},
 		"parent beyond base": {
-			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{65: 4}},
-			"outside the base port range",
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "65", Channels: 4}},
+			},
+			"ascending range within 1..64",
 		},
 		"invalid width": {
-			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 3}},
-			"must have 2, 4, or 8 lanes",
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "10", Channels: 3}},
+			},
+			"must have 2, 4, or 8 channels",
 		},
 		"one lane": {
-			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 1}},
-			"must have 2, 4, or 8 lanes",
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "10", Channels: 1}},
+			},
+			"must have 2, 4, or 8 channels",
+		},
+		"missing channels": {
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "10"}},
+			},
+			"must have 2, 4, or 8 channels",
+		},
+		"duplicate parent": {
+			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+				{Port: "10", Channels: 4}, {Port: "10", Channels: 4},
+			}},
+			"port 10 is configured more than once",
+		},
+		"overlapping ranges": {
+			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+				{Port: "1..10", Channels: 4}, {Port: "10..20", Channels: 2},
+			}},
+			"port 10 is configured more than once",
+		},
+		"parent overlaps range": {
+			clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+				{Port: "10", Channels: 4}, {Port: "1..20", Channels: 4},
+			}},
+			"port 10 is configured more than once",
 		},
 		"indices exceed tc limit": {
-			clabtypes.CumulusVXExtras{Ports: 996, Breakouts: map[int]int{10: 4}},
+			clabtypes.CumulusVXExtras{
+				Ports:     996,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "10", Channels: 4}},
+			},
 			"exceed vrnetlab's",
 		},
+		"range indices exceed tc limit": {
+			clabtypes.CumulusVXExtras{
+				Ports:     125,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: "1..110", Channels: 8}},
+			},
+			"exceed vrnetlab's",
+		},
+	}
+	for _, port := range []string{
+		"", "-1", "01", "+1", " 1", "1 ", "swp1", "1.2", "1...2", "1..2..3",
+		"..10", "1..", "20..1", "0..10", "1..65", "65..66", "1..999999999999999999999999",
+		"999999999999999999999999", "1..02", "1..+2", "1.. 2", "1..-2",
+	} {
+		tests["invalid port "+port] = struct {
+			cfg  clabtypes.CumulusVXExtras
+			want string
+		}{
+			clabtypes.CumulusVXExtras{
+				Ports:     64,
+				Breakouts: []clabtypes.CumulusVXBreakout{{Port: port, Channels: 4}},
+			},
+			"ascending range within 1..64",
+		}
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -90,13 +154,16 @@ func TestPortLayoutValidation(t *testing.T) {
 
 func TestBreakoutInterfaceMapping(t *testing.T) {
 	n := testNode(t, &clabtypes.CumulusVXExtras{
-		Ports:     64,
-		Breakouts: map[int]int{64: 8, 10: 4, 2: 2},
+		Ports: 64,
+		Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "64", Channels: 8}, {Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
+		},
 	}, "")
 	// Connect sparse lanes in a different order from port allocation. Earlier
 	// parents and unconnected lanes must still reserve their NIC indices.
 	for _, tc := range []struct{ alias, mapped string }{
-		{"swp64s7", "eth78"},
+		{"swp64s7", "eth82"},
+		{"swp11s3", "eth74"},
 		{"swp10s3", "eth70"},
 		{"swp2s1", "eth66"},
 		{"swp10s0", "eth67"},
@@ -119,8 +186,47 @@ func TestBreakoutInterfaceMapping(t *testing.T) {
 	}
 }
 
+func TestBreakoutPortRanges(t *testing.T) {
+	for _, tc := range []struct {
+		port        string
+		ports       int
+		channels    int
+		first, last int
+	}{
+		{port: "1..20", ports: 64, channels: 4, first: 1, last: 20},
+		{port: "10..10", ports: 64, channels: 2, first: 10, last: 10},
+		{port: "1..64", ports: 64, channels: 8, first: 1, last: 64},
+		{port: "991", ports: 991, channels: 8, first: 991, last: 991},
+	} {
+		t.Run(tc.port, func(t *testing.T) {
+			n := testNode(t, &clabtypes.CumulusVXExtras{
+				Ports: tc.ports,
+				Breakouts: []clabtypes.CumulusVXBreakout{
+					{Port: tc.port, Channels: tc.channels},
+				},
+			}, "")
+			if got, want := len(n.portLayout.breakouts), tc.last-tc.first+1; got != want {
+				t.Fatalf("breakout count = %d, want %d", got, want)
+			}
+			for port := tc.first; port <= tc.last; port++ {
+				for lane := range tc.channels {
+					alias := fmt.Sprintf("swp%ds%d", port, lane)
+					got, err := n.CalculateInterfaceIndex(alias)
+					want := tc.ports + (port-tc.first)*tc.channels + lane + 1
+					if err != nil || got != want {
+						t.Fatalf("%s maps to %d, error %v; want %d", alias, got, err, want)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestInterfaceValidation(t *testing.T) {
-	layout := &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 4}}
+	layout := &clabtypes.CumulusVXExtras{
+		Ports:     64,
+		Breakouts: []clabtypes.CumulusVXBreakout{{Port: "10", Channels: 4}},
+	}
 	for _, name := range []string{
 		"swp0", "eth0", "swp10", "eth10", "swp65", "eth69",
 		"swp10s4", "swp11s0", "swp10s-1", "swp10s", "swp10s0junk",
@@ -167,7 +273,9 @@ func TestInterfacesWithoutPortLayout(t *testing.T) {
 
 func TestPreDeployPortsConfig(t *testing.T) {
 	n := testNode(t, &clabtypes.CumulusVXExtras{
-		Ports: 6, Breakouts: map[int]int{4: 2, 1: 4},
+		Ports: 6, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "4..5", Channels: 2}, {Port: "1", Channels: 4},
+		},
 	}, "")
 	params := &clabnodes.PreDeployParams{}
 	if err := n.PreDeploy(context.Background(), params); err != nil {
@@ -181,7 +289,7 @@ func TestPreDeployPortsConfig(t *testing.T) {
 			t.Fatalf("ports.conf = %q, error %v; want %q", got, err, want)
 		}
 	}
-	checkFile(portsConfigHeader + "1=4x\n2=1x\n3=1x\n4=2x\n5=1x\n6=1x\n")
+	checkFile(portsConfigHeader + "1=4x\n2=1x\n3=1x\n4=2x\n5=2x\n6=1x\n")
 	if !slices.Contains(n.Cfg.Binds, filepath.Join(n.Cfg.LabDir, configDirName)+":/config") {
 		t.Fatal("generated directory is not mounted at /config")
 	}
@@ -192,7 +300,10 @@ func TestPreDeployPortsConfig(t *testing.T) {
 	// Topology changes regenerate ports.conf, independent of startup-config flags.
 	n = testNode(
 		t,
-		&clabtypes.CumulusVXExtras{Ports: 6, Breakouts: map[int]int{2: 8}},
+		&clabtypes.CumulusVXExtras{
+			Ports:     6,
+			Breakouts: []clabtypes.CumulusVXBreakout{{Port: "2", Channels: 8}},
+		},
 		n.Cfg.LabDir,
 	)
 	n.Cfg.SuppressStartupConfig = true
@@ -232,16 +343,36 @@ func TestPortsConfigWithoutLayout(t *testing.T) {
 }
 
 func TestPortLayoutDiff(t *testing.T) {
-	base := &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 4}}
+	base := &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+		{Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
+	}}
 	n := testNode(t, base, "")
 	for _, tc := range []struct {
 		name     string
 		layout   *clabtypes.CumulusVXExtras
 		wantDiff bool
 	}{
-		{"unchanged", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 4}}, false},
-		{"width changed", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: map[int]int{10: 8}}, true},
-		{"base changed", &clabtypes.CumulusVXExtras{Ports: 32, Breakouts: map[int]int{10: 4}}, true},
+		{"unchanged", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
+		}}, false},
+		{"reordered", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "2", Channels: 2}, {Port: "10..11", Channels: 4},
+		}}, false},
+		{"expanded range", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "11", Channels: 4}, {Port: "2..2", Channels: 2}, {Port: "10", Channels: 4},
+		}}, false},
+		{"width changed", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "10..11", Channels: 8}, {Port: "2", Channels: 2},
+		}}, true},
+		{"range changed", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "10..12", Channels: 4}, {Port: "2", Channels: 2},
+		}}, true},
+		{"base changed", &clabtypes.CumulusVXExtras{Ports: 32, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
+		}}, true},
+		{"invalid layout", &clabtypes.CumulusVXExtras{Ports: 64, Breakouts: []clabtypes.CumulusVXBreakout{
+			{Port: "10..11", Channels: 4}, {Port: "11", Channels: 2},
+		}}, true},
 		{"removed", nil, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

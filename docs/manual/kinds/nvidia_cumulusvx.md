@@ -64,8 +64,11 @@ where `N` is the parent port number and `M` is the lane number, starting at zero
 This requires an image built with [vrnetlab's Cumulus VX breakout support](https://github.com/srl-labs/vrnetlab/pull/521).
 
 * `ports`: required base port count, defining the range `swp1` through `swpN`.
-* `breakouts`: required mapping of parent port numbers to 2, 4, or 8 lanes. Specify at
-  least one parent within the base port range.
+* `breakouts`: required list of entries with `port` and `channels` fields. `port`
+  selects one parent port (e.g. `10`) or an inclusive range (e.g. `1..20`), and
+  `channels` sets 2, 4, or 8 breakout lanes for each selected port. Specify at least
+  one entry. All selected ports must be within the base port range, ranges must be
+  ascending, and entries must not overlap.
 
 The base port count plus all configured breakout lanes must not exceed 999.
 
@@ -80,7 +83,10 @@ topology:
         cumulus-vx:
           ports: 64
           breakouts:
-            10: 4
+            - port: 1..20
+              channels: 4
+            - port: 64
+              channels: 2
     host:
       kind: linux
       image: alpine:latest
@@ -89,8 +95,11 @@ topology:
     - endpoints: ["leaf:swp10s3", "host:eth2"]
 ```
 
-This example splits port 10 into `swp10s0` through `swp10s3`. Use these lane names
-instead of the parent `swp10` as link endpoints. Other ports retain their `swpN` names.
+This example splits every port from 1 through 20 into four lanes. For example,
+port 10 becomes `swp10s0` through `swp10s3`. It also splits port 64 into `swp64s0`
+and `swp64s1`. Use these lane names instead of the parent ports as link endpoints.
+Other ports retain their `swpN` names. Entries can appear in any order; breakout
+lanes are allocated by ascending parent port number.
 Port speeds and physical lanes are not simulated.
 
 Containerlab generates `/config/ports.conf` from these settings on each deployment.

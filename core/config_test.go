@@ -587,8 +587,10 @@ topology:
         cumulus-vx:
           ports: 64
           breakouts:
-            10: 4
-            2: 2
+            - port: 10..11
+              channels: 4
+            - port: 2
+              channels: 2
   nodes:
     leaf1:
       kind: nvidia_cumulusvx
@@ -598,7 +600,8 @@ topology:
         cumulus-vx:
           ports: 8
           breakouts:
-            1: 2
+            - port: 1
+              channels: 2
     host:
       kind: linux
       image: alpine:latest
@@ -606,6 +609,7 @@ topology:
     - endpoints: ["leaf1:swp10s3", "host:eth1"]
     - endpoints: ["leaf1:swp2s0", "host:eth2"]
     - endpoints: ["leaf2:swp1s1", "host:eth3"]
+    - endpoints: ["leaf1:swp11s3", "host:eth4"]
 `
 	filename := filepath.Join(t.TempDir(), "cumulus.clab.yml")
 	if err := os.WriteFile(filename, []byte(topology), 0o644); err != nil {
@@ -621,7 +625,7 @@ topology:
 			t.Fatal(err)
 		}
 		for name, want := range map[string][]string{
-			"leaf1": {"eth70", "eth65"},
+			"leaf1": {"eth70", "eth65", "eth74"},
 			"leaf2": {"eth10"},
 		} {
 			n := c.Nodes[name]
