@@ -188,7 +188,7 @@ topology:
       startup-config: r1.partial.cfg # layered on top of my-baseline.cfg
 ```
 
-The file replaces the [default startup configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl) and is rendered with the same template variables; include `{{ .PartialCfg }}` where partial startup configurations should be inserted. The path is resolved relative to the directory containerlab is invoked from, or use an absolute path.
+The file replaces the [default startup configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl) and is rendered with the same template variables; include `{{ .PartialCfg }}` where partial startup configurations should be inserted. Relative paths are resolved against the topology file directory, the same as `startup-config`.
 
 Setting `CLAB_IOL_BOOTSTRAP_CONFIG: none` disables the baseline entirely: the node boots with only its partial startup configuration, or with no configuration at all. In that case containerlab also skips the management interface address update on subsequent boots.
 
