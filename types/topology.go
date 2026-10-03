@@ -1207,7 +1207,10 @@ func (t *Topology) GetNodeKindConfig(nodeName string) []KindConfigEntry {
 		}
 	}
 
-	slices.SortFunc(entries, func(a, b KindConfigEntry) int { return strings.Compare(a.Key, b.Key) })
+	slices.SortFunc(
+		entries,
+		func(a, b KindConfigEntry) int { return strings.Compare(a.Key, b.Key) },
+	)
 
 	return entries
 }

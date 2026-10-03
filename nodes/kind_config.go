@@ -97,7 +97,8 @@ func yamlErrorText(err error) string {
 
 // DecodeKindConfig strictly decodes a node's raw kind config entries into a new config of the
 // kind registered in e. It returns a pointer to the kind's config type, or nil for kinds without
-// a kind config. Every unsupported key and invalid value is reported, naming the block it was set in.
+// a kind config. Every unsupported key and invalid value is reported, naming the block it was set
+// in.
 func DecodeKindConfig(
 	e *NodeRegistryEntry,
 	node, kind string,

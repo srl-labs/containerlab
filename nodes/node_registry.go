@@ -220,7 +220,9 @@ func (nrea *NodeRegistryEntryAttributes) WithPrivilegedByDefault(
 }
 
 // WithKindConfig registers the kind's KindConfigSpec. Kinds without one accept no kind config keys.
-func (nrea *NodeRegistryEntryAttributes) WithKindConfig(t KindConfigType) *NodeRegistryEntryAttributes {
+func (nrea *NodeRegistryEntryAttributes) WithKindConfig(
+	t KindConfigType,
+) *NodeRegistryEntryAttributes {
 	nrea.kindConfigType = t
 	return nrea
 }

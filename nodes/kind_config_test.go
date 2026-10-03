@@ -81,7 +81,9 @@ func TestDecodeKindConfig(t *testing.T) {
 		"kind_without_config": {
 			entry:   testEntry(false),
 			entries: []clabtypes.KindConfigEntry{{Key: "mode", Value: "a", From: "defaults"}},
-			wantErr: []string{`node "n1": kind "test" does not support key "mode" (set in defaults)`},
+			wantErr: []string{
+				`node "n1": kind "test" does not support key "mode" (set in defaults)`,
+			},
 		},
 		"unregistered_kind": {
 			entries: []clabtypes.KindConfigEntry{{Key: "mode", Value: "a", From: "nodes.n1"}},
@@ -160,7 +162,9 @@ func TestKindConfigDefaults(t *testing.T) {
 		t.Error("Of on an empty node config did not apply defaults")
 	}
 
-	e := &NodeRegistryEntry{attributes: NewNodeRegistryEntryAttributes(nil, nil, nil).WithKindConfig(spec)}
+	e := &NodeRegistryEntry{
+		attributes: NewNodeRegistryEntryAttributes(nil, nil, nil).WithKindConfig(spec),
+	}
 
 	got, err := DecodeKindConfig(e, "n1", "test", nil)
 	if err != nil {
