@@ -193,14 +193,19 @@ function post-install-docker {
 }
 
 function setup-sshd {
+    if [ ! -f /etc/ssh/sshd_config ]; then
+        echo "SSH server configuration /etc/ssh/sshd_config not found; skipping SSH setup."
+        return 0
+    fi
+
+    local ssh_service="ssh"
+    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
+        ssh_service="sshd"
+    fi
+
     # increase max auth tries so unknown keys don't lock ssh attempts
     sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 50/' /etc/ssh/sshd_config
-
-    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
-        sudo systemctl restart sshd
-    else
-        sudo systemctl restart ssh
-    fi
+    sudo systemctl restart "$ssh_service"
 }
 
 function install-make {
