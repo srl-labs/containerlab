@@ -17,7 +17,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -190,7 +189,9 @@ type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
 	// GenComponentConfig generates the configuration of the node's components. Defaults to true.
-	GenComponentConfig bool `yaml:"gen-component-config" json:"gen-component-config"`
+	GenComponentConfig bool                   `yaml:"component-config" json:"component-config"`
+	SFM                string                 `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components         []*clabtypes.Component `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 // SetDefaults implements clabnodes.KindConfigDefaulter.
@@ -268,10 +269,18 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.User = "0:0"
 	}
 
+	if sfm := n.kCfg().SFM; sfm != "" {
+		if n.Cfg.Env == nil {
+			n.Cfg.Env = map[string]string{}
+		}
+
+		n.Cfg.Env[envNokiaSrosSFM] = sfm
+	}
+
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
 
 	// make sure we always have uppercase slot definition
-	for _, c := range n.Cfg.Components {
+	for _, c := range n.kCfg().Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
 	// Merge Environment
@@ -287,7 +296,7 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.Certificate.Issue = new(false)
 	}
 	if n.isStandaloneNode() {
-		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.kCfg().Components))
 
 		vars, err := n.setupStandaloneComponents()
 		if err != nil {
@@ -298,7 +307,7 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
 		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 	} else {
-		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.kCfg().Components))
 
 		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
 		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
@@ -316,17 +325,17 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	vars := map[string]string{}
 
-	if len(n.Cfg.Components) == 0 {
+	if len(n.kCfg().Components) == 0 {
 		return nil, nil
 	}
-	if len(n.Cfg.Components) > 1 {
+	if len(n.kCfg().Components) > 1 {
 		return nil, fmt.Errorf(
 			"expected at most one component override for standalone SR-SIM node %q",
 			n.Cfg.ShortName,
 		)
 	}
 
-	slotA := n.Cfg.Components[0]
+	slotA := n.kCfg().Components[0]
 
 	slotName := strings.ToUpper(strings.TrimSpace(slotA.Slot))
 	// single undefined slot is implicitly set to A
@@ -642,7 +651,7 @@ func (n *sros) setupComponentNodes() error {
 	rootCtrName := n.netnsNode.Config().LongName
 
 	// loop through the components, creating them
-	for _, c := range n.Cfg.Components {
+	for _, c := range n.kCfg().Components {
 		// instantiate a new nokia_srsim instance
 		srosNode := new(sros)
 		componentNode := clabnodes.Node(srosNode)
@@ -660,7 +669,7 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.ShortName = n.calcComponentName(componentConfig.ShortName, c.Slot)
 		componentConfig.LongName = n.calcComponentName(componentConfig.LongName, c.Slot)
 		componentConfig.NodeType = n.Cfg.NodeType
-		componentConfig.Components = nil
+		kindConfig.Of(componentConfig).Components = nil
 		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
 		componentConfig.DNS = nil
 		componentConfig.PortBindings = nil
@@ -698,7 +707,7 @@ func (n *sros) setupComponentNodes() error {
 		componentNode.WithRuntime(n.GetRuntime())
 
 		// store root components for cpms, for config gen
-		srosNode.rootComponents = n.Cfg.Components
+		srosNode.rootComponents = n.kCfg().Components
 		// store base node name
 		srosNode.baseShortName = n.Cfg.ShortName
 		srosNode.baseLongName = n.Cfg.LongName
@@ -714,10 +723,6 @@ func (n *sros) setupComponentNodes() error {
 func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *clabtypes.Component) {
 	if c.Type != "" {
 		componentConfig.Env[envNokiaSrosCard] = c.Type
-	}
-
-	if c.SFM != "" {
-		componentConfig.Env[envNokiaSrosSFM] = c.SFM
 	}
 
 	for _, x := range c.XIOM {
@@ -838,7 +843,13 @@ func (n *sros) setComponentMgmtEnv(ips MgmtIP) {
 // but no components of its own.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
-	return exists && len(n.Cfg.Components) == 0
+	return exists && len(n.kCfg().Components) == 0
+}
+
+// IsMultiContainer reports whether the node is a distributed chassis with a container per
+// component.
+func (n *sros) IsMultiContainer() bool {
+	return len(n.componentNodes) > 0
 }
 
 // isDistributedBaseNode returns true if this is the base node of a distributed
@@ -847,7 +858,7 @@ func (n *sros) isDistributedBaseNode() bool {
 	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
 		return false
 	}
-	return len(n.Cfg.Components) > 1
+	return len(n.kCfg().Components) > 1
 }
 
 // isStandaloneNode returns true if this is a standalone (non-distributed) SR-SIM node.
@@ -910,13 +921,13 @@ func (n *sros) cpmNode() (clabnodes.Node, error) {
 // It prefers slot A if present, otherwise returns slot B.
 func (n *sros) cpmSlot() (string, error) {
 	// Prefer slot A, fall back to slot B
-	for _, comp := range n.Cfg.Components {
+	for _, comp := range n.kCfg().Components {
 		if comp.Slot == slotAName {
 			return slotAName, nil
 		}
 	}
 	// Check for slot B as fallback
-	for _, comp := range n.Cfg.Components {
+	for _, comp := range n.kCfg().Components {
 		if comp.Slot == slotBName {
 			return slotBName, nil
 		}
@@ -1020,7 +1031,7 @@ func (*sros) checkKernelVersion() error {
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
-	for _, component := range n.Cfg.Components {
+	for _, component := range n.kCfg().Components {
 		// convert slot to upper
 		slot := strings.ToUpper(component.Slot)
 		// check if slot exists
@@ -1499,7 +1510,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 
 	// Forge the IP address to be the actual IP of mgmt
 	// because the CPM A might not own the netns & mgmt IP
-	if len(n.Cfg.Components) > 0 {
+	if len(n.kCfg().Components) > 0 {
 		ips, err := n.distNodeMgmtIPs()
 		if err == nil {
 			if ips.IPv4 != "" {
@@ -2069,7 +2080,7 @@ func (n *sros) generateComponentConfig() string {
 
 	components := n.rootComponents
 	if len(components) == 0 {
-		if len(n.Cfg.Components) > 1 || n.rootCtrName != "" {
+		if len(n.kCfg().Components) > 1 || n.rootCtrName != "" {
 			return ""
 		}
 
@@ -2096,7 +2107,7 @@ func (n *sros) generateComponentConfig() string {
 		}
 	}
 
-	lines := buildComponentCfgLines(components)
+	lines := buildComponentCfgLines(components, n.kCfg().SFM)
 	return n.componentConfigFromLines(lines)
 }
 
@@ -2293,38 +2304,6 @@ func (n *sros) Stop(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
-	diff := n.DefaultNode.ComputeDiff(oldCfg, newCfg)
-
-	if oldCfg == nil || newCfg == nil {
-		return diff
-	}
-
-	if !componentSetsEqual(oldCfg.Components, newCfg.Components) {
-		diff.Fields = append(diff.Fields, "Components")
-	}
-
-	return diff
-}
-
-func componentSetsEqual(a, b []*clabtypes.Component) bool {
-	return reflect.DeepEqual(componentsBySlot(a), componentsBySlot(b))
-}
-
-func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Component {
-	m := make(map[string]clabtypes.Component)
-	for _, c := range components {
-		if c == nil || strings.TrimSpace(c.Slot) == "" {
-			continue
-		}
-		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
-		norm := *c
-		norm.Slot = slot
-		m[slot] = norm
-	}
-	return m
 }
 
 // DefaultLinkType returns the default link type for an SR-SIM node

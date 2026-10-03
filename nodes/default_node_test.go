@@ -94,9 +94,9 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
 		},
 		{
-			name: "components",
+			name: "kind config",
 			old:  &clabtypes.NodeConfig{},
-			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
+			new:  &clabtypes.NodeConfig{KindConfig: &struct{ Slot string }{Slot: "1"}},
 		},
 	}
 

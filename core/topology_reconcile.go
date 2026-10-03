@@ -753,7 +753,6 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		CPUSet:       topo.GetNodeCPUSet(nodeName),
 		Memory:       topo.GetNodeMemory(nodeName),
 		License:      topo.GetNodeLicense(nodeName),
-		Components:   topo.GetComponents(nodeName),
 	}
 
 	kindConfig, err := c.decodeKindConfig(topo, nodeName, strings.ToLower(kind))

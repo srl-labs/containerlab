@@ -517,18 +517,6 @@ func (t *Topology) GetNodeShmSize(nodeName string) string {
 	)
 }
 
-func (t *Topology) GetComponents(nodeName string) []*Component {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) []*Component { return node.Components },
-		func(group *NodeDefinition) []*Component { return group.Components },
-		func(kind *NodeDefinition) []*Component { return kind.Components },
-		func(defaults *NodeDefinition) []*Component { return defaults.Components },
-		func(v []*Component) bool { return v != nil },
-	)
-}
-
 func (t *Topology) GetNodeStartupConfig(nodeName string) string {
 	return getField(
 		t,
@@ -1155,6 +1143,20 @@ const (
 func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialTopologySource {
 	_, _, src := t.resolveTopologyCredentials(nodeName)
 	return src
+}
+
+// GetComponents returns the node's raw components kind config value, or nil when unset.
+//
+// Deprecated: components are kind config; use GetNodeKindConfig. Kept for clabernetes, which
+// transcodes the value into its own component type.
+func (t *Topology) GetComponents(nodeName string) any {
+	for _, e := range t.GetNodeKindConfig(nodeName) {
+		if e.Key == "components" {
+			return e.Value
+		}
+	}
+
+	return nil
 }
 
 // KindConfigEntry is a raw kind config key of a node with the topology block it came from.

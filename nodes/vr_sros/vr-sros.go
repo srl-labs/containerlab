@@ -86,6 +86,8 @@ func Register(r *clabnodes.NodeRegistry) {
 type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	SFM        string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components []*clabtypes.Component   `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 var kindConfig clabnodes.KindConfigSpec[KindConfig]
@@ -120,9 +122,9 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 
 	// if user defined components: are used, parse them.
 	variant := s.Cfg.NodeType
-	if len(s.Cfg.Components) > 0 {
+	if len(s.kCfg().Components) > 0 {
 		var err error
-		variant, err = buildSrosVariant(s.Cfg.NodeType, s.Cfg.Components, s.Cfg.Env)
+		variant, err = buildSrosVariant(s.Cfg.NodeType, s.kCfg().Components, s.kCfg().SFM)
 		if err != nil {
 			return err
 		}

@@ -269,7 +269,6 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
-	Components          []*Component
 	// KindConfig is the kind-specific config, decoded from the topology into the kind's
 	// registered config type (see nodes.KindConfigSpec). Nil for kinds without a kind config.
 	KindConfig any `json:"kind-config,omitempty"`

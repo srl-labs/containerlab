@@ -134,8 +134,7 @@ type NodeDefinition struct {
 	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
 	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Network aliases
-	Aliases    []string     `yaml:"aliases,omitempty"`
-	Components []*Component `yaml:"components,omitempty"`
+	Aliases []string `yaml:"aliases,omitempty"`
 	// how `containerlab apply` handles dataplane link changes for this node:
 	// live, restart or recreate. Overrides the kind's own declaration.
 	LinkApplyMode LinkApplyMode `yaml:"link-apply-mode,omitempty"`

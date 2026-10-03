@@ -321,7 +321,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
-		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 
 	if nodeCfg.LinkApplyMode != "" && !nodeCfg.LinkApplyMode.IsValid() {

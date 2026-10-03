@@ -368,13 +368,13 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 	t.Run("distributed_components_still_generate", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
+		kindConfig.Of(n.Cfg).SFM = "sfm-2s"
 		n.rootCtrName = "clab-test-sr2s-a"
 		n.rootComponents = []*clabtypes.Component{
-			{Slot: slotAName, Type: "cpm-2s", SFM: "sfm-2s"},
+			{Slot: slotAName, Type: "cpm-2s"},
 			{
 				Slot: "1",
 				Type: "xcm-2s",
-				SFM:  "sfm-2s",
 				XIOM: clabtypes.XIOMS{
 					{
 						Slot: 1,
@@ -430,6 +430,14 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Contains(t, err.Error(), "at most one component override")
 	})
 
+	t.Run("sfm_sets_container_env", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1", nil)
+		kindConfig.Of(n.Cfg).SFM = "m-sfm6-7/12"
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "m-sfm6-7/12", n.Cfg.Env[envNokiaSrosSFM])
+	})
+
 	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
 		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
 			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
@@ -463,6 +471,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, n.isStandaloneNode())
 		assert.Len(t, n.componentNodes, 2)
+		assert.True(t, n.IsMultiContainer())
 	})
 }
 
@@ -478,12 +487,12 @@ func newSrosComponentConfigTestNode(
 	n := &sros{}
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = &clabtypes.NodeConfig{
-		ShortName:  "n1",
-		LongName:   "clab-test-n1",
-		NodeType:   nodeType,
-		Env:        env,
-		Components: components,
+		ShortName: "n1",
+		LongName:  "clab-test-n1",
+		NodeType:  nodeType,
+		Env:       env,
 	}
+	kindConfig.Of(n.Cfg).Components = components
 	return n
 }
 
@@ -497,9 +506,9 @@ func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sr
 		NodeType:    nodeType,
 		Env:         map[string]string{},
 		Sysctls:     map[string]string{},
-		Components:  components,
 		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 	}
+	kindConfig.Of(n.Cfg).Components = components
 	return n
 }
 
