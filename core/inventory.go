@@ -14,6 +14,8 @@ import (
 	"text/template"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	clabnodesvr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -159,8 +161,15 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 func ansibleInventoryGroup(cfg *clabtypes.NodeConfig) string {
 	ansibleGroup := cfg.Kind
-	if strings.EqualFold(cfg.Env["CLAB_SROS_CONFIG_MODE"], "classic") {
-		ansibleGroup = "nokia_srsim_classic"
+	switch kc := cfg.KindConfig.(type) {
+	case *clabnodessros.KindConfig:
+		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
+			ansibleGroup = "nokia_srsim_classic"
+		}
+	case *clabnodesvr_sros.KindConfig:
+		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
+			ansibleGroup = "nokia_srsim_classic"
+		}
 	}
 	return ansibleGroup
 }

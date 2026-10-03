@@ -83,10 +83,6 @@ const (
 	envSrosIPv6Active         = "NOKIA_SROS_ADDRESS_IPV6_ACTIVE"
 	envSrosStaticRoutePrefix  = "NOKIA_SROS_STATIC_ROUTE_"
 
-	// CLAB SPECIFIC ENV VARS.
-	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
-	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
-
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
 
@@ -130,7 +126,6 @@ var (
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
-		envSrosConfigMode:         "model-driven",      // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -183,12 +178,25 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformOpts,
-	)
+	).WithKindConfig(kindConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)
 	}, nrea)
 }
+
+// KindConfig is the nokia_srsim kind config, set as keys on the node definition.
+type KindConfig struct {
+	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
+	ConfigMode ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	// GenComponentConfig generates the configuration of the node's components. Defaults to true.
+	GenComponentConfig bool `yaml:"gen-component-config" json:"gen-component-config"`
+}
+
+// SetDefaults implements clabnodes.KindConfigDefaulter.
+func (c *KindConfig) SetDefaults() { c.GenComponentConfig = true }
+
+var kindConfig clabnodes.KindConfigSpec[KindConfig]
 
 // sros SR-SIM Kind structure.
 type sros struct {
@@ -232,6 +240,8 @@ func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 }
 
 // Init Function for SR-SIM kind.
+func (n *sros) kCfg() *KindConfig { return kindConfig.Of(n.Cfg) }
+
 func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
@@ -1274,7 +1284,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 			strings.ToLower(n.Cfg.NodeType),
 		)
 		configMode = string(ConfigModeClassic)
-		n.Cfg.Env[envSrosConfigMode] = string(ConfigModeClassic)
+		n.kCfg().ConfigMode = ConfigModeClassic
 	}
 
 	tplData := &srosTemplateData{
@@ -1720,7 +1730,7 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		"addr",
 		addr,
 		"config-mode",
-		n.Cfg.Env[envSrosConfigMode],
+		n.kCfg().ConfigMode,
 	)
 
 	return nil
@@ -1832,11 +1842,10 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	return err
 }
 
-// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic"
-// strings.
+// isConfigClassic reports whether the node is in classic or mixed configuration mode.
 func (n *sros) isConfigClassic() bool {
-	cfgMode := strings.ToLower(n.Cfg.Env[envSrosConfigMode])
-	return cfgMode == "classic" || cfgMode == "mixed"
+	mode := n.kCfg().ConfigMode
+	return mode == ConfigModeClassic || mode == ConfigModeMixed
 }
 
 // isFullConfigFile returns true if the config file doesn't contain .partial substring
@@ -2051,7 +2060,7 @@ func (n *sros) MgmtIPAddr() (string, error) {
 // generateComponentConfig generates SR OS configuration for explicitly defined distributed
 // components or known integrated SR-SIM defaults. Power config is appended when supported.
 func (n *sros) generateComponentConfig() string {
-	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+	if !n.kCfg().GenComponentConfig {
 		return ""
 	}
 	if n.isConfigClassic() {

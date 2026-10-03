@@ -1690,3 +1690,52 @@ func TestGetNodePrivilegedDefault(t *testing.T) {
 		t.Fatalf("privileged with kind default = %v, want false", got)
 	}
 }
+
+func TestGetNodeKindConfig(t *testing.T) {
+	topo := &Topology{
+		Defaults: &NodeDefinition{KindConfig: map[string]any{"a": "defaults", "d": "defaults"}},
+		Kinds: map[string]*NodeDefinition{
+			"k": {KindConfig: map[string]any{"a": "kind", "b": map[any]any{"x": 1}}},
+		},
+		Groups: map[string]*NodeDefinition{
+			"g": {KindConfig: map[string]any{"b": map[any]any{"y": 2}, "c": "group"}},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"n1": {Kind: "k", Group: "g", KindConfig: map[string]any{"c": "node"}},
+			"n2": {Kind: "other"},
+		},
+	}
+
+	tests := map[string]struct {
+		node string
+		want []KindConfigEntry
+	}{
+		"precedence_whole_value": {
+			node: "n1",
+			want: []KindConfigEntry{
+				{Key: "a", Value: "kind", From: "kinds.k"},
+				{Key: "b", Value: map[any]any{"y": 2}, From: "groups.g"},
+				{Key: "c", Value: "node", From: "nodes.n1"},
+				{Key: "d", Value: "defaults", From: "defaults"},
+			},
+		},
+		"defaults_only": {
+			node: "n2",
+			want: []KindConfigEntry{
+				{Key: "a", Value: "defaults", From: "defaults"},
+				{Key: "d", Value: "defaults", From: "defaults"},
+			},
+		},
+		"absent_node": {
+			node: "missing",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if d := cmp.Diff(tc.want, topo.GetNodeKindConfig(tc.node)); d != "" {
+				t.Errorf("entries mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}

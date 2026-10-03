@@ -74,12 +74,22 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	)
+	).WithKindConfig(kindConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(iol)
 	}, nrea)
 }
+
+// KindConfig is the cisco_iol kind config, set as keys on the node definition.
+type KindConfig struct {
+	// PidOffset shifts the auto-assigned IOL PID, e.g. to keep IDs unique across labs.
+	PidOffset *int `yaml:"pid-offset,omitempty" json:"pid-offset,omitempty"`
+	// MgmtIntf is the management interface, e.g. Ethernet0/1. Defaults to Ethernet0/0.
+	MgmtIntf string `yaml:"mgmt-intf,omitempty" json:"mgmt-intf,omitempty"`
+}
+
+var kindConfig clabnodes.KindConfigSpec[KindConfig]
 
 type iol struct {
 	clabnodes.DefaultNode
@@ -99,6 +109,8 @@ type iol struct {
 	mgmtLinuxIdx      int
 }
 
+func (n *iol) kCfg() *KindConfig { return kindConfig.Of(n.Cfg) }
+
 func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
@@ -112,15 +124,8 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	nodeType := strings.ToLower(n.Cfg.NodeType)
 
 	pid := n.Cfg.Index + 1 // n.Cfg.Index is zero-indexed, PID needs to be >= 1
-
-	// CLAB_IOL_PID_OFFSET shifts the auto-assigned PID, e.g. to keep IDs unique across labs.
-	if v, ok := n.Cfg.Env["CLAB_IOL_PID_OFFSET"]; ok {
-		offset, err := strconv.Atoi(v)
-		if err != nil {
-			return fmt.Errorf("invalid CLAB_IOL_PID_OFFSET %q: %w", v, err)
-		}
-
-		pid += offset
+	if off := n.kCfg().PidOffset; off != nil {
+		pid += *off
 	}
 
 	n.Pid = strconv.Itoa(pid)
@@ -165,12 +170,13 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	return nil
 }
 
-// parseMgmtIntf reads CLAB_IOL_MGMT_INTF from the node env; unset keeps the default Ethernet0/0.
+// parseMgmtIntf parses the mgmt-intf kind config key and normalizes it to Ethernet<slot>/<port>;
+// empty means the default Ethernet0/0.
 func (n *iol) parseMgmtIntf() error {
-	if v, ok := n.Cfg.Env["CLAB_IOL_MGMT_INTF"]; ok && v != "" {
+	if v := n.kCfg().MgmtIntf; v != "" {
 		captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, v)
 		if err != nil {
-			return fmt.Errorf("invalid CLAB_IOL_MGMT_INTF %q: %w\n%s", v, err, IntfHelpMsg)
+			return fmt.Errorf("invalid mgmt-intf %q: %w\n%s", v, err, IntfHelpMsg)
 		}
 
 		n.mgmtSlot, _ = strconv.Atoi(captureGroups["slot"])
@@ -178,7 +184,7 @@ func (n *iol) parseMgmtIntf() error {
 
 		if n.mgmtSlot > 9 || n.mgmtPort > 3 {
 			return fmt.Errorf(
-				"invalid CLAB_IOL_MGMT_INTF %q: slot must be 0-9 and port must be 0-3", v)
+				"invalid mgmt-intf %q: slot must be 0-9 and port must be 0-3", v)
 		}
 	}
 

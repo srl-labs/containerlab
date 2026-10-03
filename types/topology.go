@@ -1156,3 +1156,58 @@ func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialT
 	_, _, src := t.resolveTopologyCredentials(nodeName)
 	return src
 }
+
+// KindConfigEntry is a raw kind config key of a node with the topology block it came from.
+type KindConfigEntry struct {
+	Key   string
+	Value any
+	// From is the block that set the key: nodes.<name>, groups.<name>, kinds.<name> or defaults.
+	From string
+}
+
+// GetNodeKindConfig returns the node's raw kind config keys merged with precedence
+// node > group > kind > defaults, sorted by key. The first block that sets a key provides its
+// whole value. Nodes absent from the topology have no kind config.
+func (t *Topology) GetNodeKindConfig(nodeName string) []KindConfigEntry {
+	nodeDef, ok := t.Nodes[nodeName]
+	if !ok {
+		return nil
+	}
+
+	group := t.GetNodeGroup(nodeName)
+	kind := t.GetNodeKind(nodeName)
+
+	blocks := []struct {
+		from string
+		def  *NodeDefinition
+	}{
+		{"nodes." + nodeName, nodeDef},
+		{"groups." + group, t.GetGroup(group)},
+		{"kinds." + kind, t.GetKind(kind)},
+		{"defaults", t.GetDefaults()},
+	}
+
+	var entries []KindConfigEntry
+
+	seen := map[string]bool{}
+
+	for _, b := range blocks {
+		if b.def == nil {
+			continue
+		}
+
+		for k, v := range b.def.KindConfig {
+			if seen[k] {
+				continue
+			}
+
+			seen[k] = true
+
+			entries = append(entries, KindConfigEntry{Key: k, Value: v, From: b.from})
+		}
+	}
+
+	slices.SortFunc(entries, func(a, b KindConfigEntry) int { return strings.Compare(a.Key, b.Key) })
+
+	return entries
+}

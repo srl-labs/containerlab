@@ -806,3 +806,25 @@ func TestDefaultNodeGetContainerStatusUsesOverwriteContainerName(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, clabruntime.Running)
 	}
 }
+
+func TestDefaultNodeComputeDiffKindConfig(t *testing.T) {
+	type kindConfig struct{ Mode string }
+
+	d := &DefaultNode{}
+
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "mixed"}},
+	)
+	if len(diff.Fields) != 1 || diff.Fields[0] != "KindConfig" {
+		t.Fatalf("ComputeDiff fields = %#v, want [KindConfig]", diff.Fields)
+	}
+
+	diff = d.ComputeDiff(
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+	)
+	if diff.HasDiff() {
+		t.Fatalf("ComputeDiff fields = %#v, want no diff for equal kind configs", diff.Fields)
+	}
+}

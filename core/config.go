@@ -87,6 +87,10 @@ func (c *CLab) parseTopology() error {
 		*c.Config.Prefix = defaultPrefix
 	}
 
+	if err := c.validateKindConfigKeys(); err != nil {
+		return err
+	}
+
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]clabnodes.Node)
 	c.Links = make(map[int]clablinks.Link)
@@ -362,6 +366,11 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 
 	var err error
+
+	nodeCfg.KindConfig, err = c.decodeKindConfig(c.Config.Topology, nodeName, kind)
+	if err != nil {
+		return nil, err
+	}
 
 	nodeCfg.Stages, err = c.Config.Topology.GetStages(nodeName)
 	if err != nil {

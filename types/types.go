@@ -270,6 +270,9 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+	// KindConfig is the kind-specific config, decoded from the topology into the kind's
+	// registered config type (see nodes.KindConfigSpec). Nil for kinds without a kind config.
+	KindConfig any `json:"kind-config,omitempty"`
 }
 
 // GetHostname returns the configured runtime hostname or the topology node name.

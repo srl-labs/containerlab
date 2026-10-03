@@ -189,15 +189,13 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			NodeType:      "sr-1",
 			StartupConfig: "",
-			Env: map[string]string{
-				envSrosConfigMode: "model-driven",
-			},
-			Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
-			TLSKey:      "",
-			TLSCert:     "",
-			TLSAnchor:   "",
-			LabDir:      t.TempDir(),
+			Certificate:   &clabtypes.CertificateConfig{Issue: &issueCert},
+			TLSKey:        "",
+			TLSCert:       "",
+			TLSAnchor:     "",
+			LabDir:        t.TempDir(),
 		}
+		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeModelDriven
 		n.WithRuntime(mockRt)
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
@@ -355,21 +353,15 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 	})
 
 	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envDisableComponentConfigGen: "true"},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindConfig.Of(n.Cfg).GenComponentConfig = false
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("classic_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envSrosConfigMode: string(ConfigModeClassic)},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
@@ -481,9 +473,6 @@ func newSrosComponentConfigTestNode(
 ) *sros {
 	if env == nil {
 		env = map[string]string{}
-	}
-	if _, ok := env[envSrosConfigMode]; !ok {
-		env[envSrosConfigMode] = string(ConfigModeModelDriven)
 	}
 
 	n := &sros{}
