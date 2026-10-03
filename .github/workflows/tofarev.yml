@@ -11,10 +11,10 @@ jobs:
       github.event.comment.user.type == 'User' &&
       contains(fromJSON('["hellt","flosch62","kaelemc"]'), github.event.comment.user.login) &&
       contains(github.event.comment.body, '/tofarev review')
-    uses: hellt/tofarev/.github/workflows/review.yml@b21febb2dab5464305b9fb7aa46581eed816204e
+    uses: hellt/tofarev/.github/workflows/review.yml@3b89bd007dc761a1b67d87d213a52da6ca8e48b7
     with:
       bot_repository: hellt/tofarev
-      bot_ref: b21febb2dab5464305b9fb7aa46581eed816204e
+      bot_ref: 3b89bd007dc761a1b67d87d213a52da6ca8e48b7
       app_client_id: ${{ vars.TOFAREV_APP_CLIENT_ID }}
       trusted_config: '{"shareSessions":true}'
     secrets:
