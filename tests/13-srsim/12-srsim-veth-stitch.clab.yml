@@ -5,8 +5,7 @@ topology:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
       image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
-      env:
-        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "true"
+      gen-component-config: false
 
   nodes:
     sros:

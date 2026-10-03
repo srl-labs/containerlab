@@ -137,7 +137,7 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 		"addr",
 		addr,
 		"config-mode",
-		n.Cfg.Env[envSrosConfigMode],
+		n.kCfg().ConfigMode,
 	)
 	return nil
 }

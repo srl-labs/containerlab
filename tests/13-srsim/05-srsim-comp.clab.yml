@@ -82,11 +82,10 @@ topology:
     sr2s-01:
       kind: nokia_srsim
       type: sr-2s
+      sfm: sfm-2s
       components:
         - slot: A
-          sfm: sfm-2s
         - slot: 1
-          sfm: sfm-2s
           type: xcm-2s
           xiom:
             - slot: 1 # xiom 1/x1

@@ -181,12 +181,26 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformOpts,
-	)
+	).WithKindConfig(kindConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(srl)
 	}, nrea)
 }
+
+// KindConfig is the nokia_srlinux kind config, set as keys on the node definition.
+type KindConfig struct {
+	// Components are the line cards of a modular chassis.
+	Components []*Component `json:"components,omitempty" yaml:"components,omitempty"`
+}
+
+// Component is an SR Linux line card.
+type Component struct {
+	Slot string `json:"slot,omitempty" yaml:"slot,omitempty"`
+	Type string `json:"type,omitempty" yaml:"type,omitempty"`
+}
+
+var kindConfig clabnodes.KindConfigSpec[KindConfig]
 
 type srl struct {
 	clabnodes.DefaultNode
@@ -209,6 +223,8 @@ type srl struct {
 func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
+
+func (n *srl) kCfg() *KindConfig { return kindConfig.Of(n.Cfg) }
 
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -261,10 +277,10 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		return err
 	}
 
-	if len(n.Cfg.Components) > 1 {
+	if len(n.kCfg().Components) > 1 {
 		log.Warn("Multiple line cards are rendered into the SR Linux topology file, but "+
 			"deploying a node with more than one line card is not supported yet",
-			"node", n.Cfg.ShortName, "line cards", len(n.Cfg.Components))
+			"node", n.Cfg.ShortName, "line cards", len(n.kCfg().Components))
 	}
 
 	if n.Cfg.Cmd == "" {

@@ -2,26 +2,26 @@ package types
 
 import "fmt"
 
+// Component is an SR OS card (SR-SIM and vSIM): a CPM (slot A or B) or a line card.
 type Component struct {
-	Slot string            `yaml:"slot,omitempty"`
-	Type string            `yaml:"type,omitempty"`
-	Env  map[string]string `yaml:"env,omitempty"`
-	SFM  string            `yaml:"sfm,omitempty"`
-	XIOM XIOMS             `yaml:"xiom,omitempty"`
-	MDA  MDAS              `yaml:"mda,omitempty"`
+	Slot string            `yaml:"slot,omitempty" json:"slot,omitempty"`
+	Type string            `yaml:"type,omitempty" json:"type,omitempty"`
+	Env  map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+	XIOM XIOMS             `yaml:"xiom,omitempty" json:"xiom,omitempty"`
+	MDA  MDAS              `yaml:"mda,omitempty" json:"mda,omitempty"`
 }
 
 type XIOM struct {
-	Slot int    `yaml:"slot,omitempty"`
-	Type string `yaml:"type,omitempty"`
-	MDA  MDAS   `yaml:"mda,omitempty"`
+	Slot int    `yaml:"slot,omitempty" json:"slot,omitempty"`
+	Type string `yaml:"type,omitempty" json:"type,omitempty"`
+	MDA  MDAS   `yaml:"mda,omitempty" json:"mda,omitempty"`
 }
 
 type XIOMS []XIOM
 
 type MDA struct {
-	Slot int    `yaml:"slot,omitempty"`
-	Type string `yaml:"type,omitempty"`
+	Slot int    `yaml:"slot,omitempty" json:"slot,omitempty"`
+	Type string `yaml:"type,omitempty" json:"type,omitempty"`
 }
 
 type MDAS []MDA

@@ -370,9 +370,11 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.License != newCfg.License {
 		diff.Fields = append(diff.Fields, "License")
 	}
-	if (len(oldCfg.Components) > 0 || len(newCfg.Components) > 0) &&
-		!reflect.DeepEqual(oldCfg.Components, newCfg.Components) {
-		diff.Fields = append(diff.Fields, "Components")
+	_, oldInvalid := oldCfg.KindConfig.(InvalidKindConfig)
+	_, newInvalid := newCfg.KindConfig.(InvalidKindConfig)
+
+	if oldInvalid || newInvalid || !reflect.DeepEqual(oldCfg.KindConfig, newCfg.KindConfig) {
+		diff.Fields = append(diff.Fields, "KindConfig")
 	}
 
 	return diff
@@ -1107,6 +1109,10 @@ func (d *DefaultNode) GetEndpoints() []clablinks.Endpoint {
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
 func (*DefaultNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
+}
+
+func (*DefaultNode) IsMultiContainer() bool {
+	return false
 }
 
 func (d *DefaultNode) GetShortName() string {

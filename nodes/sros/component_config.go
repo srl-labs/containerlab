@@ -129,7 +129,7 @@ func (l componentCfgLine) String() string {
 // buildComponentCfgLines turns root components into a slice of config lines (card, sfm, xiom,
 // xiomMda, mda).
 // CPM slots (A, B) are skipped. Components without Type are skipped (caller may log).
-func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLine {
+func buildComponentCfgLines(components []*clabtypes.Component, sfm string) []componentCfgLine {
 	var lines []componentCfgLine
 	for _, component := range components {
 		slot := strings.ToUpper(strings.TrimSpace(component.Slot))
@@ -140,8 +140,8 @@ func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLin
 			continue
 		}
 		lines = append(lines, componentCfgLine{Kind: "card", Slot: slot, Type: component.Type})
-		if component.SFM != "" {
-			lines = append(lines, componentCfgLine{Kind: "sfm", Slot: slot, Type: component.SFM})
+		if sfm != "" {
+			lines = append(lines, componentCfgLine{Kind: "sfm", Slot: slot, Type: sfm})
 		}
 		for _, xiom := range component.XIOM {
 			if xiom.Type != "" {

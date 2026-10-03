@@ -26,6 +26,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
@@ -48,13 +49,9 @@ const (
 	scrapliPlatformName        = "nokia_sros"
 	scrapliPlatformNameClassic = "nokia_sros_classic"
 	readyTimeout               = 15 * time.Minute // max wait for node health and SSH readiness
-	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
-	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
-	// Default (unset or "model-driven") uses the MD-CLI platform.
-	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
-	configDirName     = "tftpboot"
-	startupCfgFName   = "config.txt"
-	licenseFName      = "license.txt"
+	configDirName              = "tftpboot"
+	startupCfgFName            = "config.txt"
+	licenseFName               = "license.txt"
 
 	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
 	ociImageTitleLabel = "org.opencontainers.image.title"
@@ -78,18 +75,30 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	)
+	).WithKindConfig(kindConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
 	}, nrea)
 }
 
+// KindConfig is the nokia_sros kind config, set as keys on the node definition.
+type KindConfig struct {
+	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
+	ConfigMode clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	SFM        string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components []*clabtypes.Component   `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+var kindConfig clabnodes.KindConfigSpec[KindConfig]
+
 type vrSROS struct {
 	clabnodes.VRNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 }
+
+func (s *vrSROS) kCfg() *KindConfig { return kindConfig.Of(s.Cfg) }
 
 func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -105,6 +114,7 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	for _, o := range opts {
 		o(s)
 	}
+
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	if s.Cfg.NodeType == "" {
 		s.Cfg.NodeType = vrsrosDefaultType
@@ -112,9 +122,9 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 
 	// if user defined components: are used, parse them.
 	variant := s.Cfg.NodeType
-	if len(s.Cfg.Components) > 0 {
+	if len(s.kCfg().Components) > 0 {
 		var err error
-		variant, err = buildSrosVariant(s.Cfg.NodeType, s.Cfg.Components, s.Cfg.Env)
+		variant, err = buildSrosVariant(s.Cfg.NodeType, s.kCfg().Components, s.kCfg().SFM)
 		if err != nil {
 			return err
 		}
@@ -256,10 +266,10 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 }
 
 // scrapliPlatform returns the scrapligo platform name based on the configured CLI mode.
-// When CLAB_SROS_CONFIG_MODE is "classic" or "mixed", the classic CLI platform is used.
+// When config-mode is "classic" or "mixed", the classic CLI platform is used.
 // The default (unset or "model-driven") uses the MD-CLI platform.
 func (s *vrSROS) scrapliPlatform() string {
-	cfgMode := strings.ToLower(s.Cfg.Env[envSrosConfigMode])
+	cfgMode := s.kCfg().ConfigMode
 	if cfgMode == "classic" || cfgMode == "mixed" {
 		return scrapliPlatformNameClassic
 	}

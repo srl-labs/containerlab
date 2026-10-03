@@ -94,9 +94,9 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
 		},
 		{
-			name: "components",
+			name: "kind config",
 			old:  &clabtypes.NodeConfig{},
-			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
+			new:  &clabtypes.NodeConfig{KindConfig: &struct{ Slot string }{Slot: "1"}},
 		},
 	}
 
@@ -804,5 +804,27 @@ func TestDefaultNodeGetContainerStatusUsesOverwriteContainerName(t *testing.T) {
 
 	if got := node.GetContainerStatus(ctx); got != clabruntime.Running {
 		t.Fatalf("got %q, want %q", got, clabruntime.Running)
+	}
+}
+
+func TestDefaultNodeComputeDiffKindConfig(t *testing.T) {
+	type kindConfig struct{ Mode string }
+
+	d := &DefaultNode{}
+
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "mixed"}},
+	)
+	if len(diff.Fields) != 1 || diff.Fields[0] != "KindConfig" {
+		t.Fatalf("ComputeDiff fields = %#v, want [KindConfig]", diff.Fields)
+	}
+
+	diff = d.ComputeDiff(
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+	)
+	if diff.HasDiff() {
+		t.Fatalf("ComputeDiff fields = %#v, want no diff for equal kind configs", diff.Fields)
 	}
 }

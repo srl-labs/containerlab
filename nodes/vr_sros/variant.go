@@ -17,7 +17,7 @@ func isCPMSlot(slot string) bool {
 func buildSrosVariant(
 	chassis string,
 	components []*clabtypes.Component,
-	env map[string]string,
+	sfm string,
 ) (string, error) {
 	// vrnetlab vsim currently only supports single CPM
 	cpms := 0
@@ -38,9 +38,6 @@ func buildSrosVariant(
 			distributed = true
 		}
 	}
-
-	// fetch any global SFM env var on the base node
-	sfm := strings.TrimSpace(env["NOKIA_SROS_SFM"])
 
 	if !distributed {
 		return componentTimosLine(chassis, components[0], sfm), nil
@@ -86,12 +83,7 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	}
 	parts = append(parts, "slot="+slot)
 
-	// support slot defined sfm
-	// else fallback to SRSIM env var
-	// NOKIA_SROS_SFM.
-	if c.SFM != "" {
-		parts = append(parts, "sfm="+c.SFM)
-	} else if sfm != "" {
+	if sfm != "" {
 		parts = append(parts, "sfm="+sfm)
 	}
 

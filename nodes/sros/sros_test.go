@@ -189,15 +189,13 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			NodeType:      "sr-1",
 			StartupConfig: "",
-			Env: map[string]string{
-				envSrosConfigMode: "model-driven",
-			},
-			Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
-			TLSKey:      "",
-			TLSCert:     "",
-			TLSAnchor:   "",
-			LabDir:      t.TempDir(),
+			Certificate:   &clabtypes.CertificateConfig{Issue: &issueCert},
+			TLSKey:        "",
+			TLSCert:       "",
+			TLSAnchor:     "",
+			LabDir:        t.TempDir(),
 		}
+		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeModelDriven
 		n.WithRuntime(mockRt)
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
@@ -355,34 +353,28 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 	})
 
 	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envDisableComponentConfigGen: "true"},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindConfig.Of(n.Cfg).GenComponentConfig = false
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("classic_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envSrosConfigMode: string(ConfigModeClassic)},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("distributed_components_still_generate", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
+		kindConfig.Of(n.Cfg).SFM = "sfm-2s"
 		n.rootCtrName = "clab-test-sr2s-a"
 		n.rootComponents = []*clabtypes.Component{
-			{Slot: slotAName, Type: "cpm-2s", SFM: "sfm-2s"},
+			{Slot: slotAName, Type: "cpm-2s"},
 			{
 				Slot: "1",
 				Type: "xcm-2s",
-				SFM:  "sfm-2s",
 				XIOM: clabtypes.XIOMS{
 					{
 						Slot: 1,
@@ -438,6 +430,14 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Contains(t, err.Error(), "at most one component override")
 	})
 
+	t.Run("sfm_sets_container_env", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1", nil)
+		kindConfig.Of(n.Cfg).SFM = "m-sfm6-7/12"
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "m-sfm6-7/12", n.Cfg.Env[envNokiaSrosSFM])
+	})
+
 	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
 		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
 			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
@@ -471,6 +471,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, n.isStandaloneNode())
 		assert.Len(t, n.componentNodes, 2)
+		assert.True(t, n.IsMultiContainer())
 	})
 }
 
@@ -482,19 +483,16 @@ func newSrosComponentConfigTestNode(
 	if env == nil {
 		env = map[string]string{}
 	}
-	if _, ok := env[envSrosConfigMode]; !ok {
-		env[envSrosConfigMode] = string(ConfigModeModelDriven)
-	}
 
 	n := &sros{}
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = &clabtypes.NodeConfig{
-		ShortName:  "n1",
-		LongName:   "clab-test-n1",
-		NodeType:   nodeType,
-		Env:        env,
-		Components: components,
+		ShortName: "n1",
+		LongName:  "clab-test-n1",
+		NodeType:  nodeType,
+		Env:       env,
 	}
+	kindConfig.Of(n.Cfg).Components = components
 	return n
 }
 
@@ -508,9 +506,9 @@ func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sr
 		NodeType:    nodeType,
 		Env:         map[string]string{},
 		Sysctls:     map[string]string{},
-		Components:  components,
 		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 	}
+	kindConfig.Of(n.Cfg).Components = components
 	return n
 }
 

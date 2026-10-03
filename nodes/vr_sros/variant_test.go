@@ -12,19 +12,19 @@ func TestBuildSrosVariant(t *testing.T) {
 	tests := map[string]struct {
 		chassis    string
 		components []*clabtypes.Component
-		env        map[string]string
+		sfm        string
 		want       string
 		wantErr    bool
 	}{
-		"node-level-sfm-applied-to-every-segment": {
+		"sfm-applied-to-every-segment": {
 			chassis: "sr-2s",
-			env:     map[string]string{"NOKIA_SROS_SFM": "sfm-2s"},
+			sfm:     "sfm-2s",
 			components: []*clabtypes.Component{
 				{Slot: "A", Type: "cpm-2s"},
-				{Slot: "1", Type: "xcm-2s", SFM: "sfm-override"},
+				{Slot: "1", Type: "xcm-2s"},
 			},
 			want: "cp: chassis=sr-2s slot=A sfm=sfm-2s card=cpm-2s ___ " +
-				"lc: chassis=sr-2s slot=1 sfm=sfm-override card=xcm-2s",
+				"lc: chassis=sr-2s slot=1 sfm=sfm-2s card=xcm-2s",
 		},
 		"two-cpms-rejected": {
 			chassis: "sr-7",
@@ -81,11 +81,11 @@ func TestBuildSrosVariant(t *testing.T) {
 		},
 		"distributed-sfm-and-xiom": {
 			chassis: "sr-2s",
+			sfm:     "sfm-2s",
 			components: []*clabtypes.Component{
-				{Slot: "A", SFM: "sfm-2s", Type: "cpm-2s"},
+				{Slot: "A", Type: "cpm-2s"},
 				{
 					Slot: "1",
-					SFM:  "sfm-2s",
 					Type: "xcm-2s",
 					XIOM: clabtypes.XIOMS{
 						{
@@ -103,7 +103,7 @@ func TestBuildSrosVariant(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := buildSrosVariant(tc.chassis, tc.components, tc.env)
+			got, err := buildSrosVariant(tc.chassis, tc.components, tc.sfm)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
