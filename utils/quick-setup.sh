@@ -193,14 +193,19 @@ function post-install-docker {
 }
 
 function setup-sshd {
+    if [ ! -f /etc/ssh/sshd_config ]; then
+        echo "SSH server configuration /etc/ssh/sshd_config not found; skipping SSH setup."
+        return 0
+    fi
+
+    local ssh_service="ssh"
+    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
+        ssh_service="sshd"
+    fi
+
     # increase max auth tries so unknown keys don't lock ssh attempts
     sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 50/' /etc/ssh/sshd_config
-
-    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
-        sudo systemctl restart sshd
-    else
-        sudo systemctl restart ssh
-    fi
+    sudo systemctl restart "$ssh_service"
 }
 
 function install-make {
@@ -282,28 +287,23 @@ function install-containerlab {
         CLAB_PKG="containerlab-${CLAB_VERSION}"
     fi
 
-    if [ "${DISTRO_TYPE}" = "rhel" ]; then
-        sudo yum-config-manager -y --add-repo=https://netdevops.fury.site/yum/ && \
-        echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
-
-        sudo yum install -y ${CLAB_PKG}
-
-    elif [ "${DISTRO_TYPE}" = "fedora" ]; then
-        # Fedora 41 onwards ships with dnf5 instead of dnf 4 (packaged just as 'dnf')
-        # and requires a slightly different syntax.
-        if rpm --quiet -q dnf; then
-            sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
-            echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
-        else  # dnf5
-            sudo dnf config-manager addrepo --set=baseurl="https://netdevops.fury.site/yum/" && \
-            echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+    if [[ "${DISTRO_TYPE}" = "rhel" || "${DISTRO_TYPE}" = "fedora" ]]; then
+        sudo tee /etc/yum.repos.d/netdevops.fury.site_yum_.repo <<'EOF' || return 1
+[netdevops.fury.site_yum_]
+name=Containerlab
+baseurl=https://netdevops.fury.site/yum/
+enabled=1
+gpgcheck=0
+EOF
+        if [ "${DISTRO_TYPE}" = "rhel" ]; then
+            sudo yum install -y ${CLAB_PKG}
+        else
+            sudo dnf install -y ${CLAB_PKG}
         fi
-
-        sudo dnf install -y ${CLAB_PKG}
 
     else
         echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
-        sudo tee -a /etc/apt/sources.list.d/netdevops.list
+        sudo tee /etc/apt/sources.list.d/netdevops.list || return 1
 
         # For apt, version is specified with = separator
         if [ -n "${CLAB_VERSION}" ]; then
