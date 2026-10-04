@@ -1,6 +1,7 @@
 package types
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -231,6 +232,13 @@ func (t *Topology) GetKind(kind string) *NodeDefinition {
 
 	if kdef, ok := t.Kinds[kind]; ok {
 		return kdef
+	}
+
+	// kind names are case-insensitive, an exact match takes precedence
+	for _, name := range slices.Sorted(maps.Keys(t.Kinds)) {
+		if strings.EqualFold(name, kind) {
+			return t.Kinds[name]
+		}
 	}
 
 	return new(NodeDefinition)

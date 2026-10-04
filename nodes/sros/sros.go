@@ -17,7 +17,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -196,6 +198,16 @@ type KindConfig struct {
 
 // SetDefaults implements clabnodes.KindConfigDefaulter.
 func (c *KindConfig) SetDefaults() { c.GenComponentConfig = true }
+
+// equalIgnoringComponentOrder reports whether c and o are equal, comparing components by slot
+// regardless of their order and the case of the slot.
+func (c *KindConfig) equalIgnoringComponentOrder(o *KindConfig) bool {
+	a, b := *c, *o
+	a.Components, b.Components = nil, nil
+
+	return reflect.DeepEqual(a, b) &&
+		reflect.DeepEqual(componentsBySlot(c.Components), componentsBySlot(o.Components))
+}
 
 var kindConfig clabnodes.KindConfigSpec[KindConfig]
 
@@ -2304,6 +2316,28 @@ func (n *sros) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// ComputeDiff extends the default diff by ignoring component order and slot case, so that only
+// a change to the set of components marks the kind config as changed.
+func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
+	diff := n.DefaultNode.ComputeDiff(oldCfg, newCfg)
+
+	if oldCfg == nil || newCfg == nil {
+		return diff
+	}
+
+	oldKC, oldOK := oldCfg.KindConfig.(*KindConfig)
+	newKC, newOK := newCfg.KindConfig.(*KindConfig)
+
+	if oldOK && newOK && oldKC.equalIgnoringComponentOrder(newKC) {
+		diff.Fields = slices.DeleteFunc(
+			diff.Fields,
+			func(f string) bool { return f == "KindConfig" },
+		)
+	}
+
+	return diff
 }
 
 // DefaultLinkType returns the default link type for an SR-SIM node

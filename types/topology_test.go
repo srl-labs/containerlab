@@ -1739,3 +1739,22 @@ func TestGetNodeKindConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKindCaseInsensitive(t *testing.T) {
+	exact := &NodeDefinition{Image: "exact"}
+	other := &NodeDefinition{Image: "other"}
+	topo := &Topology{Kinds: map[string]*NodeDefinition{
+		"nokia_srsim": exact,
+		"Cisco_IOL":   other,
+	}}
+
+	if got := topo.GetKind("nokia_srsim"); got != exact {
+		t.Fatalf("exact match: got %+v", got)
+	}
+	if got := topo.GetKind("cisco_iol"); got != other {
+		t.Fatalf("case-insensitive match: got %+v", got)
+	}
+	if got := topo.GetKind("linux"); got == nil || got.Image != "" {
+		t.Fatalf("missing kind: got %+v", got)
+	}
+}

@@ -1,6 +1,9 @@
 package sros
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Component is an SR-SIM card: a CPM (slot A or B) or a line card.
 type Component struct {
@@ -9,6 +12,28 @@ type Component struct {
 	Env  map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	XIOM XIOMS             `yaml:"xiom,omitempty" json:"xiom,omitempty"`
 	MDA  MDAS              `yaml:"mda,omitempty" json:"mda,omitempty"`
+}
+
+func componentsBySlot(components []*Component) map[string]Component {
+	m := make(map[string]Component, len(components))
+
+	for i, c := range components {
+		if c == nil {
+			continue
+		}
+
+		norm := *c
+		norm.Slot = strings.ToUpper(strings.TrimSpace(c.Slot))
+
+		key := norm.Slot
+		if key == "" {
+			key = fmt.Sprintf("#%d", i)
+		}
+
+		m[key] = norm
+	}
+
+	return m
 }
 
 type XIOM struct {

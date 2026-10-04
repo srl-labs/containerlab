@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1048,5 +1049,80 @@ func TestIsMultiContainerComponentNodes(t *testing.T) {
 
 	for _, cn := range n.componentNodes {
 		assert.False(t, cn.IsMultiContainer(), "component %s", cn.Config().ShortName)
+	}
+}
+
+func TestComputeDiffComponents(t *testing.T) {
+	chassis := func(components ...*Component) *clabtypes.NodeConfig {
+		kc := &KindConfig{GenComponentConfig: true, Components: components}
+		return &clabtypes.NodeConfig{Kind: "nokia_srsim", NodeType: "sr-2s", KindConfig: kc}
+	}
+
+	tests := map[string]struct {
+		old, new *clabtypes.NodeConfig
+		want     bool
+	}{
+		"same_components": {
+			old: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			new: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+		},
+		"reordered_components": {
+			old: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			new: chassis(
+				&Component{Slot: "1", Type: "xcm-2s"},
+				&Component{Slot: "A", Type: "cpm-2s"},
+			),
+		},
+		"slot_case_only": {
+			old: chassis(&Component{Slot: "a", Type: "cpm-2s"}),
+			new: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+		},
+		"card_type_changed": {
+			old:  chassis(&Component{Slot: "1", Type: "xcm-2s"}),
+			new:  chassis(&Component{Slot: "1", Type: "xcm-1s"}),
+			want: true,
+		},
+		"component_added": {
+			old: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+			new: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			want: true,
+		},
+		"other_key_changed": {
+			old: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+			new: func() *clabtypes.NodeConfig {
+				c := chassis(&Component{Slot: "A", Type: "cpm-2s"})
+				c.KindConfig.(*KindConfig).SFM = "sfm-2s"
+				return c
+			}(),
+			want: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := &sros{}
+			n.DefaultNode = *clabnodes.NewDefaultNode(n)
+
+			diff := n.ComputeDiff(tc.old, tc.new)
+			assert.Equal(
+				t,
+				tc.want,
+				slices.Contains(diff.Fields, "KindConfig"),
+				"fields %v",
+				diff.Fields,
+			)
+		})
 	}
 }

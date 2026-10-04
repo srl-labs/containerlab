@@ -801,7 +801,7 @@ topology:
 	}
 }
 
-func TestInjectTailscaleSidecarsSkipsMultiContainerNodes(t *testing.T) {
+func TestInjectTailscaleSidecarsSRSIM(t *testing.T) {
 	path := writeTailscaleTopo(t, `
 name: mylab
 mgmt:
@@ -814,6 +814,18 @@ topology:
   nodes:
     standalone:
       kind: nokia_srsim
+    integrated:
+      kind: nokia_srsim
+      type: ixr-r6
+      components:
+        - slot: B
+          type: cpiom-ixr-r6
+    single-cpm:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
     chassis:
       kind: nokia_srsim
       type: sr-2s
@@ -828,13 +840,24 @@ topology:
 		t.Fatal(err)
 	}
 
-	if !c.Nodes["chassis"].IsMultiContainer() {
-		t.Fatal("chassis should be multi-container")
+	// every SR-SIM node gets a single sidecar, including a distributed chassis
+	for _, name := range []string{"standalone", "integrated", "single-cpm", "chassis"} {
+		sc, ok := c.Nodes[name+"-ts"]
+		if !ok {
+			t.Fatalf("missing %s-ts sidecar", name)
+		}
+		if parent := sc.Config().Labels[clabnodestailscale.ParentLabel]; parent != name {
+			t.Fatalf("%s-ts parent = %q", name, parent)
+		}
 	}
-	if _, ok := c.Nodes["standalone-ts"]; !ok {
-		t.Fatal("missing standalone-ts sidecar")
+
+	sidecars := 0
+	for _, n := range c.Nodes {
+		if n.Config().Kind == clabnodestailscale.KindName {
+			sidecars++
+		}
 	}
-	if _, ok := c.Nodes["chassis-ts"]; ok {
-		t.Fatal("unexpected sidecar for multi-container node chassis")
+	if sidecars != 4 {
+		t.Fatalf("got %d sidecars, want 4", sidecars)
 	}
 }

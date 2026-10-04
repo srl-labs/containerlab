@@ -57,7 +57,7 @@ func (c *CLab) injectTailscaleSidecars() error {
 				name,
 			)
 		}
-		if !n.IsMultiContainer() && tailscaleSidecarEligible(n.Config()) {
+		if tailscaleSidecarEligible(n.Config()) {
 			parents = append(parents, name)
 		}
 	}

@@ -238,3 +238,23 @@ topology:
 		})
 	}
 }
+
+func TestKindConfigKindBlockCaseInsensitive(t *testing.T) {
+	path := writeKindConfigTopo(t, `
+name: kc
+topology:
+  kinds:
+    Nokia_SRSIM:
+      image: nokia_srsim:test
+      config-mode: classic
+  nodes:
+    sim:
+      kind: nokia_srsim
+`)
+
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	require.NoError(t, err)
+
+	assert.Equal(t, clabnodessros.ConfigModeClassic, srosKindConfig(t, c, "sim").ConfigMode)
+	assert.Equal(t, "nokia_srsim:test", c.Nodes["sim"].Config().Image)
+}
