@@ -239,8 +239,7 @@ topology:
       kind: nokia_sros
       image: nokia_sros:24.10.R1
       type: sr-2s
-      env:
-        NOKIA_SROS_SFM: sfm-2s
+      sfm: sfm-2s
       components:
         - slot: A
           type: cpm-2s
