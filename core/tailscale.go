@@ -36,10 +36,6 @@ func tailscaleSidecarEligible(cfg *clabtypes.NodeConfig) bool {
 	if cfg.Labels[clabconstants.InternalNode] == "true" {
 		return false
 	}
-	if len(cfg.Components) > 0 {
-		return false
-	}
-
 	return cfg.ManagementIPAMEligible()
 }
 
@@ -61,7 +57,7 @@ func (c *CLab) injectTailscaleSidecars() error {
 				name,
 			)
 		}
-		if tailscaleSidecarEligible(n.Config()) {
+		if !n.IsMultiContainer() && tailscaleSidecarEligible(n.Config()) {
 			parents = append(parents, name)
 		}
 	}

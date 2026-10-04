@@ -49,13 +49,6 @@ func TestTailscaleSidecarEligible(t *testing.T) {
 				Labels: map[string]string{clabconstants.InternalNode: "true"},
 			},
 		},
-		{
-			name: "components",
-			cfg: &clabtypes.NodeConfig{
-				Kind:       "nokia_srsim",
-				Components: []*clabtypes.Component{{Slot: "A"}},
-			},
-		},
 		{name: "host net", cfg: &clabtypes.NodeConfig{Kind: "linux", NetworkMode: "host"}},
 		{name: "none net", cfg: &clabtypes.NodeConfig{Kind: "linux", NetworkMode: "none"}},
 		{
