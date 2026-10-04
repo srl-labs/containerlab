@@ -378,10 +378,6 @@
                             "type": {
                                 "description": "Set component type"
                             },
-                            "sfm": {
-                                "description": "Set SFM type (SR OS specific).",
-                                "$ref": "#/definitions/sros-sfm-types"
-                            },
                             "xiom": {
                                 "type": "array",
                                 "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
@@ -450,6 +446,21 @@
                             "env": {
                                 "type": "object",
                                 "$ref": "#/definitions/env"
+                            },
+                            "cpu": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "vCPUs allocated to the card VM (nokia_sros kind)."
+                            },
+                            "ram": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "RAM in GB allocated to the card VM (nokia_sros kind)."
+                            },
+                            "max-nics": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "Number of NICs given to the card VM, derived from the MDAs when unset (nokia_sros kind)."
                             }
                         },
                         "additionalProperties": false,
@@ -482,6 +493,41 @@
                     "uniqueItems": true,
                     "description": "List of node components, used for multicontainer systems",
                     "markdownDescription": "Dependency list for Components"
+                },
+                "config-mode": {
+                    "type": "string",
+                    "enum": [
+                        "model-driven",
+                        "classic",
+                        "mixed"
+                    ],
+                    "description": "SR OS configuration mode (nokia_srsim and nokia_sros kinds).",
+                    "markdownDescription": "SR OS configuration mode, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` and `nokia_sros` kinds"
+                },
+                "gen-component-config": {
+                    "type": "boolean",
+                    "description": "Generate the configuration of the node's components, defaults to true (nokia_srsim kind).",
+                    "markdownDescription": "Generate the configuration of the node's components, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` kind"
+                },
+                "sfm": {
+                    "$ref": "#/definitions/sros-sfm-types",
+                    "description": "SFM type of the chassis (nokia_srsim and nokia_sros kinds).",
+                    "markdownDescription": "SFM type of the chassis, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` and `nokia_sros` kinds"
+                },
+                "pid-offset": {
+                    "type": "integer",
+                    "description": "Offset added to the auto-assigned IOL PID (cisco_iol kind).",
+                    "markdownDescription": "Offset added to the auto-assigned IOL PID, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
+                },
+                "mgmt-intf": {
+                    "type": "string",
+                    "description": "Management interface, defaults to Ethernet0/0 (cisco_iol kind).",
+                    "markdownDescription": "Management interface, defaults to `Ethernet0/0`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
+                },
+                "bootstrap-config": {
+                    "type": "string",
+                    "description": "File replacing the default startup configuration, or 'none' to disable it (cisco_iol kind).",
+                    "markdownDescription": "File replacing the default startup configuration, or `none` to disable it. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
                 },
                 "aliases": {
                     "type": "array",
@@ -812,6 +858,189 @@
                                     "iol",
                                     "l2"
                                 ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "not": {
+                                    "pattern": "^(nokia_srsim|nokia_sros)$"
+                                }
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "not": {
+                            "anyOf": [
+                                {
+                                    "required": [
+                                        "config-mode"
+                                    ]
+                                },
+                                {
+                                    "required": [
+                                        "sfm"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "not": {
+                                    "pattern": "^(nokia_srsim)$"
+                                }
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "not": {
+                            "anyOf": [
+                                {
+                                    "required": [
+                                        "gen-component-config"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "not": {
+                                    "pattern": "^(cisco_iol)$"
+                                }
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "not": {
+                            "anyOf": [
+                                {
+                                    "required": [
+                                        "pid-offset"
+                                    ]
+                                },
+                                {
+                                    "required": [
+                                        "mgmt-intf"
+                                    ]
+                                },
+                                {
+                                    "required": [
+                                        "bootstrap-config"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "not": {
+                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux)$"
+                                }
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "not": {
+                            "anyOf": [
+                                {
+                                    "required": [
+                                        "components"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^(nokia_srsim|nokia_srlinux)$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "components": {
+                                "items": {
+                                    "not": {
+                                        "anyOf": [
+                                            {
+                                                "required": [
+                                                    "cpu"
+                                                ]
+                                            },
+                                            {
+                                                "required": [
+                                                    "ram"
+                                                ]
+                                            },
+                                            {
+                                                "required": [
+                                                    "max-nics"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^(nokia_sros|nokia_srlinux)$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "components": {
+                                "items": {
+                                    "not": {
+                                        "anyOf": [
+                                            {
+                                                "required": [
+                                                    "env"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
                             }
                         }
                     }
