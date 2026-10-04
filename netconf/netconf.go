@@ -6,140 +6,146 @@
 package netconf
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-xmlfmt/xmlfmt"
-	"github.com/scrapli/scrapligo/driver/netconf"
-	"github.com/scrapli/scrapligo/driver/options"
-	"github.com/scrapli/scrapligo/platform"
-	"github.com/scrapli/scrapligo/response"
-	"github.com/scrapli/scrapligo/transport"
-	"github.com/scrapli/scrapligo/util"
-	"github.com/scrapli/scrapligocfg"
+
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
+	scrapligonetconf "github.com/scrapli/scrapligo/v2/netconf"
+	scrapligooptions "github.com/scrapli/scrapligo/v2/options"
+)
+
+const (
+	netconfPort = 830
+	cliPort     = 22
 )
 
 // SaveRunningConfig saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config> from running to startup datastore
 // this method is used on the network elements that can't perform configuration save via other
 // means.
-func SaveRunningConfig(addr, username, password, _ string) error {
-	opts := []util.Option{
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(username),
-		options.WithAuthPassword(password),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithPort(830),
-	}
-
-	d, err := netconf.NewDriver(
+func SaveRunningConfig(ctx context.Context, addr, username, password, _ string) error {
+	n, err := scrapligonetconf.NewNetconf(
 		addr,
-		opts...,
+		scrapligooptions.WithPort(netconfPort),
+		scrapligooptions.WithUsername(username),
+		scrapligooptions.WithPassword(password),
+		scrapligooptions.WithTransportSSH2(),
 	)
 	if err != nil {
 		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
 	}
 
-	err = d.Open()
-	if err != nil {
+	if _, err := n.Open(ctx); err != nil {
 		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
 	}
-	defer d.Close()
+	defer n.Close(ctx)
 
-	_, err = d.CopyConfig("running", "startup")
+	r, err := n.CopyConfig(ctx,
+		scrapligonetconf.WithSourceType(scrapligonetconf.DatastoreTypeRunning),
+		scrapligonetconf.WithTargetType(scrapligonetconf.DatastoreTypeStartup),
+	)
 	if err != nil {
 		return fmt.Errorf("%s: Could not send save config via Netconf: %+v", addr, err)
+	}
+	if r.Failed {
+		return fmt.Errorf("%s: netconf copy-config rpc failed: %s", addr, r.Result)
 	}
 
 	return nil
 }
 
-// GetConfig retrieves the running configuration and returns it as a string. It automatically picks
-// the appropriate network driver for the provided Scrapli Platform.
-func GetConfig(addr, username, password, scrapliPlatform string) (string, error) {
-	p, err := platform.NewPlatform(
-		scrapliPlatform,
-		addr,
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(username),
-		options.WithAuthPassword(password),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithPort(22),
-	)
-	if err != nil {
-		return "", fmt.Errorf("could not create or missing platform driver for %s: %+v", addr, err)
-	}
-
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return "", fmt.Errorf("could not create generic driver for %s: %+v", addr, err)
-	}
-
-	err = d.Open()
-	if err != nil {
-		return "", fmt.Errorf("failed to open generic driver for %s: %+v", addr, err)
-	}
-	defer d.Close()
-
-	cfg, err := scrapligocfg.NewCfg(d, scrapliPlatform)
-	if err != nil {
-		return "", fmt.Errorf("failed to instantiate scrapligocfg for %s: %+v", addr, err)
-	}
-
-	err = cfg.Prepare()
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare scraplicfg connection for %s: %+v", addr, err)
-	}
-
-	config, err := cfg.GetConfig("running")
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve config via scraplicfg for %s: %+v", addr, err)
-	}
-
-	log.Debug("Retrieved node config via scraplicfg", "config", config.Result)
-
-	return config.Result, nil
+// runningConfigCmds maps a scrapli platform name to the command that renders
+// the running configuration over the CLI.
+var runningConfigCmds = map[string]string{
+	"arista_eos":    "show running-config",
+	"cisco_iosxe":   "show running-config",
+	"cisco_iosxr":   "show running-config",
+	"cisco_nxos":    "show running-config",
+	"juniper_junos": "show configuration",
 }
 
-// Operation defines a NETCONF action to be executed against an established NETCONF driver.
-type Operation func(*netconf.Driver) (*response.NetconfResponse, error)
+// GetConfig retrieves the running configuration and returns it as a string. It automatically picks
+// the appropriate command for the provided Scrapli Platform.
+func GetConfig(
+	ctx context.Context,
+	addr, username, password, scrapliPlatform string,
+) (string, error) {
+	cmd, ok := runningConfigCmds[scrapliPlatform]
+	if !ok {
+		return "", fmt.Errorf("retrieving the running config of the %q platform is not supported",
+			scrapliPlatform)
+	}
+
+	c, err := scrapligocli.NewCli(
+		addr,
+		scrapligooptions.WithDefinitionFileOrName(scrapliPlatform),
+		scrapligooptions.WithPort(cliPort),
+		scrapligooptions.WithUsername(username),
+		scrapligooptions.WithPassword(password),
+		scrapligooptions.WithTransportSSH2(),
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not create cli session for %s: %+v", addr, err)
+	}
+
+	if _, err := c.Open(ctx); err != nil {
+		return "", fmt.Errorf("failed to open cli session for %s: %+v", addr, err)
+	}
+	defer c.Close(ctx)
+
+	res, err := c.SendInput(ctx, cmd)
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve config via scrapli for %s: %+v", addr, err)
+	}
+	if res.Failed() {
+		return "", fmt.Errorf(
+			"failed to retrieve config via scrapli for %s: %s",
+			addr,
+			res.Result(),
+		)
+	}
+
+	log.Debug("Retrieved node config via scrapli", "config", res.Result())
+
+	return res.Result(), nil
+}
+
+// Operation defines a NETCONF action to be executed against an established NETCONF session.
+type Operation func(*scrapligonetconf.Netconf) (*scrapligonetconf.Result, error)
 
 // MultiExec opens a NETCONF session to the provided address and executes the supplied operations
 // sequentially. The driver is opened once and used across every operation, enabling scenarios that
 // require multiple NETCONF calls within a single session (for example, chaining import actions
 // prior
 // to committing configuration changes).
-func MultiExec(addr, username, password string, operations []Operation) error {
-	opts := []util.Option{
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(username),
-		options.WithAuthPassword(password),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithPort(830),
-	}
-
-	d, err := netconf.NewDriver(
+func MultiExec(ctx context.Context, addr, username, password string, operations []Operation) error {
+	n, err := scrapligonetconf.NewNetconf(
 		addr,
-		opts...,
+		scrapligooptions.WithPort(netconfPort),
+		scrapligooptions.WithUsername(username),
+		scrapligooptions.WithPassword(password),
+		scrapligooptions.WithTransportSSH2(),
 	)
 	if err != nil {
 		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
 	}
 
-	err = d.Open()
-	if err != nil {
+	if _, err := n.Open(ctx); err != nil {
 		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
 	}
-	defer d.Close()
+	defer n.Close(ctx)
 
 	for _, operation := range operations {
-		r, e := operation(d)
+		r, e := operation(n)
 		if e != nil {
 			return fmt.Errorf("NETCONF operation failed for %q: %w", addr, e)
 		}
 		log.Debugf("NETCONF RPC sent to %q: %s", addr,
-			xmlfmt.FormatXML(string(r.Input), "\t", "    "))
-		if r.Failed != nil {
+			xmlfmt.FormatXML(r.Input, "\t", "    "))
+		if r.Failed {
 			return fmt.Errorf("NETCONF RPC to %q failed: %s",
 				addr, r.Result)
 		}

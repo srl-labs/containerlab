@@ -42,8 +42,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/sftp v1.13.11
 	github.com/pmorjan/kmod v1.1.1
-	github.com/scrapli/scrapligo v1.4.1
-	github.com/scrapli/scrapligocfg v1.0.0
+	github.com/scrapli/scrapligo/v2 v2.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/steiler/acls v0.1.5
@@ -55,7 +54,7 @@ require (
 	go.podman.io/podman/v6 v6.1.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.55.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.4
@@ -91,6 +90,7 @@ require (
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
+	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
@@ -214,7 +214,6 @@ require (
 	github.com/containers/ocicrypt v1.3.2 // indirect
 	github.com/containers/psgo v1.10.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
-	github.com/creack/pty v1.1.24 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/docker/docker-credential-helpers v0.9.8 // indirect
@@ -256,7 +255,7 @@ require (
 	github.com/proglottis/gpgme v0.1.6 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
-	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
+	github.com/sirikothe/gotextfsm v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.10
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/sylabs/sif/v2 v2.24.1 // indirect

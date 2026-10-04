@@ -12,33 +12,29 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/network"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/steiler/acls"
 )
 
-func (n *vyos) save(_ context.Context, cli *network.Driver) error {
+func (n *vyos) save(ctx context.Context, cli *scrapligocli.Cli) error {
 	log.Debug("Saving config", "node", n.Cfg.ShortName)
-	resp, err := cli.SendConfigs(saveCmd)
+	resp, err := cli.SendInputs(ctx, saveCmd)
 	if err != nil {
 		return err
-	} else if resp.Failed != nil {
-		return fmt.Errorf("save failed: %w", resp.Failed)
+	} else if resp.Failed() {
+		return fmt.Errorf("save failed: %s", resp.Result())
 	}
 	log.Info("Save successful", "node", n.Cfg.ShortName)
 	return nil
 }
 
-func (n *vyos) newCli() (*network.Driver, error) {
-	cli, err := clabutils.SpawnCLIviaExec(
+func (n *vyos) newCli() (*scrapligocli.Cli, error) {
+	return clabutils.SpawnCLIviaExec(
 		scrapliPlatformName,
 		n.Cfg.LongName,
 		n.Runtime.GetName())
-	if err != nil {
-		return nil, err
-	}
-	return cli, nil
 }
 
 func (n *vyos) createVyosFiles(_ context.Context) error {

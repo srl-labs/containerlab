@@ -10,14 +10,12 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/generic"
-	"github.com/scrapli/scrapligo/driver/options"
-	"github.com/scrapli/scrapligo/transport"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
+	scrapligooptions "github.com/scrapli/scrapligo/v2/options"
 	"golang.org/x/crypto/ssh"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -44,8 +42,6 @@ const (
 	readyTimeout        = 5 * time.Minute
 	readyRetryInterval  = 5 * time.Second
 )
-
-var bashPromptPattern = regexp.MustCompile(`[$#]\s*$`)
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -173,28 +169,37 @@ func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for SSH to become available")
 		default:
-			driver, err := generic.NewDriver(
+			// the "default" scrapli definition matches any shell prompt, which is what we
+			// need here since we drop to the Linux shell of SONiC.
+			c, err := scrapligocli.NewCli(
 				n.Cfg.MgmtIPv4Address,
-				options.WithAuthNoStrictKey(),
-				options.WithAuthUsername(n.Cfg.Credentials.Username),
-				options.WithAuthPassword(n.Cfg.Credentials.Password),
-				options.WithTransportType(transport.StandardTransport),
-				options.WithPromptPattern(bashPromptPattern),
-				options.WithTimeoutOps(30*time.Second),
+				scrapligooptions.WithDefinitionFileOrName(scrapligocli.Default),
+				scrapligooptions.WithPort(22),
+				scrapligooptions.WithUsername(n.Cfg.Credentials.Username),
+				scrapligooptions.WithPassword(n.Cfg.Credentials.Password),
+				scrapligooptions.WithTransportSSH2(),
+				scrapligooptions.WithOperationTimeout(30*time.Second),
 			)
 			if err != nil {
 				return err
 			}
 
-			if err := driver.Open(); err != nil {
+			if _, err := c.Open(ctx); err != nil {
 				log.Debugf("%s: SSH not yet ready - %v", n.Cfg.ShortName, err)
 				time.Sleep(readyRetryInterval)
 				continue
 			}
-			defer driver.Close()
+			defer c.Close(ctx)
 
-			_, err = driver.SendCommands(commands)
-			return err
+			res, err := c.SendInputs(ctx, commands)
+			if err != nil {
+				return err
+			}
+			if res.Failed() {
+				return fmt.Errorf("failed to deploy ssh keys: %s", res.Result())
+			}
+
+			return nil
 		}
 	}
 }

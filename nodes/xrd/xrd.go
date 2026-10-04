@@ -132,8 +132,8 @@ func (n *xrd) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error
 	return err
 }
 
-func (n *xrd) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
-	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
+func (n *xrd) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	err := clabnetconf.SaveRunningConfig(ctx, n.Cfg.LongName,
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
 		scrapliPlatformName,

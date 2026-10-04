@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/options"
-	scraplilogging "github.com/scrapli/scrapligo/logging"
-	"github.com/scrapli/scrapligo/platform"
-	"github.com/scrapli/scrapligo/transport"
-	"github.com/scrapli/scrapligo/util"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
+	scrapligologging "github.com/scrapli/scrapligo/v2/logging"
+	scrapligooptions "github.com/scrapli/scrapligo/v2/options"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/mod/semver"
 )
@@ -79,7 +77,13 @@ func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 	}
 }
 
-func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c []string) error {
+const sshPort = 22
+
+func (n *sros) srosSendCommandsSSH(
+	ctx context.Context,
+	scrapli_platform string,
+	cmds []string,
+) error {
 	addr, err := n.MgmtIPAddr()
 	if err != nil {
 		return err
@@ -87,47 +91,36 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 	sl := log.StandardLog(log.StandardLogOptions{
 		ForceLevel: log.DebugLevel,
 	})
-	li, err := scraplilogging.NewInstance(
-		scraplilogging.WithLevel("debug"),
-		scraplilogging.WithLogger(sl.Print))
-	if err != nil {
-		return err
+
+	opts := []scrapligooptions.Option{
+		scrapligooptions.WithDefinitionFileOrName(scrapli_platform),
+		scrapligooptions.WithPort(sshPort),
+		scrapligooptions.WithUsername(n.Cfg.Credentials.Username),
+		scrapligooptions.WithPassword(n.Cfg.Credentials.Password),
+		scrapligooptions.WithTransportSSH2(),
+		scrapligooptions.WithOperationTimeout(5 * time.Second),
+		scrapligooptions.WithLogger(func(level scrapligologging.LogLevel, message string) {
+			sl.Print(message)
+		}),
+		scrapligooptions.WithLoggerLevel(scrapligologging.Debug),
 	}
 
-	opts := []util.Option{
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(n.Cfg.Credentials.Username),
-		options.WithAuthPassword(n.Cfg.Credentials.Password),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithTimeoutOps(5 * time.Second),
-		options.WithLogger(li),
-	}
-	p, err := platform.NewPlatform(scrapli_platform, fmt.Sprintf("[%s]", addr), opts...)
+	c, err := scrapligocli.NewCli(addr, opts...)
 	if err != nil {
-		return fmt.Errorf("%q-%q: failed to create platform: %+v", n.Cfg.ShortName, addr, err)
+		return fmt.Errorf("%q-%q: failed to create cli session: %+v", n.Cfg.ShortName, addr, err)
 	}
 
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return fmt.Errorf("%q-%q: could not create the driver: %+v", n.Cfg.ShortName, addr, err)
-	}
-	if err := d.Open(); err != nil {
+	if _, err := c.Open(ctx); err != nil {
 		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
 	}
-	defer d.Close()
-	mresp, err := d.SendCommands(c)
+	defer c.Close(ctx)
+
+	res, err := c.SendInputs(ctx, cmds)
 	if err != nil {
-		if mresp != nil && mresp.Failed != nil {
-			return fmt.Errorf(
-				"failed to send command: %w (failed responses: %+v)",
-				err,
-				mresp.Failed,
-			)
-		}
-		return fmt.Errorf("failed to send command: %w", err)
+		return fmt.Errorf("failed to send command: %+v", err)
 	}
-	if mresp != nil && mresp.Failed != nil {
-		return fmt.Errorf("failed to send command (failed responses: %+v)", mresp.Failed)
+	if res.Failed() {
+		return fmt.Errorf("failed to send command (failed result: %s)", res.Result())
 	}
 
 	log.Debug(

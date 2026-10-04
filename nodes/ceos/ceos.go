@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -347,14 +348,14 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
+func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
+	c, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {
 		return err
 	}
 
-	defer d.Close()
+	defer c.Close(ctx)
 
 	cfgs := []string{
 		"interface " + nodeCfg.MgmtIntf,
@@ -414,10 +415,10 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 
 	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
 
-	resp, err := d.SendConfigs(cfgs)
+	resp, err := c.SendInputs(ctx, cfgs, scrapligocli.WithRequestedMode("configuration"))
 	if err != nil {
 		return err
-	} else if resp.Failed != nil {
+	} else if resp.Failed() {
 		return errors.New("failed CLI configuration")
 	}
 
