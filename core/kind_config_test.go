@@ -93,12 +93,6 @@ topology:
 		require.Len(t, kc.Components, 1, "node components replace group components")
 		assert.Equal(t, "cpm-2s", kc.Components[0].Type)
 	})
-
-	t.Run("multi_container_follows_inherited_components", func(t *testing.T) {
-		assert.False(t, c.Nodes["kind-only"].IsMultiContainer())
-		assert.True(t, c.Nodes["grouped"].IsMultiContainer())
-		assert.False(t, c.Nodes["node-override"].IsMultiContainer())
-	})
 }
 
 func TestKindConfigDefaultsApplied(t *testing.T) {

@@ -451,20 +451,6 @@ func (mr *MockNodeMockRecorder) IsHealthy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockNode)(nil).IsHealthy), ctx)
 }
 
-// IsMultiContainer mocks base method.
-func (m *MockNode) IsMultiContainer() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMultiContainer")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsMultiContainer indicates an expected call of IsMultiContainer.
-func (mr *MockNodeMockRecorder) IsMultiContainer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMultiContainer", reflect.TypeOf((*MockNode)(nil).IsMultiContainer))
-}
-
 // LinkApplyMode mocks base method.
 func (m *MockNode) LinkApplyMode(arg0 context.Context) nodes.LinkApplyMode {
 	m.ctrl.T.Helper()

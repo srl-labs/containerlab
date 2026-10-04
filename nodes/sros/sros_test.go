@@ -472,7 +472,6 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, n.isStandaloneNode())
 		assert.Len(t, n.componentNodes, 2)
-		assert.True(t, n.IsMultiContainer())
 	})
 }
 
@@ -996,7 +995,7 @@ func TestWithoutComponentsDoesNotUseNamespaceHolder(t *testing.T) {
 	}
 }
 
-func TestIsMultiContainer(t *testing.T) {
+func TestDistributedComponentNodes(t *testing.T) {
 	tests := map[string]struct {
 		nodeType   string
 		components []*Component
@@ -1034,21 +1033,8 @@ func TestIsMultiContainer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			n := newSrosInitTestNode(tc.nodeType, tc.components)
 			require.NoError(t, n.Init(n.Cfg))
-			assert.Equal(t, tc.want, n.IsMultiContainer())
+			assert.Equal(t, tc.want, len(n.componentNodes) > 0)
 		})
-	}
-}
-
-func TestIsMultiContainerComponentNodes(t *testing.T) {
-	n := newSrosInitTestNode("sr-2s", []*Component{
-		{Slot: slotAName, Type: "cpm-2s"},
-		{Slot: "1", Type: "xcm-2s"},
-	})
-	require.NoError(t, n.Init(n.Cfg))
-	require.Len(t, n.componentNodes, 2)
-
-	for _, cn := range n.componentNodes {
-		assert.False(t, cn.IsMultiContainer(), "component %s", cn.Config().ShortName)
 	}
 }
 

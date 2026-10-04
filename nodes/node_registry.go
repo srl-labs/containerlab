@@ -127,16 +127,6 @@ func (nre *NodeRegistryEntry) KindConfigType() KindConfigType {
 	return nre.attributes.kindConfigType
 }
 
-// NewKindConfig returns a pointer to a zero kind config, or nil when the kind has none.
-func (nre *NodeRegistryEntry) NewKindConfig() any {
-	t := nre.KindConfigType()
-	if t == nil {
-		return nil
-	}
-
-	return t.newKindConfig()
-}
-
 // AcceptsKindConfigKey reports whether the kind's config has key.
 func (nre *NodeRegistryEntry) AcceptsKindConfigKey(key string) bool {
 	t := nre.KindConfigType()

@@ -48,23 +48,21 @@ topology:
     # sr2se:
     #   kind: nokia_srsim
     #   type: sr-2se
+    #   sfm: sfm-2se
     #   components:
     #     - slot: A
     #       type: cpm-2se
-    #       sfm: sfm-2se
     #     - slot: 1
-    #       sfm: sfm-2se
     #       type: xcm-2se
 
     # sr7s:
     #   kind: nokia_srsim
     #   type: sr-7s
+    #   sfm: sfm2-s
     #   components:
     #     - slot: A
     #       type: cpm2-s
-    #       sfm: sfm2-s
     #     - slot: 1
-    #       sfm: sfm2-s
     #       type: xcm2-7s
     #       mda:
     #         - slot: 1

@@ -1111,10 +1111,6 @@ func (*DefaultNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
 }
 
-func (*DefaultNode) IsMultiContainer() bool {
-	return false
-}
-
 func (d *DefaultNode) GetShortName() string {
 	return d.Cfg.ShortName
 }

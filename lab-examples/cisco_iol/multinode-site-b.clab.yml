@@ -2,7 +2,7 @@
 # that file for the full description. The vxlan-stitch link mirrors site A
 # with `remote` pointing back at site A's host.
 #
-# CLAB_IOL_PID_OFFSET shifts this site's auto-assigned IOL application IDs
+# pid-offset shifts this site's auto-assigned IOL application IDs
 # so the switch derives MAC addresses and an STP bridge ID that don't
 # overlap with site A. Any offset works as long as the two sites differ.
 name: iol-site-b

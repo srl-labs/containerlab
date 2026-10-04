@@ -326,19 +326,3 @@ func TestKindConfigDecodesComponents(t *testing.T) {
 	}})
 	require.Error(t, err)
 }
-
-func Test_vrSROS_IsMultiContainer_withComponents(t *testing.T) {
-	cfg := &clabtypes.NodeConfig{
-		ShortName: "sros1",
-		LabDir:    t.TempDir(),
-		NodeType:  "sr-2s",
-		Env:       map[string]string{},
-		KindConfig: &KindConfig{
-			Components: []*Component{{Slot: "A", Type: "cpm-2s"}, {Slot: "1", Type: "xcm-2s"}},
-		},
-	}
-	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
-	s := new(vrSROS)
-	require.NoError(t, s.Init(cfg, clabnodes.WithMgmtNet(mgmt)))
-	assert.False(t, s.IsMultiContainer(), "vSIM runs all cards in a single container")
-}

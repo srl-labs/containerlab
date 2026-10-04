@@ -858,12 +858,6 @@ func (n *sros) isDistributedCardNode() bool {
 	return exists && len(n.kCfg().Components) == 0
 }
 
-// IsMultiContainer reports whether the node is a distributed chassis with a container per
-// component.
-func (n *sros) IsMultiContainer() bool {
-	return len(n.componentNodes) > 0
-}
-
 // isDistributedBaseNode returns true if this is the base node of a distributed
 // SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {

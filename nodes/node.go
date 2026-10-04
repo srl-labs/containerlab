@@ -229,7 +229,6 @@ type Node interface {
 	ReleaseEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType
-	IsMultiContainer() bool
 	GetShortName() string
 	// DeployEndpoints deploys the links for the node.
 	DeployEndpoints(ctx context.Context) error
