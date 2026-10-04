@@ -257,16 +257,15 @@ The same limitation as the TiMOS line variant definition applies that only a sin
 
 ##### Additional parameters
 
-By default `cpu`, `ram` and `max_nics` are derived automatically but can be easily overridden per component through that specific component's `env`.
+By default `cpu`, `ram` and `max_nics` are derived automatically but can be overridden per component with the `cpu`, `ram` and `max-nics` keys.
 
 ```yaml
 components:
   - slot: 1
     type: xcm-2s
-    env:
-      cpu: "4"        # vCPUs allocated to the card VM
-      ram: "6"        # RAM in GB
-      max_nics: "5"   # Give the card VM only 5 NICs
+    cpu: 4        # vCPUs allocated to the card VM
+    ram: 6        # RAM in GB
+    max-nics: 5   # Give the card VM only 5 NICs
     xiom:
       - slot: 1
         type: iom-s-3.0t
