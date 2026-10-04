@@ -191,3 +191,64 @@ func TestC8000vInterfaceMappingByNetworkMode(t *testing.T) {
 		})
 	}
 }
+
+func TestC8000vModeValidation(t *testing.T) {
+	tests := map[string]struct {
+		cfg      clabtypes.NodeConfig
+		wantMode string
+		wantErr  bool
+	}{
+		"default-mode": {
+			wantMode: modeAutonomous,
+		},
+		"controller-mode": {
+			cfg:      clabtypes.NodeConfig{NodeType: modeController},
+			wantMode: modeController,
+		},
+		"invalid-mode": {
+			cfg:     clabtypes.NodeConfig{NodeType: "bogus"},
+			wantErr: true,
+		},
+		"autonomous-with-startup-config": {
+			cfg:      clabtypes.NodeConfig{StartupConfig: "cfg.txt"},
+			wantMode: modeAutonomous,
+		},
+		"ztp-without-startup-config": {
+			cfg:      clabtypes.NodeConfig{NodeType: modeZTP},
+			wantMode: modeZTP,
+		},
+		"ztp-rejects-startup-config": {
+			cfg:     clabtypes.NodeConfig{NodeType: modeZTP, StartupConfig: "cfg.txt"},
+			wantErr: true,
+		},
+		"ztp-allows-suppressed-startup-config": {
+			cfg: clabtypes.NodeConfig{
+				NodeType:              modeZTP,
+				StartupConfig:         "cfg.txt",
+				SuppressStartupConfig: true,
+			},
+			wantMode: modeZTP,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n, err := initC8000v(t, &tc.cfg)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("Init() succeeded, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Init() failed: %v", err)
+			}
+			if n.mode != tc.wantMode {
+				t.Errorf("mode = %q, want %q", n.mode, tc.wantMode)
+			}
+			if got := n.Cfg.Env["MODE"]; got != tc.wantMode {
+				t.Errorf("MODE env = %q, want %q", got, tc.wantMode)
+			}
+		})
+	}
+}
