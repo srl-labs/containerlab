@@ -189,7 +189,7 @@ type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
 	// GenComponentConfig generates the configuration of the node's components. Defaults to true.
-	GenComponentConfig bool                   `yaml:"component-config" json:"component-config"`
+	GenComponentConfig bool                   `yaml:"gen-component-config" json:"gen-component-config"`
 	SFM                string                 `yaml:"sfm,omitempty" json:"sfm,omitempty"`
 	Components         []*clabtypes.Component `yaml:"components,omitempty" json:"components,omitempty"`
 }

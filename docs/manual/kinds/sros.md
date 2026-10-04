@@ -303,12 +303,12 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
+      sfm: m-sfm6-7/12 # maps to NOKIA_SROS_SFM
       components:
         - slot: A
         - slot: B
         - slot: 1
           type: iom5-e # maps to NOKIA_SROS_CARD
-          sfm: m-sfm6-7/12 # maps to NOKIA_SROS_SFM
           mda:
             - slot: 1
               type: me6-100gb-qsfp28 # maps to NOKIA_SROS_MDA_1
@@ -316,7 +316,6 @@ topology:
               type: me3-400gb-qsfpdd # maps to NOKIA_SROS_MDA_2
         - slot: 2
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 2
               type: me6-100gb-qsfp28
@@ -335,12 +334,11 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-2s
+      sfm: sfm-2s # maps to NOKIA_SROS_SFM
       components:
         - slot: A
-          sfm: sfm-2s
         - slot: 1
           type: xcm-2s # maps to NOKIA_SROS_CARD
-          sfm: sfm-2s # maps to NOKIA_SROS_SFM
           xiom:
             - slot: 1 # XIOM slot x1
               type: iom-s-3.0t # maps to NOKIA_SROS_XIOM_X1 env var
@@ -389,7 +387,7 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 1. Component containers are attached to an internal namespace pause container.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
-4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
+4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom` and `mda` fields.
 
 ##### Configuration for components
 
@@ -397,7 +395,7 @@ When using the `components` structure in the node definition for a distributed n
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
-You can disable this config generation behavior by setting the `component-config: false` [kind config key](../nodes.md#kind-config) on the node, or on the base node for a distributed chassis.
+You can disable this config generation behavior by setting the `gen-component-config: false` [kind config key](../nodes.md#kind-config) on the node, or on the base node for a distributed chassis.
 
 ```yaml hl_lines="6"
 topology:
@@ -405,7 +403,7 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
-      component-config: false
+      gen-component-config: false
       components:
         - slot: A
         - slot: B
@@ -427,12 +425,12 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
+      sfm: m-sfm6-7/12
       components:
         - slot: A
         - slot: B
         - slot: 1
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 1
               type: me6-100gb-qsfp28
@@ -440,7 +438,6 @@ topology:
               type: me3-400gb-qsfpdd
         - slot: 2
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 2
               type: me6-100gb-qsfp28

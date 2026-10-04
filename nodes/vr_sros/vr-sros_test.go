@@ -193,6 +193,24 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 		"lc: max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
 }
 
+func Test_vrSROS_Init_withComponents_appliesSFM(t *testing.T) {
+	cfg := &clabtypes.NodeConfig{
+		ShortName: "sros1",
+		LabDir:    t.TempDir(),
+		NodeType:  "sr-2s",
+		Env:       map[string]string{},
+		KindConfig: &KindConfig{
+			SFM:        "sfm-2s",
+			Components: []*clabtypes.Component{{Slot: "A", Type: "cpm-2s"}, {Slot: "1", Type: "xcm-2s"}},
+		},
+	}
+	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
+	s := new(vrSROS)
+	require.NoError(t, s.Init(cfg, clabnodes.WithMgmtNet(mgmt)))
+	assert.Contains(t, s.Cfg.Cmd, "cp: chassis=sr-2s slot=A sfm=sfm-2s card=cpm-2s ___ "+
+		"lc: chassis=sr-2s slot=1 sfm=sfm-2s card=xcm-2s")
+}
+
 func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &clabtypes.NodeConfig{
