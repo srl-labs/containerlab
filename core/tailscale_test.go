@@ -800,3 +800,41 @@ topology:
 		t.Fatalf("ssh nodes = %d, want 1", len(tmpl.Nodes))
 	}
 }
+
+func TestInjectTailscaleSidecarsSkipsMultiContainerNodes(t *testing.T) {
+	path := writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  tailscale:
+    auth-key: tskey-auth-test
+topology:
+  kinds:
+    nokia_srsim:
+      image: nokia_srsim:test
+  nodes:
+    standalone:
+      kind: nokia_srsim
+    chassis:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
+        - slot: 1
+          type: xcm-2s
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !c.Nodes["chassis"].IsMultiContainer() {
+		t.Fatal("chassis should be multi-container")
+	}
+	if _, ok := c.Nodes["standalone-ts"]; !ok {
+		t.Fatal("missing standalone-ts sidecar")
+	}
+	if _, ok := c.Nodes["chassis-ts"]; ok {
+		t.Fatal("unexpected sidecar for multi-container node chassis")
+	}
+}

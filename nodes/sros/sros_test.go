@@ -994,3 +994,59 @@ func TestWithoutComponentsDoesNotUseNamespaceHolder(t *testing.T) {
 		})
 	}
 }
+
+func TestIsMultiContainer(t *testing.T) {
+	tests := map[string]struct {
+		nodeType   string
+		components []*Component
+		want       bool
+	}{
+		"standalone_without_components": {
+			nodeType: "sr-1",
+		},
+		"integrated_with_component": {
+			nodeType: "ixr-r6",
+			components: []*Component{
+				{Slot: slotBName, Type: "cpiom-ixr-r6", MDA: MDAS{{Slot: 3, Type: "m20-1g-csfp"}}},
+			},
+		},
+		"distributed_chassis_single_cpm": {
+			nodeType:   "sr-2s",
+			components: []*Component{{Slot: slotAName, Type: "cpm-2s"}},
+		},
+		"distributed_chassis_cpm_and_linecard": {
+			nodeType: "sr-2s",
+			components: []*Component{
+				{Slot: slotAName, Type: "cpm-2s"},
+				{Slot: "1", Type: "xcm-2s"},
+			},
+			want: true,
+		},
+		"distributed_chassis_dual_cpm": {
+			nodeType:   "sr-7",
+			components: []*Component{{Slot: slotAName}, {Slot: slotBName}},
+			want:       true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := newSrosInitTestNode(tc.nodeType, tc.components)
+			require.NoError(t, n.Init(n.Cfg))
+			assert.Equal(t, tc.want, n.IsMultiContainer())
+		})
+	}
+}
+
+func TestIsMultiContainerComponentNodes(t *testing.T) {
+	n := newSrosInitTestNode("sr-2s", []*Component{
+		{Slot: slotAName, Type: "cpm-2s"},
+		{Slot: "1", Type: "xcm-2s"},
+	})
+	require.NoError(t, n.Init(n.Cfg))
+	require.Len(t, n.componentNodes, 2)
+
+	for _, cn := range n.componentNodes {
+		assert.False(t, cn.IsMultiContainer(), "component %s", cn.Config().ShortName)
+	}
+}
