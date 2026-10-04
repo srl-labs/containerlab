@@ -9,6 +9,7 @@ import (
 	"path"
 	"regexp"
 
+	"github.com/charmbracelet/log"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -102,6 +103,11 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 				"suppress-startup-config on the node to leave it unconfigured",
 			n.Cfg.ShortName,
 		)
+	}
+
+	persistedCfg := path.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
+	if n.mode == modeZTP && clabutils.FileExists(persistedCfg) {
+		log.Info("Persisted startup-config detected. ZTP will be skipped.", "node", n.Cfg.ShortName)
 	}
 
 	// env vars are used to set launch.py arguments in vrnetlab container
