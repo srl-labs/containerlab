@@ -67,6 +67,10 @@ sonic-vs container uses the following mapping for its linux interfaces:
 
 When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` mapped to `Ethernet0` port and needs to be configured with IP addressing manually. See Lab examples for exact configurations.
 
+/// note
+SONiC does not rename `ethN`. Each data link leaves the node with two netdevs: the veth containerlab creates (`ethN`) and a tap that syncd creates for the port that veth is mapped to (`eth1` behind `Ethernet0`, `eth2` behind `Ethernet4`, and so on). SONiC configures the port; `ethN` is only the wire that carries the port's frames, and it carries a MAC of its own. Containerlab therefore marks every `ethN` data interface ARP-off and IPv6-off once the links exist, so that only the port answers on the link: a neighbour cannot cache the wire's MAC for the port's address, nor discover the wire as a second device.
+///
+
 ## Lab examples
 
 The following labs feature sonic-vs node:
