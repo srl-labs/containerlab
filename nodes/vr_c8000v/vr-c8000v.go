@@ -22,7 +22,7 @@ var (
 	InterfaceOffset = 2
 	InterfaceHelp   = "GiX or GigabitEthernetX (where X >= 2) or ethX (where X >= 1)"
 
-    // network-mode: none
+	// network-mode: none.
 	InterfaceOffsetNoMgmt = 1
 	InterfaceHelpNoMgmt   = "GiX or GigabitEthernetX (where X >= 1) or ethX (where X >= 1)"
 )
