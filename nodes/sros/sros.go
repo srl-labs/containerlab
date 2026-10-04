@@ -189,9 +189,9 @@ type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
 	// GenComponentConfig generates the configuration of the node's components. Defaults to true.
-	GenComponentConfig bool                   `yaml:"gen-component-config" json:"gen-component-config"`
-	SFM                string                 `yaml:"sfm,omitempty" json:"sfm,omitempty"`
-	Components         []*clabtypes.Component `yaml:"components,omitempty" json:"components,omitempty"`
+	GenComponentConfig bool         `yaml:"gen-component-config" json:"gen-component-config"`
+	SFM                string       `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components         []*Component `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 // SetDefaults implements clabnodes.KindConfigDefaulter.
@@ -220,7 +220,7 @@ type sros struct {
 	renameDone bool
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
-	rootComponents []*clabtypes.Component
+	rootComponents []*Component
 	// store the longname with cpm suffix
 	cpmContainerName string
 	// for component nodes, store base nodes
@@ -720,7 +720,7 @@ func (n *sros) setupComponentNodes() error {
 }
 
 // setComponentEnvVars sets environment variables for a component.
-func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *clabtypes.Component) {
+func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *Component) {
 	if c.Type != "" {
 		componentConfig.Env[envNokiaSrosCard] = c.Type
 	}

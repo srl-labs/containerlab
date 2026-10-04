@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func isCPMSlot(slot string) bool {
@@ -16,7 +14,7 @@ func isCPMSlot(slot string) bool {
 
 func buildSrosVariant(
 	chassis string,
-	components []*clabtypes.Component,
+	components []*Component,
 	sfm string,
 ) (string, error) {
 	// vrnetlab vsim currently only supports single CPM
@@ -60,15 +58,14 @@ func buildSrosVariant(
 	return strings.Join(segments, " ___ "), nil
 }
 
-func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) string {
+func componentTimosLine(chassis string, c *Component, sfm string) string {
 	var parts []string
 
-	// fetch cpu/ram/max_nics from env: under slot:
-	if v := strings.TrimSpace(c.Env["cpu"]); v != "" {
-		parts = append(parts, "cpu="+v)
+	if c.CPU > 0 {
+		parts = append(parts, "cpu="+strconv.Itoa(c.CPU))
 	}
-	if v := strings.TrimSpace(c.Env["ram"]); v != "" {
-		parts = append(parts, "ram="+v)
+	if c.RAM > 0 {
+		parts = append(parts, "ram="+strconv.Itoa(c.RAM))
 	}
 	if n := componentMaxNics(c); n > 0 {
 		parts = append(parts, "max_nics="+strconv.Itoa(n))
@@ -105,17 +102,15 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	return strings.Join(parts, " ")
 }
 
-func componentMaxNics(c *clabtypes.Component) int {
-	if v := strings.TrimSpace(c.Env["max_nics"]); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
+func componentMaxNics(c *Component) int {
+	if c.MaxNics > 0 {
+		return c.MaxNics
 	}
 	return componentPortCount(c)
 }
 
 // figure out the max_nics per slot.
-func componentPortCount(c *clabtypes.Component) int {
+func componentPortCount(c *Component) int {
 	total := 0
 	for _, m := range c.MDA {
 		total += mdaPortCount(m.Type)

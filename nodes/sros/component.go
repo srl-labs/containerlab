@@ -1,8 +1,8 @@
-package types
+package sros
 
 import "fmt"
 
-// Component is an SR OS card (SR-SIM and vSIM): a CPM (slot A or B) or a line card.
+// Component is an SR-SIM card: a CPM (slot A or B) or a line card.
 type Component struct {
 	Slot string            `yaml:"slot,omitempty" json:"slot,omitempty"`
 	Type string            `yaml:"type,omitempty" json:"type,omitempty"`

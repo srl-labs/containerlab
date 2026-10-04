@@ -9,15 +9,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 const integratedSrosCardSlot = "1"
 
 type integratedSrosDefaultComponent struct {
 	cardType     string
-	mdas         clabtypes.MDAS
+	mdas         MDAS
 	allowedSlots []string
 }
 
@@ -25,7 +23,7 @@ var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 	"sr-1": {
 		cardType:     "iom-1",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "me6-100gb-qsfp28"},
 			{Slot: 2, Type: "me12-100gb-qsfp28"},
 		},
@@ -33,63 +31,63 @@ var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 	"sr-1s": {
 		cardType:     "xcm-1s",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "s36-100gb-qsfp28"},
 		},
 	},
 	"ixr-r6": {
 		cardType:     "iom-ixr-r6",
 		allowedSlots: []string{slotAName, slotBName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"},
 		},
 	},
 	"ixr-e2": {
 		cardType:     "imm2-qsfpdd+2-qsfp28+24-sfp28",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"},
 		},
 	},
 	"ixr-e2c": {
 		cardType:     "imm12-sfp28+2-qsfp28",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m12-sfp28+2-qsfp28"},
 		},
 	},
 	"ixr-e2n": {
 		cardType:     "imm4-sfp+4-sfp+",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m4-sfp+4-sfp+"},
 		},
 	},
 	"ixr-e2n-s": {
 		cardType:     "imm4-sfp+4-sfp+-s",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m4-sfp+4-sfp+-s"},
 		},
 	},
 	"ixr-e3c": {
 		cardType:     "imm4-qsfp28+16-sfp28+8-sfp56",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"},
 		},
 	},
 	"ixr-e3x": {
 		cardType:     "imm16-sfp112+15-sfp56+6-qsfpdd",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"},
 		},
 	},
 	"ixr-ec": {
 		cardType:     "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
 		allowedSlots: []string{slotAName},
-		mdas: clabtypes.MDAS{
+		mdas: MDAS{
 			{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"},
 		},
 	},
@@ -129,7 +127,7 @@ func (l componentCfgLine) String() string {
 // buildComponentCfgLines turns root components into a slice of config lines (card, sfm, xiom,
 // xiomMda, mda).
 // CPM slots (A, B) are skipped. Components without Type are skipped (caller may log).
-func buildComponentCfgLines(components []*clabtypes.Component, sfm string) []componentCfgLine {
+func buildComponentCfgLines(components []*Component, sfm string) []componentCfgLine {
 	var lines []componentCfgLine
 	for _, component := range components {
 		slot := strings.ToUpper(strings.TrimSpace(component.Slot))
@@ -203,7 +201,7 @@ func buildIntegratedComponentCfgLines(
 	return lines
 }
 
-func mergeIntegratedMdas(defaults clabtypes.MDAS, env map[string]string) clabtypes.MDAS {
+func mergeIntegratedMdas(defaults MDAS, env map[string]string) MDAS {
 	bySlot := map[int]string{}
 	for _, mda := range defaults {
 		if mda.Slot > 0 && mda.Type != "" {
@@ -232,9 +230,9 @@ func mergeIntegratedMdas(defaults clabtypes.MDAS, env map[string]string) clabtyp
 	}
 	slices.Sort(slots)
 
-	mdas := make(clabtypes.MDAS, 0, len(slots))
+	mdas := make(MDAS, 0, len(slots))
 	for _, slot := range slots {
-		mdas = append(mdas, clabtypes.MDA{Slot: slot, Type: bySlot[slot]})
+		mdas = append(mdas, MDA{Slot: slot, Type: bySlot[slot]})
 	}
 	return mdas
 }

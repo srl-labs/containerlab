@@ -87,7 +87,17 @@ type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
 	SFM        string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
-	Components []*clabtypes.Component   `yaml:"components,omitempty" json:"components,omitempty"`
+	Components []*Component             `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+type Component struct {
+	Slot    string              `yaml:"slot,omitempty" json:"slot,omitempty"`
+	Type    string              `yaml:"type,omitempty" json:"type,omitempty"`
+	CPU     int                 `yaml:"cpu,omitempty" json:"cpu,omitempty"`
+	RAM     int                 `yaml:"ram,omitempty" json:"ram,omitempty"`
+	MaxNics int                 `yaml:"max-nics,omitempty" json:"max-nics,omitempty"`
+	XIOM    clabnodessros.XIOMS `yaml:"xiom,omitempty" json:"xiom,omitempty"`
+	MDA     clabnodessros.MDAS  `yaml:"mda,omitempty" json:"mda,omitempty"`
 }
 
 var kindConfig clabnodes.KindConfigSpec[KindConfig]

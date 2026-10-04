@@ -3,7 +3,7 @@ package vr_sros
 import (
 	"testing"
 
-	clabtypes "github.com/srl-labs/containerlab/types"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -11,7 +11,7 @@ import (
 func TestBuildSrosVariant(t *testing.T) {
 	tests := map[string]struct {
 		chassis    string
-		components []*clabtypes.Component
+		components []*Component
 		sfm        string
 		want       string
 		wantErr    bool
@@ -19,7 +19,7 @@ func TestBuildSrosVariant(t *testing.T) {
 		"sfm-applied-to-every-segment": {
 			chassis: "sr-2s",
 			sfm:     "sfm-2s",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "A", Type: "cpm-2s"},
 				{Slot: "1", Type: "xcm-2s"},
 			},
@@ -28,7 +28,7 @@ func TestBuildSrosVariant(t *testing.T) {
 		},
 		"two-cpms-rejected": {
 			chassis: "sr-7",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "A", Type: "cpm5"},
 				{Slot: "B", Type: "cpm5"},
 			},
@@ -36,44 +36,47 @@ func TestBuildSrosVariant(t *testing.T) {
 		},
 		"integrated-single-component": {
 			chassis: "ixr-r6",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{
 					Slot: "A",
 					Type: "cpiom-ixr-r6",
-					Env:  map[string]string{"cpu": "2", "ram": "4"},
-					MDA:  clabtypes.MDAS{{Slot: 1, Type: "m6-10g-sfp++4-25g-sfp28"}},
+					CPU:  2,
+					RAM:  4,
+					MDA:  clabnodessros.MDAS{{Slot: 1, Type: "m6-10g-sfp++4-25g-sfp28"}},
 				},
 			},
 			want: "cpu=2 ram=4 max_nics=10 chassis=ixr-r6 slot=A card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
 		},
 		"env-max_nics-overrides-derived": {
 			chassis: "ixr-r6",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{
-					Slot: "A",
-					Type: "cpiom-ixr-r6",
-					Env:  map[string]string{"max_nics": "99"},
-					MDA:  clabtypes.MDAS{{Slot: 1, Type: "m6-10g-sfp++4-25g-sfp28"}},
+					Slot:    "A",
+					Type:    "cpiom-ixr-r6",
+					MaxNics: 99,
+					MDA:     clabnodessros.MDAS{{Slot: 1, Type: "m6-10g-sfp++4-25g-sfp28"}},
 				},
 			},
 			want: "max_nics=99 chassis=ixr-r6 slot=A card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
 		},
 		"integrated-empty-slot-defaults-to-A": {
 			chassis: "sr-1",
-			components: []*clabtypes.Component{
-				{Type: "iom-1", MDA: clabtypes.MDAS{{Slot: 1, Type: "me6-100gb-qsfp28"}}},
+			components: []*Component{
+				{Type: "iom-1", MDA: clabnodessros.MDAS{{Slot: 1, Type: "me6-100gb-qsfp28"}}},
 			},
 			want: "max_nics=6 chassis=sr-1 slot=A card=iom-1 mda/1=me6-100gb-qsfp28",
 		},
 		"distributed-cpm-and-lc": {
 			chassis: "ixr-e",
-			components: []*clabtypes.Component{
-				{Slot: "A", Type: "cpm-ixr-e", Env: map[string]string{"cpu": "2", "ram": "4"}},
+			components: []*Component{
+				{Slot: "A", Type: "cpm-ixr-e", CPU: 2, RAM: 4},
 				{
-					Slot: "1",
-					Type: "imm24-sfp++8-sfp28+2-qsfp28",
-					Env:  map[string]string{"cpu": "2", "ram": "4", "max_nics": "34"},
-					MDA:  clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
+					Slot:    "1",
+					Type:    "imm24-sfp++8-sfp28+2-qsfp28",
+					CPU:     2,
+					RAM:     4,
+					MaxNics: 34,
+					MDA:     clabnodessros.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
 				},
 			},
 			want: "cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ " +
@@ -82,16 +85,18 @@ func TestBuildSrosVariant(t *testing.T) {
 		"distributed-sfm-and-xiom": {
 			chassis: "sr-2s",
 			sfm:     "sfm-2s",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "A", Type: "cpm-2s"},
 				{
 					Slot: "1",
 					Type: "xcm-2s",
-					XIOM: clabtypes.XIOMS{
+					XIOM: clabnodessros.XIOMS{
 						{
 							Slot: 1,
 							Type: "iom-s-3.0t",
-							MDA:  clabtypes.MDAS{{Slot: 1, Type: "ms8-100gb-sfpdd+2-100gb-qsfp28"}},
+							MDA: clabnodessros.MDAS{
+								{Slot: 1, Type: "ms8-100gb-sfpdd+2-100gb-qsfp28"},
+							},
 						},
 					},
 				},
@@ -133,11 +138,11 @@ func TestMdaPortCount(t *testing.T) {
 }
 
 func TestComponentPortCountSumsDirectAndXiomMdas(t *testing.T) {
-	c := &clabtypes.Component{
+	c := &Component{
 		Slot: "1",
 		Type: "xcm-2s",
-		XIOM: clabtypes.XIOMS{
-			{Slot: 1, Type: "iom-s-3.0t", MDA: clabtypes.MDAS{
+		XIOM: clabnodessros.XIOMS{
+			{Slot: 1, Type: "iom-s-3.0t", MDA: clabnodessros.MDAS{
 				{Slot: 1, Type: "ms18-100gb-qsfp28"},
 				{Slot: 2, Type: "ms24-10/100gb-sfpdd"},
 			}},
