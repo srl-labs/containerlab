@@ -66,7 +66,7 @@ func SpawnCLIviaExec(platformName, contName, runtimeName string) (*scrapligocli.
 
 	c, err := scrapligocli.NewCli(contName, opts...)
 	if err != nil {
-		log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", err, contName)
+		log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", contName, err)
 		return nil, err
 	}
 

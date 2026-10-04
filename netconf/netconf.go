@@ -26,7 +26,7 @@ const (
 // of invoking a netconf rpc <copy-config> from running to startup datastore
 // this method is used on the network elements that can't perform configuration save via other
 // means.
-func SaveRunningConfig(ctx context.Context, addr, username, password, _ string) error {
+func SaveRunningConfig(ctx context.Context, addr, username, password string) error {
 	n, err := scrapligonetconf.NewNetconf(
 		addr,
 		scrapligooptions.WithPort(netconfPort),
@@ -61,6 +61,7 @@ func SaveRunningConfig(ctx context.Context, addr, username, password, _ string) 
 // the running configuration over the CLI.
 var runningConfigCmds = map[string]string{
 	"arista_eos":    "show running-config",
+	"cisco_asa":     "show running-config",
 	"cisco_iosxe":   "show running-config",
 	"cisco_iosxr":   "show running-config",
 	"cisco_nxos":    "show running-config",
