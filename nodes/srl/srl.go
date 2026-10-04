@@ -192,6 +192,16 @@ func Register(r *clabnodes.NodeRegistry) {
 type KindConfig struct {
 	// Components are the line cards of a modular chassis.
 	Components []*Component `json:"components,omitempty" yaml:"components,omitempty"`
+	// CustomPrompt sets the containerlab CLI prompt. Defaults to true.
+	CustomPrompt bool `json:"custom-prompt" yaml:"custom-prompt"`
+	// EDADefaultGRPCServer adds the EDA TLS profile to the default mgmt gRPC server instead of
+	// adding a dedicated eda-mgmt gRPC server.
+	EDADefaultGRPCServer bool `json:"eda-default-grpc-server,omitempty" yaml:"eda-default-grpc-server,omitempty"` //nolint:lll
+}
+
+// SetDefaults implements clabnodes.KindConfigDefaulter.
+func (c *KindConfig) SetDefaults() {
+	c.CustomPrompt = true
 }
 
 // Component is an SR Linux line card.

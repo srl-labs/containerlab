@@ -408,6 +408,21 @@
                     "description": "File replacing the default startup configuration, or 'none' to disable it (cisco_iol kind).",
                     "markdownDescription": "File replacing the default startup configuration, or `none` to disable it. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
                 },
+                "inject-ssh-keys": {
+                    "type": "boolean",
+                    "description": "Add the host's public SSH keys to the node config, defaults to true (nokia_sros kind).",
+                    "markdownDescription": "Add the host's public SSH keys to the node config, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_sros` kind"
+                },
+                "custom-prompt": {
+                    "type": "boolean",
+                    "description": "Set the containerlab CLI prompt, defaults to true (nokia_srlinux kind).",
+                    "markdownDescription": "Set the containerlab CLI prompt, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srlinux` kind"
+                },
+                "eda-default-grpc-server": {
+                    "type": "boolean",
+                    "description": "Use the default mgmt gRPC server for EDA instead of a dedicated eda-mgmt server (nokia_srlinux kind).",
+                    "markdownDescription": "Use the default `mgmt` gRPC server for EDA instead of a dedicated `eda-mgmt` server. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srlinux` kind"
+                },
                 "aliases": {
                     "type": "array",
                     "description": "list of additional network aliases for the node",
@@ -2178,6 +2193,21 @@
                 "anyOf": [
                     {
                         "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
                             "pid-offset"
                         ]
                     },
@@ -2237,6 +2267,16 @@
                     },
                     {
                         "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
                             "pid-offset"
                         ]
                     },
@@ -2292,6 +2332,11 @@
                     },
                     {
                         "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
                             "pid-offset"
                         ]
                     },
@@ -2336,6 +2381,21 @@
                     },
                     {
                         "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
                             "components"
                         ]
                     }
@@ -2359,6 +2419,21 @@
                     {
                         "required": [
                             "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
                         ]
                     },
                     {

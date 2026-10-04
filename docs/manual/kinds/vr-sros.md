@@ -460,10 +460,15 @@ Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS VM nodes. 
 Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^2]. This will enable key-based authentication next time you connect to the node.
 
 /// details | Skipping keys injection
-If you want to disable this feature (e.g. when using classic CLI mode), you can do so by setting the `CLAB_SKIP_SROS_SSH_KEY_CONFIG=true` env variable:
+The keys configuration uses MD-CLI syntax, so keys are not injected into nodes with `config-mode` set to `classic` or `mixed`.
 
-```bash
-sudo CLAB_SKIP_SROS_SSH_KEY_CONFIG=true -E clab deploy -t <topo-file>
+To disable this feature for other nodes, set the `inject-ssh-keys: false` [kind config key](../nodes.md#kind-config):
+
+```yaml
+topology:
+  kinds:
+    nokia_sros:
+      inject-ssh-keys: false
 ```
 
 ///

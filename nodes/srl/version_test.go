@@ -3,6 +3,7 @@ package srl
 import (
 	"bytes"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -222,4 +223,70 @@ func wantSSHPubKeys(keys []ssh.PublicKey) []ssh.PublicKey {
 	})
 
 	return sorted[:srlMaxSSHPubKeys]
+}
+
+func TestSetVersionSpecificParamsEDAServer(t *testing.T) {
+	tests := map[string]struct {
+		defaultServer bool
+		want          string
+		notWant       string
+	}{
+		"dedicated eda-mgmt server": {
+			want:    edaCustomMgmtServerConfig,
+			notWant: edaDefaultMgmtServerConfig,
+		},
+		"default mgmt server": {
+			defaultServer: true,
+			want:          edaDefaultMgmtServerConfig,
+			notWant:       edaCustomMgmtServerConfig,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := &srl{swVersion: &SrlVersion{Major: "25", Minor: "3", Patch: "1"}}
+			n.Cfg = &clabtypes.NodeConfig{
+				ShortName:  "srl1",
+				KindConfig: &KindConfig{EDADefaultGRPCServer: tt.defaultServer},
+			}
+
+			tplData := &srlTemplateData{}
+			if err := n.setVersionSpecificParams(tplData); err != nil {
+				t.Fatalf("setVersionSpecificParams() error = %v", err)
+			}
+
+			if !strings.Contains(tplData.EDAConfig, tt.want) {
+				t.Fatalf("EDAConfig is missing the expected server config")
+			}
+
+			if strings.Contains(tplData.EDAConfig, tt.notWant) {
+				t.Fatalf("EDAConfig contains the unexpected server config")
+			}
+		})
+	}
+}
+
+func TestSetCustomPromptDisabled(t *testing.T) {
+	n := &srl{}
+	n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1", KindConfig: &KindConfig{CustomPrompt: false}}
+
+	tplData := &srlTemplateData{}
+	// a disabled prompt returns before running any command in the node
+	n.setCustomPrompt(tplData)
+
+	if tplData.EnableCustomPrompt || tplData.CustomPrompt != "" {
+		t.Fatalf("custom prompt set: %+v", tplData)
+	}
+}
+
+func TestKindConfigDefaults(t *testing.T) {
+	kc := kindConfig.Of(&clabtypes.NodeConfig{})
+
+	if !kc.CustomPrompt {
+		t.Fatal("custom-prompt should default to true")
+	}
+
+	if kc.EDADefaultGRPCServer {
+		t.Fatal("eda-default-grpc-server should default to false")
+	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -214,7 +213,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
 		cfg := edaDiscoveryServerConfig
 
-		if os.Getenv("CLAB_EDA_USE_DEFAULT_GRPC_SERVER") != "" {
+		if n.kCfg().EDADefaultGRPCServer {
 			cfg = cfg + "\n" + edaDefaultMgmtServerConfig
 		} else {
 			cfg = cfg + "\n" + edaCustomMgmtServerConfig

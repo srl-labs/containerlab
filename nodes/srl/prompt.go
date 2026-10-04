@@ -3,17 +3,14 @@ package srl
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
-	// when CLAB_CUSTOM_PROMPT is set to false, we don't generate custom prompt
-	if strings.ToLower(os.Getenv("CLAB_CUSTOM_PROMPT")) == "false" {
+	if !n.kCfg().CustomPrompt {
 		return
 	}
 

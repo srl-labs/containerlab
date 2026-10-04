@@ -85,9 +85,10 @@ func Register(r *clabnodes.NodeRegistry) {
 // KindConfig is the nokia_sros kind config, set as keys on the node definition.
 type KindConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
-	ConfigMode clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
-	SFM        string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
-	Components []*Component             `yaml:"components,omitempty" json:"components,omitempty"`
+	ConfigMode    clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	InjectSSHKeys bool                     `yaml:"inject-ssh-keys" json:"inject-ssh-keys"`
+	SFM           string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components    []*Component             `yaml:"components,omitempty" json:"components,omitempty"`
 }
 
 type Component struct {
@@ -98,6 +99,11 @@ type Component struct {
 	MaxNics int                 `yaml:"max-nics,omitempty" json:"max-nics,omitempty"`
 	XIOM    clabnodessros.XIOMS `yaml:"xiom,omitempty" json:"xiom,omitempty"`
 	MDA     clabnodessros.MDAS  `yaml:"mda,omitempty" json:"mda,omitempty"`
+}
+
+// SetDefaults implements clabnodes.KindConfigDefaulter.
+func (c *KindConfig) SetDefaults() {
+	c.InjectSSHKeys = true
 }
 
 var kindConfig clabnodes.KindConfigSpec[KindConfig]
@@ -239,12 +245,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 		}
 	}
 
-	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
-	// which is needed for SR OS nodes running in classic CLI mode, because our key
-	// injection mechanism assumes MD-CLI mode.
-	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
-
-	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
+	if len(s.sshPubKeys) > 0 && s.injectSSHKeys() {
 		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
 
 		sshConf, err := s.generateSSHPublicKeysConfig()
@@ -279,11 +280,19 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 // When config-mode is "classic" or "mixed", the classic CLI platform is used.
 // The default (unset or "model-driven") uses the MD-CLI platform.
 func (s *vrSROS) scrapliPlatform() string {
-	cfgMode := s.kCfg().ConfigMode
-	if cfgMode == "classic" || cfgMode == "mixed" {
+	if s.isConfigClassic() {
 		return scrapliPlatformNameClassic
 	}
 	return scrapliPlatformName
+}
+
+func (s *vrSROS) isConfigClassic() bool {
+	m := s.kCfg().ConfigMode
+	return m == clabnodessros.ConfigModeClassic || m == clabnodessros.ConfigModeMixed
+}
+
+func (s *vrSROS) injectSSHKeys() bool {
+	return s.kCfg().InjectSSHKeys && !s.isConfigClassic()
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
