@@ -360,139 +360,18 @@
                 "components": {
                     "type": "array",
                     "items": {
-                        "type": "object",
-                        "properties": {
-                            "slot": {
-                                "description": "Set component physical position on a distributed chassis",
-                                "anyOf": [
-                                    {
-                                        "type": "string",
-                                        "pattern": "^[ABab]$"
-                                    },
-                                    {
-                                        "type": "integer",
-                                        "minimum": 1
-                                    }
-                                ]
-                            },
-                            "type": {
-                                "description": "Set component type"
-                            },
-                            "xiom": {
-                                "type": "array",
-                                "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "slot": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "type": {
-                                            "$ref": "#/definitions/sros-xiom-types"
-                                        },
-                                        "mda": {
-                                            "type": "array",
-                                            "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slot": {
-                                                        "type": "integer",
-                                                        "minimum": 1
-                                                    },
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-xiom-mda-types"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "slot",
-                                                    "type"
-                                                ],
-                                                "additionalProperties": false
-                                            }
-                                        }
-                                    },
-                                    "required": [
-                                        "slot",
-                                        "type"
-                                    ],
-                                    "additionalProperties": false
-                                },
-                                "uniqueItems": true
-                            },
-                            "mda": {
-                                "type": "array",
-                                "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "slot": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "type": {
-                                            "description": "Set MDA type (SR OS specific)",
-                                            "$ref": "#/definitions/sros-mda-types"
-                                        }
-                                    },
-                                    "required": [
-                                        "slot",
-                                        "type"
-                                    ],
-                                    "additionalProperties": false
-                                }
-                            },
-                            "env": {
-                                "type": "object",
-                                "$ref": "#/definitions/env"
-                            },
-                            "cpu": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "description": "vCPUs allocated to the card VM (nokia_sros kind)."
-                            },
-                            "ram": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "description": "RAM in GB allocated to the card VM (nokia_sros kind)."
-                            },
-                            "max-nics": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "description": "Number of NICs given to the card VM, derived from the MDAs when unset (nokia_sros kind)."
-                            }
-                        },
-                        "additionalProperties": false,
-                        "allOf": [
+                        "anyOf": [
                             {
-                                "if": {
-                                    "properties": {
-                                        "slot": {
-                                            "type": "string"
-                                        }
-                                    }
-                                },
-                                "then": {
-                                    "properties": {
-                                        "type": {
-                                            "$ref": "#/definitions/sros-cpm-types"
-                                        }
-                                    }
-                                },
-                                "else": {
-                                    "properties": {
-                                        "type": {
-                                            "$ref": "#/definitions/sros-card-types"
-                                        }
-                                    }
-                                }
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "$ref": "#/definitions/srl-component"
                             }
                         ]
                     },
                     "uniqueItems": true,
-                    "description": "List of node components, used for multicontainer systems",
-                    "markdownDescription": "Dependency list for Components"
+                    "description": "List of node components (nokia_srsim, nokia_sros and nokia_srlinux kinds)",
+                    "markdownDescription": "List of node components, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim`, `nokia_sros` and `nokia_srlinux` kinds"
                 },
                 "config-mode": {
                     "type": "string",
@@ -866,9 +745,7 @@
                     "if": {
                         "properties": {
                             "kind": {
-                                "not": {
-                                    "pattern": "^(nokia_srsim|nokia_sros)$"
-                                }
+                                "pattern": "^nokia_srsim$"
                             }
                         },
                         "required": [
@@ -876,20 +753,52 @@
                         ]
                     },
                     "then": {
-                        "not": {
-                            "anyOf": [
-                                {
-                                    "required": [
-                                        "config-mode"
-                                    ]
-                                },
-                                {
-                                    "required": [
-                                        "sfm"
-                                    ]
-                                }
-                            ]
-                        }
+                        "$ref": "#/definitions/kind-config-nokia_srsim"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^nokia_sros$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-config-nokia_sros"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^nokia_srlinux$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-config-nokia_srlinux"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^cisco_iol$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-config-cisco_iol"
                     }
                 },
                 {
@@ -897,7 +806,7 @@
                         "properties": {
                             "kind": {
                                 "not": {
-                                    "pattern": "^(nokia_srsim)$"
+                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol)$"
                                 }
                             }
                         },
@@ -906,143 +815,7 @@
                         ]
                     },
                     "then": {
-                        "not": {
-                            "anyOf": [
-                                {
-                                    "required": [
-                                        "gen-component-config"
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "kind": {
-                                "not": {
-                                    "pattern": "^(cisco_iol)$"
-                                }
-                            }
-                        },
-                        "required": [
-                            "kind"
-                        ]
-                    },
-                    "then": {
-                        "not": {
-                            "anyOf": [
-                                {
-                                    "required": [
-                                        "pid-offset"
-                                    ]
-                                },
-                                {
-                                    "required": [
-                                        "mgmt-intf"
-                                    ]
-                                },
-                                {
-                                    "required": [
-                                        "bootstrap-config"
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "kind": {
-                                "not": {
-                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux)$"
-                                }
-                            }
-                        },
-                        "required": [
-                            "kind"
-                        ]
-                    },
-                    "then": {
-                        "not": {
-                            "anyOf": [
-                                {
-                                    "required": [
-                                        "components"
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "kind": {
-                                "pattern": "^(nokia_srsim|nokia_srlinux)$"
-                            }
-                        },
-                        "required": [
-                            "kind"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "components": {
-                                "items": {
-                                    "not": {
-                                        "anyOf": [
-                                            {
-                                                "required": [
-                                                    "cpu"
-                                                ]
-                                            },
-                                            {
-                                                "required": [
-                                                    "ram"
-                                                ]
-                                            },
-                                            {
-                                                "required": [
-                                                    "max-nics"
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "kind": {
-                                "pattern": "^(nokia_sros|nokia_srlinux)$"
-                            }
-                        },
-                        "required": [
-                            "kind"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "components": {
-                                "items": {
-                                    "not": {
-                                        "anyOf": [
-                                            {
-                                                "required": [
-                                                    "env"
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                }
-                            }
-                        }
+                        "$ref": "#/definitions/kind-config-other"
                     }
                 }
             ],
@@ -2246,6 +2019,371 @@
                 "sfm2-s",
                 "sfm2-x20s"
             ]
+        },
+        "sros-component": {
+            "type": "object",
+            "properties": {
+                "slot": {
+                    "description": "Set component physical position on a distributed chassis",
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "pattern": "^[ABab]$"
+                        },
+                        {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    ]
+                },
+                "type": {
+                    "description": "Set component type"
+                },
+                "xiom": {
+                    "type": "array",
+                    "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "slot": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "type": {
+                                "$ref": "#/definitions/sros-xiom-types"
+                            },
+                            "mda": {
+                                "type": "array",
+                                "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "$ref": "#/definitions/sros-xiom-mda-types"
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        },
+                        "required": [
+                            "slot",
+                            "type"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "uniqueItems": true
+                },
+                "mda": {
+                    "type": "array",
+                    "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "slot": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "type": {
+                                "description": "Set MDA type (SR OS specific)",
+                                "$ref": "#/definitions/sros-mda-types"
+                            }
+                        },
+                        "required": [
+                            "slot",
+                            "type"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "$ref": "#/definitions/env"
+                },
+                "cpu": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "vCPUs allocated to the card VM (nokia_sros kind)."
+                },
+                "ram": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "RAM in GB allocated to the card VM (nokia_sros kind)."
+                },
+                "max-nics": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of NICs given to the card VM, derived from the MDAs when unset (nokia_sros kind)."
+                }
+            },
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "slot": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "$ref": "#/definitions/sros-cpm-types"
+                            }
+                        }
+                    },
+                    "else": {
+                        "properties": {
+                            "type": {
+                                "$ref": "#/definitions/sros-card-types"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "srl-component": {
+            "type": "object",
+            "properties": {
+                "slot": {
+                    "description": "Line card slot",
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    ]
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Line card type"
+                }
+            },
+            "additionalProperties": false
+        },
+        "kind-config-nokia_srsim": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    }
+                ]
+            },
+            "properties": {
+                "components": {
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "not": {
+                                    "anyOf": [
+                                        {
+                                            "required": [
+                                                "cpu"
+                                            ]
+                                        },
+                                        {
+                                            "required": [
+                                                "ram"
+                                            ]
+                                        },
+                                        {
+                                            "required": [
+                                                "max-nics"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "description": "kind config keys of the nokia_srsim kind"
+        },
+        "kind-config-nokia_sros": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    }
+                ]
+            },
+            "properties": {
+                "components": {
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "not": {
+                                    "required": [
+                                        "env"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "description": "kind config keys of the nokia_sros kind"
+        },
+        "kind-config-nokia_srlinux": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    }
+                ]
+            },
+            "properties": {
+                "components": {
+                    "items": {
+                        "$ref": "#/definitions/srl-component"
+                    }
+                }
+            },
+            "description": "kind config keys of the nokia_srlinux kind"
+        },
+        "kind-config-cisco_iol": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind config keys of the cisco_iol kind"
+        },
+        "kind-config-other": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    }
+                ]
+            },
+            "description": "kinds without kind config keys"
         }
     },
     "type": "object",
@@ -2457,184 +2595,604 @@
                     "type": "object",
                     "properties": {
                         "nokia_srlinux": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-nokia_srlinux"
+                                }
+                            ]
                         },
                         "nokia_srsim": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-nokia_srsim"
+                                }
+                            ]
                         },
                         "nokia_sros": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-nokia_sros"
+                                }
+                            ]
                         },
                         "arista_ceos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "vyosnetworks_vyos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_crpd": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_csrx": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "sonic-vs": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "sonic-vm": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "dell_ftosv": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "dell_sonic": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "plvision_sonic": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_vmx": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_vsrx": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_vjunosrouter": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_vjunosswitch": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_vjunosevolved": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cjunosevolved": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "juniper_cjunosevolved": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "aruba_aoscx": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_xrd": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_xrd_vrouter": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_xrv": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_xrv9k": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_nxos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_n9kv": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_csr": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_cat9kv": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_ftdv": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_iol": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-cisco_iol"
+                                }
+                            ]
                         },
                         "cisco_c8000": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_c8000v": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_sdwan": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_asav": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "cisco_vios": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "linux": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "bridge": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "ovs-bridge": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "host": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "ipinfusion_ocnos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "keysight_ixia-c-one": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "checkpoint_cloudguard": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "ciena_saos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "ext-container": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "rare": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "frr": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "frrouting": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "nvidia_cumulusvx": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "openbsd": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "freebsd": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "openwrt": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "huawei_vrp": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "generic_vm": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "fdio_vpp": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "arrcus_arcos": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "mikrotik_ros": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "6wind_vsr": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "spirent_stc": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "veesix_osvbng": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         },
                         "ostinato": {
-                            "$ref": "#/definitions/node-config"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-config-other"
+                                }
+                            ]
                         }
                     },
                     "additionalProperties": false
