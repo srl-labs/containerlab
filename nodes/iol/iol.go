@@ -87,6 +87,9 @@ type KindConfig struct {
 	PidOffset *int `yaml:"pid-offset,omitempty" json:"pid-offset,omitempty"`
 	// MgmtIntf is the management interface, e.g. Ethernet0/1. Defaults to Ethernet0/0.
 	MgmtIntf string `yaml:"mgmt-intf,omitempty" json:"mgmt-intf,omitempty"`
+	// BootstrapConfig replaces the default startup configuration with a file, or disables it
+	// when set to "none".
+	BootstrapConfig string `yaml:"bootstrap-config,omitempty" json:"bootstrap-config,omitempty"`
 }
 
 var kindConfig clabnodes.KindConfigSpec[KindConfig]
@@ -236,14 +239,14 @@ func (n *iol) ensureNumSlotsEnv() {
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	if v := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; v != "" {
+	if v := n.kCfg().BootstrapConfig; v != "" {
 		switch p := clabutils.ResolvePath(v, params.TopoPaths.TopologyFileDir()); {
 		case strings.EqualFold(v, "none"):
 			n.bootstrapNone = true
 		case clabutils.FileExists(p):
 			n.bootstrapCfgFile = p
 		default:
-			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", p)
+			return fmt.Errorf("bootstrap-config file %q does not exist", p)
 		}
 	}
 

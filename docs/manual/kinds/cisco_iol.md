@@ -200,14 +200,13 @@ topology:
 
 #### Custom baseline configuration
 
-The default startup configuration that containerlab applies (management addressing, management VRF, SSH) can be replaced or disabled with the `CLAB_IOL_BOOTSTRAP_CONFIG` environment variable, without giving up partial startup configurations. This is useful you need to manage advanced configuration sets for labs or set up custom management:
+The default startup configuration that containerlab applies (management addressing, management VRF, SSH) can be replaced or disabled with the `bootstrap-config` [kind config key](../nodes.md#kind-config), without giving up partial startup configurations. This is useful you need to manage advanced configuration sets for labs or set up custom management:
 
 ```yaml
 topology:
   kinds:
     cisco_iol:
-      env:
-        CLAB_IOL_BOOTSTRAP_CONFIG: my-baseline.cfg # replaces the default startup configuration
+      bootstrap-config: my-baseline.cfg # replaces the default startup configuration
   nodes:
     r1:
       startup-config: r1.partial.cfg # layered on top of my-baseline.cfg
@@ -215,7 +214,7 @@ topology:
 
 The file replaces the [default startup configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl) and is rendered with the same template variables; include `{{ .PartialCfg }}` where partial startup configurations should be inserted. Relative paths are resolved against the topology file directory, the same as `startup-config`.
 
-Setting `CLAB_IOL_BOOTSTRAP_CONFIG: none` disables the baseline entirely: the node boots with only its partial startup configuration, or with no configuration at all. In that case containerlab also skips the management interface address update on subsequent boots.
+Setting `bootstrap-config: none` disables the baseline entirely: the node boots with only its partial startup configuration, or with no configuration at all. In that case containerlab also skips the management interface address update on subsequent boots.
 
 #### Link addressing
 
