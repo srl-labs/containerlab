@@ -268,5 +268,3 @@ topology:
     cisco_iol:
       pid-offset: 64
 ```
-
-The `CLAB_IOL_MGMT_INTF` and `CLAB_IOL_PID_OFFSET` environment variables are deprecated, the kind config keys take precedence when both are set.
