@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/options"
-	"github.com/scrapli/scrapligo/platform"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
+	scrapligooptions "github.com/scrapli/scrapligo/v2/options"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -700,32 +700,26 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
 // configuration.
-func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
-	p, err := platform.NewPlatform(
-		"cisco_iosxe",
+func (n *iol) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	c, err := scrapligocli.NewCli(
 		n.Cfg.LongName,
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(n.Cfg.Credentials.Username),
-		options.WithAuthPassword(n.Cfg.Credentials.Password),
+		scrapligooptions.WithDefinitionFileOrName(scrapligocli.CiscoIosxe),
+		scrapligooptions.WithPort(22),
+		scrapligooptions.WithUsername(n.Cfg.Credentials.Username),
+		scrapligooptions.WithPassword(n.Cfg.Credentials.Password),
+		scrapligooptions.WithTransportSSH2(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create platform; error: %+v", err)
 	}
 
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch network driver from the platform; error: %+v", err)
-	}
-
-	err = d.Open()
-	if err != nil {
+	if _, err := c.Open(ctx); err != nil {
 		return nil, fmt.Errorf("failed to open driver; error: %+v", err)
 	}
 
-	defer d.Close()
+	defer c.Close(ctx)
 
-	_, err = d.SendCommand("write memory")
-	if err != nil {
+	if _, err := c.SendInput(ctx, "write memory"); err != nil {
 		return nil, fmt.Errorf("failed to send command; error: %+v", err)
 	}
 

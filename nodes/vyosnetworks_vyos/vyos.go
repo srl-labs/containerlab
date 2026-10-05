@@ -14,6 +14,7 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -25,7 +26,7 @@ const (
 	generateable     = true
 	generateIfFormat = "eth%d"
 
-	scrapliPlatformName = "vyatta_vyos"
+	scrapliPlatformName = "vyos_vyos"
 	NapalmPlatformName  = "vyos"
 
 	vyattacfg_gid = 102
@@ -131,7 +132,7 @@ func (n *vyos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 	if err != nil {
 		return nil, err
 	}
-	defer cli.Close()
+	defer cli.Close(ctx)
 
 	if err := n.save(ctx, cli); err != nil {
 		return nil, err
@@ -147,7 +148,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
-	defer cli.Close()
+	defer cli.Close(ctx)
 
 	log.Debug("Configuring management interface", "int", nodeCfg.MgmtIntf)
 
@@ -210,11 +211,12 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	log.Debugf("VyOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
 
-	resp, err := cli.SendConfigs(cfgs)
-	log.Debug("CLI", "response", resp.JoinedResult())
+	resp, err := cli.SendInputs(ctx, cfgs, scrapligocli.WithRequestedMode("configuration"))
 	if err != nil {
 		return err
-	} else if resp.Failed != nil {
+	}
+	log.Debug("CLI", "response", resp.Result())
+	if resp.Failed() {
 		return errors.New("failed to apply configuration")
 	}
 	if err := n.save(ctx, cli); err != nil {

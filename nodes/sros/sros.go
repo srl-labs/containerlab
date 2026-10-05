@@ -27,11 +27,9 @@ import (
 	"github.com/beevik/etree"
 	"github.com/brunoga/deep"
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/netconf"
-	"github.com/scrapli/scrapligo/driver/opoptions"
 	"github.com/vishvananda/netns"
 
-	"github.com/scrapli/scrapligo/response"
+	scrapligonetconf "github.com/scrapli/scrapligo/v2/netconf"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -1704,7 +1702,7 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		cmd := []string{"/admin save", "/bof persist on", "/bof save"}
 		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
 	}
-	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
+	err := clabnetconf.SaveRunningConfig(ctx, addr,
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
 		scrapliPlatformName,
@@ -1785,13 +1783,13 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
 	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
 	operations := []clabnetconf.Operation{
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
-				fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key")))
+		func(d *scrapligonetconf.Netconf) (*scrapligonetconf.Result, error) {
+			return d.RawRPC(ctx, buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key"))
 		},
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
-				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
+		func(d *scrapligonetconf.Netconf) (*scrapligonetconf.Result, error) {
+			return d.RawRPC(ctx, buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate"))
 		},
 	}
 
@@ -1808,17 +1806,17 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 		)
 	} else {
 		operations = append(operations,
-			func(d *netconf.Driver) (*response.NetconfResponse, error) {
-				return d.EditConfig("candidate", buildTLSProfileXML())
+			func(d *scrapligonetconf.Netconf) (*scrapligonetconf.Result, error) {
+				return d.EditConfig(ctx, buildTLSProfileXML(),
+					scrapligonetconf.WithDatastore(scrapligonetconf.DatastoreTypeCandidate))
 			},
-			func(d *netconf.Driver) (*response.NetconfResponse, error) {
-				return d.Commit()
+			func(d *scrapligonetconf.Netconf) (*scrapligonetconf.Result, error) {
+				return d.Commit(ctx)
 			},
 		)
 	}
 
-	err := clabnetconf.MultiExec(
-		fmt.Sprintf("[%s]", addr),
+	err := clabnetconf.MultiExec(ctx, addr,
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
 		operations,

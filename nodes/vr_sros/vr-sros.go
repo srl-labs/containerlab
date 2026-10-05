@@ -17,12 +17,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/network"
-	"github.com/scrapli/scrapligo/driver/options"
-	scraplilogging "github.com/scrapli/scrapligo/logging"
-	"github.com/scrapli/scrapligo/platform"
-	"github.com/scrapli/scrapligo/transport"
-	"github.com/scrapli/scrapligo/util"
+	scrapligocli "github.com/scrapli/scrapligo/v2/cli"
+	scrapligooptions "github.com/scrapli/scrapligo/v2/options"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -47,6 +43,7 @@ const (
 	vrsrosDefaultType          = "sr-1"
 	scrapliPlatformName        = "nokia_sros"
 	scrapliPlatformNameClassic = "nokia_sros_classic"
+	sshPort                    = 22
 	readyTimeout               = 15 * time.Minute // max wait for node health and SSH readiness
 	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
 	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
@@ -266,8 +263,8 @@ func (s *vrSROS) scrapliPlatform() string {
 	return scrapliPlatformName
 }
 
-func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
-	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
+func (s *vrSROS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	err := clabnetconf.SaveRunningConfig(ctx, s.Cfg.LongName,
 		s.Cfg.Credentials.Username,
 		s.Cfg.Credentials.Password,
 		s.scrapliPlatform(),
@@ -319,7 +316,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	username, password string, config io.Reader,
 ) error { // skipcq: GO-R1005
 	var err error
-	var d *network.Driver
+	var c *scrapligocli.Cli
 
 	configContent, err := clabutils.SubstituteEnvsAndTemplate(config, s.Cfg)
 	if err != nil {
@@ -361,52 +358,38 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 			continue
 		}
 
-		sl := log.StandardLog(log.StandardLogOptions{
-			ForceLevel: log.DebugLevel,
-		})
-		li, err := scraplilogging.NewInstance(
-			scraplilogging.WithLevel("debug"),
-			scraplilogging.WithLogger(sl.Print))
-		if err != nil {
-			return err
+		opts := []scrapligooptions.Option{
+			scrapligooptions.WithDefinitionFileOrName(platformName),
+			scrapligooptions.WithPort(sshPort),
+			scrapligooptions.WithUsername(username),
+			scrapligooptions.WithPassword(password),
+			scrapligooptions.WithTransportSSH2(),
+			scrapligooptions.WithOperationTimeout(5 * time.Second),
 		}
 
-		opts := []util.Option{
-			options.WithAuthNoStrictKey(),
-			options.WithAuthUsername(username),
-			options.WithAuthPassword(password),
-			options.WithTransportType(transport.StandardTransport),
-			options.WithTimeoutOps(5 * time.Second),
-			options.WithLogger(li),
-		}
-
-		p, err := platform.NewPlatform(platformName, addr, opts...)
+		c, err = scrapligocli.NewCli(addr, opts...)
 		if err != nil {
-			return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
-		}
-
-		d, err = p.GetNetworkDriver()
-		if err != nil {
-			return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+			return fmt.Errorf("%s: failed to create cli session: %+v", addr, err)
 		}
 
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: waiting to accept configs: %w", addr, err)
 		}
 
-		err = d.Open()
-		if err == nil {
-			// driver successfully opened, exit the loop
+		_, oerr := c.Open(ctx)
+		if oerr == nil {
+			// cli session successfully opened, exit the loop
 			break
 		}
 
-		log.Debugf("%s: not yet ready - %v", addr, err)
+		log.Debugf("%s: not yet ready - %v", addr, oerr)
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
 		case <-time.After(5 * time.Second): // cool-off period
 		}
 	}
+	defer c.Close(ctx)
 
 	// Normalize character sequences to avoid interaction issues with CLI
 	replacer := strings.NewReplacer(
@@ -422,13 +405,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	// and quit from the config mode
 	cfgs = append(cfgs, "commit", "/admin save", "/exit all", "quit-config")
 
-	mr, err := d.SendConfigs(cfgs)
-	if err != nil || (mr != nil && mr.Failed != nil) {
-		if mr != nil {
-			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
-		} else {
-			return fmt.Errorf("failed to apply config; error: %+v", err)
-		}
+	res, err := c.SendInputs(ctx, cfgs, scrapligocli.WithRequestedMode("configuration"))
+	if err != nil {
+		return fmt.Errorf("failed to apply config; error: %+v", err)
+	}
+	if res.Failed() {
+		return fmt.Errorf("failed to apply config; failed result: %s", res.Result())
 	}
 
 	return nil
