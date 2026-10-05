@@ -60,11 +60,36 @@ Check veth interface parameters on the host for very long name node
 
     Should Contain    ${output}    altname ve-some_very_long_node_name_l1_e1-1
 
+Check tc stitching for interface name with slashes
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo tc filter show dev vx-l3_1-1-c3-1 ingress
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Egress Redirect to device ve-l3_1-1-c3-1
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo tc filter show dev ve-l3_1-1-c3-1 ingress
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Egress Redirect to device vx-l3_1-1-c3-1
+
 Check VxLAN connectivity srl-linux
     Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity srl->linux
 
 Check VxLAN connectivity linux-srl
     Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity linux->srl
+
+Destroy ${lab-name} lab and check VxLAN interfaces are removed
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip -d link show type vxlan
+    Log    ${output}
+    Should Not Contain    ${output}    vx-srl1_e1-1
+    Should Not Contain    ${output}    vx-l3_1-1-c3-1
 
 
 *** Keywords ***
