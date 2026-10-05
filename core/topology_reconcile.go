@@ -107,6 +107,18 @@ func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
 }
 
+// isNewNonContainerNode reports whether a non-container node (bridge, host,
+// ext-container) is absent from the previously deployed topology. Such nodes
+// exist outside the lab, so they are always listed as current nodes, even
+// when the topology has just added them.
+func (p *applyPlan) isNewNonContainerNode(nodeName string) bool {
+	if !p.isNonContainerNode(nodeName) || p.state == nil || p.state.Topology == nil {
+		return false
+	}
+	_, exists := p.state.Topology.Nodes[nodeName]
+	return !exists
+}
+
 // networkModeContainerTarget returns the referenced node name for a
 // "network-mode: container:<name>" config, or "" if networkMode does not
 // share another container's network namespace.
@@ -211,6 +223,11 @@ func (c *CLab) planApply(
 				)
 			}
 
+			plan.addedNodeSet[nodeName] = struct{}{}
+			continue
+		}
+
+		if plan.isNewNonContainerNode(nodeName) {
 			plan.addedNodeSet[nodeName] = struct{}{}
 		}
 	}

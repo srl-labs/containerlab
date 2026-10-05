@@ -12,6 +12,7 @@ ${lab-name}         bridge-reconcile
 ${topo}              30-bridge-reconcile.clab.yml
 ${initial-vars}      30-bridge-reconcile.vars.initial.yml
 ${remap-vars}        30-bridge-reconcile.vars.remap.yml
+${no-bridge-vars}    30-bridge-reconcile.vars.no-bridge.yml
 ${runtime}           docker
 ${bridge-name}       br-30-reconcile
 ${runtime-cli-exec}  docker exec
@@ -46,6 +47,37 @@ Remapped bridge is idempotent
     Should Not Contain    ${output}    deleted endpoints
     Host Interface Should Be Attached To Bridge    e1
     Host Interface Should Be Attached To Bridge    e2
+
+Apply removes bridge from running lab
+    ${rc}    ${output} =    Run Clab Command
+    ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${no-bridge-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    deleted endpoints
+    Host Interface Should Not Exist    e1
+    Host Interface Should Not Exist    e2
+
+Apply adds bridge to running lab
+    ${n1_before} =    Node Runtime Identity    n1
+    ${rc}    ${output} =    Run Clab Command
+    ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${remap-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    externally managed
+    Should Contain    ${output}    added nodes
+    Should Contain    ${output}    added links
+    Interface Should Exist    eth1
+    Interface Should Exist    eth2
+    Host Interface Should Be Attached To Bridge    e1
+    Host Interface Should Be Attached To Bridge    e2
+    ${n1_after} =    Node Runtime Identity    n1
+    Should Be Equal As Strings    ${n1_after}    ${n1_before}
+
+Added bridge is idempotent
+    ${rc}    ${output} =    Run Clab Command
+    ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${remap-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    added nodes
+    Should Not Contain    ${output}    added links
+    Should Not Contain    ${output}    deleted endpoints
 
 
 *** Keywords ***
@@ -97,3 +129,11 @@ Host Interface Should Not Exist
     ...    ip link show ${interface}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
+
+Node Runtime Identity
+    [Arguments]    ${node}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    RETURN    ${output}
