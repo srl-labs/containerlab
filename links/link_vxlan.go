@@ -59,12 +59,14 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
 	var err error
 
 	// hostIface is the name of the host interface that will be created
-	hostIface := fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+	hostIface := clabutils.SanitizeInterfaceName(
+		fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+	)
 
 	// when tools vxlan create command is used, the hostIface is provided
 	// by the user, otherwise it is generated
 	if params.VxlanIfaceNameOverwrite != "" {
-		hostIface = params.VxlanIfaceNameOverwrite
+		hostIface = clabutils.SanitizeInterfaceName(params.VxlanIfaceNameOverwrite)
 	}
 
 	lhr := &LinkHostRaw{
@@ -224,10 +226,14 @@ func (lr *LinkVxlanRaw) resolveLocalEndpoint(
 	if stitched {
 		// point the vxlan endpoint to the host system
 		vxlanRawEp := lr.Endpoint
-		vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+		vxlanRawEp.Iface = clabutils.SanitizeInterfaceName(
+			fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		)
 
 		if params.VxlanIfaceNameOverwrite != "" {
-			vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
+			vxlanRawEp.Iface = clabutils.SanitizeInterfaceName(
+				fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite),
+			)
 		}
 
 		// in the stitched vxlan mode we create vxlan interface in the host node namespace

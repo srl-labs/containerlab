@@ -24,6 +24,10 @@ topology:
       exec:
         - apk add iproute2
 
+    l3:
+      kind: linux
+      image: alpine:3
+
     l2:
       kind: linux
       image: alpine:3
@@ -53,3 +57,11 @@ topology:
       remote: 172.20.25.23
       vni: 101
       dst-port: 14789
+
+    - type: vxlan-stitch
+      endpoint:
+        node: l3
+        interface: 1/1/c3/1
+      remote: 172.20.25.24
+      vni: 102
+      dst-port: 14790
