@@ -1024,6 +1024,82 @@ func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
 	}
 }
 
+func TestPlanApplyAddsNewRootNamespaceNode(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		inState   bool
+		wantAdded bool
+	}{
+		"bridge added to running lab":   {inState: false, wantAdded: true},
+		"bridge already in running lab": {inState: true, wantAdded: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			paths := &clabtypes.TopoPaths{}
+			if err := paths.SetLabDir(t.TempDir()); err != nil {
+				t.Fatal(err)
+			}
+
+			oldTopo := clabtypes.NewTopology()
+			oldTopo.Nodes["l1"] = &clabtypes.NodeDefinition{Kind: "linux"}
+			if tt.inState {
+				oldTopo.Nodes["br1"] = &clabtypes.NodeDefinition{Kind: "bridge"}
+			}
+			stateLab := &CLab{
+				Config:    &Config{Topology: oldTopo},
+				TopoPaths: paths,
+			}
+			if err := stateLab.WriteState(); err != nil {
+				t.Fatal(err)
+			}
+
+			ctrl := gomock.NewController(t)
+			br := clabmocksmocknodes.NewMockNode(ctrl)
+			br.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				ShortName:            "br1",
+				Kind:                 "bridge",
+				IsRootNamespaceBased: true,
+			}).AnyTimes()
+			br.EXPECT().GetShortName().Return("br1").AnyTimes()
+			br.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			if !tt.wantAdded {
+				// Only nodes known to the previous topology are checked for drift.
+				br.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).
+					Return(&clabtypes.TopologyDiff{})
+				br.EXPECT().GetReconcilePlan(gomock.Any(), gomock.Any()).
+					Return(&clabnodes.ReconcileResult{}, nil)
+			}
+
+			newTopo := clabtypes.NewTopology()
+			newTopo.Nodes["br1"] = &clabtypes.NodeDefinition{Kind: "bridge"}
+			c := &CLab{
+				Config:    &Config{Topology: newTopo},
+				TopoPaths: paths,
+				Nodes:     map[string]clabnodes.Node{"br1": br},
+				Links:     map[int]clablinks.Link{},
+			}
+
+			plan, err := c.planApply(
+				context.Background(),
+				map[string]*runtimeNodeGroup{"br1": {name: "br1", rootNamespaceBased: true}},
+			)
+			if err != nil {
+				t.Fatalf("planApply() error = %v", err)
+			}
+			if _, added := plan.addedNodeSet["br1"]; added != tt.wantAdded {
+				t.Fatalf("br1 added = %v, want %v", added, tt.wantAdded)
+			}
+			if len(plan.recreatedNodeSet) != 0 {
+				t.Fatalf("recreated nodes = %v, want none", plan.recreatedNodeSet)
+			}
+		})
+	}
+}
+
 func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	t.Parallel()
 
