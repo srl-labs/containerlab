@@ -97,9 +97,10 @@ func wireInterfaceCmds(ifNames []string) []string {
 // IPv6-off.
 //
 // A sonic-vs node has two kernel interfaces per link: the veth containerlab
-// creates (ethN, the wire) and the tap syncd creates for the port that veth is
-// mapped to (eth1 is mapped to Ethernet0, eth2 to Ethernet4, and so on - the
-// port SONiC configures). The veth is not renamed; both netdevs exist.
+// creates, which keeps its ethN name and is the wire, and the tap syncd creates
+// for the port that veth is mapped to, which takes the port's name - eth1 is the
+// wire behind Ethernet0, eth2 behind Ethernet4, and so on. The veth is not
+// renamed; both netdevs exist.
 // Left alone, the kernel answers ARP for the port's address on the wire with
 // the wire's MAC and brings up an IPv6 link-local there, so a neighbour can
 // cache the wrong MAC and learn a device that isn't the port. Quieting the wire
@@ -107,9 +108,10 @@ func wireInterfaceCmds(ifNames []string) []string {
 // (sonic-swss, tests/conftest.py, VirtualServer).
 //
 // The commands are idempotent, so this may run more than once for a node - it
-// runs at post-deploy time and again for links added to a running node. A
-// failure is logged and does not fail the deploy.
-func (s *sonic) quietWireInterfaces(ctx context.Context) error {
+// runs at post-deploy time and again for links added to a running node. Quieting
+// a wire is best effort: a failure is logged and does not fail the deploy, which
+// is why nothing is returned here.
+func (s *sonic) quietWireInterfaces(ctx context.Context) {
 	ifNames := make([]string, 0, len(s.Endpoints))
 
 	for _, e := range s.Endpoints {
@@ -136,14 +138,14 @@ func (s *sonic) quietWireInterfaces(ctx context.Context) error {
 				"node", s.Cfg.ShortName, "cmd", cmdStr, "error", err)
 		}
 	}
-
-	return nil
 }
 
 // PostDeployEndpoints runs sonic-vs endpoint fixups after dataplane links
 // exist. It also covers links added to an already running node.
 func (s *sonic) PostDeployEndpoints(ctx context.Context) error {
-	return s.quietWireInterfaces(ctx)
+	s.quietWireInterfaces(ctx)
+
+	return nil
 }
 
 // Start starts a stopped sonic-vs node and re-applies the wire fixups. Stopping
@@ -163,9 +165,7 @@ func (s *sonic) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) e
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
 	// quiet the wires before the SONiC agents start.
-	if err := s.quietWireInterfaces(ctx); err != nil {
-		return err
-	}
+	s.quietWireInterfaces(ctx)
 
 	cmd, _ := clabexec.NewExecCmdFromString("supervisord")
 	err := s.RunExecNotWait(ctx, cmd)
