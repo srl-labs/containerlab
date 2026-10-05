@@ -95,6 +95,51 @@ At this moment, the connectivity diagrams becomes complete and can be depicted a
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 
+### native vxlan stitching
+
+The same datapath can also be declared right in the topology files by using the [`vxlan-stitch`](../manual/topo-def-file.md#vxlan-stitched) link type instead of the host links and the `tools vxlan create` commands shown above. Containerlab then creates the VxLAN tunnel and the stitched veth pair as part of the deployment, and removes them again on `destroy` — nothing is left behind on the hosts.
+
+With this approach the `links` sections of the two topology files would look like this:
+
+=== "VM1 (SROS)"
+    ```yaml
+      links:
+        - type: vxlan-stitch
+          endpoint:
+            node: sros
+            interface: eth1
+          remote: 10.0.0.20 # VM2's address
+          vni: 10
+          dst-port: 4789
+        - type: vxlan-stitch
+          endpoint:
+            node: sros
+            interface: eth2
+          remote: 10.0.0.20
+          vni: 20
+          dst-port: 4789
+    ```
+=== "VM2 (VMX)"
+    ```yaml
+      links:
+        - type: vxlan-stitch
+          endpoint:
+            node: vmx
+            interface: eth1
+          remote: 10.0.0.18 # VM1's address
+          vni: 10
+          dst-port: 4789
+        - type: vxlan-stitch
+          endpoint:
+            node: vmx
+            interface: eth2
+          remote: 10.0.0.18
+          vni: 20
+          dst-port: 4789
+    ```
+
+As with the manual approach, each stitched link needs its own `vni`, while the UDP port can be shared. The optional `mtu` field lets you size the link for the underlay path — for example 50 bytes below the underlay MTU to account for the VxLAN overhead.
+
 ## Configuration
 Once the datapath is in place, we proceed with the configuration of a simple LACP use case, where both SR OS and vMX routers have their pair of interfaces aggregated into a LAG and form an LACP neighborship.
 

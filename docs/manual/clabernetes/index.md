@@ -8,7 +8,7 @@ tags:
 
 <small>pronounciation: *Kla-ber-net-ees*</small>
 
-Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/) or simply **c9s**.
+Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/clabernetes/clabernetes/) or simply **c9s**.
 
 ![Clabernetes](https://gitlab.com/rdodin/pics/-/wikis/uploads/9d8c5abcb8db2c80811635d928aa98df/c9s_logo1_border_2.webp){ align=left width="300" }
 
@@ -18,6 +18,11 @@ Love containerlab? Want containerlab, just distributed in a kubernetes cluster? 
 </figure>
 
 Clabernetes deploys containerlab topologies into a kubernetes cluster. The goal of Clabernetes is to scale Containerlab beyond a single node while keeping the user experience you love.
+
+You can use clabernetes in two ways:
+
+- with the native [`containerlab --runtime c9s`](runtime.md) workflow
+- with [`clabverter`](install.md#clabverter), which converts topology files into kubernetes manifests
 
 If all goes to plan, Clabernetes is going to be one of the solutions to enable [multi-node labs](../multi-node.md) and allow its users to create large topologies powered by a k8s cluster.
 
@@ -32,5 +37,6 @@ In the beta release we focus on the core topology constructs working our way tow
 ## Quick Links
 
 * [Helm chart on ArtifactHub](https://artifacthub.io/packages/helm/clabernetes/clabernetes)
-* [CRD reference](https://crds.r8y.page/repo/github.com/srl-labs/clabernetes)
-* Source code on [GitHub](https://github.com/srl-labs/clabernetes)
+* [CRD reference](https://c9s.run/docs/crd)
+* [Native containerlab runtime](runtime.md)
+* Source code on [GitHub](https://github.com/clabernetes/clabernetes)

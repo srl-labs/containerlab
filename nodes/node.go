@@ -201,6 +201,9 @@ type Node interface {
 	SaveConfig(
 		context.Context,
 	) (*SaveConfigResult, error) // SaveConfig saves the nodes configuration to an external file
+	// PreDestroy runs on destroy and apply before any node is deleted, while the node's container
+	// still exists, e.g. to deregister the node from an external service.
+	PreDestroy(context.Context) error
 	Delete(context.Context) error // Delete triggers the deletion of this node
 	// Stop parks dataplane interfaces and stops the container.
 	Stop(context.Context) error

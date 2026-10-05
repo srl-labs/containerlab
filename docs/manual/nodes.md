@@ -383,9 +383,12 @@ ports:
   - 80:8080 # tcp port 80 of the host is mapped to port 8080 of the container
   - 55555:43555/udp
   - 55554:43554/tcp
+  - 8022:22/ts
 ```
 
 The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--expose` flag](https://docs.docker.com/reference/cli/docker/container/run/#publish).
+
+A `/ts` suffix publishes the mapping on the lab Tailscale proxy instead of the container runtime. See [Tailscale](network.md#tailscale).
 
 This option is only configurable under the node level.
 
@@ -676,16 +679,24 @@ If you want to completely disable the networking stack on a container, you can u
 
 ### runtime
 
-By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman` runtime.
+By default containerlab nodes will be started by the `docker` container runtime. Besides that, containerlab has experimental support for the `podman` runtime.
 
-It is possible to specify a global runtime with a global `--runtime` flag, or set the runtime on a per-node basis:
+It is possible to specify a global local container runtime with the global `--runtime` flag, or set the runtime on a per-node basis:
 
-Options for the runtime parameter are:
+Options for the per-node `runtime` parameter are:
 
 - `docker`
 - `podman`
 
-The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable, which takes the same values as mentioned above.
+The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable.
+
+/// note | Clabernetes lab runtime
+The global `--runtime` flag and `CLAB_RUNTIME` environment variable accept
+`c9s`. This is a whole-lab runtime that sends the topology to kubernetes as a
+Clabernetes `Topology` resource. It is not a valid per-node `runtime:` value.
+
+See [c9s runtime](clabernetes/runtime.md) for details.
+///
 
 ```yaml
 # example node definition with per-node runtime definition

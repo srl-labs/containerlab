@@ -165,6 +165,10 @@ func listContainers(
 	c *clabcore.CLab,
 	o *Options,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.ListLabRuntimeContainers(ctx, o.Destroy.All)
+	}
+
 	var containers []clabruntime.GenericContainer
 
 	var err error
@@ -189,6 +193,13 @@ func listContainers(
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
 		}
+	}
+
+	// hide internal containers (ie. SR-SIM netns holder) only for non-all inspect.
+	if !o.Destroy.All {
+		containers = slices.DeleteFunc(containers, func(c clabruntime.GenericContainer) bool {
+			return c.Labels[clabconstants.InternalNode] == "true"
+		})
 	}
 
 	return containers, nil
@@ -247,6 +258,9 @@ func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWr
 func getShortestTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
+	}
+	if strings.Contains(p, "://") {
+		return p, nil
 	}
 
 	// get topo file path relative of the cwd
@@ -352,7 +366,6 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 		Header: text.Colors{text.Bold},
 	}
 
-	// For --wide, avoid AutoMerge and multi-line cells
 	headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
 	if o.Inspect.Wide {
 		headerBase = slices.Insert(headerBase, 0, "Owner")
@@ -362,31 +375,33 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 
 	var colConfigs []tableWriter.ColumnConfig
 
+	// Lab-level columns (Topology, Lab Name, Owner) AutoMerge across nodes of the same lab.
 	if o.Destroy.All {
 		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-		if !o.Inspect.Wide {
-			colConfigs = append(
-				colConfigs,
-				tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				},
-				tableWriter.ColumnConfig{
-					Number:    2, //nolint: mnd
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				},
-			)
-		}
-		// If wide, do not set AutoMerge for any columns
-	} else {
-		header = headerBase
-
-		if !o.Inspect.Wide {
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+		colConfigs = append(
+			colConfigs,
+			tableWriter.ColumnConfig{
 				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			},
+			tableWriter.ColumnConfig{
+				Number:    2, //nolint: mnd
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			},
+		)
+		if o.Inspect.Wide {
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    3, //nolint: mnd
 				AutoMerge: true, VAlign: text.VAlignMiddle,
 			})
 		}
+	} else {
+		header = headerBase
+
+		colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+			Number:    1,
+			AutoMerge: true, VAlign: text.VAlignMiddle,
+		})
 	}
 
 	table.AppendHeader(header)
@@ -427,6 +442,9 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 
 	// Gather summary details of each container
 	for idx := range containers {
+		if !o.Destroy.All && containers[idx].Labels[clabconstants.InternalNode] == "true" {
+			continue
+		}
 		absPath := containers[idx].Labels[clabconstants.TopoFile]
 
 		shortPath, err := getShortestTopologyPath(absPath)

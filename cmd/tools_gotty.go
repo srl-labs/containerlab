@@ -384,6 +384,10 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 	)
 
+	if err := c.AllocateToolManagementIPs(ctx, gottyNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate GoTTY management address: %w", err)
+	}
+
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {
 		return fmt.Errorf("failed to create GoTTY container: %w", err)
@@ -392,6 +396,9 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, gottyNode); err != nil {
 		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof(
@@ -664,6 +671,10 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		labelsMap,
 	)
 
+	if err := c.AllocateToolManagementIPs(ctx, gottyNode.Config()); err != nil {
+		return fmt.Errorf("failed to allocate GoTTY management address: %w", err)
+	}
+
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {
 		return fmt.Errorf("failed to create GoTTY container: %w", err)
@@ -672,6 +683,9 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, gottyNode); err != nil {
 		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+		return fmt.Errorf("failed to synchronize management host routes: %w", err)
 	}
 
 	log.Infof(

@@ -137,6 +137,7 @@ The following env vars are supported:
 * `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM.
 * `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
 * `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
+* `UUID` - sets the UUID used for the VM. For the supported devices, it will keep a consistent serial number across multiple lab boots.
 
 ### Datapath connectivity
 

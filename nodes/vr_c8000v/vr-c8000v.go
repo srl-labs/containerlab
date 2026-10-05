@@ -9,6 +9,7 @@ import (
 	"path"
 	"regexp"
 
+	"github.com/charmbracelet/log"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -21,6 +22,10 @@ var (
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`)
 	InterfaceOffset = 2
 	InterfaceHelp   = "GiX or GigabitEthernetX (where X >= 2) or ethX (where X >= 1)"
+
+	// network-mode: none.
+	InterfaceOffsetNoMgmt = 1
+	InterfaceHelpNoMgmt   = "GiX or GigabitEthernetX (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -32,6 +37,7 @@ const (
 	// C8000v modes.
 	modeAutonomous = "autonomous"
 	modeController = "controller"
+	modeZTP        = "ztp"
 
 	// Default mode if not specified.
 	defaultMode = modeAutonomous
@@ -72,7 +78,7 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	}
 
 	// Determine mode from NodeType field
-	// NodeType can be: autonomous, controller
+	// NodeType can be: autonomous, controller, ztp
 	// If not specified, defaults to autonomous
 	n.mode = n.Cfg.NodeType
 	if n.mode == "" {
@@ -82,10 +88,26 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	// Validate mode
 	if !isValidMode(n.mode) {
 		return fmt.Errorf(
-			"invalid mode %q for cisco_c8000v node %q. Must be one of: autonomous, controller",
+			"invalid mode %q for cisco_c8000v node %q. Must be one of: autonomous, controller, ztp",
 			n.mode,
 			n.Cfg.ShortName,
 		)
+	}
+
+	// IOS-XE starts ZTP only with an empty startup-config.
+	// suppress-startup-config may be used on this node to override the kind default.
+	if n.mode == modeZTP && n.Cfg.StartupConfig != "" && !n.Cfg.SuppressStartupConfig {
+		return fmt.Errorf(
+			"cisco_c8000v node %q in ztp mode must boot with no startup-config, "+
+				"because a config prevents zero-touch provisioning. Set "+
+				"suppress-startup-config on the node to leave it unconfigured",
+			n.Cfg.ShortName,
+		)
+	}
+
+	persistedCfg := path.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
+	if n.mode == modeZTP && clabutils.FileExists(persistedCfg) {
+		log.Info("Persisted startup-config detected. ZTP will be skipped.", "node", n.Cfg.ShortName)
 	}
 
 	// env vars are used to set launch.py arguments in vrnetlab container
@@ -122,13 +144,18 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
 
+	if n.Cfg.NetworkMode == "none" {
+		n.InterfaceOffset = InterfaceOffsetNoMgmt
+		n.InterfaceHelp = InterfaceHelpNoMgmt
+	}
+
 	return nil
 }
 
 // isValidMode checks if the mode is valid.
 func isValidMode(mode string) bool {
 	switch mode {
-	case modeAutonomous, modeController:
+	case modeAutonomous, modeController, modeZTP:
 		return true
 	default:
 		return false

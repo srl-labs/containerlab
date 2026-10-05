@@ -24,6 +24,7 @@ import (
 	clabnodesf5_bigipve "github.com/srl-labs/containerlab/nodes/f5_bigipve"
 	clabnodesfdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	clabnodesfortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
+	clabnodesfrr "github.com/srl-labs/containerlab/nodes/frr"
 	clabnodesgeneric_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
 	clabnodeshost "github.com/srl-labs/containerlab/nodes/host"
 	clabnodeshuawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
@@ -42,6 +43,7 @@ import (
 	clabnodesspirent_stc "github.com/srl-labs/containerlab/nodes/spirent_stc"
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -131,4 +133,6 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesveesix_osvbng.Register(c.Reg)
 	clabnodesspirent_stc.Register(c.Reg)
 	clabnodesplvision_sonic.Register(c.Reg)
+	clabnodesfrr.Register(c.Reg)
+	clabnodestailscale.Register(c.Reg)
 }

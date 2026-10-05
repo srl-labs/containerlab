@@ -3,7 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
-	"strings"
+	"net/netip"
+
+	clabtypes "github.com/srl-labs/containerlab/types"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -125,10 +127,6 @@ func (c *CLab) apply(
 		return result, nil
 	}
 
-	if err := c.checkUnsupportedApplyNodes(); err != nil {
-		return nil, err
-	}
-
 	if err := c.setMgmtBridgeFromRuntime(currentNodes); err != nil {
 		return nil, err
 	}
@@ -161,10 +159,28 @@ func (c *CLab) apply(
 	}
 
 	if plan.empty() {
-		if options.finalizeNoop {
-			if err := c.prepareApply(ctx, nil, options.skipLabDirFileACLs); err != nil {
+		if c.tailscaleProxyEnabled() {
+			if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
 				return nil, err
 			}
+		}
+		if err := c.syncTailscaleProxy(ctx); err != nil {
+			return nil, err
+		}
+		if options.finalizeNoop {
+			if err := c.prepareApply(
+				ctx,
+				nil,
+				options.skipLabDirFileACLs,
+				currentNodes,
+			); err != nil {
+				return nil, err
+			}
+		}
+		if err := c.SyncMgmtHostRoutes(ctx); err != nil {
+			return nil, err
+		}
+		if options.finalizeNoop {
 			if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
 				return nil, err
 			}
@@ -175,7 +191,12 @@ func (c *CLab) apply(
 	}
 
 	deployNodeNames := plan.deployNodeNames()
-	if err := c.prepareApply(ctx, deployNodeNames, options.skipLabDirFileACLs); err != nil {
+	if err := c.prepareApply(
+		ctx,
+		deployNodeNames,
+		options.skipLabDirFileACLs,
+		currentNodes,
+	); err != nil {
 		return nil, err
 	}
 
@@ -191,15 +212,11 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.DeployNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+	if err := c.deployApplyNodes(ctx, plan, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
 	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
-		return nil, err
-	}
-
-	if err := c.startStoppedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -220,6 +237,12 @@ func (c *CLab) apply(
 	}
 
 	if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
+		return nil, err
+	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
+		return nil, err
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
 
@@ -257,30 +280,21 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 		}
 	}
 
-	return c.verifyDuplicateAddresses()
-}
-
-func (c *CLab) checkUnsupportedApplyNodes() error {
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		cfg := c.Nodes[nodeName].Config()
-		if cfg != nil && strings.HasPrefix(cfg.NetworkMode, "container:") {
-			return fmt.Errorf(
-				"apply does not support nodes with %q; use redeploy or "+
-					"deploy --reconfigure",
-				cfg.NetworkMode,
-			)
-		}
+	if err := c.verifyDuplicateAddresses(); err != nil {
+		return err
 	}
 
-	return nil
+	return c.verifyTailscaleProxy()
 }
 
 func (c *CLab) prepareApply(
 	ctx context.Context,
 	addedNodes []string,
 	skipLabDirFileACLs bool,
+	currentNodes map[string]*runtimeNodeGroup,
 ) error {
-	if _, err := c.prepareLabManagementNetwork(ctx); err != nil {
+	existing := c.collectExistingManagementAddresses(currentNodes)
+	if _, err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
 		return err
 	}
 
@@ -311,4 +325,27 @@ func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Lin
 	}
 
 	return nil
+}
+
+// try to preserve the existing addressing instead of reallocation.
+func (c *CLab) collectExistingManagementAddresses(
+	currentNodes map[string]*runtimeNodeGroup,
+) []clabtypes.ExistingAddress {
+	var existing []clabtypes.ExistingAddress
+	for name, group := range currentNodes {
+		for _, ctr := range group.containers {
+			if ctr.NetworkName != c.Config.Mgmt.Network {
+				continue
+			}
+			for _, value := range []string{ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv6addr} {
+				if ip, err := netip.ParseAddr(value); err == nil {
+					existing = append(
+						existing,
+						clabtypes.ExistingAddress{NodeName: name, ContainerID: ctr.ID, Address: ip},
+					)
+				}
+			}
+		}
+	}
+	return existing
 }

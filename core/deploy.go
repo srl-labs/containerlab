@@ -4,18 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/srl-labs/containerlab/mgmt"
+	clabtypes "github.com/srl-labs/containerlab/types"
+
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sync/errgroup"
@@ -27,6 +33,8 @@ type DeployResult struct {
 	// Apply summarizes the reconciliation of an already deployed lab or the dry-run plan;
 	// it is nil when Deploy performed a fresh full deployment.
 	Apply *ApplyResult
+	// RuntimePlan is the remote resource plan produced by a controller-driven runtime dry-run.
+	RuntimePlan *clablabruntime.DeployPlan
 }
 
 // Deploy converges the lab to the requested topology. A lab without runtime state is
@@ -57,6 +65,26 @@ func (c *CLab) Deploy(
 		}
 
 		return &DeployResult{Containers: containers}, nil
+	}
+
+	if c.LabRuntime != nil && options.dryRun {
+		planner, ok := c.LabRuntime.(clablabruntime.TopologyPlanner)
+		if !ok {
+			return nil, fmt.Errorf("lab runtime %q does not support dry-run", c.globalRuntimeName)
+		}
+
+		req, err := c.labRuntimeDeployRequest()
+		if err != nil {
+			return nil, err
+		}
+		applyLabRuntimeDeployOptions(&req, options)
+
+		plan, err := planner.Plan(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		return &DeployResult{RuntimePlan: plan}, nil
 	}
 
 	currentNodes, err := c.runtimeNodeGroups(ctx)
@@ -153,6 +181,10 @@ func (c *CLab) deploy( //nolint: funlen
 	ctx context.Context,
 	options *DeployOptions,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.deployWithLabRuntime(ctx, options)
+	}
+
 	var err error
 
 	err = c.ResolveLinks()
@@ -199,6 +231,12 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
+		return nil, err
+	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
+		return nil, err
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
 
@@ -265,10 +303,17 @@ func waitForNodeDeploy(
 	return nil
 }
 
-func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
+func (c *CLab) prepareLabManagementNetwork(
+	ctx context.Context,
+	existing ...clabtypes.ExistingAddress,
+) (bool, error) {
 	skipMgmt := c.skipMgmtNetwork()
 	if !skipMgmt {
 		if err := c.CreateNetwork(ctx); err != nil {
+			return skipMgmt, err
+		}
+
+		if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
 			return skipMgmt, err
 		}
 	}
@@ -278,6 +323,85 @@ func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
 	}
 
 	return skipMgmt, nil
+}
+
+func (c *CLab) allocateLabManagementIPs(
+	ctx context.Context,
+	existing []clabtypes.ExistingAddress,
+) error {
+	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+		return nil
+	}
+
+	configs := make([]*clabtypes.NodeConfig, 0, len(c.Nodes))
+	for _, node := range c.Nodes {
+		configs = append(configs, node.Config())
+	}
+
+	reserved, err := c.collectReservedManagementAddresses(ctx, existing)
+	if err != nil {
+		return err
+	}
+
+	preferred := make(map[string]clabtypes.NodeAddresses)
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Ignoring preferred management addresses", "error", err)
+	}
+
+	if state != nil {
+		for name, addresses := range state.IPAM {
+			preferred[name] = addresses
+		}
+	}
+
+	return mgmt.AllocateManagementIPs(
+		ctx,
+		c.Config.Mgmt,
+		configs,
+		clabtypes.AllocationOptions{Existing: existing, Preferred: preferred, Reserved: reserved},
+	)
+}
+
+func (c *CLab) collectReservedManagementAddresses(
+	ctx context.Context,
+	existing []clabtypes.ExistingAddress,
+) ([]netip.Addr, error) {
+	var subnets []netip.Prefix
+	for _, value := range []string{c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet} {
+		if value == "" {
+			continue
+		}
+		subnet, err := netip.ParsePrefix(value)
+		if err != nil {
+			return nil, fmt.Errorf("management subnet %q: %w", value, err)
+		}
+		subnets = append(subnets, subnet)
+	}
+	occupied, err := c.globalRuntime().NetworkAddresses(ctx, subnets)
+	if err != nil {
+		return nil, err
+	}
+	type ownerAddress struct {
+		containerID string
+		address     netip.Addr
+	}
+	reused := make(map[ownerAddress]bool, len(existing))
+	for _, entry := range existing {
+		if entry.ContainerID != "" {
+			reused[ownerAddress{entry.ContainerID, entry.Address}] = true
+		}
+	}
+
+	var reserved []netip.Addr
+	for _, entry := range occupied {
+		if entry.NetworkName == c.Config.Mgmt.Network &&
+			reused[ownerAddress{entry.ContainerID, entry.Address}] {
+			continue
+		}
+		reserved = append(reserved, entry.Address)
+	}
+	return reserved, nil
 }
 
 func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bool) error {
@@ -493,6 +617,24 @@ func (c *CLab) DeployNodes(
 	nodeNames []string,
 	maxWorkers uint,
 ) error {
+	return c.deployNodes(ctx, nodeNames, maxWorkers, nil)
+}
+
+// deployApplyNodes schedules starts and creates together: a new sidecar can
+// depend on a stopped target, and a stopped node can depend on a new target.
+func (c *CLab) deployApplyNodes(ctx context.Context, plan *applyPlan, maxWorkers uint) error {
+	nodeNames := sortedStringSet(
+		unionStringSets(plan.addedNodeSet, plan.recreatedNodeSet, plan.startNodeSet),
+	)
+	return c.deployNodes(ctx, nodeNames, maxWorkers, plan.startNodeSet)
+}
+
+func (c *CLab) deployNodes(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+	startNodeSet map[string]struct{},
+) error {
 	if len(nodeNames) == 0 {
 		return nil
 	}
@@ -500,28 +642,62 @@ func (c *CLab) DeployNodes(
 	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
 		maxWorkers = uint(len(nodeNames))
 	}
-	for _, nodeName := range nodeNames {
-		if _, exists := c.Nodes[nodeName]; !exists {
-			return fmt.Errorf("node %q not found", nodeName)
-		}
+	if _, err := c.networkModeNodeOrder(nodeNames); err != nil {
+		return err
 	}
 
 	input := make(chan string)
 	errCh := make(chan error, len(nodeNames))
+	completed := make(map[string]*nodeDeployCompletion, len(nodeNames))
+	for _, name := range nodeNames {
+		completed[name] = &nodeDeployCompletion{done: make(chan struct{})}
+	}
+	finish := func(name string, err error) {
+		completed[name].err = err
+		close(completed[name].done)
+		errCh <- err
+	}
 
 	for range maxWorkers {
 		go func() {
 			for nodeName := range input {
+				if _, start := startNodeSet[nodeName]; start {
+					log.Info("Starting stopped node", "node", nodeName)
+					err := c.Nodes[nodeName].Start(ctx)
+					if err != nil {
+						err = fmt.Errorf("failed starting node %q: %w", nodeName, err)
+					}
+					finish(nodeName, err)
+					continue
+				}
 				log.Info("Creating node", "node", nodeName)
-				errCh <- c.deployNode(ctx, c.Nodes[nodeName])
+				finish(nodeName, c.deployNode(ctx, c.Nodes[nodeName]))
 			}
 		}()
 	}
 
+	// Wait outside the worker pool. Targets in this operation signal completion
+	// directly, avoiding runtime polling and propagating failures to dependents.
+	var feedWg sync.WaitGroup
 	for _, nodeName := range nodeNames {
-		input <- nodeName
+		feedWg.Add(1)
+		go func(nodeName string) {
+			defer feedWg.Done()
+			if err := c.waitForNodeDeployTarget(ctx, nodeName, completed); err != nil {
+				finish(nodeName, err)
+				return
+			}
+			select {
+			case input <- nodeName:
+			case <-ctx.Done():
+				finish(nodeName, ctx.Err())
+			}
+		}(nodeName)
 	}
-	close(input)
+	go func() {
+		feedWg.Wait()
+		close(input)
+	}()
 
 	var errs []error
 	for range nodeNames {
@@ -535,6 +711,73 @@ func (c *CLab) DeployNodes(
 	}
 
 	return nil
+}
+
+type nodeDeployCompletion struct {
+	done chan struct{}
+	// Closing done publishes err to dependent goroutines.
+	err error
+}
+
+func (c *CLab) waitForNodeDeployTarget(
+	ctx context.Context,
+	name string,
+	completed map[string]*nodeDeployCompletion,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
+	if target == "" {
+		target = c.Nodes[name].Config().Labels[clabnodestailscale.ParentLabel]
+	}
+	if completion, selected := completed[target]; selected {
+		select {
+		case <-completion.done:
+			if completion.err != nil {
+				return fmt.Errorf(
+					"node %q depends on failed node %q: %w",
+					name,
+					target,
+					completion.err,
+				)
+			}
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return c.waitForApplyNetworkModeTarget(ctx, name)
+}
+
+// waitForApplyNetworkModeTarget waits until a node's network-mode:
+// container:<target> target is running, so apply's incremental deploy never
+// races a newly created or recreated target against its dependent. The
+// target may be a node in this same apply call (added or recreated
+// alongside the dependent) or, like fresh deploy, an external container not
+// managed by this topology.
+func (c *CLab) waitForApplyNetworkModeTarget(ctx context.Context, nodeName string) error {
+	node, exists := c.Nodes[nodeName]
+	if !exists {
+		return nil
+	}
+
+	target := networkModeContainerTarget(node.Config().NetworkMode)
+	if target == "" {
+		return nil
+	}
+
+	targetNode, internal := c.Nodes[target]
+	if !internal {
+		return c.waitForExternalNodeDependencies(ctx, nodeName)
+	}
+
+	runtime := c.globalRuntime()
+	if runtime == nil {
+		return fmt.Errorf("container runtime is not initialized")
+	}
+
+	return clabruntime.WaitForContainerRunning(ctx, runtime, targetNode.Config().LongName, nodeName)
 }
 
 func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {

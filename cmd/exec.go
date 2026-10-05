@@ -84,20 +84,18 @@ func execFn(_ *cobra.Command, o *Options) error {
 	}
 
 	resultCollection, err := c.Exec(ctx, o.Exec.Commands, listOptions...)
-	if err != nil {
-		return err
-	}
+	if resultCollection != nil {
+		switch outputFormat {
+		case clabconstants.FormatPlain:
+			resultCollection.Log()
+		case clabconstants.FormatJSON:
+			out, dumpErr := resultCollection.Dump(outputFormat)
+			if dumpErr != nil {
+				return fmt.Errorf("failed to print the results collection: %v", dumpErr)
+			}
 
-	switch outputFormat {
-	case clabconstants.FormatPlain:
-		resultCollection.Log()
-	case clabconstants.FormatJSON:
-		out, err := resultCollection.Dump(outputFormat)
-		if err != nil {
-			return fmt.Errorf("failed to print the results collection: %v", err)
+			fmt.Println(out)
 		}
-
-		fmt.Println(out)
 	}
 
 	return err

@@ -76,6 +76,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **IPInfusion OcNOS**       | [`ipinfusion_ocnos`](ipinfusion-ocnos.md)           | supported |    VM     |
 | **Palo Alto PAN-OS**       | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)       | supported |    VM     |
+| **Fortinet FortiProxy**    | [`fortinet_fortiproxy`](fortinet_fortigate.md)      | supported |    VM     |
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
 | **Ciena SAOS 10**          | [`ciena_saos`](ciena_saos.md)                   | supported |    VM     |
 | **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
@@ -84,6 +85,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Arrcus ArcOS**           | [`arrcus_arcos`](arrcus_arcos.md)                   | supported | container |
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
+| **FRRouting**              | [`frr`](frr.md)                                     | supported | container |
 | **VyOS Networks VyOS**     | [`vyosnetworks_vyos`](vyosnetworks_vyos.md)         | supported |    VM     |
 | **PLVision SONiC**         | [`plvision_sonic`](plvision_sonic.md)               | supported |    VM     |
 | **Generic VM**             | [`generic_vm`](generic_vm.md)                       | supported |    VM     |

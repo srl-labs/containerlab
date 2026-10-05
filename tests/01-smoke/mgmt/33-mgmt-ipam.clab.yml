@@ -1,0 +1,28 @@
+name: {{ .name }}
+
+mgmt:
+  network: clab-smoke33
+  driver: {{ .driver }}
+{{- if eq .driver "macvlan" }}
+  macvlan-parent: clab-smoke33
+{{- end }}
+  ipv4-subnet: 198.18.33.0/24
+  ipv4-gw: 198.18.33.1
+  ipv4-range: 198.18.33.128/25
+  ipv6-subnet: fd00:33::/64
+  ipv6-gw: fd00:33::1
+  ipv6-range: fd00:33::/120
+  ipam:
+    provider: {{ .provider }}
+    dad: {{ .dad }}
+
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine:3
+      cmd: sleep 9999
+{{- if .static }}
+      mgmt-ipv4: 198.18.33.140
+      mgmt-ipv6: fd00:33::20
+{{- end }}

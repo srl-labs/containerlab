@@ -5,6 +5,7 @@
 package cisco_iol
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
@@ -39,6 +40,8 @@ const (
 
 	scrapliPlatformName = "cisco_ios"
 	NapalmPlatformName  = "ios"
+
+	bootPromptTimeout = 60 * time.Second
 )
 
 var (
@@ -49,13 +52,11 @@ var (
 	cfgTemplate string
 
 	// IntfRegexp with named capture groups for extracting slot and port.
-	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
+	CapturingIntfRegexp = regexp.MustCompile(`^(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	// ethX naming is the "raw" or "default" interface naming.
 	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9]\d*$`)
-	// Match on the management interface.
-	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
 	// Matches on any allowed/legal interface name.
-	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[123])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
+	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[0-3])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
@@ -90,6 +91,12 @@ type iol struct {
 	bootCfg           string
 	interfaces        []IOLInterface
 	firstBoot         bool
+	bootstrapNone     bool
+	bootstrapCfgFile  string
+	mgmtIntf          string
+	mgmtSlot          int
+	mgmtPort          int
+	mgmtLinuxIdx      int
 }
 
 func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -104,7 +111,19 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	nodeType := strings.ToLower(n.Cfg.NodeType)
 
-	n.Pid = strconv.Itoa(n.Cfg.Index + 1) // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+	pid := n.Cfg.Index + 1 // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+
+	// CLAB_IOL_PID_OFFSET shifts the auto-assigned PID, e.g. to keep IDs unique across labs.
+	if v, ok := n.Cfg.Env["CLAB_IOL_PID_OFFSET"]; ok {
+		offset, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("invalid CLAB_IOL_PID_OFFSET %q: %w", v, err)
+		}
+
+		pid += offset
+	}
+
+	n.Pid = strconv.Itoa(pid)
 
 	env := map[string]string{
 		"IOL_PID": n.Pid,
@@ -114,13 +133,19 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	// check if user submitted node type is valid
 	switch nodeType {
-	case "", typeIOL:
+	case "":
+		n.isL2Node = strings.Contains(strings.ToLower(path.Base(n.Cfg.Image)), "l2")
+	case typeIOL:
 		n.isL2Node = false
 	case typeL2:
 		n.isL2Node = true
 	default:
 		return fmt.Errorf("invalid node type '%s'. Valid types are: %s",
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
+	}
+
+	if err := n.parseMgmtIntf(); err != nil {
+		return err
 	}
 
 	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
@@ -140,13 +165,88 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	return nil
 }
 
+// parseMgmtIntf reads CLAB_IOL_MGMT_INTF from the node env; unset keeps the default Ethernet0/0.
+func (n *iol) parseMgmtIntf() error {
+	if v, ok := n.Cfg.Env["CLAB_IOL_MGMT_INTF"]; ok && v != "" {
+		captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, v)
+		if err != nil {
+			return fmt.Errorf("invalid CLAB_IOL_MGMT_INTF %q: %w\n%s", v, err, IntfHelpMsg)
+		}
+
+		n.mgmtSlot, _ = strconv.Atoi(captureGroups["slot"])
+		n.mgmtPort, _ = strconv.Atoi(captureGroups["port"])
+
+		if n.mgmtSlot > 9 || n.mgmtPort > 3 {
+			return fmt.Errorf(
+				"invalid CLAB_IOL_MGMT_INTF %q: slot must be 0-9 and port must be 0-3", v)
+		}
+	}
+
+	n.mgmtIntf = fmt.Sprintf("Ethernet%d/%d", n.mgmtSlot, n.mgmtPort)
+	n.mgmtLinuxIdx = n.mgmtSlot*4 + n.mgmtPort
+
+	return nil
+}
+
+// swapMgmtIdx swaps linux interface index 0 with the management interface's index,
+// so Ethernet0/0 takes the index a relocated management interface vacated.
+func (n *iol) swapMgmtIdx(idx int) int {
+	switch idx {
+	case 0:
+		return n.mgmtLinuxIdx
+	case n.mgmtLinuxIdx:
+		return 0
+	}
+
+	return idx
+}
+
+// iolPortForLinuxIdx returns the IOL slot/port backed by linux interface index idx.
+func (n *iol) iolPortForLinuxIdx(idx int) (slot, port int) {
+	mapped := n.swapMgmtIdx(idx)
+	return mapped / 4, mapped % 4
+}
+
+// ensureNumSlotsEnv exports CLAB_IOL_NUM_SLOTS when the management interface is
+// relocated, so that its slot exists even when no link lands in it.
+func (n *iol) ensureNumSlotsEnv() {
+	if n.mgmtLinuxIdx == 0 || n.Cfg.Env["CLAB_IOL_NUM_SLOTS"] != "" {
+		return
+	}
+
+	intfIdxRegexp := regexp.MustCompile(`\d+`)
+	needed := n.mgmtSlot + 1
+
+	for _, ep := range n.Endpoints {
+		x, _ := strconv.Atoi(intfIdxRegexp.FindString(ep.GetIfaceName()))
+		if slot, _ := n.iolPortForLinuxIdx(x); slot+1 > needed {
+			needed = slot + 1
+		}
+	}
+
+	n.Cfg.Env["CLAB_IOL_NUM_SLOTS"] = strconv.Itoa(needed)
+}
+
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+
+	if v := n.Cfg.Env["CLAB_IOL_BOOTSTRAP_CONFIG"]; v != "" {
+		switch p := clabutils.ResolvePath(v, params.TopoPaths.TopologyFileDir()); {
+		case strings.EqualFold(v, "none"):
+			n.bootstrapNone = true
+		case clabutils.FileExists(p):
+			n.bootstrapCfgFile = p
+		default:
+			return fmt.Errorf("CLAB_IOL_BOOTSTRAP_CONFIG file %q does not exist", p)
+		}
+	}
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
+
+	n.ensureNumSlotsEnv()
 
 	return n.CreateIOLFiles(ctx)
 }
@@ -154,29 +254,27 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	// Disable TX checksum offload on the host NS veth for the mgmt interface.
-	var peerIfIndex int
-	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
-	if err != nil {
-		log.Warn("Failed to get veth peer index for IOL mgmt interface",
-			"node", n.Cfg.ShortName,
-			"error", err)
-		return nil
+	if n.Runtime.Mgmt().Driver != clabtypes.MgmtDriverMacvlan {
+		// Disable TX checksum offload on the host NS veth for the mgmt interface.
+		var peerIfIndex int
+		err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+		if err != nil {
+			log.Warn("Failed to get veth peer index for IOL mgmt interface",
+				"node", n.Cfg.ShortName,
+				"error", err)
+		} else if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+			log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
+				"node", n.Cfg.ShortName,
+				"error", err)
+		}
 	}
 
-	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-		log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
-			"node", n.Cfg.ShortName,
-			"error", err)
+	if err := n.GenBootConfig(ctx); err != nil {
+		return fmt.Errorf("failed to generate boot config: %w", err)
 	}
 
-	n.GenBootConfig(ctx)
-
-	// Must update mgmt IP if not first boot
-	if !n.firstBoot {
-		// iol has a 5sec boot delay, wait a few extra secs for the console
-		time.Sleep(10 * time.Second)
-
+	// Must update mgmt IP if not first boot, unless the node boots without a baseline config
+	if !n.firstBoot && !n.bootstrapNone {
 		return n.UpdateMgmtIntf(ctx)
 	}
 
@@ -201,9 +299,20 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 
 // Generate interfaces configuration for IOL (and iouyap/netmap).
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
-	// add default 'boilerplate' to NETMAP and iouyap.ini for management port (e0/0)
-	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:0/0]\neth_dev = eth0\n"
-	netmapdata := fmt.Sprintf("%s:0/0 513:0/0\n", n.Pid)
+	// add 'boilerplate' to NETMAP and iouyap.ini for the management port
+	iouyapData := fmt.Sprintf(
+		"[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:%d/%d]\neth_dev = eth0\n",
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
+	netmapdata := fmt.Sprintf(
+		"%s:%d/%d 513:%d/%d\n",
+		n.Pid,
+		n.mgmtSlot,
+		n.mgmtPort,
+		n.mgmtSlot,
+		n.mgmtPort,
+	)
 
 	slot, port := 0, 0
 
@@ -215,8 +324,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
 
 		// Interface naming is Ethernet{slot}/{port}. Each slot contains max 4 ports
-		slot = x / 4
-		port = x % 4
+		slot, port = n.iolPortForLinuxIdx(x)
 
 		// append data to write to NETMAP and IOUYAP files
 		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = %s\n", slot, port, intf.GetIfaceName())
@@ -263,6 +371,18 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 func (n *iol) GenBootConfig(_ context.Context) error {
 	n.bootCfg = cfgTemplate
 
+	switch {
+	case n.bootstrapNone:
+		n.bootCfg = "{{ .PartialCfg }}"
+	case n.bootstrapCfgFile != "":
+		cfg, err := os.ReadFile(n.bootstrapCfgFile)
+		if err != nil {
+			return err
+		}
+
+		n.bootCfg = string(cfg)
+	}
+
 	if n.Cfg.StartupConfig != "" {
 		cfg, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -280,6 +400,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 	tpl := IOLTemplateData{
 		Hostname:           n.Cfg.ShortName,
 		IsL2Node:           n.isL2Node,
+		MgmtIntf:           n.mgmtIntf,
 		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
 		MgmtIPv4SubnetMask: clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		MgmtIPv4GW:         n.Cfg.MgmtIPv4Gateway,
@@ -287,15 +408,33 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
 		DataIFaces:         n.interfaces,
-		PartialCfg:         n.partialStartupCfg,
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+	// render the partial startup config so template variables work in partials too
+	if n.partialStartupCfg != "" {
+		partialTpl, err := template.New("clab-iol-partial-config").Funcs(
+			clabutils.CreateFuncs()).Parse(n.partialStartupCfg)
+		if err != nil {
+			return err
+		}
+
+		buf := new(bytes.Buffer)
+		if err := partialTpl.Execute(buf, tpl); err != nil {
+			return err
+		}
+
+		tpl.PartialCfg = buf.String()
+	}
+
+	IOLCfgTpl, err := template.New("clab-iol-default-config").Funcs(
 		clabutils.CreateFuncs()).Parse(n.bootCfg)
+	if err != nil {
+		return err
+	}
 
 	// generate the config
 	buf := new(bytes.Buffer)
-	err := IOLCfgTpl.Execute(buf, tpl)
+	err = IOLCfgTpl.Execute(buf, tpl)
 	if err != nil {
 		return err
 	}
@@ -306,6 +445,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 type IOLTemplateData struct {
 	Hostname           string
 	IsL2Node           bool
+	MgmtIntf           string
 	MgmtIPv4Addr       string
 	MgmtIPv4SubnetMask string
 	MgmtIPv4GW         string
@@ -328,7 +468,7 @@ type IOLInterface struct {
 	IPv6Addr  string
 }
 
-func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
+func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
 	captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
@@ -365,7 +505,8 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 
 	// return an ethX interface name. Slots are in 'groups' of 4 interfaces each
 	if foundIndices["slot"] && foundIndices["port"] {
-		return fmt.Sprintf("eth%d", (parsedIndices["slot"]*4)+parsedIndices["port"]), nil
+		idx := n.swapMgmtIdx((parsedIndices["slot"] * 4) + parsedIndices["port"])
+		return fmt.Sprintf("eth%d", idx), nil
 	} else {
 		return "", fmt.Errorf("%q missing slot or port index", ifName)
 	}
@@ -418,10 +559,12 @@ func (n *iol) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		IFaceName := e.GetIfaceName()
-		if MgmtIntfRegexp.MatchString(IFaceName) {
+		// eth0 always backs the management interface
+		if IFaceName == "eth0" {
 			return fmt.Errorf(
-				"IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed",
+				"IOL Node: %q. Management interface %s (eth0) is not allowed",
 				n.Cfg.ShortName,
+				n.mgmtIntf,
 			)
 		}
 
@@ -439,17 +582,120 @@ func (n *iol) CheckInterfaceName() error {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
+	// L2 IOL images default to switchport mode, which rejects IP addresses.
+	switchportCmd := ""
+	if n.isL2Node {
+		switchportCmd = "no switchport\r"
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, bootPromptTimeout)
+	defer cancel()
+
+	// 1. Start streaming container logs
+	logReader, err := n.Runtime.StreamLogs(waitCtx, n.Cfg.LongName)
+	if err != nil {
+		log.Warn("Skipping IOL mgmt interface update, cannot stream container logs",
+			"node", n.Cfg.ShortName, "error", err)
+		return nil
+	}
+	defer logReader.Close()
+
+	// Ticker to periodically send carriage returns (\r) to wake up the serial console
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	// Scanner to read the container log output line by line
+	scanner := bufio.NewScanner(logReader)
+
+	// Asynchronously send carriage returns since scanner.Scan() blocks
+	tickCtx, stopTicker := context.WithCancel(waitCtx)
+	defer stopTicker()
+	tickerDone := make(chan struct{})
+
+	go func() {
+		defer close(tickerDone)
+		for {
+			select {
+			case <-tickCtx.Done():
+				return
+			case <-ticker.C:
+				_ = n.Runtime.WriteToStdinNoWait(tickCtx, n.Cfg.LongName, []byte("\r"))
+			}
+		}
+	}()
+
+	bootComplete := false
+	for scanner.Scan() {
+		// Trim control characters and spaces from the log line
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		log.Debugf("[IOL Boot Log] %s", line)
+
+		// Match boot prompts (>, #, or initial config dialog)
+		if strings.HasSuffix(line, ">") ||
+			strings.HasSuffix(line, "#") ||
+			strings.Contains(line, "initial configuration dialog?") {
+
+			// Ignore syslog messages containing '>'
+			if strings.Contains(line, "%") {
+				continue
+			}
+
+			log.Infof("IOL boot prompt detected (%s). Proceeding with configuration.", line)
+			bootComplete = true
+			break
+		}
+	}
+
+	stopTicker()
+	<-tickerDone
+
+	if !bootComplete {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if waitCtx.Err() != nil {
+			return fmt.Errorf("node %q: timed out after %s waiting for IOL boot prompt",
+				n.Cfg.ShortName, bootPromptTimeout)
+		}
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("error reading IOL log stream: %w", err)
+		}
+	}
+	// --- End of prompt detection ---
+
+	// All IOS commands applied here are idempotent and safe to re-run.
 	mgmt_str := fmt.Sprintf(
-		"\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		"\rend\renable\rconfig terminal\rinterface %s\r%sip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s %s\ripv6 route vrf clab-mgmt ::/0 %s %s\rend\rwr\r",
+		n.mgmtIntf,
+		switchportCmd,
 		n.Cfg.MgmtIPv4Address,
 		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		n.Cfg.MgmtIPv6Address,
 		n.Cfg.MgmtIPv6PrefixLength,
+		n.mgmtIntf,
 		n.Cfg.MgmtIPv4Gateway,
+		n.mgmtIntf,
 		n.Cfg.MgmtIPv6Gateway,
 	)
+	data := []byte(mgmt_str)
 
-	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
+	var lastErr error
+	for i := range 3 {
+		if i > 0 {
+			time.Sleep(10 * time.Second)
+		}
+		lastErr = n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, data)
+		if lastErr == nil {
+			break
+		}
+		log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
+			i+1, n.Cfg.ShortName, lastErr)
+	}
+	return lastErr
 }
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup

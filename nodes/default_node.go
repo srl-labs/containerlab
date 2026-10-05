@@ -91,12 +91,25 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
+func (d *DefaultNode) RequireMgmtReachable() error {
+	m := d.Runtime.Mgmt()
+	if m == nil || m.Driver != clabtypes.MgmtDriverMacvlan || m.MacvlanAuxEnabled() {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"node %q post-deploy needs host-to-node management access, enable mgmt macvlan aux interface",
+		d.Cfg.ShortName,
+	)
+}
+
 func (d *DefaultNode) WithMgmtNet(mgmt *clabtypes.MgmtNet)                   { d.Mgmt = mgmt }
 func (d *DefaultNode) WithRuntime(r clabruntime.ContainerRuntime)            { d.Runtime = r }
 func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { return d.Runtime }
 func (d *DefaultNode) Config() *clabtypes.NodeConfig                         { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
 func (*DefaultNode) PreStop(context.Context) error                           { return nil }
+func (*DefaultNode) PreDestroy(context.Context) error                        { return nil }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {

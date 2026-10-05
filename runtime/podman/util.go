@@ -8,12 +8,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	netTypes "go.podman.io/common/libnetwork/types"
+	netUtil "go.podman.io/common/libnetwork/util"
 	"go.podman.io/image/v5/manifest"
 	"go.podman.io/podman/v6/pkg/bindings/containers"
 	"go.podman.io/podman/v6/pkg/domain/entities"
@@ -579,6 +581,9 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 		if err != nil {
 			return netTypes.Network{}, err
 		}
+		if err := setPodmanLeaseRange(&v4subnet, r.mgmt.IPv4Range); err != nil {
+			return netTypes.Network{}, err
+		}
 		// add a custom gw address if specified
 		if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
 			v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
@@ -590,6 +595,9 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	if r.mgmt.IPv6Subnet != "" && r.mgmt.IPv6Subnet != "auto" {
 		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv6Subnet)
 		if err != nil {
+			return netTypes.Network{}, err
+		}
+		if err := setPodmanLeaseRange(&v6subnet, r.mgmt.IPv6Range); err != nil {
 			return netTypes.Network{}, err
 		}
 		ipv6 = true
@@ -626,6 +634,67 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 		NetworkInterface: intName,
 	}
 	return toReturn, nil
+}
+
+func setPodmanLeaseRange(subnet *netTypes.Subnet, value string) error {
+	if value == "" {
+		return nil
+	}
+	_, pool, err := net.ParseCIDR(value)
+	if err != nil {
+		return fmt.Errorf("invalid Podman IP range %q: %w", value, err)
+	}
+	start, err := netUtil.FirstIPInSubnet(pool)
+	if err != nil {
+		return err
+	}
+	end, err := netUtil.LastIPInSubnet(pool)
+	if err != nil {
+		return err
+	}
+	if !subnet.Subnet.Contains(start) || !subnet.Subnet.Contains(end) {
+		return fmt.Errorf("Podman IP range %q is outside subnet %s", value, subnet.Subnet.String())
+	}
+	subnet.LeaseRange = &netTypes.LeaseRange{StartIP: start, EndIP: end}
+	return nil
+}
+
+func podmanLeaseRangePrefix(lease *netTypes.LeaseRange) (string, error) {
+	if lease == nil {
+		return "", nil
+	}
+	start, startOK := netip.AddrFromSlice(lease.StartIP)
+	end, endOK := netip.AddrFromSlice(lease.EndIP)
+	if !startOK || !endOK {
+		return "", fmt.Errorf("Podman lease range requires valid start and end addresses")
+	}
+	start, end = start.Unmap(), end.Unmap()
+	if start.Is4() != end.Is4() {
+		return "", fmt.Errorf("Podman lease range uses different address families")
+	}
+	for bits := 0; bits <= start.BitLen(); bits++ {
+		prefix := netip.PrefixFrom(start, bits).Masked()
+		network := &net.IPNet{
+			IP:   net.IP(prefix.Addr().AsSlice()),
+			Mask: net.CIDRMask(prefix.Bits(), prefix.Addr().BitLen()),
+		}
+		first, err := netUtil.FirstIPInSubnet(network)
+		if err != nil {
+			return "", err
+		}
+		last, err := netUtil.LastIPInSubnet(network)
+		if err != nil {
+			return "", err
+		}
+		if first.Equal(lease.StartIP) && last.Equal(lease.EndIP) {
+			return prefix.String(), nil
+		}
+	}
+	return "", fmt.Errorf(
+		"Podman lease range %s-%s cannot be represented as a CIDR",
+		lease.StartIP,
+		lease.EndIP,
+	)
 }
 
 func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[string][]string {
