@@ -15,12 +15,11 @@ topology:
     sr2s:
       kind: nokia_srsim
       type: sr-2s
+      sfm: sfm-2s
       components:
         - slot: A
           type: cpm-2s
-          sfm: sfm-2s
         - slot: 1
-          sfm: sfm-2s
           type: xcm-2s
           xiom:
             - slot: 1
@@ -32,14 +31,12 @@ topology:
     sr2s-nocfg:
       kind: nokia_srsim
       type: sr-2s
-      env:
-        CLAB_SROS_DISABLE_COMPONENT_CONFIG: foo
+      gen-component-config: false
+      sfm: sfm-2s
       components:
         - slot: A
           type: cpm-2s
-          sfm: sfm-2s
         - slot: 1
-          sfm: sfm-2s
           type: xcm-2s
           xiom:
             - slot: 1
@@ -51,23 +48,21 @@ topology:
     # sr2se:
     #   kind: nokia_srsim
     #   type: sr-2se
+    #   sfm: sfm-2se
     #   components:
     #     - slot: A
     #       type: cpm-2se
-    #       sfm: sfm-2se
     #     - slot: 1
-    #       sfm: sfm-2se
     #       type: xcm-2se
 
     # sr7s:
     #   kind: nokia_srsim
     #   type: sr-7s
+    #   sfm: sfm2-s
     #   components:
     #     - slot: A
     #       type: cpm2-s
-    #       sfm: sfm2-s
     #     - slot: 1
-    #       sfm: sfm2-s
     #       type: xcm2-7s
     #       mda:
     #         - slot: 1
@@ -76,12 +71,11 @@ topology:
     sr14s:
       kind: nokia_srsim
       type: sr-14s
+      sfm: sfm2-s
       components:
         - slot: A
           type: cpm2-s
-          sfm: sfm2-s
         - slot: 1
-          sfm: sfm2-s
           type: xcm2-14s
           mda:
             - slot: 1

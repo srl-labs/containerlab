@@ -742,7 +742,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		c.privilegedByDefault(strings.ToLower(kind)),
 	)
 
-	return &clabtypes.NodeConfig{
+	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:    nodeName,
 		Hostname:     topo.GetNodeHostname(nodeName),
 		Kind:         kind,
@@ -770,8 +770,17 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		CPUSet:       topo.GetNodeCPUSet(nodeName),
 		Memory:       topo.GetNodeMemory(nodeName),
 		License:      topo.GetNodeLicense(nodeName),
-		Components:   topo.GetComponents(nodeName),
 	}
+
+	kindSpecificConfig, err := c.decodeKindSpecificConfig(topo, nodeName, strings.ToLower(kind))
+	if err != nil {
+		// A state file can hold keys a later release rejects; such a node counts as changed.
+		kindSpecificConfig = clabnodes.InvalidKindSpecificConfig{Err: err.Error()}
+	}
+
+	nodeCfg.KindSpecificConfig = kindSpecificConfig
+
+	return nodeCfg
 }
 
 func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) error {

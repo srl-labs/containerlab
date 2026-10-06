@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -83,10 +84,6 @@ const (
 	envSrosIPv6Active         = "NOKIA_SROS_ADDRESS_IPV6_ACTIVE"
 	envSrosStaticRoutePrefix  = "NOKIA_SROS_STATIC_ROUTE_"
 
-	// CLAB SPECIFIC ENV VARS.
-	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
-	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
-
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
 
@@ -130,7 +127,6 @@ var (
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
-		envSrosConfigMode:         "model-driven",      // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -183,12 +179,37 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformOpts,
-	)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)
 	}, nrea)
 }
+
+// KindSpecificConfig is the nokia_srsim kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
+	ConfigMode ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	// GenComponentConfig generates the configuration of the node's components. Defaults to true.
+	GenComponentConfig bool         `yaml:"gen-component-config" json:"gen-component-config"`
+	SFM                string       `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components         []*Component `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+// SetDefaults implements clabnodes.KindSpecificConfigDefaulter.
+func (c *KindSpecificConfig) SetDefaults() { c.GenComponentConfig = true }
+
+// equalIgnoringComponentOrder reports whether c and o are equal, comparing components by slot
+// regardless of their order and the case of the slot.
+func (c *KindSpecificConfig) equalIgnoringComponentOrder(o *KindSpecificConfig) bool {
+	a, b := *c, *o
+	a.Components, b.Components = nil, nil
+
+	return reflect.DeepEqual(a, b) &&
+		reflect.DeepEqual(componentsBySlot(c.Components), componentsBySlot(o.Components))
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 // sros SR-SIM Kind structure.
 type sros struct {
@@ -211,7 +232,7 @@ type sros struct {
 	renameDone bool
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
-	rootComponents []*clabtypes.Component
+	rootComponents []*Component
 	// store the longname with cpm suffix
 	cpmContainerName string
 	// for component nodes, store base nodes
@@ -232,6 +253,8 @@ func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 }
 
 // Init Function for SR-SIM kind.
+func (n *sros) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
+
 func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
@@ -258,10 +281,18 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.User = "0:0"
 	}
 
+	if sfm := n.kindSpecificCfg().SFM; sfm != "" {
+		if n.Cfg.Env == nil {
+			n.Cfg.Env = map[string]string{}
+		}
+
+		n.Cfg.Env[envNokiaSrosSFM] = sfm
+	}
+
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
 
 	// make sure we always have uppercase slot definition
-	for _, c := range n.Cfg.Components {
+	for _, c := range n.kindSpecificCfg().Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
 	// Merge Environment
@@ -277,7 +308,11 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.Certificate.Issue = new(false)
 	}
 	if n.isStandaloneNode() {
-		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		log.Debugf(
+			"%q is standalone node. %v",
+			n.Cfg.ShortName,
+			len(n.kindSpecificCfg().Components),
+		)
 
 		vars, err := n.setupStandaloneComponents()
 		if err != nil {
@@ -288,7 +323,11 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
 		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 	} else {
-		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		log.Debugf(
+			"%q is distributed node. %v",
+			n.Cfg.ShortName,
+			len(n.kindSpecificCfg().Components),
+		)
 
 		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
 		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
@@ -306,17 +345,17 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	vars := map[string]string{}
 
-	if len(n.Cfg.Components) == 0 {
+	if len(n.kindSpecificCfg().Components) == 0 {
 		return nil, nil
 	}
-	if len(n.Cfg.Components) > 1 {
+	if len(n.kindSpecificCfg().Components) > 1 {
 		return nil, fmt.Errorf(
 			"expected at most one component override for standalone SR-SIM node %q",
 			n.Cfg.ShortName,
 		)
 	}
 
-	slotA := n.Cfg.Components[0]
+	slotA := n.kindSpecificCfg().Components[0]
 
 	slotName := strings.ToUpper(strings.TrimSpace(slotA.Slot))
 	// single undefined slot is implicitly set to A
@@ -632,7 +671,7 @@ func (n *sros) setupComponentNodes() error {
 	rootCtrName := n.netnsNode.Config().LongName
 
 	// loop through the components, creating them
-	for _, c := range n.Cfg.Components {
+	for _, c := range n.kindSpecificCfg().Components {
 		// instantiate a new nokia_srsim instance
 		srosNode := new(sros)
 		componentNode := clabnodes.Node(srosNode)
@@ -650,7 +689,7 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.ShortName = n.calcComponentName(componentConfig.ShortName, c.Slot)
 		componentConfig.LongName = n.calcComponentName(componentConfig.LongName, c.Slot)
 		componentConfig.NodeType = n.Cfg.NodeType
-		componentConfig.Components = nil
+		kindSpecificConfig.Of(componentConfig).Components = nil
 		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
 		componentConfig.DNS = nil
 		componentConfig.PortBindings = nil
@@ -688,7 +727,7 @@ func (n *sros) setupComponentNodes() error {
 		componentNode.WithRuntime(n.GetRuntime())
 
 		// store root components for cpms, for config gen
-		srosNode.rootComponents = n.Cfg.Components
+		srosNode.rootComponents = n.kindSpecificCfg().Components
 		// store base node name
 		srosNode.baseShortName = n.Cfg.ShortName
 		srosNode.baseLongName = n.Cfg.LongName
@@ -701,13 +740,9 @@ func (n *sros) setupComponentNodes() error {
 }
 
 // setComponentEnvVars sets environment variables for a component.
-func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *clabtypes.Component) {
+func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *Component) {
 	if c.Type != "" {
 		componentConfig.Env[envNokiaSrosCard] = c.Type
-	}
-
-	if c.SFM != "" {
-		componentConfig.Env[envNokiaSrosSFM] = c.SFM
 	}
 
 	for _, x := range c.XIOM {
@@ -828,7 +863,7 @@ func (n *sros) setComponentMgmtEnv(ips MgmtIP) {
 // but no components of its own.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
-	return exists && len(n.Cfg.Components) == 0
+	return exists && len(n.kindSpecificCfg().Components) == 0
 }
 
 // isDistributedBaseNode returns true if this is the base node of a distributed
@@ -837,7 +872,7 @@ func (n *sros) isDistributedBaseNode() bool {
 	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
 		return false
 	}
-	return len(n.Cfg.Components) > 1
+	return len(n.kindSpecificCfg().Components) > 1
 }
 
 // isStandaloneNode returns true if this is a standalone (non-distributed) SR-SIM node.
@@ -900,13 +935,13 @@ func (n *sros) cpmNode() (clabnodes.Node, error) {
 // It prefers slot A if present, otherwise returns slot B.
 func (n *sros) cpmSlot() (string, error) {
 	// Prefer slot A, fall back to slot B
-	for _, comp := range n.Cfg.Components {
+	for _, comp := range n.kindSpecificCfg().Components {
 		if comp.Slot == slotAName {
 			return slotAName, nil
 		}
 	}
 	// Check for slot B as fallback
-	for _, comp := range n.Cfg.Components {
+	for _, comp := range n.kindSpecificCfg().Components {
 		if comp.Slot == slotBName {
 			return slotBName, nil
 		}
@@ -1010,7 +1045,7 @@ func (*sros) checkKernelVersion() error {
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
-	for _, component := range n.Cfg.Components {
+	for _, component := range n.kindSpecificCfg().Components {
 		// convert slot to upper
 		slot := strings.ToUpper(component.Slot)
 		// check if slot exists
@@ -1274,7 +1309,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 			strings.ToLower(n.Cfg.NodeType),
 		)
 		configMode = string(ConfigModeClassic)
-		n.Cfg.Env[envSrosConfigMode] = string(ConfigModeClassic)
+		n.kindSpecificCfg().ConfigMode = ConfigModeClassic
 	}
 
 	tplData := &srosTemplateData{
@@ -1489,7 +1524,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 
 	// Forge the IP address to be the actual IP of mgmt
 	// because the CPM A might not own the netns & mgmt IP
-	if len(n.Cfg.Components) > 0 {
+	if len(n.kindSpecificCfg().Components) > 0 {
 		ips, err := n.distNodeMgmtIPs()
 		if err == nil {
 			if ips.IPv4 != "" {
@@ -1720,7 +1755,7 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		"addr",
 		addr,
 		"config-mode",
-		n.Cfg.Env[envSrosConfigMode],
+		n.kindSpecificCfg().ConfigMode,
 	)
 
 	return nil
@@ -1832,11 +1867,10 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	return err
 }
 
-// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic"
-// strings.
+// isConfigClassic reports whether the node is in classic or mixed configuration mode.
 func (n *sros) isConfigClassic() bool {
-	cfgMode := strings.ToLower(n.Cfg.Env[envSrosConfigMode])
-	return cfgMode == "classic" || cfgMode == "mixed"
+	mode := n.kindSpecificCfg().ConfigMode
+	return mode == ConfigModeClassic || mode == ConfigModeMixed
 }
 
 // isFullConfigFile returns true if the config file doesn't contain .partial substring
@@ -2051,7 +2085,7 @@ func (n *sros) MgmtIPAddr() (string, error) {
 // generateComponentConfig generates SR OS configuration for explicitly defined distributed
 // components or known integrated SR-SIM defaults. Power config is appended when supported.
 func (n *sros) generateComponentConfig() string {
-	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+	if !n.kindSpecificCfg().GenComponentConfig {
 		return ""
 	}
 	if n.isConfigClassic() {
@@ -2060,7 +2094,7 @@ func (n *sros) generateComponentConfig() string {
 
 	components := n.rootComponents
 	if len(components) == 0 {
-		if len(n.Cfg.Components) > 1 || n.rootCtrName != "" {
+		if len(n.kindSpecificCfg().Components) > 1 || n.rootCtrName != "" {
 			return ""
 		}
 
@@ -2087,7 +2121,7 @@ func (n *sros) generateComponentConfig() string {
 		}
 	}
 
-	lines := buildComponentCfgLines(components)
+	lines := buildComponentCfgLines(components, n.kindSpecificCfg().SFM)
 	return n.componentConfigFromLines(lines)
 }
 
@@ -2286,6 +2320,8 @@ func (n *sros) Stop(ctx context.Context) error {
 	return nil
 }
 
+// ComputeDiff extends the default diff by ignoring component order and slot case, so that only
+// a change to the set of components marks the kind-specific config as changed.
 func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
 	diff := n.DefaultNode.ComputeDiff(oldCfg, newCfg)
 
@@ -2293,29 +2329,17 @@ func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.Topo
 		return diff
 	}
 
-	if !componentSetsEqual(oldCfg.Components, newCfg.Components) {
-		diff.Fields = append(diff.Fields, "Components")
+	oldKC, oldOK := oldCfg.KindSpecificConfig.(*KindSpecificConfig)
+	newKC, newOK := newCfg.KindSpecificConfig.(*KindSpecificConfig)
+
+	if oldOK && newOK && oldKC.equalIgnoringComponentOrder(newKC) {
+		diff.Fields = slices.DeleteFunc(
+			diff.Fields,
+			func(f string) bool { return f == "KindSpecificConfig" },
+		)
 	}
 
 	return diff
-}
-
-func componentSetsEqual(a, b []*clabtypes.Component) bool {
-	return reflect.DeepEqual(componentsBySlot(a), componentsBySlot(b))
-}
-
-func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Component {
-	m := make(map[string]clabtypes.Component)
-	for _, c := range components {
-		if c == nil || strings.TrimSpace(c.Slot) == "" {
-			continue
-		}
-		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
-		norm := *c
-		norm.Slot = slot
-		m[slot] = norm
-	}
-	return m
 }
 
 // DefaultLinkType returns the default link type for an SR-SIM node

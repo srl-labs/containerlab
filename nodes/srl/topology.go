@@ -102,7 +102,8 @@ func resolveSRLTopology(cfg *clabtypes.NodeConfig) (srlTopology, error) {
 		return srlTopology{}, fmt.Errorf("no embedded topology for srl type %q", cfg.NodeType)
 	}
 
-	if len(cfg.Components) == 0 {
+	components := kindSpecificConfig.Of(cfg).Components
+	if len(components) == 0 {
 		return base, nil
 	}
 
@@ -115,7 +116,7 @@ func resolveSRLTopology(cfg *clabtypes.NodeConfig) (srlTopology, error) {
 	resolved.IMM = ""
 	resolved.Slots = map[int]srlSlot{}
 
-	for i, component := range cfg.Components {
+	for i, component := range components {
 		if component == nil {
 			return srlTopology{}, fmt.Errorf(
 				"component %d for srl type %q must not be empty", i+1, cfg.NodeType)

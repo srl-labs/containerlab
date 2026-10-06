@@ -239,8 +239,7 @@ topology:
       kind: nokia_sros
       image: nokia_sros:24.10.R1
       type: sr-2s
-      env:
-        NOKIA_SROS_SFM: sfm-2s
+      sfm: sfm-2s
       components:
         - slot: A
           type: cpm-2s
@@ -258,16 +257,15 @@ The same limitation as the TiMOS line variant definition applies that only a sin
 
 ##### Additional parameters
 
-By default `cpu`, `ram` and `max_nics` are derived automatically but can be easily overridden per component through that specific component's `env`.
+By default `cpu`, `ram` and `max_nics` are derived automatically but can be overridden per component with the `cpu`, `ram` and `max-nics` keys.
 
 ```yaml
 components:
   - slot: 1
     type: xcm-2s
-    env:
-      cpu: "4"        # vCPUs allocated to the card VM
-      ram: "6"        # RAM in GB
-      max_nics: "5"   # Give the card VM only 5 NICs
+    cpu: 4        # vCPUs allocated to the card VM
+    ram: 6        # RAM in GB
+    max-nics: 5   # Give the card VM only 5 NICs
     xiom:
       - slot: 1
         type: iom-s-3.0t
@@ -462,10 +460,15 @@ Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS VM nodes. 
 Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^2]. This will enable key-based authentication next time you connect to the node.
 
 /// details | Skipping keys injection
-If you want to disable this feature (e.g. when using classic CLI mode), you can do so by setting the `CLAB_SKIP_SROS_SSH_KEY_CONFIG=true` env variable:
+The keys configuration uses MD-CLI syntax, so keys are not injected into nodes with `config-mode` set to `classic` or `mixed`.
 
-```bash
-sudo CLAB_SKIP_SROS_SSH_KEY_CONFIG=true -E clab deploy -t <topo-file>
+To disable this feature for other nodes, set the `inject-ssh-keys: false` [kind-specific config key](../nodes.md#kind-specific-config):
+
+```yaml
+topology:
+  kinds:
+    nokia_sros:
+      inject-ssh-keys: false
 ```
 
 ///
@@ -474,15 +477,14 @@ sudo CLAB_SKIP_SROS_SSH_KEY_CONFIG=true -E clab deploy -t <topo-file>
 
 Nokia SR OS supports both MD-CLI (model-driven) and classic CLI modes. By default, containerlab uses the MD-CLI scrapligo platform (`nokia_sros`) to interact with vr-sros nodes for operations such as partial config apply and `save-config`.
 
-If your node is running in classic or mixed CLI mode, set the `CLAB_SROS_CONFIG_MODE` environment variable so that containerlab uses the matching scrapligo platform (`nokia_sros_classic`) with the correct prompt regex:
+If your node is running in classic or mixed CLI mode, set the `config-mode` [kind-specific config key](../nodes.md#kind-specific-config) so that containerlab uses the matching scrapligo platform (`nokia_sros_classic`) with the correct prompt regex:
 
 ```yaml
 topology:
   nodes:
     sros1:
       kind: nokia_sros
-      env:
-        CLAB_SROS_CONFIG_MODE: classic  # or "mixed"
+      config-mode: classic # or "mixed"
 ```
 
 ### License

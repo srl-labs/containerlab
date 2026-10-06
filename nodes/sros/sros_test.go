@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -189,15 +190,13 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			NodeType:      "sr-1",
 			StartupConfig: "",
-			Env: map[string]string{
-				envSrosConfigMode: "model-driven",
-			},
-			Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
-			TLSKey:      "",
-			TLSCert:     "",
-			TLSAnchor:   "",
-			LabDir:      t.TempDir(),
+			Certificate:   &clabtypes.CertificateConfig{Issue: &issueCert},
+			TLSKey:        "",
+			TLSCert:       "",
+			TLSAnchor:     "",
+			LabDir:        t.TempDir(),
 		}
+		kindSpecificConfig.Of(n.Cfg).ConfigMode = ConfigModeModelDriven
 		n.WithRuntime(mockRt)
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
@@ -214,14 +213,14 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		name      string
 		nodeType  string
 		cardType  string
-		mdas      clabtypes.MDAS
+		mdas      MDAS
 		powerType string
 	}{
 		{
 			name:     "integrated_sr1_default",
 			nodeType: "sr-1",
 			cardType: "iom-1",
-			mdas: clabtypes.MDAS{
+			mdas: MDAS{
 				{Slot: 1, Type: "me6-100gb-qsfp28"},
 				{Slot: 2, Type: "me12-100gb-qsfp28"},
 			},
@@ -230,56 +229,56 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			name:      "integrated_sr1s_default",
 			nodeType:  "sr-1s",
 			cardType:  "xcm-1s",
-			mdas:      clabtypes.MDAS{{Slot: 1, Type: "s36-100gb-qsfp28"}},
+			mdas:      MDAS{{Slot: 1, Type: "s36-100gb-qsfp28"}},
 			powerType: "ps-a4-shelf-dc",
 		},
 		{
 			name:     "integrated_ixr_r6_default",
 			nodeType: "ixr-r6",
 			cardType: "iom-ixr-r6",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"}},
+			mdas:     MDAS{{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2_default",
 			nodeType: "ixr-e2",
 			cardType: "imm2-qsfpdd+2-qsfp28+24-sfp28",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"}},
+			mdas:     MDAS{{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2c_default",
 			nodeType: "ixr-e2c",
 			cardType: "imm12-sfp28+2-qsfp28",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m12-sfp28+2-qsfp28"}},
+			mdas:     MDAS{{Slot: 1, Type: "m12-sfp28+2-qsfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2n_default",
 			nodeType: "ixr-e2n",
 			cardType: "imm4-sfp+4-sfp+",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+"}},
+			mdas:     MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+"}},
 		},
 		{
 			name:     "integrated_ixr_e2n_s_default",
 			nodeType: "ixr-e2n-s",
 			cardType: "imm4-sfp+4-sfp+-s",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+-s"}},
+			mdas:     MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+-s"}},
 		},
 		{
 			name:     "integrated_ixr_e3c_default",
 			nodeType: "ixr-e3c",
 			cardType: "imm4-qsfp28+16-sfp28+8-sfp56",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"}},
+			mdas:     MDAS{{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"}},
 		},
 		{
 			name:     "integrated_ixr_e3x_default",
 			nodeType: "ixr-e3x",
 			cardType: "imm16-sfp112+15-sfp56+6-qsfpdd",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"}},
+			mdas:     MDAS{{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"}},
 		},
 		{
 			name:     "integrated_ixr_ec_default",
 			nodeType: "ixr-ec",
 			cardType: "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
-			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"}},
+			mdas:     MDAS{{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"}},
 		},
 	}
 	for _, tc := range integratedDefaults {
@@ -355,39 +354,33 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 	})
 
 	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envDisableComponentConfigGen: "true"},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindSpecificConfig.Of(n.Cfg).GenComponentConfig = false
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("classic_config_returns_empty", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"sr-1",
-			map[string]string{envSrosConfigMode: string(ConfigModeClassic)},
-			nil,
-		)
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+		kindSpecificConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("distributed_components_still_generate", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
+		kindSpecificConfig.Of(n.Cfg).SFM = "sfm-2s"
 		n.rootCtrName = "clab-test-sr2s-a"
-		n.rootComponents = []*clabtypes.Component{
-			{Slot: slotAName, Type: "cpm-2s", SFM: "sfm-2s"},
+		n.rootComponents = []*Component{
+			{Slot: slotAName, Type: "cpm-2s"},
 			{
 				Slot: "1",
 				Type: "xcm-2s",
-				SFM:  "sfm-2s",
-				XIOM: clabtypes.XIOMS{
+				XIOM: XIOMS{
 					{
 						Slot: 1,
 						Type: "iom-s-3.0t",
-						MDA:  clabtypes.MDAS{{Slot: 1, Type: "ms18-100gb-qsfp28"}},
+						MDA:  MDAS{{Slot: 1, Type: "ms18-100gb-qsfp28"}},
 					},
 				},
 			},
@@ -409,11 +402,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 func Test_sros_integratedComponentOverrides(t *testing.T) {
 	t.Run("integrated_component_override_sets_env", func(t *testing.T) {
-		n := newSrosInitTestNode("ixr-r6", []*clabtypes.Component{
+		n := newSrosInitTestNode("ixr-r6", []*Component{
 			{
 				Slot: slotBName,
 				Type: "cpiom-ixr-r6",
-				MDA:  clabtypes.MDAS{{Slot: 3, Type: "m20-1g-csfp"}},
+				MDA:  MDAS{{Slot: 3, Type: "m20-1g-csfp"}},
 			},
 		})
 
@@ -427,7 +420,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 	})
 
 	t.Run("integrated_rejects_multiple_components", func(t *testing.T) {
-		n := newSrosInitTestNode("ixr-r6", []*clabtypes.Component{
+		n := newSrosInitTestNode("ixr-r6", []*Component{
 			{Slot: slotAName, Type: "cpiom-ixr-r6"},
 			{Slot: slotBName, Type: "cpiom-ixr-r6"},
 		})
@@ -438,8 +431,16 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Contains(t, err.Error(), "at most one component override")
 	})
 
+	t.Run("sfm_sets_container_env", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1", nil)
+		kindSpecificConfig.Of(n.Cfg).SFM = "m-sfm6-7/12"
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "m-sfm6-7/12", n.Cfg.Env[envNokiaSrosSFM])
+	})
+
 	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
-		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
+		n := newSrosInitTestNode("ixr-e2", []*Component{
 			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
 		})
 
@@ -450,7 +451,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 	})
 
 	t.Run("integrated_rejects_invalid_slot", func(t *testing.T) {
-		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
+		n := newSrosInitTestNode("ixr-e2", []*Component{
 			{Slot: slotBName, Type: "cpm-ixr-e2"},
 		})
 
@@ -461,7 +462,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 	})
 
 	t.Run("distributed_node_still_uses_components", func(t *testing.T) {
-		n := newSrosInitTestNode("sr-2s", []*clabtypes.Component{
+		n := newSrosInitTestNode("sr-2s", []*Component{
 			{Slot: slotAName, Type: "cpm-2s"},
 			{Slot: "1", Type: "xcm-2s"},
 		})
@@ -477,28 +478,25 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 func newSrosComponentConfigTestNode(
 	nodeType string,
 	env map[string]string,
-	components []*clabtypes.Component,
+	components []*Component,
 ) *sros {
 	if env == nil {
 		env = map[string]string{}
-	}
-	if _, ok := env[envSrosConfigMode]; !ok {
-		env[envSrosConfigMode] = string(ConfigModeModelDriven)
 	}
 
 	n := &sros{}
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = &clabtypes.NodeConfig{
-		ShortName:  "n1",
-		LongName:   "clab-test-n1",
-		NodeType:   nodeType,
-		Env:        env,
-		Components: components,
+		ShortName: "n1",
+		LongName:  "clab-test-n1",
+		NodeType:  nodeType,
+		Env:       env,
 	}
+	kindSpecificConfig.Of(n.Cfg).Components = components
 	return n
 }
 
-func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sros {
+func newSrosInitTestNode(nodeType string, components []*Component) *sros {
 	issueCert := false
 	n := &sros{}
 	n.Cfg = &clabtypes.NodeConfig{
@@ -508,14 +506,14 @@ func newSrosInitTestNode(nodeType string, components []*clabtypes.Component) *sr
 		NodeType:    nodeType,
 		Env:         map[string]string{},
 		Sysctls:     map[string]string{},
-		Components:  components,
 		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 	}
+	kindSpecificConfig.Of(n.Cfg).Components = components
 	return n
 }
 
 func TestDistributedComponentsUseNetnsContainer(t *testing.T) {
-	components := []*clabtypes.Component{
+	components := []*Component{
 		{Slot: slotAName},
 		{Slot: "2"},
 		{Slot: slotBName},
@@ -563,7 +561,7 @@ func TestDistributedHolderOnlyRemainsDiscoverableForDestroy(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+	n := newSrosInitTestNode("sr-14s", []*Component{
 		{Slot: slotAName},
 		{Slot: "1"},
 	})
@@ -605,7 +603,7 @@ func TestDistributedDeleteAttemptsHolderAfterComponentError(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+	n := newSrosInitTestNode("sr-14s", []*Component{
 		{Slot: slotAName},
 		{Slot: "1"},
 	})
@@ -632,7 +630,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 	t.Run("already running", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		n := newSrosInitTestNode("sr-14s", []*Component{
 			{Slot: slotAName}, {Slot: "1"},
 		})
 		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
@@ -645,7 +643,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 	t.Run("starts stopped holder", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		n := newSrosInitTestNode("sr-14s", []*Component{
 			{Slot: slotAName}, {Slot: "1"},
 		})
 		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
@@ -661,7 +659,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 	t.Run("missing holder requires recreate", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-		n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+		n := newSrosInitTestNode("sr-14s", []*Component{
 			{Slot: slotAName}, {Slot: "1"},
 		})
 		require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(runtime)))
@@ -734,7 +732,7 @@ func TestComponentMgmtEnv(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+			n := newSrosInitTestNode("sr-14s", []*Component{
 				{Slot: slotAName, Env: tt.env}, {Slot: slotBName}, {Slot: "1"},
 			})
 			require.NoError(t, n.Init(n.Cfg))
@@ -766,7 +764,7 @@ func TestComponentMgmtEnv(t *testing.T) {
 func TestComponentMgmtEnvOnlyCPMSlots(t *testing.T) {
 	for _, slot := range []string{"A", "B", "a", "b", "1", "10", "", "C", "invalid"} {
 		t.Run(slot, func(t *testing.T) {
-			n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+			n := newSrosInitTestNode("sr-14s", []*Component{
 				{Slot: slotAName}, {Slot: "1"},
 			})
 			require.NoError(t, n.Init(n.Cfg))
@@ -794,7 +792,7 @@ func TestDistributedNetnsLookupAndMgmtIPs(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	runtime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	n := newSrosInitTestNode("sr-2s", []*clabtypes.Component{
+	n := newSrosInitTestNode("sr-2s", []*Component{
 		{Slot: slotAName},
 		{Slot: "1"},
 	})
@@ -832,7 +830,7 @@ func TestNamespaceNodeUsesDefaultLifecycle(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+	n := newSrosInitTestNode("sr-14s", []*Component{
 		{Slot: slotAName}, {Slot: "1"},
 	})
 	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
@@ -860,7 +858,7 @@ func TestDeployFabricUsesResolvedManagementAddresses(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	n := newSrosInitTestNode("sr-14s", []*clabtypes.Component{
+	n := newSrosInitTestNode("sr-14s", []*Component{
 		{Slot: slotAName}, {Slot: "1"},
 	})
 	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
@@ -918,14 +916,14 @@ func TestNamespaceNodeOnlyForDistributedComponents(t *testing.T) {
 	tests := []struct {
 		name       string
 		nodeType   string
-		components []*clabtypes.Component
+		components []*Component
 		env        map[string]string
 		wantHolder bool
 	}{
 		{name: "integrated", nodeType: "sr-1"},
 		{
 			name: "integrated component override", nodeType: "sr-1",
-			components: []*clabtypes.Component{{Slot: slotAName}},
+			components: []*Component{{Slot: slotAName}},
 		},
 		{
 			name: "explicit distributed card", nodeType: "sr-14s",
@@ -933,7 +931,7 @@ func TestNamespaceNodeOnlyForDistributedComponents(t *testing.T) {
 		},
 		{
 			name: "distributed components", nodeType: "sr-14s",
-			components: []*clabtypes.Component{{Slot: slotAName}, {Slot: "1"}},
+			components: []*Component{{Slot: slotAName}, {Slot: "1"}},
 			wantHolder: true,
 		},
 	}
@@ -959,10 +957,10 @@ func TestWithoutComponentsDoesNotUseNamespaceHolder(t *testing.T) {
 		name       string
 		nodeType   string
 		slot       string
-		components []*clabtypes.Component
+		components []*Component
 	}{
 		{name: "integrated without components", nodeType: "sr-1"},
-		{name: "integrated empty components", nodeType: "sr-1", components: []*clabtypes.Component{}},
+		{name: "integrated empty components", nodeType: "sr-1", components: []*Component{}},
 		{name: "explicit CPM A", nodeType: "sr-14s", slot: "A"},
 		{name: "explicit CPM B", nodeType: "sr-14s", slot: "B"},
 		{name: "explicit line card", nodeType: "sr-14s", slot: "1"},
@@ -993,6 +991,124 @@ func TestWithoutComponentsDoesNotUseNamespaceHolder(t *testing.T) {
 			runtime.EXPECT().DeleteContainer(ctx, n.Cfg.LongName).Return(nil)
 			require.NoError(t, n.Delete(ctx))
 			require.Nil(t, n.netnsNode)
+		})
+	}
+}
+
+func TestDistributedComponentNodes(t *testing.T) {
+	tests := map[string]struct {
+		nodeType   string
+		components []*Component
+		want       bool
+	}{
+		"standalone_without_components": {
+			nodeType: "sr-1",
+		},
+		"integrated_with_component": {
+			nodeType: "ixr-r6",
+			components: []*Component{
+				{Slot: slotBName, Type: "cpiom-ixr-r6", MDA: MDAS{{Slot: 3, Type: "m20-1g-csfp"}}},
+			},
+		},
+		"distributed_chassis_single_cpm": {
+			nodeType:   "sr-2s",
+			components: []*Component{{Slot: slotAName, Type: "cpm-2s"}},
+		},
+		"distributed_chassis_cpm_and_linecard": {
+			nodeType: "sr-2s",
+			components: []*Component{
+				{Slot: slotAName, Type: "cpm-2s"},
+				{Slot: "1", Type: "xcm-2s"},
+			},
+			want: true,
+		},
+		"distributed_chassis_dual_cpm": {
+			nodeType:   "sr-7",
+			components: []*Component{{Slot: slotAName}, {Slot: slotBName}},
+			want:       true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := newSrosInitTestNode(tc.nodeType, tc.components)
+			require.NoError(t, n.Init(n.Cfg))
+			assert.Equal(t, tc.want, len(n.componentNodes) > 0)
+		})
+	}
+}
+
+func TestComputeDiffComponents(t *testing.T) {
+	chassis := func(components ...*Component) *clabtypes.NodeConfig {
+		kc := &KindSpecificConfig{GenComponentConfig: true, Components: components}
+		return &clabtypes.NodeConfig{Kind: "nokia_srsim", NodeType: "sr-2s", KindSpecificConfig: kc}
+	}
+
+	tests := map[string]struct {
+		old, new *clabtypes.NodeConfig
+		want     bool
+	}{
+		"same_components": {
+			old: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			new: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+		},
+		"reordered_components": {
+			old: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			new: chassis(
+				&Component{Slot: "1", Type: "xcm-2s"},
+				&Component{Slot: "A", Type: "cpm-2s"},
+			),
+		},
+		"slot_case_only": {
+			old: chassis(&Component{Slot: "a", Type: "cpm-2s"}),
+			new: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+		},
+		"card_type_changed": {
+			old:  chassis(&Component{Slot: "1", Type: "xcm-2s"}),
+			new:  chassis(&Component{Slot: "1", Type: "xcm-1s"}),
+			want: true,
+		},
+		"component_added": {
+			old: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+			new: chassis(
+				&Component{Slot: "A", Type: "cpm-2s"},
+				&Component{Slot: "1", Type: "xcm-2s"},
+			),
+			want: true,
+		},
+		"other_key_changed": {
+			old: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
+			new: func() *clabtypes.NodeConfig {
+				c := chassis(&Component{Slot: "A", Type: "cpm-2s"})
+				c.KindSpecificConfig.(*KindSpecificConfig).SFM = "sfm-2s"
+				return c
+			}(),
+			want: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := &sros{}
+			n.DefaultNode = *clabnodes.NewDefaultNode(n)
+
+			diff := n.ComputeDiff(tc.old, tc.new)
+			assert.Equal(
+				t,
+				tc.want,
+				slices.Contains(diff.Fields, "KindSpecificConfig"),
+				"fields %v",
+				diff.Fields,
+			)
 		})
 	}
 }

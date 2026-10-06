@@ -134,15 +134,20 @@ type NodeDefinition struct {
 	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
 	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Network aliases
-	Aliases    []string     `yaml:"aliases,omitempty"`
-	Components []*Component `yaml:"components,omitempty"`
+	Aliases []string `yaml:"aliases,omitempty"`
 	// how `containerlab apply` handles dataplane link changes for this node:
 	// live, restart or recreate. Overrides the kind's own declaration.
 	LinkApplyMode LinkApplyMode `yaml:"link-apply-mode,omitempty"`
+	// KindSpecificConfig holds the keys not known to the generic node definition. They are the
+	// kind-specific config, decoded strictly into the kind's config type at node creation.
+	KindSpecificConfig map[string]any `yaml:"-"`
 }
 
 // Interface compliance.
-var _ yaml.Unmarshaler = &NodeDefinition{}
+var (
+	_ yaml.Unmarshaler = &NodeDefinition{}
+	_ yaml.Marshaler   = NodeDefinition{}
+)
 
 // UnmarshalYAML is a custom unmarshaler for NodeDefinition type that allows to map old attributes
 // to new ones.
@@ -156,6 +161,8 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 		NodeDefinitionAlias `yaml:",inline"`
 		LegacyUsername      string `yaml:"username,omitempty"`
 		LegacyPassword      string `yaml:"password,omitempty"`
+		// the inline map must sit on this wrapper; yaml.v2 ignores it inside the inlined alias.
+		KindSpecificConfig map[string]any `yaml:",inline"`
 	}
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
@@ -166,6 +173,7 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	*n = NodeDefinition(nd.NodeDefinitionAlias)
+	n.KindSpecificConfig = nd.KindSpecificConfig
 
 	if nd.LegacyUsername != "" && n.Credentials.Username == "" {
 		n.Credentials.Username = nd.LegacyUsername
@@ -175,6 +183,17 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	return nil
+}
+
+// MarshalYAML renders KindSpecificConfig inline next to the generic fields, mirroring
+// UnmarshalYAML.
+func (n NodeDefinition) MarshalYAML() (any, error) {
+	type NodeDefinitionAlias NodeDefinition
+
+	return struct {
+		NodeDefinitionAlias `yaml:",inline"`
+		KindSpecificConfig  map[string]any `yaml:",inline"`
+	}{NodeDefinitionAlias(n), n.KindSpecificConfig}, nil
 }
 
 // ImportEnvs imports all environment variables defined in the shell

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	clabtypes "github.com/srl-labs/containerlab/types"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -57,10 +57,10 @@ func parseSrosPortAlias(ifName string) (srosPortAlias, error) {
 }
 
 func (s *vrSROS) CalculateInterfaceIndex(ifName string) (int, error) {
-	if len(s.Cfg.Components) == 0 {
+	if len(s.kindSpecificCfg().Components) == 0 {
 		return simpleInterfaceIndex(ifName)
 	}
-	return componentInterfaceIndex(s.Cfg.Components, ifName)
+	return componentInterfaceIndex(s.kindSpecificCfg().Components, ifName)
 }
 
 func simpleInterfaceIndex(ifName string) (int, error) {
@@ -78,14 +78,14 @@ func simpleInterfaceIndex(ifName string) (int, error) {
 	return p.portIndex, nil
 }
 
-func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (int, error) {
+func componentInterfaceIndex(components []*Component, ifName string) (int, error) {
 	p, err := parseSrosPortAlias(ifName)
 	if err != nil {
 		return 0, err
 	}
 	slot, xiom, mda, portIndex := p.slot, p.xiom, p.mda, p.portIndex
 
-	lcs := make([]*clabtypes.Component, 0, len(components))
+	lcs := make([]*Component, 0, len(components))
 	for _, c := range components {
 		if !isCPMSlot(c.Slot) {
 			lcs = append(lcs, c)
@@ -93,7 +93,7 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 	}
 
 	base := 0
-	var target *clabtypes.Component
+	var target *Component
 	if len(lcs) == 0 {
 		if slot != 1 {
 			return 0, fmt.Errorf(
@@ -104,7 +104,7 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 		}
 		target = components[0]
 	} else {
-		slices.SortFunc(lcs, func(a, b *clabtypes.Component) int {
+		slices.SortFunc(lcs, func(a, b *Component) int {
 			as, _ := strconv.Atoi(strings.TrimSpace(a.Slot))
 			bs, _ := strconv.Atoi(strings.TrimSpace(b.Slot))
 			return as - bs
@@ -134,7 +134,7 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 	return base + within + portIndex, nil
 }
 
-func withinCardOffset(c *clabtypes.Component, xiom, mda int) (int, error) {
+func withinCardOffset(c *Component, xiom, mda int) (int, error) {
 	if len(c.MDA) == 0 && len(c.XIOM) == 0 {
 		return 0, nil
 	}
@@ -149,7 +149,7 @@ func withinCardOffset(c *clabtypes.Component, xiom, mda int) (int, error) {
 	offset := 0
 
 	directMDA := slices.Clone(c.MDA)
-	slices.SortFunc(directMDA, func(a, b clabtypes.MDA) int { return a.Slot - b.Slot })
+	slices.SortFunc(directMDA, func(a, b clabnodessros.MDA) int { return a.Slot - b.Slot })
 	for _, m := range directMDA {
 		if matches(false, 0, m.Slot) {
 			return offset, nil
@@ -158,10 +158,10 @@ func withinCardOffset(c *clabtypes.Component, xiom, mda int) (int, error) {
 	}
 
 	xioms := slices.Clone(c.XIOM)
-	slices.SortFunc(xioms, func(a, b clabtypes.XIOM) int { return a.Slot - b.Slot })
+	slices.SortFunc(xioms, func(a, b clabnodessros.XIOM) int { return a.Slot - b.Slot })
 	for _, x := range xioms {
 		xmda := slices.Clone(x.MDA)
-		slices.SortFunc(xmda, func(a, b clabtypes.MDA) int { return a.Slot - b.Slot })
+		slices.SortFunc(xmda, func(a, b clabnodessros.MDA) int { return a.Slot - b.Slot })
 		for _, m := range xmda {
 			if matches(true, x.Slot, m.Slot) {
 				return offset, nil

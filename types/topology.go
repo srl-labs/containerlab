@@ -1,6 +1,7 @@
 package types
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -231,6 +232,13 @@ func (t *Topology) GetKind(kind string) *NodeDefinition {
 
 	if kdef, ok := t.Kinds[kind]; ok {
 		return kdef
+	}
+
+	// kind names are case-insensitive, an exact match takes precedence
+	for _, name := range slices.Sorted(maps.Keys(t.Kinds)) {
+		if strings.EqualFold(name, kind) {
+			return t.Kinds[name]
+		}
 	}
 
 	return new(NodeDefinition)
@@ -514,18 +522,6 @@ func (t *Topology) GetNodeShmSize(nodeName string) string {
 		func(kind *NodeDefinition) string { return kind.ShmSize },
 		func(defaults *NodeDefinition) string { return defaults.ShmSize },
 		func(v string) bool { return v != "" },
-	)
-}
-
-func (t *Topology) GetComponents(nodeName string) []*Component {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) []*Component { return node.Components },
-		func(group *NodeDefinition) []*Component { return group.Components },
-		func(kind *NodeDefinition) []*Component { return kind.Components },
-		func(defaults *NodeDefinition) []*Component { return defaults.Components },
-		func(v []*Component) bool { return v != nil },
 	)
 }
 
@@ -1155,4 +1151,78 @@ const (
 func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialTopologySource {
 	_, _, src := t.resolveTopologyCredentials(nodeName)
 	return src
+}
+
+// GetComponents returns the node's raw components kind-specific config value, or nil when unset.
+//
+// Deprecated: components are kind-specific config; use GetNodeKindSpecificConfig. Kept for
+// clabernetes, which
+// transcodes the value into its own component type.
+func (t *Topology) GetComponents(nodeName string) any {
+	for _, e := range t.GetNodeKindSpecificConfig(nodeName) {
+		if e.Key == "components" {
+			return e.Value
+		}
+	}
+
+	return nil
+}
+
+// KindSpecificConfigEntry is a raw kind-specific config key of a node with the topology block it
+// came from.
+type KindSpecificConfigEntry struct {
+	Key   string
+	Value any
+	// From is the block that set the key: nodes.<name>, groups.<name>, kinds.<name> or defaults.
+	From string
+}
+
+// GetNodeKindSpecificConfig returns the node's raw kind-specific config keys merged with precedence
+// node > group > kind > defaults, sorted by key. The first block that sets a key provides its
+// whole value. Nodes absent from the topology have no kind-specific config.
+func (t *Topology) GetNodeKindSpecificConfig(nodeName string) []KindSpecificConfigEntry {
+	nodeDef, ok := t.Nodes[nodeName]
+	if !ok {
+		return nil
+	}
+
+	group := t.GetNodeGroup(nodeName)
+	kind := t.GetNodeKind(nodeName)
+
+	blocks := []struct {
+		from string
+		def  *NodeDefinition
+	}{
+		{"nodes." + nodeName, nodeDef},
+		{"groups." + group, t.GetGroup(group)},
+		{"kinds." + kind, t.GetKind(kind)},
+		{"defaults", t.GetDefaults()},
+	}
+
+	var entries []KindSpecificConfigEntry
+
+	seen := map[string]bool{}
+
+	for _, b := range blocks {
+		if b.def == nil {
+			continue
+		}
+
+		for k, v := range b.def.KindSpecificConfig {
+			if seen[k] {
+				continue
+			}
+
+			seen[k] = true
+
+			entries = append(entries, KindSpecificConfigEntry{Key: k, Value: v, From: b.from})
+		}
+	}
+
+	slices.SortFunc(
+		entries,
+		func(a, b KindSpecificConfigEntry) int { return strings.Compare(a.Key, b.Key) },
+	)
+
+	return entries
 }

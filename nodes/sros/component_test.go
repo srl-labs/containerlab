@@ -1,4 +1,4 @@
-package types
+package sros
 
 import (
 	"strings"

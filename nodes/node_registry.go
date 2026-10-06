@@ -55,6 +55,10 @@ func (r *NodeRegistry) NewNodeOfKind(nodeKindName string) (Node, error) {
 		)
 	}
 
+	if nodeKindEntry.initFunction == nil {
+		return nil, fmt.Errorf("kind %q has no node constructor", nodeKindName)
+	}
+
 	// return a new instance of the requested node
 	return nodeKindEntry.initFunction(), nil
 }
@@ -107,10 +111,28 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 }
 
 type NodeRegistryEntryAttributes struct {
-	credentials         *Credentials
-	generateAttributes  *GenerateNodeAttributes
-	platformAttrs       *PlatformAttrs
-	privilegedByDefault *bool
+	credentials            *Credentials
+	generateAttributes     *GenerateNodeAttributes
+	platformAttrs          *PlatformAttrs
+	privilegedByDefault    *bool
+	kindSpecificConfigType KindSpecificConfigType
+}
+
+// KindSpecificConfigType returns the kind's config type, or nil when the kind accepts no
+// kind-specific config keys.
+func (nre *NodeRegistryEntry) KindSpecificConfigType() KindSpecificConfigType {
+	if nre == nil || nre.attributes == nil {
+		return nil
+	}
+
+	return nre.attributes.kindSpecificConfigType
+}
+
+// AcceptsKindSpecificConfigKey reports whether the kind's config has key.
+func (nre *NodeRegistryEntry) AcceptsKindSpecificConfigKey(key string) bool {
+	t := nre.KindSpecificConfigType()
+
+	return t != nil && acceptsKey(t, key)
 }
 
 func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
@@ -185,6 +207,15 @@ func (nrea *NodeRegistryEntryAttributes) WithPrivilegedByDefault(
 	privileged bool,
 ) *NodeRegistryEntryAttributes {
 	nrea.privilegedByDefault = &privileged
+	return nrea
+}
+
+// WithKindSpecificConfig registers the kind's KindSpecificConfigSpec. Kinds without one accept no
+// kind-specific config keys.
+func (nrea *NodeRegistryEntryAttributes) WithKindSpecificConfig(
+	t KindSpecificConfigType,
+) *NodeRegistryEntryAttributes {
+	nrea.kindSpecificConfigType = t
 	return nrea
 }
 

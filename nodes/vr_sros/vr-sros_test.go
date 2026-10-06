@@ -10,11 +10,13 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"gopkg.in/yaml.v2"
 )
 
 func Test_applyPartialConfig_HonorsContextCancellationWhileUnhealthy(t *testing.T) {
@@ -176,14 +178,14 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 		LabDir:    dir,
 		NodeType:  "ixr-e",
 		Env:       map[string]string{},
-		Components: []*clabtypes.Component{
+		KindSpecificConfig: &KindSpecificConfig{Components: []*Component{
 			{Slot: "A", Type: "cpm-ixr-e"},
 			{
 				Slot: "1",
 				Type: "imm24-sfp++8-sfp28+2-qsfp28",
-				MDA:  clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
+				MDA:  clabnodessros.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
 			},
-		},
+		}},
 	}
 	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
 	s := new(vrSROS)
@@ -193,14 +195,34 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 		"lc: max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
 }
 
+func Test_vrSROS_Init_withComponents_appliesSFM(t *testing.T) {
+	cfg := &clabtypes.NodeConfig{
+		ShortName: "sros1",
+		LabDir:    t.TempDir(),
+		NodeType:  "sr-2s",
+		Env:       map[string]string{},
+		KindSpecificConfig: &KindSpecificConfig{
+			SFM:        "sfm-2s",
+			Components: []*Component{{Slot: "A", Type: "cpm-2s"}, {Slot: "1", Type: "xcm-2s"}},
+		},
+	}
+	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
+	s := new(vrSROS)
+	require.NoError(t, s.Init(cfg, clabnodes.WithMgmtNet(mgmt)))
+	assert.Contains(t, s.Cfg.Cmd, "cp: chassis=sr-2s slot=A sfm=sfm-2s card=cpm-2s ___ "+
+		"lc: chassis=sr-2s slot=1 sfm=sfm-2s card=xcm-2s")
+}
+
 func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &clabtypes.NodeConfig{
-		ShortName:  "sros1",
-		LabDir:     dir,
-		NodeType:   "sr-7",
-		Env:        map[string]string{},
-		Components: []*clabtypes.Component{{Slot: "A", Type: "cpm5"}, {Slot: "B", Type: "cpm5"}},
+		ShortName: "sros1",
+		LabDir:    dir,
+		NodeType:  "sr-7",
+		Env:       map[string]string{},
+		KindSpecificConfig: &KindSpecificConfig{
+			Components: []*Component{{Slot: "A", Type: "cpm5"}, {Slot: "B", Type: "cpm5"}},
+		},
 	}
 	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
 	s := new(vrSROS)
@@ -274,4 +296,83 @@ func Test_vrSROS_verifyNokiaSrosImage(t *testing.T) {
 		err := s.verifyNokiaSrosImage(ctx)
 		assert.NoError(t, err)
 	})
+}
+
+func TestKindSpecificConfigDecodesComponents(t *testing.T) {
+	r := clabnodes.NewNodeRegistry()
+	Register(r)
+	e := r.Kind("nokia_sros")
+
+	var components any
+	require.NoError(t, yaml.Unmarshal([]byte(`
+- slot: 1
+  type: xcm-2s
+  cpu: 4
+  ram: 6
+  max-nics: 5
+`), &components))
+
+	got, err := clabnodes.DecodeKindSpecificConfig(
+		e,
+		"n",
+		"nokia_sros",
+		[]clabtypes.KindSpecificConfigEntry{
+			{Key: "components", Value: components, From: "nodes.n"},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, &KindSpecificConfig{InjectSSHKeys: true, Components: []*Component{
+		{Slot: "1", Type: "xcm-2s", CPU: 4, RAM: 6, MaxNics: 5},
+	}}, got)
+
+	_, err = clabnodes.DecodeKindSpecificConfig(
+		e,
+		"n",
+		"nokia_sros",
+		[]clabtypes.KindSpecificConfigEntry{{
+			Key:   "components",
+			Value: []any{map[any]any{"slot": 1, "env": map[any]any{"cpu": "4"}}},
+			From:  "nodes.n",
+		}},
+	)
+	require.Error(t, err)
+}
+
+func Test_vrSROS_injectSSHKeys(t *testing.T) {
+	tests := map[string]struct {
+		kc   *KindSpecificConfig
+		want bool
+	}{
+		"default":  {want: true},
+		"disabled": {kc: &KindSpecificConfig{InjectSSHKeys: false}},
+		"enabled":  {kc: &KindSpecificConfig{InjectSSHKeys: true}, want: true},
+		"model_driven": {
+			kc: &KindSpecificConfig{
+				InjectSSHKeys: true,
+				ConfigMode:    clabnodessros.ConfigModeModelDriven,
+			},
+			want: true,
+		},
+		"classic_skips": {
+			kc: &KindSpecificConfig{
+				InjectSSHKeys: true,
+				ConfigMode:    clabnodessros.ConfigModeClassic,
+			},
+		},
+		"mixed_skips": {
+			kc: &KindSpecificConfig{InjectSSHKeys: true, ConfigMode: clabnodessros.ConfigModeMixed},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := &clabtypes.NodeConfig{ShortName: "sros1"}
+			if tc.kc != nil {
+				cfg.KindSpecificConfig = tc.kc
+			}
+			s := &vrSROS{}
+			s.Cfg = cfg
+			assert.Equal(t, tc.want, s.injectSSHKeys())
+		})
+	}
 }

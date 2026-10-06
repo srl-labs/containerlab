@@ -181,7 +181,7 @@ func TestSRLNonModularTopologiesCarryNoIMM(t *testing.T) {
 func TestResolveSRLTopologyWithComponents(t *testing.T) {
 	tests := map[string]struct {
 		nodeType    string
-		components  []*clabtypes.Component
+		components  []*Component
 		wantErr     string
 		wantCPM     int
 		wantMode    string
@@ -196,33 +196,33 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 		},
 		"imm selects the card and mda for the chassis": {
 			nodeType:   "ixr-10e",
-			components: []*clabtypes.Component{{Slot: "1", Type: "imm3-36-800g-osfp"}},
+			components: []*Component{{Slot: "1", Type: "imm3-36-800g-osfp"}},
 			wantCPM:    184,
 			wantMode:   "GEN3_ONLY",
 			wantSlots:  map[int]srlSlot{1: {CardType: 53, MDAType: 14}},
 		},
 		"a card offered by a single chassis resolves with its own cpm": {
 			nodeType:   "ixr-18e",
-			components: []*clabtypes.Component{{Type: "imm3-36-800g-sync-qsfpdd"}},
+			components: []*Component{{Type: "imm3-36-800g-sync-qsfpdd"}},
 			wantCPM:    25,
 			wantMode:   "GEN3_ONLY",
 			wantSlots:  map[int]srlSlot{1: {CardType: 46, MDAType: 11}},
 		},
 		"a card offered only by the 6e and 10e is rejected on the 18e": {
 			nodeType:   "ixr-18e",
-			components: []*clabtypes.Component{{Type: "imm3-36-800g-qsfpdd"}},
+			components: []*Component{{Type: "imm3-36-800g-qsfpdd"}},
 			wantErr:    "unknown line card",
 		},
 		"an imm can pull in a different cpm card": {
 			nodeType:   "ixr-6e",
-			components: []*clabtypes.Component{{Type: "imm2-36-400g-sync-qsfpdd"}},
+			components: []*Component{{Type: "imm2-36-400g-sync-qsfpdd"}},
 			wantCPM:    41,
 			wantMode:   "GEN2CP_ONLY",
 			wantSlots:  map[int]srlSlot{1: {CardType: 43, MDAType: 199}},
 		},
 		"multiple line cards populate multiple slots": {
 			nodeType: "ixr-10e",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "1", Type: "imm3-36-800g-osfp"},
 				{Slot: "3", Type: "imm3-36-800g-osfp"},
 			},
@@ -235,17 +235,17 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 		},
 		"a fixed chassis rejects components": {
 			nodeType:   "ixr-d2l",
-			components: []*clabtypes.Component{{Type: "imm36-400g-qsfpdd"}},
+			components: []*Component{{Type: "imm36-400g-qsfpdd"}},
 			wantErr:    "is not modular",
 		},
 		"an imm the chassis does not offer is rejected": {
 			nodeType:   "ixr-18e",
-			components: []*clabtypes.Component{{Type: "imm60-100g-qsfp28"}},
+			components: []*Component{{Type: "imm60-100g-qsfp28"}},
 			wantErr:    "unknown line card",
 		},
 		"two line cards in the same slot are rejected": {
 			nodeType: "ixr-6e",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "2", Type: "imm3-36-800g-osfp"},
 				{Slot: "2", Type: "imm3-36-800g-osfp"},
 			},
@@ -253,7 +253,7 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 		},
 		"line cards of different generations cannot share a chassis": {
 			nodeType: "ixr-6e",
-			components: []*clabtypes.Component{
+			components: []*Component{
 				{Slot: "1", Type: "imm36-400g-qsfpdd"},
 				{Slot: "2", Type: "imm3-36-800g-osfp"},
 			},
@@ -261,7 +261,7 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 		},
 		"a non numeric slot is rejected": {
 			nodeType:   "ixr-6e",
-			components: []*clabtypes.Component{{Slot: "A", Type: "imm3-36-800g-osfp"}},
+			components: []*Component{{Slot: "A", Type: "imm3-36-800g-osfp"}},
 			wantErr:    "invalid component slot",
 		},
 	}
@@ -269,8 +269,8 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			got, err := resolveSRLTopology(&clabtypes.NodeConfig{
-				NodeType:   tc.nodeType,
-				Components: tc.components,
+				NodeType:           tc.nodeType,
+				KindSpecificConfig: &KindSpecificConfig{Components: tc.components},
 			})
 
 			if tc.wantErr != "" {
@@ -307,14 +307,14 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 }
 
 func TestResolveSRLTopologyRejectsNullComponent(t *testing.T) {
-	var def clabtypes.NodeDefinition
-	if err := yaml.UnmarshalStrict([]byte("components: [null]\n"), &def); err != nil {
+	var kc KindSpecificConfig
+	if err := yaml.UnmarshalStrict([]byte("components: [null]\n"), &kc); err != nil {
 		t.Fatalf("unexpected YAML error: %v", err)
 	}
 
 	_, err := resolveSRLTopology(&clabtypes.NodeConfig{
-		NodeType:   "ixr-10e",
-		Components: def.Components,
+		NodeType:           "ixr-10e",
+		KindSpecificConfig: &kc,
 	})
 
 	const want = `component 1 for srl type "ixr-10e" must not be empty`
@@ -327,10 +327,10 @@ func TestGenerateSRLTopologyFile(t *testing.T) {
 	cfg := &clabtypes.NodeConfig{
 		NodeType: "ixr-10e",
 		LabDir:   t.TempDir(),
-		Components: []*clabtypes.Component{
+		KindSpecificConfig: &KindSpecificConfig{Components: []*Component{
 			{Slot: "3", Type: "imm3-36-800g-osfp"},
 			{Slot: "1", Type: "imm3-36-800g-osfp"},
-		},
+		}},
 	}
 
 	if err := generateSRLTopologyFile(cfg); err != nil {
