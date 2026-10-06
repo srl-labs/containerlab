@@ -1153,12 +1153,13 @@ func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialT
 	return src
 }
 
-// GetComponents returns the node's raw components kind config value, or nil when unset.
+// GetComponents returns the node's raw components kind-specific config value, or nil when unset.
 //
-// Deprecated: components are kind config; use GetNodeKindConfig. Kept for clabernetes, which
+// Deprecated: components are kind-specific config; use GetNodeKindSpecificConfig. Kept for
+// clabernetes, which
 // transcodes the value into its own component type.
 func (t *Topology) GetComponents(nodeName string) any {
-	for _, e := range t.GetNodeKindConfig(nodeName) {
+	for _, e := range t.GetNodeKindSpecificConfig(nodeName) {
 		if e.Key == "components" {
 			return e.Value
 		}
@@ -1167,18 +1168,19 @@ func (t *Topology) GetComponents(nodeName string) any {
 	return nil
 }
 
-// KindConfigEntry is a raw kind config key of a node with the topology block it came from.
-type KindConfigEntry struct {
+// KindSpecificConfigEntry is a raw kind-specific config key of a node with the topology block it
+// came from.
+type KindSpecificConfigEntry struct {
 	Key   string
 	Value any
 	// From is the block that set the key: nodes.<name>, groups.<name>, kinds.<name> or defaults.
 	From string
 }
 
-// GetNodeKindConfig returns the node's raw kind config keys merged with precedence
+// GetNodeKindSpecificConfig returns the node's raw kind-specific config keys merged with precedence
 // node > group > kind > defaults, sorted by key. The first block that sets a key provides its
-// whole value. Nodes absent from the topology have no kind config.
-func (t *Topology) GetNodeKindConfig(nodeName string) []KindConfigEntry {
+// whole value. Nodes absent from the topology have no kind-specific config.
+func (t *Topology) GetNodeKindSpecificConfig(nodeName string) []KindSpecificConfigEntry {
 	nodeDef, ok := t.Nodes[nodeName]
 	if !ok {
 		return nil
@@ -1197,7 +1199,7 @@ func (t *Topology) GetNodeKindConfig(nodeName string) []KindConfigEntry {
 		{"defaults", t.GetDefaults()},
 	}
 
-	var entries []KindConfigEntry
+	var entries []KindSpecificConfigEntry
 
 	seen := map[string]bool{}
 
@@ -1206,20 +1208,20 @@ func (t *Topology) GetNodeKindConfig(nodeName string) []KindConfigEntry {
 			continue
 		}
 
-		for k, v := range b.def.KindConfig {
+		for k, v := range b.def.KindSpecificConfig {
 			if seen[k] {
 				continue
 			}
 
 			seen[k] = true
 
-			entries = append(entries, KindConfigEntry{Key: k, Value: v, From: b.from})
+			entries = append(entries, KindSpecificConfigEntry{Key: k, Value: v, From: b.from})
 		}
 	}
 
 	slices.SortFunc(
 		entries,
-		func(a, b KindConfigEntry) int { return strings.Compare(a.Key, b.Key) },
+		func(a, b KindSpecificConfigEntry) int { return strings.Compare(a.Key, b.Key) },
 	)
 
 	return entries

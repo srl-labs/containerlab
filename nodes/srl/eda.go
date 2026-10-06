@@ -15,7 +15,7 @@ var edaCustomMgmtServerConfig string
 
 // edaDefaultMgmtServerConfig is the configuration blob that sets EDA TLS profile
 // for the `mgmt` grpc server running over port 57400,
-// it is applied when the eda-default-grpc-server kind config key is set.
+// it is applied when the eda-default-grpc-server kind-specific config key is set.
 //
 //go:embed eda_configs/default_mgmt_server.cfg
 var edaDefaultMgmtServerConfig string

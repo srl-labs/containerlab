@@ -269,9 +269,10 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
-	// KindConfig is the kind-specific config, decoded from the topology into the kind's
-	// registered config type (see nodes.KindConfigSpec). Nil for kinds without a kind config.
-	KindConfig any `json:"kind-config,omitempty"`
+	// KindSpecificConfig is the kind-specific config, decoded from the topology into the kind's
+	// registered config type (see nodes.KindSpecificConfigSpec). Nil for kinds without a
+	// kind-specific config.
+	KindSpecificConfig any `json:"kind-specific-config,omitempty"`
 }
 
 // GetHostname returns the configured runtime hostname or the topology node name.

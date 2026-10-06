@@ -111,25 +111,26 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 }
 
 type NodeRegistryEntryAttributes struct {
-	credentials         *Credentials
-	generateAttributes  *GenerateNodeAttributes
-	platformAttrs       *PlatformAttrs
-	privilegedByDefault *bool
-	kindConfigType      KindConfigType
+	credentials            *Credentials
+	generateAttributes     *GenerateNodeAttributes
+	platformAttrs          *PlatformAttrs
+	privilegedByDefault    *bool
+	kindSpecificConfigType KindSpecificConfigType
 }
 
-// KindConfigType returns the kind's config type, or nil when the kind accepts no kind config keys.
-func (nre *NodeRegistryEntry) KindConfigType() KindConfigType {
+// KindSpecificConfigType returns the kind's config type, or nil when the kind accepts no
+// kind-specific config keys.
+func (nre *NodeRegistryEntry) KindSpecificConfigType() KindSpecificConfigType {
 	if nre == nil || nre.attributes == nil {
 		return nil
 	}
 
-	return nre.attributes.kindConfigType
+	return nre.attributes.kindSpecificConfigType
 }
 
-// AcceptsKindConfigKey reports whether the kind's config has key.
-func (nre *NodeRegistryEntry) AcceptsKindConfigKey(key string) bool {
-	t := nre.KindConfigType()
+// AcceptsKindSpecificConfigKey reports whether the kind's config has key.
+func (nre *NodeRegistryEntry) AcceptsKindSpecificConfigKey(key string) bool {
+	t := nre.KindSpecificConfigType()
 
 	return t != nil && acceptsKey(t, key)
 }
@@ -209,11 +210,12 @@ func (nrea *NodeRegistryEntryAttributes) WithPrivilegedByDefault(
 	return nrea
 }
 
-// WithKindConfig registers the kind's KindConfigSpec. Kinds without one accept no kind config keys.
-func (nrea *NodeRegistryEntryAttributes) WithKindConfig(
-	t KindConfigType,
+// WithKindSpecificConfig registers the kind's KindSpecificConfigSpec. Kinds without one accept no
+// kind-specific config keys.
+func (nrea *NodeRegistryEntryAttributes) WithKindSpecificConfig(
+	t KindSpecificConfigType,
 ) *NodeRegistryEntryAttributes {
-	nrea.kindConfigType = t
+	nrea.kindSpecificConfigType = t
 	return nrea
 }
 

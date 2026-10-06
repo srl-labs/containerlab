@@ -462,7 +462,7 @@ Next it will filter out public keys that are not of RSA/ECDSA type. The remainin
 /// details | Skipping keys injection
 The keys configuration uses MD-CLI syntax, so keys are not injected into nodes with `config-mode` set to `classic` or `mixed`.
 
-To disable this feature for other nodes, set the `inject-ssh-keys: false` [kind config key](../nodes.md#kind-config):
+To disable this feature for other nodes, set the `inject-ssh-keys: false` [kind-specific config key](../nodes.md#kind-specific-config):
 
 ```yaml
 topology:
@@ -477,7 +477,7 @@ topology:
 
 Nokia SR OS supports both MD-CLI (model-driven) and classic CLI modes. By default, containerlab uses the MD-CLI scrapligo platform (`nokia_sros`) to interact with vr-sros nodes for operations such as partial config apply and `save-config`.
 
-If your node is running in classic or mixed CLI mode, set the `config-mode` [kind config key](../nodes.md#kind-config) so that containerlab uses the matching scrapligo platform (`nokia_sros_classic`) with the correct prompt regex:
+If your node is running in classic or mixed CLI mode, set the `config-mode` [kind-specific config key](../nodes.md#kind-specific-config) so that containerlab uses the matching scrapligo platform (`nokia_sros_classic`) with the correct prompt regex:
 
 ```yaml
 topology:

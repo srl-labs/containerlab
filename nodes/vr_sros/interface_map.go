@@ -57,10 +57,10 @@ func parseSrosPortAlias(ifName string) (srosPortAlias, error) {
 }
 
 func (s *vrSROS) CalculateInterfaceIndex(ifName string) (int, error) {
-	if len(s.kCfg().Components) == 0 {
+	if len(s.kindSpecificCfg().Components) == 0 {
 		return simpleInterfaceIndex(ifName)
 	}
-	return componentInterfaceIndex(s.kCfg().Components, ifName)
+	return componentInterfaceIndex(s.kindSpecificCfg().Components, ifName)
 }
 
 func simpleInterfaceIndex(ifName string) (int, error) {

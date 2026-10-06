@@ -55,7 +55,7 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
-### Kind Config
+### Kind-Specific Config
 
 Certain kinds will accept extra keys in the node definition which only applies to nodes of that specific kind. However the inheritance model of groups, kinds and defaults can still be used. As with the below example:
 

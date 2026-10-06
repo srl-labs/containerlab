@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func writeKindConfigTopo(t *testing.T, body string) string {
+func writeKindSpecificConfigTopo(t *testing.T, body string) string {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), "topo.clab.yml")
@@ -20,18 +20,24 @@ func writeKindConfigTopo(t *testing.T, body string) string {
 	return path
 }
 
-func srosKindConfig(t *testing.T, c *CLab, node string) *clabnodessros.KindConfig {
+func srosKindSpecificConfig(t *testing.T, c *CLab, node string) *clabnodessros.KindSpecificConfig {
 	t.Helper()
 
 	require.Contains(t, c.Nodes, node)
-	kc, ok := c.Nodes[node].Config().KindConfig.(*clabnodessros.KindConfig)
-	require.True(t, ok, "node %s kind config is %T", node, c.Nodes[node].Config().KindConfig)
+	kc, ok := c.Nodes[node].Config().KindSpecificConfig.(*clabnodessros.KindSpecificConfig)
+	require.True(
+		t,
+		ok,
+		"node %s kind-specific config is %T",
+		node,
+		c.Nodes[node].Config().KindSpecificConfig,
+	)
 
 	return kc
 }
 
-func TestKindConfigInheritance(t *testing.T) {
-	path := writeKindConfigTopo(t, `
+func TestKindSpecificConfigInheritance(t *testing.T) {
+	path := writeKindSpecificConfigTopo(t, `
 name: kc
 topology:
   defaults:
@@ -69,7 +75,7 @@ topology:
 	require.NoError(t, err)
 
 	t.Run("kind_overrides_defaults", func(t *testing.T) {
-		kc := srosKindConfig(t, c, "kind-only")
+		kc := srosKindSpecificConfig(t, c, "kind-only")
 		assert.Equal(t, clabnodessros.ConfigModeMixed, kc.ConfigMode)
 		assert.False(t, kc.GenComponentConfig)
 		assert.Equal(t, "sfm-2s", kc.SFM)
@@ -77,7 +83,7 @@ topology:
 	})
 
 	t.Run("group_overrides_kind", func(t *testing.T) {
-		kc := srosKindConfig(t, c, "grouped")
+		kc := srosKindSpecificConfig(t, c, "grouped")
 		assert.Equal(t, clabnodessros.ConfigModeMixed, kc.ConfigMode)
 		assert.False(t, kc.GenComponentConfig)
 		assert.Equal(t, "sfm-group", kc.SFM)
@@ -86,7 +92,7 @@ topology:
 	})
 
 	t.Run("node_overrides_group_with_whole_value", func(t *testing.T) {
-		kc := srosKindConfig(t, c, "node-override")
+		kc := srosKindSpecificConfig(t, c, "node-override")
 		assert.Equal(t, clabnodessros.ConfigModeModelDriven, kc.ConfigMode)
 		assert.True(t, kc.GenComponentConfig)
 		assert.Equal(t, "sfm-group", kc.SFM)
@@ -95,8 +101,8 @@ topology:
 	})
 }
 
-func TestKindConfigDefaultsApplied(t *testing.T) {
-	path := writeKindConfigTopo(t, `
+func TestKindSpecificConfigDefaultsApplied(t *testing.T) {
+	path := writeKindSpecificConfigTopo(t, `
 name: kc
 topology:
   defaults:
@@ -110,13 +116,13 @@ topology:
 	c, err := NewContainerLab(WithTopoPath(path, nil))
 	require.NoError(t, err)
 
-	kc := srosKindConfig(t, c, "sim")
+	kc := srosKindSpecificConfig(t, c, "sim")
 	assert.Equal(t, clabnodessros.ConfigModeClassic, kc.ConfigMode, "inherited from defaults")
 	assert.True(t, kc.GenComponentConfig, "unset keys keep the kind's defaults")
 }
 
-func TestKindConfigPerKind(t *testing.T) {
-	path := writeKindConfigTopo(t, `
+func TestKindSpecificConfigPerKind(t *testing.T) {
+	path := writeKindSpecificConfigTopo(t, `
 name: kc
 topology:
   kinds:
@@ -137,9 +143,9 @@ topology:
 	c, err := NewContainerLab(WithTopoPath(path, nil))
 	require.NoError(t, err)
 
-	assert.Equal(t, clabnodessros.ConfigModeClassic, srosKindConfig(t, c, "sim").ConfigMode)
+	assert.Equal(t, clabnodessros.ConfigModeClassic, srosKindSpecificConfig(t, c, "sim").ConfigMode)
 
-	iolCfg, ok := c.Nodes["iol1"].Config().KindConfig.(*clabnodesiol.KindConfig)
+	iolCfg, ok := c.Nodes["iol1"].Config().KindSpecificConfig.(*clabnodesiol.KindSpecificConfig)
 	require.True(t, ok)
 	require.NotNil(t, iolCfg.PidOffset)
 	assert.Equal(t, 64, *iolCfg.PidOffset)
@@ -147,7 +153,7 @@ topology:
 	assert.Empty(t, iolCfg.BootstrapConfig)
 }
 
-func TestKindConfigInheritanceErrors(t *testing.T) {
+func TestKindSpecificConfigInheritanceErrors(t *testing.T) {
 	tests := map[string]struct {
 		topo    string
 		wantErr string
@@ -226,15 +232,16 @@ topology:
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := NewContainerLab(WithTopoPath(writeKindConfigTopo(t, tc.topo), nil))
+			_, err := NewContainerLab(WithTopoPath(
+				writeKindSpecificConfigTopo(t, tc.topo), nil))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
 }
 
-func TestKindConfigKindBlockCaseInsensitive(t *testing.T) {
-	path := writeKindConfigTopo(t, `
+func TestKindSpecificConfigKindBlockCaseInsensitive(t *testing.T) {
+	path := writeKindSpecificConfigTopo(t, `
 name: kc
 topology:
   kinds:
@@ -249,6 +256,6 @@ topology:
 	c, err := NewContainerLab(WithTopoPath(path, nil))
 	require.NoError(t, err)
 
-	assert.Equal(t, clabnodessros.ConfigModeClassic, srosKindConfig(t, c, "sim").ConfigMode)
+	assert.Equal(t, clabnodessros.ConfigModeClassic, srosKindSpecificConfig(t, c, "sim").ConfigMode)
 	assert.Equal(t, "nokia_srsim:test", c.Nodes["sim"].Config().Image)
 }

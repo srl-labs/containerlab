@@ -755,13 +755,13 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		License:      topo.GetNodeLicense(nodeName),
 	}
 
-	kindConfig, err := c.decodeKindConfig(topo, nodeName, strings.ToLower(kind))
+	kindSpecificConfig, err := c.decodeKindSpecificConfig(topo, nodeName, strings.ToLower(kind))
 	if err != nil {
 		// A state file can hold keys a later release rejects; such a node counts as changed.
-		kindConfig = clabnodes.InvalidKindConfig{Err: err.Error()}
+		kindSpecificConfig = clabnodes.InvalidKindSpecificConfig{Err: err.Error()}
 	}
 
-	nodeCfg.KindConfig = kindConfig
+	nodeCfg.KindSpecificConfig = kindSpecificConfig
 
 	return nodeCfg
 }

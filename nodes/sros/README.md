@@ -131,7 +131,7 @@ exit
 
 #### Configuration Mode Detection
 
-The mode is set by the `config-mode` kind config key (`KindConfig.ConfigMode`):
+The mode is set by the `config-mode` kind-specific config key (`KindSpecificConfig.ConfigMode`):
 
 ```yaml
 config-mode: model-driven  # Model-Driven mode (default)
@@ -149,7 +149,7 @@ configMode := string(v.Mode)
 if v.ForceClassic {
     log.Warn("SAR-Hm nodes only support classic configuration mode. Overriding...")
     configMode = string(ConfigModeClassic)
-    n.kCfg().ConfigMode = ConfigModeClassic
+    n.kindSpecificCfg().ConfigMode = ConfigModeClassic
 }
 ```
 
@@ -268,7 +268,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error)
 tplData := &srosTemplateData{
     // Selection criteria (used by selectConfigTemplate)
     NodeType:          strings.ToLower(n.Cfg.NodeType),  // "ixr-6e", "sar-8", etc.
-    ConfigurationMode: configMode,                       // from the config-mode kind config key
+    ConfigurationMode: configMode,                       // from the config-mode kind-specific config key
     SwVersion:         n.swVersion,                      // Detected version
     IsSecureGrpc:      *n.Cfg.Certificate.Issue,        // true/false for TLS
     
@@ -1426,7 +1426,7 @@ sudo clab deploy -t topology.yml --debug 2>&1 | grep "template"
 ```
 
 **Common Causes:**
-- `config-mode` kind config key incorrectly set
+- `config-mode` kind-specific config key incorrectly set
 - Node type not matching regexp patterns (check case sensitivity)
 - SAR-Hm node not forcing classic mode
 

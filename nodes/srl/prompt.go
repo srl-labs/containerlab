@@ -10,7 +10,7 @@ import (
 )
 
 func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
-	if !n.kCfg().CustomPrompt {
+	if !n.kindSpecificCfg().CustomPrompt {
 		return
 	}
 

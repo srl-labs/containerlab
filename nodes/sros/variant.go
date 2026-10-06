@@ -85,10 +85,10 @@ func getFullSnippetSet(v ConfigVariant) FullSnippetSet {
 }
 
 // resolveConfigVariant returns the config variant for node n from NodeType,
-// the config-mode kind config key, and Certificate.Issue. SAR-Hm forces classic mode;
-// the caller should apply that to tplData and the kind config when ForceClassic is true.
+// the config-mode kind-specific config key, and Certificate.Issue. SAR-Hm forces classic mode;
+// the caller should apply that to tplData and the kind-specific config when ForceClassic is true.
 func (n *sros) resolveConfigVariant() ConfigVariant {
-	mode := n.kCfg().ConfigMode
+	mode := n.kindSpecificCfg().ConfigMode
 	if mode == "" {
 		mode = ConfigModeModelDriven
 	}

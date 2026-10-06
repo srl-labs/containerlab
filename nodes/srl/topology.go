@@ -102,7 +102,7 @@ func resolveSRLTopology(cfg *clabtypes.NodeConfig) (srlTopology, error) {
 		return srlTopology{}, fmt.Errorf("no embedded topology for srl type %q", cfg.NodeType)
 	}
 
-	components := kindConfig.Of(cfg).Components
+	components := kindSpecificConfig.Of(cfg).Components
 	if len(components) == 0 {
 		return base, nil
 	}

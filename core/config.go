@@ -87,7 +87,7 @@ func (c *CLab) parseTopology() error {
 		*c.Config.Prefix = defaultPrefix
 	}
 
-	if err := c.validateKindConfigKeys(); err != nil {
+	if err := c.validateKindSpecificConfigKeys(); err != nil {
 		return err
 	}
 
@@ -366,7 +366,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 
 	var err error
 
-	nodeCfg.KindConfig, err = c.decodeKindConfig(c.Config.Topology, nodeName, kind)
+	nodeCfg.KindSpecificConfig, err = c.decodeKindSpecificConfig(c.Config.Topology, nodeName, kind)
 	if err != nil {
 		return nil, err
 	}

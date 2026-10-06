@@ -269,8 +269,8 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			got, err := resolveSRLTopology(&clabtypes.NodeConfig{
-				NodeType:   tc.nodeType,
-				KindConfig: &KindConfig{Components: tc.components},
+				NodeType:           tc.nodeType,
+				KindSpecificConfig: &KindSpecificConfig{Components: tc.components},
 			})
 
 			if tc.wantErr != "" {
@@ -307,14 +307,14 @@ func TestResolveSRLTopologyWithComponents(t *testing.T) {
 }
 
 func TestResolveSRLTopologyRejectsNullComponent(t *testing.T) {
-	var kc KindConfig
+	var kc KindSpecificConfig
 	if err := yaml.UnmarshalStrict([]byte("components: [null]\n"), &kc); err != nil {
 		t.Fatalf("unexpected YAML error: %v", err)
 	}
 
 	_, err := resolveSRLTopology(&clabtypes.NodeConfig{
-		NodeType:   "ixr-10e",
-		KindConfig: &kc,
+		NodeType:           "ixr-10e",
+		KindSpecificConfig: &kc,
 	})
 
 	const want = `component 1 for srl type "ixr-10e" must not be empty`
@@ -327,7 +327,7 @@ func TestGenerateSRLTopologyFile(t *testing.T) {
 	cfg := &clabtypes.NodeConfig{
 		NodeType: "ixr-10e",
 		LabDir:   t.TempDir(),
-		KindConfig: &KindConfig{Components: []*Component{
+		KindSpecificConfig: &KindSpecificConfig{Components: []*Component{
 			{Slot: "3", Type: "imm3-36-800g-osfp"},
 			{Slot: "1", Type: "imm3-36-800g-osfp"},
 		}},

@@ -213,7 +213,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
 		cfg := edaDiscoveryServerConfig
 
-		if n.kCfg().EDADefaultGRPCServer {
+		if n.kindSpecificCfg().EDADefaultGRPCServer {
 			cfg = cfg + "\n" + edaDefaultMgmtServerConfig
 		} else {
 			cfg = cfg + "\n" + edaCustomMgmtServerConfig

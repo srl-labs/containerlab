@@ -56,7 +56,7 @@ credentials:
 	}
 }
 
-func TestNodeDefinitionYAML_KindConfigRoundTrip(t *testing.T) {
+func TestNodeDefinitionYAML_KindSpecificConfigRoundTrip(t *testing.T) {
 	t.Parallel()
 	var n NodeDefinition
 	err := yaml.UnmarshalStrict([]byte(`
@@ -68,8 +68,8 @@ pid-offset: 5
 		t.Fatal(err)
 	}
 	want := map[string]any{"config-mode": "classic", "pid-offset": 5}
-	if !reflect.DeepEqual(n.KindConfig, want) {
-		t.Fatalf("KindConfig = %#v, want %#v", n.KindConfig, want)
+	if !reflect.DeepEqual(n.KindSpecificConfig, want) {
+		t.Fatalf("KindSpecificConfig = %#v, want %#v", n.KindSpecificConfig, want)
 	}
 
 	b, err := yaml.Marshal(n)
@@ -80,7 +80,12 @@ pid-offset: 5
 	if err := yaml.UnmarshalStrict(b, &back); err != nil {
 		t.Fatal(err)
 	}
-	if back.Kind != "nokia_srsim" || !reflect.DeepEqual(back.KindConfig, want) {
-		t.Fatalf("round trip got kind %q settings %#v from:\n%s", back.Kind, back.KindConfig, b)
+	if back.Kind != "nokia_srsim" || !reflect.DeepEqual(back.KindSpecificConfig, want) {
+		t.Fatalf(
+			"round trip got kind %q settings %#v from:\n%s",
+			back.Kind,
+			back.KindSpecificConfig,
+			b,
+		)
 	}
 }

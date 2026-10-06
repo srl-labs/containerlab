@@ -161,12 +161,12 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 func ansibleInventoryGroup(cfg *clabtypes.NodeConfig) string {
 	ansibleGroup := cfg.Kind
-	switch kc := cfg.KindConfig.(type) {
-	case *clabnodessros.KindConfig:
+	switch kc := cfg.KindSpecificConfig.(type) {
+	case *clabnodessros.KindSpecificConfig:
 		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
 			ansibleGroup = "nokia_srsim_classic"
 		}
-	case *clabnodesvr_sros.KindConfig:
+	case *clabnodesvr_sros.KindSpecificConfig:
 		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
 			ansibleGroup = "nokia_srsim_classic"
 		}

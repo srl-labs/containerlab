@@ -75,15 +75,15 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	).WithKindConfig(kindConfig)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
 	}, nrea)
 }
 
-// KindConfig is the nokia_sros kind config, set as keys on the node definition.
-type KindConfig struct {
+// KindSpecificConfig is the nokia_sros kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
 	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
 	ConfigMode    clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
 	InjectSSHKeys bool                     `yaml:"inject-ssh-keys" json:"inject-ssh-keys"`
@@ -101,12 +101,12 @@ type Component struct {
 	MDA     clabnodessros.MDAS  `yaml:"mda,omitempty" json:"mda,omitempty"`
 }
 
-// SetDefaults implements clabnodes.KindConfigDefaulter.
-func (c *KindConfig) SetDefaults() {
+// SetDefaults implements clabnodes.KindSpecificConfigDefaulter.
+func (c *KindSpecificConfig) SetDefaults() {
 	c.InjectSSHKeys = true
 }
 
-var kindConfig clabnodes.KindConfigSpec[KindConfig]
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 type vrSROS struct {
 	clabnodes.VRNode
@@ -114,7 +114,7 @@ type vrSROS struct {
 	sshPubKeys []ssh.PublicKey
 }
 
-func (s *vrSROS) kCfg() *KindConfig { return kindConfig.Of(s.Cfg) }
+func (s *vrSROS) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(s.Cfg) }
 
 func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -138,9 +138,13 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 
 	// if user defined components: are used, parse them.
 	variant := s.Cfg.NodeType
-	if len(s.kCfg().Components) > 0 {
+	if len(s.kindSpecificCfg().Components) > 0 {
 		var err error
-		variant, err = buildSrosVariant(s.Cfg.NodeType, s.kCfg().Components, s.kCfg().SFM)
+		variant, err = buildSrosVariant(
+			s.Cfg.NodeType,
+			s.kindSpecificCfg().Components,
+			s.kindSpecificCfg().SFM,
+		)
 		if err != nil {
 			return err
 		}
@@ -287,12 +291,12 @@ func (s *vrSROS) scrapliPlatform() string {
 }
 
 func (s *vrSROS) isConfigClassic() bool {
-	m := s.kCfg().ConfigMode
+	m := s.kindSpecificCfg().ConfigMode
 	return m == clabnodessros.ConfigModeClassic || m == clabnodessros.ConfigModeMixed
 }
 
 func (s *vrSROS) injectSSHKeys() bool {
-	return s.kCfg().InjectSSHKeys && !s.isConfigClassic()
+	return s.kindSpecificCfg().InjectSSHKeys && !s.isConfigClassic()
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {

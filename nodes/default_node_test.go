@@ -94,9 +94,9 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
 		},
 		{
-			name: "kind config",
+			name: "kind-specific config",
 			old:  &clabtypes.NodeConfig{},
-			new:  &clabtypes.NodeConfig{KindConfig: &struct{ Slot string }{Slot: "1"}},
+			new:  &clabtypes.NodeConfig{KindSpecificConfig: &struct{ Slot string }{Slot: "1"}},
 		},
 	}
 
@@ -807,24 +807,27 @@ func TestDefaultNodeGetContainerStatusUsesOverwriteContainerName(t *testing.T) {
 	}
 }
 
-func TestDefaultNodeComputeDiffKindConfig(t *testing.T) {
-	type kindConfig struct{ Mode string }
+func TestDefaultNodeComputeDiffKindSpecificConfig(t *testing.T) {
+	type kindSpecificConfig struct{ Mode string }
 
 	d := &DefaultNode{}
 
 	diff := d.ComputeDiff(
-		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
-		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "mixed"}},
+		&clabtypes.NodeConfig{KindSpecificConfig: &kindSpecificConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindSpecificConfig: &kindSpecificConfig{Mode: "mixed"}},
 	)
-	if len(diff.Fields) != 1 || diff.Fields[0] != "KindConfig" {
-		t.Fatalf("ComputeDiff fields = %#v, want [KindConfig]", diff.Fields)
+	if len(diff.Fields) != 1 || diff.Fields[0] != "KindSpecificConfig" {
+		t.Fatalf("ComputeDiff fields = %#v, want [KindSpecificConfig]", diff.Fields)
 	}
 
 	diff = d.ComputeDiff(
-		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
-		&clabtypes.NodeConfig{KindConfig: &kindConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindSpecificConfig: &kindSpecificConfig{Mode: "classic"}},
+		&clabtypes.NodeConfig{KindSpecificConfig: &kindSpecificConfig{Mode: "classic"}},
 	)
 	if diff.HasDiff() {
-		t.Fatalf("ComputeDiff fields = %#v, want no diff for equal kind configs", diff.Fields)
+		t.Fatalf(
+			"ComputeDiff fields = %#v, want no diff for equal kind-specific configs",
+			diff.Fields,
+		)
 	}
 }

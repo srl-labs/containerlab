@@ -395,7 +395,7 @@ When using the `components` structure in the node definition for a distributed n
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
-You can disable this config generation behavior by setting the `gen-component-config: false` [kind config key](../nodes.md#kind-config) on the node, or on the base node for a distributed chassis.
+You can disable this config generation behavior by setting the `gen-component-config: false` [kind-specific config key](../nodes.md#kind-specific-config) on the node, or on the base node for a distributed chassis.
 
 ```yaml hl_lines="6"
 topology:
@@ -659,7 +659,7 @@ configure {
 /// details | Start SR OS with Classic Management
     type: tip
 
-To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `config-mode` [kind config key](../nodes.md#kind-config). When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
+To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `config-mode` [kind-specific config key](../nodes.md#kind-specific-config). When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
 
 ```yaml hl_lines="6"
 topology:

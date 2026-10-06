@@ -196,7 +196,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			TLSAnchor:     "",
 			LabDir:        t.TempDir(),
 		}
-		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeModelDriven
+		kindSpecificConfig.Of(n.Cfg).ConfigMode = ConfigModeModelDriven
 		n.WithRuntime(mockRt)
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
@@ -355,21 +355,21 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
-		kindConfig.Of(n.Cfg).GenComponentConfig = false
+		kindSpecificConfig.Of(n.Cfg).GenComponentConfig = false
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("classic_config_returns_empty", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
-		kindConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
+		kindSpecificConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
 
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("distributed_components_still_generate", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
-		kindConfig.Of(n.Cfg).SFM = "sfm-2s"
+		kindSpecificConfig.Of(n.Cfg).SFM = "sfm-2s"
 		n.rootCtrName = "clab-test-sr2s-a"
 		n.rootComponents = []*Component{
 			{Slot: slotAName, Type: "cpm-2s"},
@@ -433,7 +433,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 
 	t.Run("sfm_sets_container_env", func(t *testing.T) {
 		n := newSrosInitTestNode("sr-1", nil)
-		kindConfig.Of(n.Cfg).SFM = "m-sfm6-7/12"
+		kindSpecificConfig.Of(n.Cfg).SFM = "m-sfm6-7/12"
 
 		require.NoError(t, n.Init(n.Cfg))
 		assert.Equal(t, "m-sfm6-7/12", n.Cfg.Env[envNokiaSrosSFM])
@@ -492,7 +492,7 @@ func newSrosComponentConfigTestNode(
 		NodeType:  nodeType,
 		Env:       env,
 	}
-	kindConfig.Of(n.Cfg).Components = components
+	kindSpecificConfig.Of(n.Cfg).Components = components
 	return n
 }
 
@@ -508,7 +508,7 @@ func newSrosInitTestNode(nodeType string, components []*Component) *sros {
 		Sysctls:     map[string]string{},
 		Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 	}
-	kindConfig.Of(n.Cfg).Components = components
+	kindSpecificConfig.Of(n.Cfg).Components = components
 	return n
 }
 
@@ -1040,8 +1040,8 @@ func TestDistributedComponentNodes(t *testing.T) {
 
 func TestComputeDiffComponents(t *testing.T) {
 	chassis := func(components ...*Component) *clabtypes.NodeConfig {
-		kc := &KindConfig{GenComponentConfig: true, Components: components}
-		return &clabtypes.NodeConfig{Kind: "nokia_srsim", NodeType: "sr-2s", KindConfig: kc}
+		kc := &KindSpecificConfig{GenComponentConfig: true, Components: components}
+		return &clabtypes.NodeConfig{Kind: "nokia_srsim", NodeType: "sr-2s", KindSpecificConfig: kc}
 	}
 
 	tests := map[string]struct {
@@ -1089,7 +1089,7 @@ func TestComputeDiffComponents(t *testing.T) {
 			old: chassis(&Component{Slot: "A", Type: "cpm-2s"}),
 			new: func() *clabtypes.NodeConfig {
 				c := chassis(&Component{Slot: "A", Type: "cpm-2s"})
-				c.KindConfig.(*KindConfig).SFM = "sfm-2s"
+				c.KindSpecificConfig.(*KindSpecificConfig).SFM = "sfm-2s"
 				return c
 			}(),
 			want: true,
@@ -1105,7 +1105,7 @@ func TestComputeDiffComponents(t *testing.T) {
 			assert.Equal(
 				t,
 				tc.want,
-				slices.Contains(diff.Fields, "KindConfig"),
+				slices.Contains(diff.Fields, "KindSpecificConfig"),
 				"fields %v",
 				diff.Fields,
 			)

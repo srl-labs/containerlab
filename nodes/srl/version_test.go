@@ -246,8 +246,10 @@ func TestSetVersionSpecificParamsEDAServer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			n := &srl{swVersion: &SrlVersion{Major: "25", Minor: "3", Patch: "1"}}
 			n.Cfg = &clabtypes.NodeConfig{
-				ShortName:  "srl1",
-				KindConfig: &KindConfig{EDADefaultGRPCServer: tt.defaultServer},
+				ShortName: "srl1",
+				KindSpecificConfig: &KindSpecificConfig{
+					EDADefaultGRPCServer: tt.defaultServer,
+				},
 			}
 
 			tplData := &srlTemplateData{}
@@ -268,7 +270,10 @@ func TestSetVersionSpecificParamsEDAServer(t *testing.T) {
 
 func TestSetCustomPromptDisabled(t *testing.T) {
 	n := &srl{}
-	n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1", KindConfig: &KindConfig{CustomPrompt: false}}
+	n.Cfg = &clabtypes.NodeConfig{
+		ShortName:          "srl1",
+		KindSpecificConfig: &KindSpecificConfig{CustomPrompt: false},
+	}
 
 	tplData := &srlTemplateData{}
 	// a disabled prompt returns before running any command in the node
@@ -279,8 +284,8 @@ func TestSetCustomPromptDisabled(t *testing.T) {
 	}
 }
 
-func TestKindConfigDefaults(t *testing.T) {
-	kc := kindConfig.Of(&clabtypes.NodeConfig{})
+func TestKindSpecificConfigDefaults(t *testing.T) {
+	kc := kindSpecificConfig.Of(&clabtypes.NodeConfig{})
 
 	if !kc.CustomPrompt {
 		t.Fatal("custom-prompt should default to true")

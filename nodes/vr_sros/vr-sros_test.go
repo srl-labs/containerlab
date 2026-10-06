@@ -178,7 +178,7 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 		LabDir:    dir,
 		NodeType:  "ixr-e",
 		Env:       map[string]string{},
-		KindConfig: &KindConfig{Components: []*Component{
+		KindSpecificConfig: &KindSpecificConfig{Components: []*Component{
 			{Slot: "A", Type: "cpm-ixr-e"},
 			{
 				Slot: "1",
@@ -201,7 +201,7 @@ func Test_vrSROS_Init_withComponents_appliesSFM(t *testing.T) {
 		LabDir:    t.TempDir(),
 		NodeType:  "sr-2s",
 		Env:       map[string]string{},
-		KindConfig: &KindConfig{
+		KindSpecificConfig: &KindSpecificConfig{
 			SFM:        "sfm-2s",
 			Components: []*Component{{Slot: "A", Type: "cpm-2s"}, {Slot: "1", Type: "xcm-2s"}},
 		},
@@ -220,7 +220,7 @@ func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {
 		LabDir:    dir,
 		NodeType:  "sr-7",
 		Env:       map[string]string{},
-		KindConfig: &KindConfig{
+		KindSpecificConfig: &KindSpecificConfig{
 			Components: []*Component{{Slot: "A", Type: "cpm5"}, {Slot: "B", Type: "cpm5"}},
 		},
 	}
@@ -298,7 +298,7 @@ func Test_vrSROS_verifyNokiaSrosImage(t *testing.T) {
 	})
 }
 
-func TestKindConfigDecodesComponents(t *testing.T) {
+func TestKindSpecificConfigDecodesComponents(t *testing.T) {
 	r := clabnodes.NewNodeRegistry()
 	Register(r)
 	e := r.Kind("nokia_sros")
@@ -312,38 +312,55 @@ func TestKindConfigDecodesComponents(t *testing.T) {
   max-nics: 5
 `), &components))
 
-	got, err := clabnodes.DecodeKindConfig(e, "n", "nokia_sros",
-		[]clabtypes.KindConfigEntry{{Key: "components", Value: components, From: "nodes.n"}})
+	got, err := clabnodes.DecodeKindSpecificConfig(
+		e,
+		"n",
+		"nokia_sros",
+		[]clabtypes.KindSpecificConfigEntry{
+			{Key: "components", Value: components, From: "nodes.n"},
+		},
+	)
 	require.NoError(t, err)
-	assert.Equal(t, &KindConfig{InjectSSHKeys: true, Components: []*Component{
+	assert.Equal(t, &KindSpecificConfig{InjectSSHKeys: true, Components: []*Component{
 		{Slot: "1", Type: "xcm-2s", CPU: 4, RAM: 6, MaxNics: 5},
 	}}, got)
 
-	_, err = clabnodes.DecodeKindConfig(e, "n", "nokia_sros", []clabtypes.KindConfigEntry{{
-		Key:   "components",
-		Value: []any{map[any]any{"slot": 1, "env": map[any]any{"cpu": "4"}}},
-		From:  "nodes.n",
-	}})
+	_, err = clabnodes.DecodeKindSpecificConfig(
+		e,
+		"n",
+		"nokia_sros",
+		[]clabtypes.KindSpecificConfigEntry{{
+			Key:   "components",
+			Value: []any{map[any]any{"slot": 1, "env": map[any]any{"cpu": "4"}}},
+			From:  "nodes.n",
+		}},
+	)
 	require.Error(t, err)
 }
 
 func Test_vrSROS_injectSSHKeys(t *testing.T) {
 	tests := map[string]struct {
-		kc   *KindConfig
+		kc   *KindSpecificConfig
 		want bool
 	}{
 		"default":  {want: true},
-		"disabled": {kc: &KindConfig{InjectSSHKeys: false}},
-		"enabled":  {kc: &KindConfig{InjectSSHKeys: true}, want: true},
+		"disabled": {kc: &KindSpecificConfig{InjectSSHKeys: false}},
+		"enabled":  {kc: &KindSpecificConfig{InjectSSHKeys: true}, want: true},
 		"model_driven": {
-			kc:   &KindConfig{InjectSSHKeys: true, ConfigMode: clabnodessros.ConfigModeModelDriven},
+			kc: &KindSpecificConfig{
+				InjectSSHKeys: true,
+				ConfigMode:    clabnodessros.ConfigModeModelDriven,
+			},
 			want: true,
 		},
 		"classic_skips": {
-			kc: &KindConfig{InjectSSHKeys: true, ConfigMode: clabnodessros.ConfigModeClassic},
+			kc: &KindSpecificConfig{
+				InjectSSHKeys: true,
+				ConfigMode:    clabnodessros.ConfigModeClassic,
+			},
 		},
 		"mixed_skips": {
-			kc: &KindConfig{InjectSSHKeys: true, ConfigMode: clabnodessros.ConfigModeMixed},
+			kc: &KindSpecificConfig{InjectSSHKeys: true, ConfigMode: clabnodessros.ConfigModeMixed},
 		},
 	}
 
@@ -351,7 +368,7 @@ func Test_vrSROS_injectSSHKeys(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cfg := &clabtypes.NodeConfig{ShortName: "sros1"}
 			if tc.kc != nil {
-				cfg.KindConfig = tc.kc
+				cfg.KindSpecificConfig = tc.kc
 			}
 			s := &vrSROS{}
 			s.Cfg = cfg

@@ -371,7 +371,7 @@
                     },
                     "uniqueItems": true,
                     "description": "List of node components (nokia_srsim, nokia_sros and nokia_srlinux kinds)",
-                    "markdownDescription": "List of node components, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim`, `nokia_sros` and `nokia_srlinux` kinds"
+                    "markdownDescription": "List of node components, a [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim`, `nokia_sros` and `nokia_srlinux` kinds"
                 },
                 "config-mode": {
                     "type": "string",
@@ -381,47 +381,47 @@
                         "mixed"
                     ],
                     "description": "SR OS configuration mode (nokia_srsim and nokia_sros kinds).",
-                    "markdownDescription": "SR OS configuration mode, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` and `nokia_sros` kinds"
+                    "markdownDescription": "SR OS configuration mode, a [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` and `nokia_sros` kinds"
                 },
                 "gen-component-config": {
                     "type": "boolean",
                     "description": "Generate the configuration of the node's components, defaults to true (nokia_srsim kind).",
-                    "markdownDescription": "Generate the configuration of the node's components, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` kind"
+                    "markdownDescription": "Generate the configuration of the node's components, defaults to `true`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` kind"
                 },
                 "sfm": {
                     "$ref": "#/definitions/sros-sfm-types",
                     "description": "SFM type of the chassis (nokia_srsim and nokia_sros kinds).",
-                    "markdownDescription": "SFM type of the chassis, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srsim` and `nokia_sros` kinds"
+                    "markdownDescription": "SFM type of the chassis, a [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` and `nokia_sros` kinds"
                 },
                 "pid-offset": {
                     "type": "integer",
                     "description": "Offset added to the auto-assigned IOL PID (cisco_iol kind).",
-                    "markdownDescription": "Offset added to the auto-assigned IOL PID, a [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
+                    "markdownDescription": "Offset added to the auto-assigned IOL PID, a [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `cisco_iol` kind"
                 },
                 "mgmt-intf": {
                     "type": "string",
                     "description": "Management interface, defaults to Ethernet0/0 (cisco_iol kind).",
-                    "markdownDescription": "Management interface, defaults to `Ethernet0/0`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
+                    "markdownDescription": "Management interface, defaults to `Ethernet0/0`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `cisco_iol` kind"
                 },
                 "bootstrap-config": {
                     "type": "string",
                     "description": "File replacing the default startup configuration, or 'none' to disable it (cisco_iol kind).",
-                    "markdownDescription": "File replacing the default startup configuration, or `none` to disable it. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `cisco_iol` kind"
+                    "markdownDescription": "File replacing the default startup configuration, or `none` to disable it. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `cisco_iol` kind"
                 },
                 "inject-ssh-keys": {
                     "type": "boolean",
                     "description": "Add the host's public SSH keys to the node config, defaults to true (nokia_sros kind).",
-                    "markdownDescription": "Add the host's public SSH keys to the node config, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_sros` kind"
+                    "markdownDescription": "Add the host's public SSH keys to the node config, defaults to `true`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_sros` kind"
                 },
                 "custom-prompt": {
                     "type": "boolean",
                     "description": "Set the containerlab CLI prompt, defaults to true (nokia_srlinux kind).",
-                    "markdownDescription": "Set the containerlab CLI prompt, defaults to `true`. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srlinux` kind"
+                    "markdownDescription": "Set the containerlab CLI prompt, defaults to `true`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srlinux` kind"
                 },
                 "eda-default-grpc-server": {
                     "type": "boolean",
                     "description": "Use the default mgmt gRPC server for EDA instead of a dedicated eda-mgmt server (nokia_srlinux kind).",
-                    "markdownDescription": "Use the default `mgmt` gRPC server for EDA instead of a dedicated `eda-mgmt` server. A [kind config](https://containerlab.dev/manual/nodes/#kind-config) key of the `nokia_srlinux` kind"
+                    "markdownDescription": "Use the default `mgmt` gRPC server for EDA instead of a dedicated `eda-mgmt` server. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srlinux` kind"
                 },
                 "aliases": {
                     "type": "array",
@@ -768,7 +768,7 @@
                         ]
                     },
                     "then": {
-                        "$ref": "#/definitions/kind-config-nokia_srsim"
+                        "$ref": "#/definitions/kind-specific-config-nokia_srsim"
                     }
                 },
                 {
@@ -783,7 +783,7 @@
                         ]
                     },
                     "then": {
-                        "$ref": "#/definitions/kind-config-nokia_sros"
+                        "$ref": "#/definitions/kind-specific-config-nokia_sros"
                     }
                 },
                 {
@@ -798,7 +798,7 @@
                         ]
                     },
                     "then": {
-                        "$ref": "#/definitions/kind-config-nokia_srlinux"
+                        "$ref": "#/definitions/kind-specific-config-nokia_srlinux"
                     }
                 },
                 {
@@ -813,7 +813,7 @@
                         ]
                     },
                     "then": {
-                        "$ref": "#/definitions/kind-config-cisco_iol"
+                        "$ref": "#/definitions/kind-specific-config-cisco_iol"
                     }
                 },
                 {
@@ -830,7 +830,7 @@
                         ]
                     },
                     "then": {
-                        "$ref": "#/definitions/kind-config-other"
+                        "$ref": "#/definitions/kind-specific-config-other"
                     }
                 }
             ],
@@ -2188,7 +2188,7 @@
             },
             "additionalProperties": false
         },
-        "kind-config-nokia_srsim": {
+        "kind-specific-config-nokia_srsim": {
             "not": {
                 "anyOf": [
                     {
@@ -2255,9 +2255,9 @@
                     }
                 }
             },
-            "description": "kind config keys of the nokia_srsim kind"
+            "description": "kind-specific config keys of the nokia_srsim kind"
         },
-        "kind-config-nokia_sros": {
+        "kind-specific-config-nokia_sros": {
             "not": {
                 "anyOf": [
                     {
@@ -2310,9 +2310,9 @@
                     }
                 }
             },
-            "description": "kind config keys of the nokia_sros kind"
+            "description": "kind-specific config keys of the nokia_sros kind"
         },
-        "kind-config-nokia_srlinux": {
+        "kind-specific-config-nokia_srlinux": {
             "not": {
                 "anyOf": [
                     {
@@ -2359,9 +2359,9 @@
                     }
                 }
             },
-            "description": "kind config keys of the nokia_srlinux kind"
+            "description": "kind-specific config keys of the nokia_srlinux kind"
         },
-        "kind-config-cisco_iol": {
+        "kind-specific-config-cisco_iol": {
             "not": {
                 "anyOf": [
                     {
@@ -2401,9 +2401,9 @@
                     }
                 ]
             },
-            "description": "kind config keys of the cisco_iol kind"
+            "description": "kind-specific config keys of the cisco_iol kind"
         },
-        "kind-config-other": {
+        "kind-specific-config-other": {
             "not": {
                 "anyOf": [
                     {
@@ -2458,7 +2458,7 @@
                     }
                 ]
             },
-            "description": "kinds without kind config keys"
+            "description": "kinds without kind-specific config keys"
         }
     },
     "type": "object",
@@ -2675,7 +2675,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-nokia_srlinux"
+                                    "$ref": "#/definitions/kind-specific-config-nokia_srlinux"
                                 }
                             ]
                         },
@@ -2685,7 +2685,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-nokia_srsim"
+                                    "$ref": "#/definitions/kind-specific-config-nokia_srsim"
                                 }
                             ]
                         },
@@ -2695,7 +2695,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-nokia_sros"
+                                    "$ref": "#/definitions/kind-specific-config-nokia_sros"
                                 }
                             ]
                         },
@@ -2705,7 +2705,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2715,7 +2715,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2725,7 +2725,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2735,7 +2735,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2745,7 +2745,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2755,7 +2755,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2765,7 +2765,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2775,7 +2775,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2785,7 +2785,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2795,7 +2795,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2805,7 +2805,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2815,7 +2815,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2825,7 +2825,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2835,7 +2835,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2845,7 +2845,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2855,7 +2855,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2865,7 +2865,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2875,7 +2875,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2885,7 +2885,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2895,7 +2895,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2905,7 +2905,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2915,7 +2915,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2925,7 +2925,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2935,7 +2935,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2945,7 +2945,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2955,7 +2955,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2965,7 +2965,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-cisco_iol"
+                                    "$ref": "#/definitions/kind-specific-config-cisco_iol"
                                 }
                             ]
                         },
@@ -2975,7 +2975,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2985,7 +2985,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -2995,7 +2995,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3005,7 +3005,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3015,7 +3015,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3025,7 +3025,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3035,7 +3035,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3045,7 +3045,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3055,7 +3055,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3065,7 +3065,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3075,7 +3075,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3085,7 +3085,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3095,7 +3095,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3105,7 +3105,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3115,7 +3115,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3125,7 +3125,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3135,7 +3135,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3145,7 +3145,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3155,7 +3155,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3165,7 +3165,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3175,7 +3175,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3185,7 +3185,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3195,7 +3195,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3205,7 +3205,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3215,7 +3215,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3225,7 +3225,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3235,7 +3235,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3245,7 +3245,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3255,7 +3255,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         },
@@ -3265,7 +3265,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-other"
                                 }
                             ]
                         }

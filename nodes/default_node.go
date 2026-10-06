@@ -370,11 +370,12 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.License != newCfg.License {
 		diff.Fields = append(diff.Fields, "License")
 	}
-	_, oldInvalid := oldCfg.KindConfig.(InvalidKindConfig)
-	_, newInvalid := newCfg.KindConfig.(InvalidKindConfig)
+	_, oldInvalid := oldCfg.KindSpecificConfig.(InvalidKindSpecificConfig)
+	_, newInvalid := newCfg.KindSpecificConfig.(InvalidKindSpecificConfig)
 
-	if oldInvalid || newInvalid || !reflect.DeepEqual(oldCfg.KindConfig, newCfg.KindConfig) {
-		diff.Fields = append(diff.Fields, "KindConfig")
+	if oldInvalid || newInvalid ||
+		!reflect.DeepEqual(oldCfg.KindSpecificConfig, newCfg.KindSpecificConfig) {
+		diff.Fields = append(diff.Fields, "KindSpecificConfig")
 	}
 
 	return diff

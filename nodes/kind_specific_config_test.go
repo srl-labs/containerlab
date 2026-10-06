@@ -27,47 +27,47 @@ func (m *testMode) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
-type testKindConfig struct {
+type testKindSpecificConfig struct {
 	Mode   testMode `yaml:"mode,omitempty"`
 	Offset *int     `yaml:"offset,omitempty"`
 }
 
-var testSpec KindConfigSpec[testKindConfig]
+var testSpec KindSpecificConfigSpec[testKindSpecificConfig]
 
 func testEntry(withConfig bool) *NodeRegistryEntry {
 	attrs := NewNodeRegistryEntryAttributes(nil, nil, nil)
 	if withConfig {
-		attrs.WithKindConfig(testSpec)
+		attrs.WithKindSpecificConfig(testSpec)
 	}
 
 	return &NodeRegistryEntry{attributes: attrs}
 }
 
-func TestDecodeKindConfig(t *testing.T) {
+func TestDecodeKindSpecificConfig(t *testing.T) {
 	tests := map[string]struct {
 		entry   *NodeRegistryEntry
-		entries []clabtypes.KindConfigEntry
+		entries []clabtypes.KindSpecificConfigEntry
 		want    any
 		wantErr []string
 	}{
 		"decodes": {
 			entry: testEntry(true),
-			entries: []clabtypes.KindConfigEntry{
+			entries: []clabtypes.KindSpecificConfigEntry{
 				{Key: "mode", Value: "a", From: "kinds.test"},
 				{Key: "offset", Value: 3, From: "nodes.n1"},
 			},
-			want: &testKindConfig{Mode: "a", Offset: new(3)},
+			want: &testKindSpecificConfig{Mode: "a", Offset: new(3)},
 		},
 		"no_keys_zero_config": {
 			entry: testEntry(true),
-			want:  &testKindConfig{},
+			want:  &testKindSpecificConfig{},
 		},
 		"kind_without_config_no_keys": {
 			entry: testEntry(false),
 		},
 		"unknown_keys_and_invalid_values_reported_together": {
 			entry: testEntry(true),
-			entries: []clabtypes.KindConfigEntry{
+			entries: []clabtypes.KindSpecificConfigEntry{
 				{Key: "mode", Value: "c", From: "defaults"},
 				{Key: "modee", Value: "a", From: "groups.g"},
 				{Key: "offset", Value: "abc", From: "nodes.n1"},
@@ -79,21 +79,25 @@ func TestDecodeKindConfig(t *testing.T) {
 			},
 		},
 		"kind_without_config": {
-			entry:   testEntry(false),
-			entries: []clabtypes.KindConfigEntry{{Key: "mode", Value: "a", From: "defaults"}},
+			entry: testEntry(false),
+			entries: []clabtypes.KindSpecificConfigEntry{
+				{Key: "mode", Value: "a", From: "defaults"},
+			},
 			wantErr: []string{
 				`node "n1": kind "test" does not support key "mode" (set in defaults)`,
 			},
 		},
 		"unregistered_kind": {
-			entries: []clabtypes.KindConfigEntry{{Key: "mode", Value: "a", From: "nodes.n1"}},
+			entries: []clabtypes.KindSpecificConfigEntry{
+				{Key: "mode", Value: "a", From: "nodes.n1"},
+			},
 			wantErr: []string{`kind "test" does not support key "mode"`},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := DecodeKindConfig(tc.entry, "n1", "test", tc.entries)
+			got, err := DecodeKindSpecificConfig(tc.entry, "n1", "test", tc.entries)
 			if tc.wantErr != nil {
 				if err == nil {
 					t.Fatal("expected error")
@@ -111,32 +115,32 @@ func TestDecodeKindConfig(t *testing.T) {
 			}
 
 			if d := cmp.Diff(tc.want, got); d != "" {
-				t.Fatalf("kind config mismatch (-want +got):\n%s", d)
+				t.Fatalf("kind-specific config mismatch (-want +got):\n%s", d)
 			}
 		})
 	}
 }
 
-func TestAcceptsKindConfigKey(t *testing.T) {
+func TestAcceptsKindSpecificConfigKey(t *testing.T) {
 	e := testEntry(true)
 
 	for key, want := range map[string]bool{"mode": true, "offset": true, "modee": false} {
-		if got := e.AcceptsKindConfigKey(key); got != want {
-			t.Errorf("AcceptsKindConfigKey(%q) = %v, want %v", key, got, want)
+		if got := e.AcceptsKindSpecificConfigKey(key); got != want {
+			t.Errorf("AcceptsKindSpecificConfigKey(%q) = %v, want %v", key, got, want)
 		}
 	}
 
-	if testEntry(false).AcceptsKindConfigKey("mode") {
+	if testEntry(false).AcceptsKindSpecificConfigKey("mode") {
 		t.Error("kind without config accepts a key")
 	}
 }
 
-func TestKindConfigSpecOf(t *testing.T) {
+func TestKindSpecificConfigSpecOf(t *testing.T) {
 	cfg := &clabtypes.NodeConfig{}
 
 	testSpec.Of(cfg).Mode = "a"
 
-	if got := testSpec.Of(cfg); got.Mode != "a" || cfg.KindConfig != any(got) {
+	if got := testSpec.Of(cfg); got.Mode != "a" || cfg.KindSpecificConfig != any(got) {
 		t.Fatalf("Of did not keep the zero value it set on cfg, got %+v", got)
 	}
 
@@ -146,42 +150,42 @@ func TestKindConfigSpecOf(t *testing.T) {
 		}
 	}()
 
-	KindConfigSpec[struct{}]{}.Of(cfg)
+	KindSpecificConfigSpec[struct{}]{}.Of(cfg)
 }
 
-type defaultedKindConfig struct {
+type defaultedKindSpecificConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-func (c *defaultedKindConfig) SetDefaults() { c.Enabled = true }
+func (c *defaultedKindSpecificConfig) SetDefaults() { c.Enabled = true }
 
-func TestKindConfigDefaults(t *testing.T) {
-	var spec KindConfigSpec[defaultedKindConfig]
+func TestKindSpecificConfigDefaults(t *testing.T) {
+	var spec KindSpecificConfigSpec[defaultedKindSpecificConfig]
 
 	if !spec.Of(&clabtypes.NodeConfig{}).Enabled {
 		t.Error("Of on an empty node config did not apply defaults")
 	}
 
 	e := &NodeRegistryEntry{
-		attributes: NewNodeRegistryEntryAttributes(nil, nil, nil).WithKindConfig(spec),
+		attributes: NewNodeRegistryEntryAttributes(nil, nil, nil).WithKindSpecificConfig(spec),
 	}
 
-	got, err := DecodeKindConfig(e, "n1", "test", nil)
+	got, err := DecodeKindSpecificConfig(e, "n1", "test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !got.(*defaultedKindConfig).Enabled {
+	if !got.(*defaultedKindSpecificConfig).Enabled {
 		t.Error("decode without keys did not apply defaults")
 	}
 
-	got, err = DecodeKindConfig(e, "n1", "test",
-		[]clabtypes.KindConfigEntry{{Key: "enabled", Value: false, From: "nodes.n1"}})
+	got, err = DecodeKindSpecificConfig(e, "n1", "test",
+		[]clabtypes.KindSpecificConfigEntry{{Key: "enabled", Value: false, From: "nodes.n1"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if got.(*defaultedKindConfig).Enabled {
+	if got.(*defaultedKindSpecificConfig).Enabled {
 		t.Error("explicit false did not override the default")
 	}
 }

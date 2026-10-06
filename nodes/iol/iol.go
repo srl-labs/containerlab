@@ -74,15 +74,15 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	).WithKindConfig(kindConfig)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(iol)
 	}, nrea)
 }
 
-// KindConfig is the cisco_iol kind config, set as keys on the node definition.
-type KindConfig struct {
+// KindSpecificConfig is the cisco_iol kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
 	// PidOffset shifts the auto-assigned IOL PID, e.g. to keep IDs unique across labs.
 	PidOffset *int `yaml:"pid-offset,omitempty" json:"pid-offset,omitempty"`
 	// MgmtIntf is the management interface, e.g. Ethernet0/1. Defaults to Ethernet0/0.
@@ -92,7 +92,7 @@ type KindConfig struct {
 	BootstrapConfig string `yaml:"bootstrap-config,omitempty" json:"bootstrap-config,omitempty"`
 }
 
-var kindConfig clabnodes.KindConfigSpec[KindConfig]
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 type iol struct {
 	clabnodes.DefaultNode
@@ -112,7 +112,7 @@ type iol struct {
 	mgmtLinuxIdx      int
 }
 
-func (n *iol) kCfg() *KindConfig { return kindConfig.Of(n.Cfg) }
+func (n *iol) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
 
 func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -127,7 +127,7 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	nodeType := strings.ToLower(n.Cfg.NodeType)
 
 	pid := n.Cfg.Index + 1 // n.Cfg.Index is zero-indexed, PID needs to be >= 1
-	if off := n.kCfg().PidOffset; off != nil {
+	if off := n.kindSpecificCfg().PidOffset; off != nil {
 		pid += *off
 	}
 
@@ -173,10 +173,11 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	return nil
 }
 
-// parseMgmtIntf parses the mgmt-intf kind config key and normalizes it to Ethernet<slot>/<port>;
+// parseMgmtIntf parses the mgmt-intf kind-specific config key and normalizes it to
+// Ethernet<slot>/<port>;
 // empty means the default Ethernet0/0.
 func (n *iol) parseMgmtIntf() error {
-	if v := n.kCfg().MgmtIntf; v != "" {
+	if v := n.kindSpecificCfg().MgmtIntf; v != "" {
 		captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, v)
 		if err != nil {
 			return fmt.Errorf("invalid mgmt-intf %q: %w\n%s", v, err, IntfHelpMsg)
@@ -239,7 +240,7 @@ func (n *iol) ensureNumSlotsEnv() {
 func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	if v := n.kCfg().BootstrapConfig; v != "" {
+	if v := n.kindSpecificCfg().BootstrapConfig; v != "" {
 		switch p := clabutils.ResolvePath(v, params.TopoPaths.TopologyFileDir()); {
 		case strings.EqualFold(v, "none"):
 			n.bootstrapNone = true
