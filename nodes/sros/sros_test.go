@@ -508,15 +508,52 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 	})
 
 	t.Run("integrated_rejects_multiple_components", func(t *testing.T) {
+		for _, tc := range []struct {
+			nodeType   string
+			components []*Component
+		}{
+			{"sr-1", []*Component{{Slot: slotAName}, {Slot: slotBName}}},
+			{"ixr-r6", []*Component{{Slot: slotAName}, {Slot: "1"}}},
+			{"ixr-r6", []*Component{{Slot: slotAName}, {}}},
+		} {
+			n := newSrosInitTestNode(tc.nodeType, tc.components)
+
+			err := n.Init(n.Cfg)
+
+			require.Error(t, err, tc.nodeType)
+			assert.Contains(t, err.Error(), "at most one component override")
+		}
+	})
+
+	t.Run("redundant_integrated_components_are_distributed", func(t *testing.T) {
 		n := newSrosInitTestNode("ixr-r6", []*Component{
-			{Slot: slotAName, Type: "cpiom-ixr-r6"},
-			{Slot: slotBName, Type: "cpiom-ixr-r6"},
+			{Slot: slotAName, MDA: MDAS{{Slot: 3, Type: "m20-1g-csfp"}}},
+			{Slot: slotBName},
 		})
 
-		err := n.Init(n.Cfg)
+		require.NoError(t, n.Init(n.Cfg))
+		assert.True(t, n.isDistributedBaseNode())
+		require.Len(t, n.componentNodes, 2)
 
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "at most one component override")
+		cpmA := n.componentNodes[0].(*sros)
+		cpmB := n.componentNodes[1].(*sros)
+		assert.Equal(t, slotAName, cpmA.Config().Env[envNokiaSrosSlot])
+		assert.Equal(t, slotBName, cpmB.Config().Env[envNokiaSrosSlot])
+		assert.Equal(t, "container:n1-netns", cpmA.Config().NetworkMode)
+		assert.Equal(t, "container:n1-netns", cpmB.Config().NetworkMode)
+
+		cfgA := cpmA.generateComponentConfig()
+		assert.Contains(t, cfgA, "/configure card 1 card-type iom-ixr-r6 admin-state enable")
+		assert.Contains(
+			t,
+			cfgA,
+			"/configure card 1 mda 1 mda-type m6-10g-sfp++1-100g-qsfp28 admin-state enable",
+		)
+		assert.Contains(t, cfgA, "/configure card 1 mda 3 mda-type m20-1g-csfp admin-state enable")
+
+		cfgB := cpmB.generateComponentConfig()
+		assert.Contains(t, cfgB, "/configure card 1 card-type iom-ixr-r6 admin-state enable")
+		assert.NotContains(t, cfgB, "m20-1g-csfp")
 	})
 
 	t.Run("sfm_sets_container_env", func(t *testing.T) {
