@@ -84,6 +84,13 @@ var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 			{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"},
 		},
 	},
+	"ixr-e2sc": {
+		cardType:     "imm16-sfp++4-sfp28",
+		allowedSlots: []string{slotAName},
+		mdas: MDAS{
+			{Slot: 1, Type: "m16-sfp++4-sfp28"},
+		},
+	},
 	"ixr-ec": {
 		cardType:     "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
 		allowedSlots: []string{slotAName},
@@ -183,13 +190,8 @@ func buildIntegratedComponentCfgLines(
 		return nil
 	}
 
-	cardType := component.cardType
-	if envCardType := strings.TrimSpace(env[envNokiaSrosCard]); envCardType != "" {
-		cardType = envCardType
-	}
-
 	lines := []componentCfgLine{
-		{Kind: "card", Slot: integratedSrosCardSlot, Type: cardType},
+		{Kind: "card", Slot: integratedSrosCardSlot, Type: component.cardType},
 	}
 
 	for _, mda := range mergeIntegratedMdas(component.mdas, env) {
@@ -257,13 +259,6 @@ func integratedSrosAllowedSlots(nodeType string) []string {
 		return []string{slotAName}
 	}
 	return component.allowedSlots
-}
-
-func isSingleSlotIntegratedSrosNodeType(nodeType string) bool {
-	if !isIntegratedSrosNodeType(nodeType) {
-		return false
-	}
-	return len(integratedSrosAllowedSlots(nodeType)) == 1
 }
 
 func integratedSrosSlotAllowed(nodeType, slot string) bool {
