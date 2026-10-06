@@ -325,8 +325,11 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	}
 	if len(n.kindSpecificCfg().Components) > 1 {
 		return nil, fmt.Errorf(
-			"expected at most one component override for standalone SR-SIM node %q",
+			"expected at most one component override for standalone SR-SIM node %q, "+
+				"or one component per slot %s for redundant type %q",
 			n.Cfg.ShortName,
+			strings.Join(integratedSrosAllowedSlots(n.Cfg.NodeType), "/"),
+			n.Cfg.NodeType,
 		)
 	}
 
@@ -778,7 +781,7 @@ func (n *sros) isDistributedCardNode() bool {
 // SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
 	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
-		return false
+		return isRedundantIntegratedSrosComponents(n.Cfg.NodeType, n.kindSpecificCfg().Components)
 	}
 	return len(n.kindSpecificCfg().Components) > 1
 }
