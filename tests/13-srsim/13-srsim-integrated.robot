@@ -32,18 +32,12 @@ Check IXR-E2N card override is passed to the container
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    NOKIA_SROS_CARD=cpm-ixr-e2n/imm4-sfp+4-sfp+
 
-Check IXR-E2N card configuration is not generated
+Check IXR-E2N equipped card matches the component
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-ixr-e2n --path /configure/card[slot-number=1]/card-type
-    Log    ${output}
-    Should Not Contain    ${output}    imm4-sfp+4-sfp+
-
-Check IXR-E2N card is unprovisioned
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-ixr-e2n --path /state/card[slot-number=1]/hardware-data/oper-state
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-ixr-e2n --path /state/card[slot-number=1]/equipped-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    unprovisioned
+    Should Contain    ${output}    imm4-sfp+4-sfp+
 
 Check IXR-R6 standby CPM slot is set
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -73,23 +67,23 @@ Ensure IXR-R6 CPM B is up
     Wait Until Keyword Succeeds    3 minutes    10 seconds    Check IXR-R6 CPM state    B
 
 
-Check SR-1s card configuration
+Check SR-1s equipped card
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /configure/card[slot-number=1]/card-type
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /state/card[slot-number=1]/equipped-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    xcm-1s
 
-Check SR-1s XIOM configuration
+Check SR-1s equipped XIOM
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /configure/card[slot-number=1]/xiom[xiom-slot=x1]/xiom-type
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /state/card[slot-number=1]/xiom[xiom-slot=x1]/equipped-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    iom-s-3.0t
 
-Check SR-1s XIOM MDA configuration
+Check SR-1s equipped XIOM MDA
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /configure/card[slot-number=1]/xiom[xiom-slot=x1]/mda[mda-slot=1]/mda-type
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr-1s --path /state/card[slot-number=1]/xiom[xiom-slot=x1]/mda[mda-slot=1]/equipped-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ms18-100gb-qsfp28
