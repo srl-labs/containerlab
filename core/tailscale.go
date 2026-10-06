@@ -36,10 +36,6 @@ func tailscaleSidecarEligible(cfg *clabtypes.NodeConfig) bool {
 	if cfg.Labels[clabconstants.InternalNode] == "true" {
 		return false
 	}
-	if len(cfg.Components) > 0 {
-		return false
-	}
-
 	return cfg.ManagementIPAMEligible()
 }
 

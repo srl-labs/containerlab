@@ -49,13 +49,6 @@ func TestTailscaleSidecarEligible(t *testing.T) {
 				Labels: map[string]string{clabconstants.InternalNode: "true"},
 			},
 		},
-		{
-			name: "components",
-			cfg: &clabtypes.NodeConfig{
-				Kind:       "nokia_srsim",
-				Components: []*clabtypes.Component{{Slot: "A"}},
-			},
-		},
 		{name: "host net", cfg: &clabtypes.NodeConfig{Kind: "linux", NetworkMode: "host"}},
 		{name: "none net", cfg: &clabtypes.NodeConfig{Kind: "linux", NetworkMode: "none"}},
 		{
@@ -805,5 +798,66 @@ topology:
 	}
 	if len(tmpl.Nodes) != 1 {
 		t.Fatalf("ssh nodes = %d, want 1", len(tmpl.Nodes))
+	}
+}
+
+func TestInjectTailscaleSidecarsSRSIM(t *testing.T) {
+	path := writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  tailscale:
+    auth-key: tskey-auth-test
+topology:
+  kinds:
+    nokia_srsim:
+      image: nokia_srsim:test
+  nodes:
+    standalone:
+      kind: nokia_srsim
+    integrated:
+      kind: nokia_srsim
+      type: ixr-r6
+      components:
+        - slot: B
+          type: cpiom-ixr-r6
+    single-cpm:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
+    chassis:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
+        - slot: 1
+          type: xcm-2s
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// every SR-SIM node gets a single sidecar, including a distributed chassis
+	for _, name := range []string{"standalone", "integrated", "single-cpm", "chassis"} {
+		sc, ok := c.Nodes[name+"-ts"]
+		if !ok {
+			t.Fatalf("missing %s-ts sidecar", name)
+		}
+		if parent := sc.Config().Labels[clabnodestailscale.ParentLabel]; parent != name {
+			t.Fatalf("%s-ts parent = %q", name, parent)
+		}
+	}
+
+	sidecars := 0
+	for _, n := range c.Nodes {
+		if n.Config().Kind == clabnodestailscale.KindName {
+			sidecars++
+		}
+	}
+	if sidecars != 4 {
+		t.Fatalf("got %d sidecars, want 4", sidecars)
 	}
 }

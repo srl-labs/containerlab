@@ -78,14 +78,13 @@ Read more about this in the [`vxlan-stitch` link documentation](../manual/topo-d
 
 When interconnecting labs this way, extra configuration is necessary to ensure crossfunctionality between topologies utilizing Cisco IOL L2 images. Due to system internals of how the APP ID is generated and used for the images, an ID OFFSET needs to be configured to avoid duplicate/overlapping Bridge IDs and STP issues in the supertopology.
 
-The OFFSET can be controlled by utilizing the `CLAB_IOL_PID_OFFSET` environment variable:
+The OFFSET can be controlled with the `pid-offset` [config key](../manual/kinds/cisco_iol.md#pid-offset):
 
 ```yaml
 topology:
   kinds:
     cisco_iol:
-      env:
-        CLAB_IOL_PID_OFFSET: "64" # topology2 only; topology1 stays unset (or vice versa)
+      pid-offset: 64 # topology2 only; topology1 stays unset (or vice versa)
 ```
 
 For example, setting the OFFSET to `64` would skew the starting bridge ID for the topology from `aabb.cc00.0100` to `aabb.cc00.4100`.

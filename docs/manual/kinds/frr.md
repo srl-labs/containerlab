@@ -16,25 +16,43 @@ To adapt an existing lab, change `kind: linux` to `kind: frr`, replace the bind 
 
 ## Getting -{{ kind_display_name }}- image
 
-FRR publishes a containerlab flavour of its release image, tagged `containerlab-<version>` in the same [`quay.io/frrouting/frr`](https://quay.io/repository/frrouting/frr) repository:
+FRR publishes a containerlab image alongside its plain release image, tagged `containerlab-<version>` in the same [`quay.io/frrouting/frr`](https://quay.io/repository/frrouting/frr) repository. This image was introduced with **FRR 10.7.1** and is published for 10.7.1 and later releases. **Releases older than 10.7.1 will not receive containerlab-native images.**
 
 ```bash
 docker pull quay.io/frrouting/frr:containerlab-10.7.1
 ```
 
-It is the release image plus `openssh` and a start script that runs `sshd` alongside `watchfrr`. FRR itself is unchanged, and the image is built from [`docker/containerlab`](https://github.com/FRRouting/frr/tree/master/docker/containerlab) in the FRR repository on every release.
+The containerlab image uses the corresponding FRR release image as its base and adds:
 
-The plain `<version>` tags ship no SSH server, so their containers cannot be reached with `ssh`. They work with this kind otherwise, and everything else on this page behaves the same way with them.
+- An OpenSSH server, started alongside `watchfrr`, with SSH host keys generated on first start so each container has its own keys.
+- An `admin` user whose login shell is `vtysh`, so SSH opens the routing CLI. Its `frr` and `frrvty` group membership lets it configure the router and save configurations. The existing `root` user retains a Linux shell.
+- An FRR-specific `/etc/motd` describing the two SSH entry points and how to view FRR logs.
+- A startup script that removes the management network's IPv4 and IPv6 default routes to keep them out of the lab's routing protocols. The connected management routes remain available.
+
+FRR itself and the other base image components are unchanged. The image's build files and README are maintained upstream in [`docker/containerlab`](https://github.com/FRRouting/frr/tree/master/docker/containerlab).
+
+The plain `<version>` tags ship no SSH server. Use `docker exec` to access those containers, as shown in the `vtysh` and `bash` tabs below.
 
 ## Managing -{{ kind_display_name }}- nodes
 
 /// tab | SSH
-The public keys detected on your host are added to the `root` user, so no password is needed:
+The public keys detected on your host are added to both the `admin` and the `root` user, so no password is needed either way.
+
+`admin` is the default user for these nodes, and its login shell is `vtysh`, so a bare `ssh` reaches the routing CLI:
+
+```bash
+ssh <node-name>
+```
+
+`root` gets a shell:
 
 ```bash
 ssh root@<node-name>
 ```
 
+`admin` can also log in with a password, which is `admin` unless the node's [`credentials`](../nodes.md#credentials) set another. The image ships no password for it; containerlab sets this one when it deploys the node, so changing `credentials` changes the password the node accepts. `root` has no password and accepts keys only.
+
+These SSH commands require the containerlab image described above. For plain release images, use the `vtysh` or `bash` tabs below to access them with `docker exec`.
 ///
 /// tab | vtysh
 FRR's integrated shell is available in the container:
@@ -57,7 +75,7 @@ docker exec -it <node-name> bash
 
 ## Node configuration
 
--{{ kind_display_name }}- nodes are configured through three files, which containerlab writes into the node's lab directory under `config/` and bind mounts over the container's `/etc/frr`:
+-{{ kind_display_name }}- nodes are configured through three files, which containerlab writes into the node's lab directory under `config/`. That directory is bind mounted over the container's `/etc/frr`:
 
 | File | Contents |
 | --- | --- |
@@ -66,6 +84,10 @@ docker exec -it <node-name> bash
 | `vtysh.conf` | `service integrated-vtysh-config`, so `frr.conf` is the only config file |
 
 The official image ships none of `frr.conf` and `vtysh.conf`, and `vtysh` refuses to start without them, which is why all three are always written.
+
+Saving a configuration also leaves a `frr.conf.sav` next to them, which is the previous configuration: FRR keeps one backup by renaming the old file before writing the new one.
+
+Files saved with `write memory` or `copy running-config startup-config` belong to the user who deployed the lab and remain readable on the host with `0644` permissions.
 
 ### Startup configuration
 

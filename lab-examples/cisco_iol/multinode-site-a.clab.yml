@@ -5,7 +5,7 @@
 # (10.30.0.1 <-> 10.30.0.2) across the stitch.
 #
 # Site A keeps the default IOL application IDs; site B sets
-# CLAB_IOL_PID_OFFSET so its switch derives unique MAC addresses and STP
+# pid-offset so its switch derives unique MAC addresses and STP
 # bridge ID. Without the offset both switches boot with identical bridge
 # IDs and STP blocks the stitched port.
 name: iol-site-a

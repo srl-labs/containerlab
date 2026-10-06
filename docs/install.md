@@ -119,7 +119,7 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 ```bash
 echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
-sudo tee -a /etc/apt/sources.list.d/netdevops.list
+sudo tee /etc/apt/sources.list.d/netdevops.list
 
 sudo apt update && sudo apt install containerlab
 ```
@@ -128,36 +128,35 @@ sudo apt update && sudo apt install containerlab
 
 /// tab | YUM
 
-```
-sudo yum-config-manager --add-repo=https://netdevops.fury.site/yum/ && \
-echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+```bash
+sudo tee /etc/yum.repos.d/netdevops.fury.site_yum_.repo <<'EOF'
+[netdevops.fury.site_yum_]
+name=Containerlab
+baseurl=https://netdevops.fury.site/yum/
+enabled=1
+gpgcheck=0
+EOF
 
 sudo yum install containerlab
 ```
 
 ///
 
-//// tab | DNF4
+/// tab | DNF
 
 ```bash
-sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
-echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+sudo tee /etc/yum.repos.d/netdevops.fury.site_yum_.repo <<'EOF'
+[netdevops.fury.site_yum_]
+name=Containerlab
+baseurl=https://netdevops.fury.site/yum/
+enabled=1
+gpgcheck=0
+EOF
 
 sudo dnf install containerlab
 ```
 
-////
-
-//// tab | DNF5
-
-```bash
-sudo dnf config-manager addrepo --set=baseurl="https://netdevops.fury.site/yum/" && \
-echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
-
-sudo dnf install containerlab
-```
-
-////
+///
 
 /// tab | APK
 Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).

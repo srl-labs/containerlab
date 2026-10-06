@@ -55,6 +55,26 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
+### Kind-Specific Config
+
+Certain kinds will accept extra keys in the node definition which only applies to nodes of that specific kind. However the inheritance model of groups, kinds and defaults can still be used. As with the below example:
+
+```yaml
+topology:
+  kinds:
+    cisco_iol:
+      pid-offset: 64
+  nodes:
+    sros1:
+      kind: nokia_srsim
+      config-mode: classic
+    iol1:
+      kind: cisco_iol
+      mgmt-intf: Ethernet1/0
+```
+
+A key that the node's kind does not support is an error so take caution when using `defaults` or `groups` when applied to multiple kinds.
+
 ### group
 
 `group` is a freeform string that denotes which group a node belongs to. This can be used to inherit values from the [groups](./topo-def-file.md#groups) container.

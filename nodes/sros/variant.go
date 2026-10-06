@@ -4,7 +4,7 @@
 
 package sros
 
-import "strings"
+import "fmt"
 
 // ConfigMode is the configuration mode (model-driven or classic).
 type ConfigMode string
@@ -14,6 +14,24 @@ const (
 	ConfigModeClassic     ConfigMode = "classic"
 	ConfigModeMixed       ConfigMode = "mixed"
 )
+
+// UnmarshalYAML accepts only the known configuration modes.
+func (m *ConfigMode) UnmarshalYAML(unmarshal func(any) error) error {
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+
+	switch mode := ConfigMode(s); mode {
+	case ConfigModeModelDriven, ConfigModeClassic, ConfigModeMixed:
+		*m = mode
+
+		return nil
+	}
+
+	return fmt.Errorf("invalid config-mode %q, valid values: %s, %s, %s",
+		s, ConfigModeModelDriven, ConfigModeClassic, ConfigModeMixed)
+}
 
 // ConfigFamily is the node family (SR, IXR, SAR).
 type ConfigFamily string
@@ -67,10 +85,10 @@ func getFullSnippetSet(v ConfigVariant) FullSnippetSet {
 }
 
 // resolveConfigVariant returns the config variant for node n from NodeType,
-// Env[envSrosConfigMode], and Certificate.Issue. SAR-Hm forces classic mode;
-// the caller should apply that to tplData and n.Cfg.Env when ForceClassic is true.
+// the config-mode kind-specific config key, and Certificate.Issue. SAR-Hm forces classic mode;
+// the caller should apply that to tplData and the kind-specific config when ForceClassic is true.
 func (n *sros) resolveConfigVariant() ConfigVariant {
-	mode := ConfigMode(strings.ToLower(n.Cfg.Env[envSrosConfigMode]))
+	mode := n.kindSpecificCfg().ConfigMode
 	if mode == "" {
 		mode = ConfigModeModelDriven
 	}

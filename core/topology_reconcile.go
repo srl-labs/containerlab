@@ -107,6 +107,18 @@ func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
 }
 
+// isNewNonContainerNode reports whether a non-container node (bridge, host,
+// ext-container) is absent from the previously deployed topology. Such nodes
+// exist outside the lab, so they are always listed as current nodes, even
+// when the topology has just added them.
+func (p *applyPlan) isNewNonContainerNode(nodeName string) bool {
+	if !p.isNonContainerNode(nodeName) || p.state == nil || p.state.Topology == nil {
+		return false
+	}
+	_, exists := p.state.Topology.Nodes[nodeName]
+	return !exists
+}
+
 // networkModeContainerTarget returns the referenced node name for a
 // "network-mode: container:<name>" config, or "" if networkMode does not
 // share another container's network namespace.
@@ -211,6 +223,11 @@ func (c *CLab) planApply(
 				)
 			}
 
+			plan.addedNodeSet[nodeName] = struct{}{}
+			continue
+		}
+
+		if plan.isNewNonContainerNode(nodeName) {
 			plan.addedNodeSet[nodeName] = struct{}{}
 		}
 	}
@@ -725,7 +742,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		c.privilegedByDefault(strings.ToLower(kind)),
 	)
 
-	return &clabtypes.NodeConfig{
+	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:    nodeName,
 		Hostname:     topo.GetNodeHostname(nodeName),
 		Kind:         kind,
@@ -753,9 +770,18 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		CPUSet:       topo.GetNodeCPUSet(nodeName),
 		Memory:       topo.GetNodeMemory(nodeName),
 		License:      topo.GetNodeLicense(nodeName),
-		Components:   topo.GetComponents(nodeName),
 		Extras:       topo.GetNodeExtras(nodeName),
 	}
+
+	kindSpecificConfig, err := c.decodeKindSpecificConfig(topo, nodeName, strings.ToLower(kind))
+	if err != nil {
+		// A state file can hold keys a later release rejects; such a node counts as changed.
+		kindSpecificConfig = clabnodes.InvalidKindSpecificConfig{Err: err.Error()}
+	}
+
+	nodeCfg.KindSpecificConfig = kindSpecificConfig
+
+	return nodeCfg
 }
 
 func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) error {

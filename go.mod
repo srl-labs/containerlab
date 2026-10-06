@@ -46,7 +46,7 @@ require (
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/steiler/acls v0.1.5
+	github.com/steiler/acls v0.1.6
 	github.com/stretchr/testify v1.12.1
 	github.com/tklauser/numcpus v0.12.0
 	github.com/vishvananda/netlink v1.3.1
@@ -55,7 +55,7 @@ require (
 	go.podman.io/podman/v6 v6.1.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.55.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.4
@@ -242,7 +242,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
-	github.com/mdlayher/netlink v1.8.0
+	github.com/mdlayher/netlink v1.11.2
 	github.com/miekg/pkcs11 v1.1.2 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/term v0.5.2 // indirect

@@ -26,6 +26,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
@@ -48,13 +49,9 @@ const (
 	scrapliPlatformName        = "nokia_sros"
 	scrapliPlatformNameClassic = "nokia_sros_classic"
 	readyTimeout               = 15 * time.Minute // max wait for node health and SSH readiness
-	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
-	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
-	// Default (unset or "model-driven") uses the MD-CLI platform.
-	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
-	configDirName     = "tftpboot"
-	startupCfgFName   = "config.txt"
-	licenseFName      = "license.txt"
+	configDirName              = "tftpboot"
+	startupCfgFName            = "config.txt"
+	licenseFName               = "license.txt"
 
 	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
 	ociImageTitleLabel = "org.opencontainers.image.title"
@@ -78,18 +75,46 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
 	}, nrea)
 }
 
+// KindSpecificConfig is the nokia_sros kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// ConfigMode is the SR OS configuration mode: model-driven (default), classic or mixed.
+	ConfigMode    clabnodessros.ConfigMode `yaml:"config-mode,omitempty" json:"config-mode,omitempty"`
+	InjectSSHKeys bool                     `yaml:"inject-ssh-keys" json:"inject-ssh-keys"`
+	SFM           string                   `yaml:"sfm,omitempty" json:"sfm,omitempty"`
+	Components    []*Component             `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+type Component struct {
+	Slot    string              `yaml:"slot,omitempty" json:"slot,omitempty"`
+	Type    string              `yaml:"type,omitempty" json:"type,omitempty"`
+	CPU     int                 `yaml:"cpu,omitempty" json:"cpu,omitempty"`
+	RAM     int                 `yaml:"ram,omitempty" json:"ram,omitempty"`
+	MaxNics int                 `yaml:"max-nics,omitempty" json:"max-nics,omitempty"`
+	XIOM    clabnodessros.XIOMS `yaml:"xiom,omitempty" json:"xiom,omitempty"`
+	MDA     clabnodessros.MDAS  `yaml:"mda,omitempty" json:"mda,omitempty"`
+}
+
+// SetDefaults implements clabnodes.KindSpecificConfigDefaulter.
+func (c *KindSpecificConfig) SetDefaults() {
+	c.InjectSSHKeys = true
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
+
 type vrSROS struct {
 	clabnodes.VRNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 }
+
+func (s *vrSROS) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(s.Cfg) }
 
 func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -105,6 +130,7 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	for _, o := range opts {
 		o(s)
 	}
+
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	if s.Cfg.NodeType == "" {
 		s.Cfg.NodeType = vrsrosDefaultType
@@ -112,9 +138,13 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 
 	// if user defined components: are used, parse them.
 	variant := s.Cfg.NodeType
-	if len(s.Cfg.Components) > 0 {
+	if len(s.kindSpecificCfg().Components) > 0 {
 		var err error
-		variant, err = buildSrosVariant(s.Cfg.NodeType, s.Cfg.Components, s.Cfg.Env)
+		variant, err = buildSrosVariant(
+			s.Cfg.NodeType,
+			s.kindSpecificCfg().Components,
+			s.kindSpecificCfg().SFM,
+		)
 		if err != nil {
 			return err
 		}
@@ -219,12 +249,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 		}
 	}
 
-	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
-	// which is needed for SR OS nodes running in classic CLI mode, because our key
-	// injection mechanism assumes MD-CLI mode.
-	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
-
-	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
+	if len(s.sshPubKeys) > 0 && s.injectSSHKeys() {
 		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
 
 		sshConf, err := s.generateSSHPublicKeysConfig()
@@ -256,14 +281,22 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 }
 
 // scrapliPlatform returns the scrapligo platform name based on the configured CLI mode.
-// When CLAB_SROS_CONFIG_MODE is "classic" or "mixed", the classic CLI platform is used.
+// When config-mode is "classic" or "mixed", the classic CLI platform is used.
 // The default (unset or "model-driven") uses the MD-CLI platform.
 func (s *vrSROS) scrapliPlatform() string {
-	cfgMode := strings.ToLower(s.Cfg.Env[envSrosConfigMode])
-	if cfgMode == "classic" || cfgMode == "mixed" {
+	if s.isConfigClassic() {
 		return scrapliPlatformNameClassic
 	}
 	return scrapliPlatformName
+}
+
+func (s *vrSROS) isConfigClassic() bool {
+	m := s.kindSpecificCfg().ConfigMode
+	return m == clabnodessros.ConfigModeClassic || m == clabnodessros.ConfigModeMixed
+}
+
+func (s *vrSROS) injectSSHKeys() bool {
+	return s.kindSpecificCfg().InjectSSHKeys && !s.isConfigClassic()
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {

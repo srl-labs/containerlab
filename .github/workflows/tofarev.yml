@@ -1,0 +1,23 @@
+name: ToFaRev
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.user.type == 'User' &&
+      contains(fromJSON('["hellt","flosch62","kaelemc"]'), github.event.comment.user.login) &&
+      contains(github.event.comment.body, '/tofarev review')
+    uses: hellt/tofarev/.github/workflows/review.yml@688f8c1e404e1910b2ae192bfeba9c053b3f28b0
+    with:
+      bot_repository: hellt/tofarev
+      bot_ref: 688f8c1e404e1910b2ae192bfeba9c053b3f28b0
+      app_client_id: ${{ vars.TOFAREV_APP_CLIENT_ID }}
+      trusted_config: '{"shareSessions":true}'
+    secrets:
+      TOFAREV_API_KEY: ${{ secrets.TOFAREV_API_KEY }}
+      TOFAREV_APP_PRIVATE_KEY: ${{ secrets.TOFAREV_APP_PRIVATE_KEY }}
