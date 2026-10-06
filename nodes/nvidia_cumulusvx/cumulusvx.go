@@ -21,7 +21,7 @@ var (
 
 	InterfaceRegexp = regexp.MustCompile(`^swp(?P<port>[1-9]\d*)(?:s(?P<lane>\d+))?$`)
 	InterfaceOffset = 1
-	InterfaceHelp   = "swpN or ethN (N >= 1), or swpNsM with extras.cumulus-vx breakouts"
+	InterfaceHelp   = "swpN or ethN (N >= 1), or swpNsM with breakouts"
 )
 
 const (
@@ -36,12 +36,29 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		nil,
-	)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(nvidiaCumulusVX)
 	}, nrea)
 }
+
+// KindSpecificConfig is the nvidia_cumulusvx kind-specific config, set as keys on the node
+// definition.
+type KindSpecificConfig struct {
+	// PortCount is the base port count; breakout lanes are allocated after this range.
+	PortCount int `yaml:"port-count,omitempty" json:"port-count,omitempty"`
+	// Breakouts applies breakout channels to individual parent ports or port ranges.
+	Breakouts []Breakout `yaml:"breakouts,omitempty" json:"breakouts,omitempty"`
+}
+
+// Breakout applies a channel count to one port or an inclusive range (e.g. 1..20).
+type Breakout struct {
+	Port     string `yaml:"port" json:"port"`
+	Channels int    `yaml:"channels" json:"channels"`
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 type nvidiaCumulusVX struct {
 	clabnodes.VRNode
@@ -58,7 +75,7 @@ func (n *nvidiaCumulusVX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.Node
 	}
 
 	var err error
-	n.portLayout, err = newPortLayout(cumulusExtras(cfg))
+	n.portLayout, err = newPortLayout(portLayoutConfig(cfg.KindSpecificConfig))
 	if err != nil {
 		return fmt.Errorf("node %q: %w", cfg.ShortName, err)
 	}

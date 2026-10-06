@@ -577,31 +577,27 @@ topology:
 	}
 }
 
-func TestResolveLinksWithKindExtras(t *testing.T) {
+func TestResolveLinksWithKindSpecificConfig(t *testing.T) {
 	const topology = `name: cumulus-breakout
 topology:
   kinds:
     nvidia_cumulusvx:
       image: vrnetlab/nvidia_cumulus-vx:test
-      extras:
-        cumulus-vx:
-          ports: 64
-          breakouts:
-            - port: 10..11
-              channels: 4
-            - port: 2
-              channels: 2
+      port-count: 64
+      breakouts:
+        - port: 10..11
+          channels: 4
+        - port: 2
+          channels: 2
   nodes:
     leaf1:
       kind: nvidia_cumulusvx
     leaf2:
       kind: nvidia_cumulusvx
-      extras:
-        cumulus-vx:
-          ports: 8
-          breakouts:
-            - port: 1
-              channels: 2
+      port-count: 8
+      breakouts:
+        - port: 1
+          channels: 2
     host:
       kind: linux
       image: alpine:latest

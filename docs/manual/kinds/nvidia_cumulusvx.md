@@ -59,11 +59,11 @@ Dataplane interfaces in your topology file should be named as `swpN`, where `N` 
 
 ### Breakout ports
 
-Configure breakout ports with `extras.cumulus-vx` and use `swpNsM` in link endpoints,
+Configure breakout ports with the `port-count` and `breakouts` [kind-specific config](../nodes.md#kind-specific-config) keys and use `swpNsM` in link endpoints,
 where `N` is the parent port number and `M` is the lane number, starting at zero.
 This requires an image built with [vrnetlab's Cumulus VX breakout support](https://github.com/srl-labs/vrnetlab/pull/521).
 
-* `ports`: required base port count, defining the range `swp1` through `swpN`.
+* `port-count`: required base port count, defining the range `swp1` through `swpN`.
 * `breakouts`: required list of entries with `port` and `channels` fields. `port`
   selects one parent port (e.g. `10`) or an inclusive range (e.g. `1..20`), and
   `channels` sets 2, 4, or 8 breakout lanes for each selected port. Specify at least
@@ -79,14 +79,12 @@ topology:
     leaf:
       kind: nvidia_cumulusvx
       image: vrnetlab/nvidia_cumulus-vx:5.16.1
-      extras:
-        cumulus-vx:
-          ports: 64
-          breakouts:
-            - port: 1..20
-              channels: 4
-            - port: 64
-              channels: 2
+      port-count: 64
+      breakouts:
+        - port: 1..20
+          channels: 4
+        - port: 64
+          channels: 2
     host:
       kind: linux
       image: alpine:latest
