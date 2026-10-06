@@ -275,6 +275,12 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			mdas:     MDAS{{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"}},
 		},
 		{
+			name:     "integrated_ixr_e2sc_default",
+			nodeType: "ixr-e2sc",
+			cardType: "imm16-sfp++4-sfp28",
+			mdas:     MDAS{{Slot: 1, Type: "m16-sfp++4-sfp28"}},
+		},
+		{
 			name:     "integrated_ixr_ec_default",
 			nodeType: "ixr-ec",
 			cardType: "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
@@ -313,25 +319,35 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		})
 	}
 
-	t.Run("integrated_env_overrides_preserve_default_mda_slots", func(t *testing.T) {
+	t.Run("integrated_env_mda_override_preserves_default_mda_slots", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode(
 			"sr-1",
-			map[string]string{
-				envNokiaSrosCard:       "env-card",
-				envNokiaSrosMDA + "_1": "env-mda",
-			},
+			map[string]string{envNokiaSrosMDA + "_1": "env-mda"},
 			nil,
 		)
 
 		cfg := n.generateComponentConfig()
 
-		assert.Contains(t, cfg, "/configure card 1 card-type env-card admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 card-type iom-1 admin-state enable")
 		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type env-mda admin-state enable")
 		assert.Contains(
 			t,
 			cfg,
 			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
 		)
+	})
+
+	t.Run("integrated_card_override_skips_component_config", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1s",
+			map[string]string{
+				envNokiaSrosCard:       "cpm-1s",
+				envNokiaSrosMDA + "_1": "env-mda",
+			},
+			nil,
+		)
+
+		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("integrated_env_override_adds_mda_slot", func(t *testing.T) {
@@ -417,6 +433,8 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, slotBName, n.Cfg.Env[envNokiaSrosSlot])
 		assert.Equal(t, "cpiom-ixr-r6", n.Cfg.Env[envNokiaSrosCard])
 		assert.Equal(t, "m20-1g-csfp", n.Cfg.Env[envNokiaSrosMDA+"_3"])
+
+		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("integrated_rejects_multiple_components", func(t *testing.T) {
@@ -439,15 +457,14 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, "m-sfm6-7/12", n.Cfg.Env[envNokiaSrosSFM])
 	})
 
-	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
-		n := newSrosInitTestNode("ixr-e2", []*Component{
-			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
+	t.Run("single_slot_integrated_allows_card_type_override", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-e2n", []*Component{
+			{Slot: slotAName, Type: "cpm-ixr-e2n/imm4-sfp+4-sfp+"},
 		})
 
-		err := n.Init(n.Cfg)
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "does not support component card-type override")
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "cpm-ixr-e2n/imm4-sfp+4-sfp+", n.Cfg.Env[envNokiaSrosCard])
+		assert.Empty(t, n.generateComponentConfig())
 	})
 
 	t.Run("integrated_rejects_invalid_slot", func(t *testing.T) {

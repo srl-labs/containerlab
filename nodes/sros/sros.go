@@ -373,21 +373,12 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	vars[envNokiaSrosSlot] = slotName
 
 	if slotA.Type != "" {
-		if isSingleSlotIntegratedSrosNodeType(n.Cfg.NodeType) {
-			return nil, fmt.Errorf(
-				"node %q type %q is integrated and does not support component card-type override",
-				n.Cfg.ShortName,
-				n.Cfg.NodeType,
-			)
-		}
 		vars[envNokiaSrosCard] = slotA.Type
 	}
 
-	if len(slotA.MDA) > 0 {
-		for _, m := range slotA.MDA {
-			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
-			vars[key] = m.Type
-		}
+	for _, m := range slotA.MDA {
+		key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+		vars[key] = m.Type
 	}
 
 	maps.Copy(vars, slotA.Env)
@@ -1110,10 +1101,6 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
-	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
-		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
-			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
-	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -1127,27 +1114,6 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
-}
-
-// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
-// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
-// with the same filename (chassis_info.json).
-func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
-	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
-	if err != nil {
-		return fmt.Errorf("inspect image: %w", err)
-	}
-	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
-	if err != nil {
-		return err
-	}
-	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
-	licensed := append([]byte(chassisInfoFileLicense), content...)
-	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
-		return fmt.Errorf("write %s: %w", dstPath, err)
-	}
-	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
 	return nil
 }
 
@@ -2095,6 +2061,16 @@ func (n *sros) generateComponentConfig() string {
 	components := n.rootComponents
 	if len(components) == 0 {
 		if len(n.kindSpecificCfg().Components) > 1 || n.rootCtrName != "" {
+			return ""
+		}
+		card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
+		if card != "" && isIntegratedSrosNodeType(n.Cfg.NodeType) {
+			log.Info(
+				"Card type override set on integrated chassis type, skipping component SR OS config generation",
+				"node", n.Cfg.ShortName,
+				"type", n.Cfg.NodeType,
+				"card", card,
+			)
 			return ""
 		}
 
