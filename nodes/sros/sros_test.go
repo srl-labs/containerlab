@@ -319,7 +319,56 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		})
 	}
 
-	t.Run("integrated_env_mda_override_preserves_default_mda_slots", func(t *testing.T) {
+	t.Run("integrated_component_mda_override_preserves_default_mda_slots", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-1", nil, []*Component{
+			{MDA: MDAS{{Slot: 1, Type: "custom-mda"}}},
+		})
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type iom-1 admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type custom-mda admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
+		)
+	})
+
+	t.Run("integrated_xiom_replaces_default_mdas", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-1s", nil, []*Component{
+			{
+				XIOM: XIOMS{
+					{
+						Slot: 1,
+						Type: "iom-s-3.0t",
+						MDA: MDAS{
+							{Slot: 1, Type: "ms18-100gb-qsfp28"},
+							{Slot: 2, Type: "ms2-400gb-qsfpdd+2-100gb-qsfp28"},
+						},
+					},
+				},
+			},
+		})
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type xcm-1s admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable",
+		)
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 xiom x1 mda 2 mda-type ms2-400gb-qsfpdd+2-100gb-qsfp28 admin-state enable",
+		)
+		assert.NotContains(t, cfg, "s36-100gb-qsfp28")
+	})
+
+	t.Run("integrated_env_mda_does_not_change_component_config", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode(
 			"sr-1",
 			map[string]string{envNokiaSrosMDA + "_1": "env-mda"},
@@ -328,13 +377,12 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 		cfg := n.generateComponentConfig()
 
-		assert.Contains(t, cfg, "/configure card 1 card-type iom-1 admin-state enable")
-		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type env-mda admin-state enable")
 		assert.Contains(
 			t,
 			cfg,
-			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
+			"/configure card 1 mda 1 mda-type me6-100gb-qsfp28 admin-state enable",
 		)
+		assert.NotContains(t, cfg, "env-mda")
 	})
 
 	t.Run("integrated_card_override_skips_component_config", func(t *testing.T) {
@@ -350,14 +398,10 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		assert.Empty(t, n.generateComponentConfig())
 	})
 
-	t.Run("integrated_env_override_adds_mda_slot", func(t *testing.T) {
-		n := newSrosComponentConfigTestNode(
-			"ixr-r6",
-			map[string]string{
-				envNokiaSrosMDA + "_3": "m20-1g-csfp",
-			},
-			nil,
-		)
+	t.Run("integrated_component_override_adds_mda_slot", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("ixr-r6", nil, []*Component{
+			{MDA: MDAS{{Slot: 3, Type: "m20-1g-csfp"}}},
+		})
 
 		cfg := n.generateComponentConfig()
 
@@ -435,6 +479,32 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, "m20-1g-csfp", n.Cfg.Env[envNokiaSrosMDA+"_3"])
 
 		assert.Empty(t, n.generateComponentConfig())
+	})
+
+	t.Run("integrated_component_xiom_sets_env", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1s", []*Component{
+			{
+				XIOM: XIOMS{
+					{
+						Slot: 1,
+						Type: "iom-s-3.0t",
+						MDA:  MDAS{{Slot: 1, Type: "ms18-100gb-qsfp28"}},
+					},
+				},
+			},
+		})
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "iom-s-3.0t", n.Cfg.Env[envNokiaSrosXIOM+"_X1"])
+		assert.Equal(t, "ms18-100gb-qsfp28", n.Cfg.Env[envNokiaSrosMDA+"_X1_1"])
+
+		cfg := n.generateComponentConfig()
+		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable",
+		)
 	})
 
 	t.Run("integrated_rejects_multiple_components", func(t *testing.T) {

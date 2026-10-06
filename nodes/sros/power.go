@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	defaultSrosPowerType       = "dc"
+	defaultSrosPowerModuleType = "ps-a-dc-6000"
+)
+
 // SrosPower defines power supply configuration for a given node type.
 type SrosPower struct {
 	Modules any
