@@ -246,6 +246,18 @@ func integratedSrosAllowedSlots(nodeType string) []string {
 	return component.allowedSlots
 }
 
+func isRedundantIntegratedSrosComponents(nodeType string, components []*Component) bool {
+	if !isIntegratedSrosNodeType(nodeType) || len(components) < 2 {
+		return false
+	}
+	for _, c := range components {
+		if strings.TrimSpace(c.Slot) == "" || !integratedSrosSlotAllowed(nodeType, c.Slot) {
+			return false
+		}
+	}
+	return true
+}
+
 func integratedSrosSlotAllowed(nodeType, slot string) bool {
 	slot = strings.ToUpper(strings.TrimSpace(slot))
 	if slot == "" {
@@ -262,35 +274,13 @@ func (n *sros) generateComponentConfig() string {
 		return ""
 	}
 
+	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
+		return n.generateIntegratedComponentConfig()
+	}
+
 	components := n.rootComponents
 	if len(components) == 0 {
-		if len(n.kindSpecificCfg().Components) > 1 || n.rootCtrName != "" {
-			return ""
-		}
-		card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
-		if card != "" && isIntegratedSrosNodeType(n.Cfg.NodeType) {
-			log.Info(
-				"Card type override set on integrated chassis type, skipping component SR OS config generation",
-				"node",
-				n.Cfg.ShortName,
-				"type",
-				n.Cfg.NodeType,
-				"card",
-				card,
-			)
-			return ""
-		}
-
-		var override *Component
-		if len(n.kindSpecificCfg().Components) == 1 {
-			override = n.kindSpecificCfg().Components[0]
-		}
-
-		lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, override)
-		if len(lines) == 0 {
-			return ""
-		}
-		return n.componentConfigFromLines(lines)
+		return ""
 	}
 
 	for _, c := range components {
@@ -325,4 +315,40 @@ func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
 	}
 	config.WriteString(powerConfig)
 	return config.String()
+}
+
+func (n *sros) generateIntegratedComponentConfig() string {
+	card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
+	if card != "" {
+		log.Info(
+			"Card type override set on integrated chassis type, skipping component SR OS config generation",
+			"node", n.Cfg.ShortName,
+			"type", n.Cfg.NodeType,
+			"card", card,
+		)
+		return ""
+	}
+
+	lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.integratedComponentOverride())
+	return n.componentConfigFromLines(lines)
+}
+
+// integratedComponentOverride returns the component that overrides the integrated defaults:
+// the single component of a standalone node, or the component matching the slot of a
+// redundant CPM node.
+func (n *sros) integratedComponentOverride() *Component {
+	if n.rootCtrName == "" {
+		if len(n.kindSpecificCfg().Components) == 1 {
+			return n.kindSpecificCfg().Components[0]
+		}
+		return nil
+	}
+
+	slot := n.Cfg.Env[envNokiaSrosSlot]
+	for _, c := range n.rootComponents {
+		if strings.EqualFold(strings.TrimSpace(c.Slot), slot) {
+			return c
+		}
+	}
+	return nil
 }
