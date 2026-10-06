@@ -322,9 +322,12 @@ func (n *sros) generateIntegratedComponentConfig() string {
 	if card != "" {
 		log.Info(
 			"Card type override set on integrated chassis type, skipping component SR OS config generation",
-			"node", n.Cfg.ShortName,
-			"type", n.Cfg.NodeType,
-			"card", card,
+			"node",
+			n.Cfg.ShortName,
+			"type",
+			n.Cfg.NodeType,
+			"card",
+			card,
 		)
 		return ""
 	}
