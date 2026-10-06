@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: cvx-breakout
+
+topology:
+  kinds:
+    nvidia_cumulusvx:
+      image: ${CUMULUS_IMAGE}
+      port-count: 8
+      breakouts:
+        - port: 1..2
+          channels: 4
+        - port: 8
+          channels: 2
+
+  nodes:
+    leaf:
+      kind: nvidia_cumulusvx
+
+    client:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool
+      exec:
+        - ip addr add 10.0.1.1/24 dev eth1
+        - ip addr add 10.0.2.1/24 dev eth2
+        - ip addr add 10.0.3.1/24 dev eth3
+        - ip addr add 10.0.4.1/24 dev eth4
+
+  # Base ports are eth1..eth8. Lanes follow in ascending parent order:
+  # swp1s0..3 = eth9..12, swp2s0..3 = eth13..16, swp8s0..1 = eth17..18.
+  links:
+    - endpoints: ["leaf:swp1s0", "client:eth1"]
+    - endpoints: ["leaf:swp2s3", "client:eth2"]
+    - endpoints: ["leaf:swp3", "client:eth3"]
+    - endpoints: ["leaf:swp8s1", "client:eth4"]
