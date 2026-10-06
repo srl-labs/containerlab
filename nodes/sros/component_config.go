@@ -6,9 +6,11 @@ package sros
 
 import (
 	"fmt"
+	"maps"
 	"slices"
-	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 const integratedSrosCardSlot = "1"
@@ -181,57 +183,40 @@ func buildComponentCfgLines(components []*Component, sfm string) []componentCfgL
 	return lines
 }
 
-func buildIntegratedComponentCfgLines(
-	nodeType string,
-	env map[string]string,
-) []componentCfgLine {
+func buildIntegratedComponentCfgLines(nodeType string, override *Component) []componentCfgLine {
 	component, ok := integratedSrosDefaultComponents[canonicalSrosNodeType(nodeType)]
 	if !ok {
 		return nil
 	}
-
-	lines := []componentCfgLine{
-		{Kind: "card", Slot: integratedSrosCardSlot, Type: component.cardType},
+	if override == nil {
+		override = &Component{}
 	}
 
-	for _, mda := range mergeIntegratedMdas(component.mdas, env) {
-		lines = append(lines, componentCfgLine{
-			Kind: "mda", Slot: integratedSrosCardSlot, MdaSlot: mda.Slot, Type: mda.Type,
-		})
+	defaultMdas := component.mdas
+
+	if len(override.XIOM) > 0 {
+		defaultMdas = nil
 	}
 
-	return lines
+	card := &Component{
+		Slot: integratedSrosCardSlot,
+		Type: component.cardType,
+		XIOM: override.XIOM,
+		MDA:  mergeIntegratedMdas(defaultMdas, override.MDA),
+	}
+
+	return buildComponentCfgLines([]*Component{card}, "")
 }
 
-func mergeIntegratedMdas(defaults MDAS, env map[string]string) MDAS {
+func mergeIntegratedMdas(defaults, overrides MDAS) MDAS {
 	bySlot := map[int]string{}
-	for _, mda := range defaults {
+	for _, mda := range slices.Concat(defaults, overrides) {
 		if mda.Slot > 0 && mda.Type != "" {
 			bySlot[mda.Slot] = mda.Type
 		}
 	}
 
-	const prefix = envNokiaSrosMDA + "_"
-	for key, value := range env {
-		slotText, ok := strings.CutPrefix(key, prefix)
-		if !ok {
-			continue
-		}
-		slot, err := strconv.Atoi(slotText)
-		if err != nil || slot <= 0 {
-			continue
-		}
-		if value = strings.TrimSpace(value); value != "" {
-			bySlot[slot] = value
-		}
-	}
-
-	slots := make([]int, 0, len(bySlot))
-	for slot := range bySlot {
-		slots = append(slots, slot)
-	}
-	slices.Sort(slots)
-
+	slots := slices.Sorted(maps.Keys(bySlot))
 	mdas := make(MDAS, 0, len(slots))
 	for _, slot := range slots {
 		mdas = append(mdas, MDA{Slot: slot, Type: bySlot[slot]})
@@ -267,4 +252,77 @@ func integratedSrosSlotAllowed(nodeType, slot string) bool {
 		slot = standaloneSlotName
 	}
 	return slices.Contains(integratedSrosAllowedSlots(nodeType), slot)
+}
+
+func (n *sros) generateComponentConfig() string {
+	if !n.kindSpecificCfg().GenComponentConfig {
+		return ""
+	}
+	if n.isConfigClassic() {
+		return ""
+	}
+
+	components := n.rootComponents
+	if len(components) == 0 {
+		if len(n.kindSpecificCfg().Components) > 1 || n.rootCtrName != "" {
+			return ""
+		}
+		card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
+		if card != "" && isIntegratedSrosNodeType(n.Cfg.NodeType) {
+			log.Info(
+				"Card type override set on integrated chassis type, skipping component SR OS config generation",
+				"node",
+				n.Cfg.ShortName,
+				"type",
+				n.Cfg.NodeType,
+				"card",
+				card,
+			)
+			return ""
+		}
+
+		var override *Component
+		if len(n.kindSpecificCfg().Components) == 1 {
+			override = n.kindSpecificCfg().Components[0]
+		}
+
+		lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, override)
+		if len(lines) == 0 {
+			return ""
+		}
+		return n.componentConfigFromLines(lines)
+	}
+
+	for _, c := range components {
+		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
+		if slot == slotAName || slot == slotBName {
+			continue
+		}
+		if c.Type == "" {
+			log.Warn(
+				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot,
+			)
+		}
+	}
+
+	lines := buildComponentCfgLines(components, n.kindSpecificCfg().SFM)
+	return n.componentConfigFromLines(lines)
+}
+
+func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
+	powerConfig := n.generatePowerConfig()
+	if len(lines) == 0 && powerConfig == "" {
+		return ""
+	}
+
+	var config strings.Builder
+	for _, l := range lines {
+		config.WriteString(l.String())
+	}
+	config.WriteString(powerConfig)
+	return config.String()
 }
