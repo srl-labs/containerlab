@@ -13,7 +13,13 @@ import (
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
-	for _, m := range c.usedMgmtNetworks() {
+	return c.createNetworks(ctx, c.usedMgmtNetworks())
+}
+
+// createNetworks creates or inspects the given management networks
+// and labels the nodes with their management bridge.
+func (c *CLab) createNetworks(ctx context.Context, networks clabtypes.MgmtNetworks) error {
+	for _, m := range networks {
 		var opts []clabruntime.NetworkCreateOptions
 		if addresses := c.staticManagementAddresses(m); len(addresses) != 0 {
 			opts = append(opts, clabruntime.NetworkCreateOptions{StaticAddresses: addresses})
@@ -26,6 +32,18 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 		// create docker network or use existing one
 		if err := rt.CreateNet(ctx, opts...); err != nil {
 			return err
+		}
+
+		// VM kinds read the subnets at init, before the runtime resolved them
+		for _, cfg := range c.mgmtNetNodes(m) {
+			for key, subnet := range map[string]string{
+				"DOCKER_NET_V4_ADDR": m.IPv4Subnet,
+				"DOCKER_NET_V6_ADDR": m.IPv6Subnet,
+			} {
+				if value, ok := cfg.Env[key]; ok && value == "" {
+					cfg.Env[key] = subnet
+				}
+			}
 		}
 	}
 

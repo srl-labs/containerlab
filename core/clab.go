@@ -324,6 +324,7 @@ func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 
 	networks := make(map[string]bool, len(c.Config.MgmtNetworks))
+	bridges := make(map[string]string, len(c.Config.MgmtNetworks))
 	tailscaleNet := ""
 	for idx, m := range c.Config.MgmtNetworks {
 		if m == nil {
@@ -350,6 +351,13 @@ func (c *CLab) initMgmtNetwork() error {
 			return fmt.Errorf("management network %q is defined more than once", m.Network)
 		}
 		networks[m.Network] = true
+
+		if other, ok := bridges[m.Bridge]; ok && m.Bridge != "" {
+			return fmt.Errorf(
+				"management networks %q and %q use the same bridge %q", other, m.Network, m.Bridge,
+			)
+		}
+		bridges[m.Bridge] = m.Network
 	}
 
 	if err := c.validateManagementLinks(); err != nil {

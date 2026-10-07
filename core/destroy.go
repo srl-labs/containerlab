@@ -189,12 +189,17 @@ func (c *CLab) makeCopyForDestroy(
 		return nil, err
 	}
 
-	// create management network or use existing one
-	// we call this to populate the nc.cfg.mgmt.bridge variable
-	// which is needed for the removal of the iptables rules.
-	if !cc.skipMgmtNetwork() && cc.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan {
-		err = cc.CreateNetwork(ctx)
-		if err != nil {
+	// create management networks or use existing ones
+	// we call this to populate the bridge names
+	// which are needed for the removal of the iptables rules.
+	if !cc.skipMgmtNetwork() {
+		var bridged clabtypes.MgmtNetworks
+		for _, m := range cc.usedMgmtNetworks() {
+			if m.Driver != clabtypes.MgmtDriverMacvlan {
+				bridged = append(bridged, m)
+			}
+		}
+		if err = cc.createNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}

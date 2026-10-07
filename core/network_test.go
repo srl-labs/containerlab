@@ -497,6 +497,11 @@ func TestMgmtNetworkListErrors(t *testing.T) {
 			want: `management network "x" is defined more than once`,
 		},
 		{
+			name: "duplicate bridge",
+			mgmt: "  - network: a\n    bridge: br0\n  - network: b\n    bridge: br0\n",
+			want: `management networks "a" and "b" use the same bridge "br0"`,
+		},
+		{
 			name: "tailscale on two networks",
 			mgmt: "  - network: a\n    tailscale:\n      auth-mode: sso\n" +
 				"  - network: b\n    tailscale:\n      auth-mode: sso\n",
@@ -712,7 +717,8 @@ topology:
 		"ipv6":    WithManagementIpv6Subnet("2001:db8::/64"),
 	} {
 		_, err := NewContainerLab(WithTopoPath(multi, nil), opt)
-		if err == nil || !strings.Contains(err.Error(), "cannot be used with multiple management networks") {
+		if err == nil ||
+			!strings.Contains(err.Error(), "cannot be used with multiple management networks") {
 			t.Fatalf("%s: error = %v; want override rejected", name, err)
 		}
 	}
@@ -721,5 +727,39 @@ topology:
 	c, err := NewContainerLab(WithTopoPath(single, nil), WithManagementNetworkName("other"))
 	if err != nil || c.Config.Mgmt.Network != "other" {
 		t.Fatalf("single network override: err = %v, network = %q", err, c.Config.Mgmt.Network)
+	}
+}
+
+func TestCreateNetworkFillsResolvedSubnetEnv(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := &clabtypes.MgmtNet{Network: "main"}
+	cfg := &clabtypes.NodeConfig{
+		ShortName: "vm",
+		MgmtNet:   "main",
+		Labels:    map[string]string{},
+		Env:       map[string]string{"DOCKER_NET_V4_ADDR": "", "DOCKER_NET_V6_ADDR": "fd00::/64"},
+	}
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().Config().Return(cfg).AnyTimes()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	rt.EXPECT().CreateNet(gomock.Any()).DoAndReturn(
+		func(context.Context, ...clabruntime.NetworkCreateOptions) error {
+			m.IPv4Subnet, m.IPv6Subnet = "192.0.2.0/24", "2001:db8::/64"
+			return nil
+		})
+	rt.EXPECT().Mgmt().Return(m).AnyTimes()
+	c := &CLab{
+		Config:            &Config{Mgmt: m, MgmtNetworks: clabtypes.MgmtNetworks{m}},
+		globalRuntimeName: "test",
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+		Nodes:             map[string]clabnodes.Node{"vm": node},
+	}
+
+	if err := c.CreateNetwork(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Env["DOCKER_NET_V4_ADDR"] != "192.0.2.0/24" ||
+		cfg.Env["DOCKER_NET_V6_ADDR"] != "fd00::/64" {
+		t.Fatalf("env = %v; want empty subnet filled and set subnet kept", cfg.Env)
 	}
 }

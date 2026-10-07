@@ -157,8 +157,13 @@ func (c *CLab) verifyTailscaleProxy() error {
 			continue
 		}
 		if len(cfg.TailscalePorts) > 0 && cfg.MgmtNet != c.tailscaleMgmtNet().Network {
-			log.Warn("Tailscale /ts ports need the node on the tailscale management network, ignoring",
-				"node", name, "network", c.tailscaleMgmtNet().Network)
+			log.Warn(
+				"Tailscale /ts ports need the node on the tailscale management network, ignoring",
+				"node",
+				name,
+				"network",
+				c.tailscaleMgmtNet().Network,
+			)
 			continue
 		}
 		for _, p := range cfg.TailscalePorts {
