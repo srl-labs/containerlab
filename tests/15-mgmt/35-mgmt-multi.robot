@@ -1,6 +1,6 @@
 *** Settings ***
 Library             OperatingSystem
-Resource            ../../common.robot
+Resource            ../common.robot
 
 Suite Setup         Setup
 Suite Teardown      Cleanup
@@ -10,6 +10,7 @@ Suite Teardown      Cleanup
 ${runtime}              docker
 ${topo}                 ${CURDIR}/35-mgmt-multi.clab.yml
 ${parent}               clab-smoke35
+${uplink}               clab-smoke35-u
 ${parent-created}       ${False}
 
 
@@ -58,12 +59,16 @@ Setup
     Command Should Succeed    sudo ip link add ${parent} type bridge
     Set Suite Variable    ${parent-created}    ${True}
     Command Should Succeed    sudo ip link set ${parent} up
+    # a bridge without ports has no carrier on some kernels, which keeps macvlan children down
+    Command Should Succeed    sudo ip link add ${uplink} type dummy
+    Command Should Succeed    sudo ip link set ${uplink} master ${parent} up
     Command Should Succeed    sudo ip addr add 198.18.135.1/24 dev ${parent}
 
 Cleanup
     Run Keyword And Ignore Error
     ...    Command Should Succeed    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
     IF    ${parent-created}
+        Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${uplink}
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
     END
 

@@ -281,6 +281,18 @@ jobs:
       - process-gitref
       - build-containerlab
 
+  mgmt-tests:
+    uses: ./.github/workflows/mgmt-tests.yml
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+    secrets: inherit
+    needs:
+      - file-changes
+      - process-gitref
+      - build-containerlab
+
   ext-container-tests:
     runs-on: ubuntu-24.04
     needs:
@@ -610,6 +622,7 @@ jobs:
     needs:
       - unit-test
       - smoke-tests
+      - mgmt-tests
       - ext-container-tests
       - ceos-basic-tests
       - srlinux-basic-tests
@@ -713,6 +726,7 @@ jobs:
       # - docs-test
       - unit-test
       - smoke-tests
+      - mgmt-tests
       - ceos-basic-tests
       - srlinux-basic-tests
       - ixiac-one-basic-tests
