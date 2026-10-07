@@ -497,6 +497,12 @@ func TestMgmtNetworkListErrors(t *testing.T) {
 			want: `management network "x" is defined more than once`,
 		},
 		{
+			name: "tailscale on two networks",
+			mgmt: "  - network: a\n    tailscale:\n      auth-mode: sso\n" +
+				"  - network: b\n    tailscale:\n      auth-mode: sso\n",
+			want: `tailscale is set on management networks "a" and "b", only one is allowed`,
+		},
+		{
 			name: "invalid entry",
 			mgmt: "  - network: a\n  - network: b\n    driver: macvlan\n",
 			want: "macvlan",
@@ -688,5 +694,32 @@ func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 		if got := cfg.Labels[clabconstants.NodeMgmtNetBr]; got != want.bridge {
 			t.Fatalf("%s: bridge label = %q; want %q", name, got, want.bridge)
 		}
+	}
+}
+
+func TestMgmtOverrideFlagsWithMultipleNetworks(t *testing.T) {
+	multi := writeTopo(t, `
+name: override
+mgmt:
+  - network: main
+  - network: oob
+topology:
+  nodes: {}
+`)
+	for name, opt := range map[string]ClabOption{
+		"network": WithManagementNetworkName("other"),
+		"ipv4":    WithManagementIpv4Subnet("192.0.2.0/24"),
+		"ipv6":    WithManagementIpv6Subnet("2001:db8::/64"),
+	} {
+		_, err := NewContainerLab(WithTopoPath(multi, nil), opt)
+		if err == nil || !strings.Contains(err.Error(), "cannot be used with multiple management networks") {
+			t.Fatalf("%s: error = %v; want override rejected", name, err)
+		}
+	}
+
+	single := writeTopo(t, "name: override\ntopology:\n  nodes: {}\n")
+	c, err := NewContainerLab(WithTopoPath(single, nil), WithManagementNetworkName("other"))
+	if err != nil || c.Config.Mgmt.Network != "other" {
+		t.Fatalf("single network override: err = %v, network = %q", err, c.Config.Mgmt.Network)
 	}
 }

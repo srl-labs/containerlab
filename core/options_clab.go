@@ -79,10 +79,24 @@ func WithSkippedBindsPathsCheck() ClabOption {
 	}
 }
 
+// checkMgmtOverride rejects management network flags for topologies with several networks,
+// since a flag cannot tell which network it applies to.
+func (c *CLab) checkMgmtOverride() error {
+	if len(c.Config.MgmtNetworks) > 1 {
+		return errors.New(
+			"management network flags cannot be used with multiple management networks",
+		)
+	}
+	return nil
+}
+
 // WithManagementNetworkName sets the name of the
 // management network that is to be used.
 func WithManagementNetworkName(n string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.Network = n
 		c.managementNetworkOverridden = true
 
@@ -94,6 +108,9 @@ func WithManagementNetworkName(n string) ClabOption {
 // that will be used for the mgmt network.
 func WithManagementIpv4Subnet(s string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.IPv4Subnet = s
 		c.managementNetworkOverridden = true
 
@@ -105,6 +122,9 @@ func WithManagementIpv4Subnet(s string) ClabOption {
 // that will be used for the mgmt network.
 func WithManagementIpv6Subnet(s string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.IPv6Subnet = s
 		c.managementNetworkOverridden = true
 

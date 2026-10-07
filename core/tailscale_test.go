@@ -861,3 +861,104 @@ topology:
 		t.Fatalf("got %d sidecars, want 4", sidecars)
 	}
 }
+
+func TestTailscaleSidecarsOnExtraMgmtNetwork(t *testing.T) {
+	path := writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  - network: main
+  - network: ts
+    ipv4-subnet: 192.0.2.0/24
+    tailscale:
+      auth-key: tskey-auth-test
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+      mgmt-net: main
+    n2:
+      kind: linux
+      image: alpine:3
+      mgmt-net: ts
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := c.Nodes[clabnodestailscale.SidecarName("n1")]; exists {
+		t.Fatal("sidecar created for n1, which is not on the tailscale network")
+	}
+	sidecar := c.Nodes[clabnodestailscale.SidecarName("n2")]
+	if sidecar == nil {
+		t.Fatal("missing sidecar for n2")
+	}
+	if got := sidecar.Config().MgmtNet; got != "ts" {
+		t.Fatalf("sidecar mgmt-net = %q; want ts", got)
+	}
+}
+
+func TestSyncTailscaleProxyOnExtraMgmtNetwork(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTailscaleTopo(t, `
+name: mylab
+mgmt:
+  - network: main
+  - network: ts
+    ipam:
+      provider: runtime
+    tailscale:
+      auth-mode: sso
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+      mgmt-net: main
+      ports:
+        - 8022:22/ts
+    n2:
+      kind: linux
+      image: alpine:3
+      mgmt-net: ts
+      ports:
+        - 9022:22/ts
+`), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Nodes["n1"].Config().MgmtIPv4Address = "172.20.20.2"
+	c.Nodes["n2"].Config().MgmtIPv4Address = "192.0.2.2"
+
+	ctrl := gomock.NewController(t)
+	base := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder := clabmocksmockruntime.NewMockMgmtNetBinder(ctrl)
+	tsRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	c.Runtimes = map[string]clabruntime.ContainerRuntime{c.globalRuntimeName: struct {
+		*clabmocksmockruntime.MockContainerRuntime
+		*clabmocksmockruntime.MockMgmtNetBinder
+	}{base, binder}}
+
+	base.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(nil, nil)
+	binder.EXPECT().ForMgmtNet(c.Config.MgmtNetworks[1]).Return(tsRt)
+	tsRt.EXPECT().PullImage(gomock.Any(), clabnodestailscale.DefaultImage, gomock.Any())
+	var created *clabtypes.NodeConfig
+	tsRt.EXPECT().CreateContainer(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, cfg *clabtypes.NodeConfig) (string, error) {
+			created = cfg
+			return "id", nil
+		})
+	tsRt.EXPECT().StartContainer(gomock.Any(), "id", gomock.Any())
+
+	if err := c.syncTailscaleProxy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if created.MgmtNet != "ts" {
+		t.Fatalf("proxy mgmt-net = %q; want ts", created.MgmtNet)
+	}
+	if want := `{"TCP":{"9022":{"TCPForward":"192.0.2.2:22"}}}`; readServeConfig(t, c) != want {
+		t.Fatalf("serve.json = %s, want %s", readServeConfig(t, c), want)
+	}
+	if got := c.usedMgmtNetworks(); len(got) != 2 || got[1].Network != "ts" {
+		t.Fatalf("used networks = %v; want the tailscale network included", got)
+	}
+}

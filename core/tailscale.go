@@ -40,11 +40,8 @@ func tailscaleSidecarEligible(cfg *clabtypes.NodeConfig) bool {
 }
 
 func (c *CLab) injectTailscaleSidecars() error {
-	if c.Config == nil || c.Config.Mgmt == nil || c.Config.Mgmt.Tailscale == nil {
-		return nil
-	}
-
-	if c.Config.Mgmt.Tailscale.Proxy() || strings.TrimSpace(c.Config.Mgmt.Tailscale.AuthKey) == "" {
+	ts := c.tailscaleMgmtNet()
+	if ts == nil || ts.Tailscale.Proxy() || strings.TrimSpace(ts.Tailscale.AuthKey) == "" {
 		return nil
 	}
 
@@ -57,7 +54,7 @@ func (c *CLab) injectTailscaleSidecars() error {
 				name,
 			)
 		}
-		if tailscaleSidecarEligible(n.Config()) {
+		if tailscaleSidecarEligible(n.Config()) && n.Config().MgmtNet == ts.Network {
 			parents = append(parents, name)
 		}
 	}
@@ -80,8 +77,22 @@ func (c *CLab) injectTailscaleSidecars() error {
 	return nil
 }
 
+// tailscaleNodes returns the nodes attached to the tailscale management network.
+func (c *CLab) tailscaleNodes() map[string]clabnodes.Node {
+	nodes := make(map[string]clabnodes.Node)
+	if ts := c.tailscaleMgmtNet(); ts != nil {
+		for name, n := range c.Nodes {
+			if n.Config().MgmtNet == ts.Network {
+				nodes[name] = n
+			}
+		}
+	}
+	return nodes
+}
+
 func (c *CLab) tailscaleProxyEnabled() bool {
-	return c.Config.Mgmt != nil && c.Config.Mgmt.Tailscale.Proxy()
+	ts := c.tailscaleMgmtNet()
+	return ts != nil && ts.Tailscale.Proxy()
 }
 
 func (c *CLab) logoutTailscaleContainer(ctx context.Context, ctr clabruntime.GenericContainer) {
@@ -145,6 +156,11 @@ func (c *CLab) verifyTailscaleProxy() error {
 			log.Warn("Tailscale /ts ports need a node management IP, ignoring", "node", name)
 			continue
 		}
+		if len(cfg.TailscalePorts) > 0 && cfg.MgmtNet != c.tailscaleMgmtNet().Network {
+			log.Warn("Tailscale /ts ports need the node on the tailscale management network, ignoring",
+				"node", name, "network", c.tailscaleMgmtNet().Network)
+			continue
+		}
 		for _, p := range cfg.TailscalePorts {
 			if owner, exists := owners[p.Listen]; exists {
 				return fmt.Errorf(
@@ -198,7 +214,7 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 	}
 
 	clabutils.CreateDirectory(labDir, clabconstants.PermissionsOpen)
-	if err := clabnodestailscale.WriteServeConfig(labDir, c.Nodes); err != nil {
+	if err := clabnodestailscale.WriteServeConfig(labDir, c.tailscaleNodes()); err != nil {
 		return fmt.Errorf("writing Tailscale Serve config: %w", err)
 	}
 	if len(existing) > 0 {
@@ -209,11 +225,15 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 }
 
 func (c *CLab) createTailscaleProxy(ctx context.Context, labDir string) error {
-	rt := c.globalRuntime()
+	ts := c.tailscaleMgmtNet()
+	rt, err := c.mgmtRuntime(c.globalRuntimeName, ts)
+	if err != nil {
+		return err
+	}
 	cfg := clabnodestailscale.ProxyConfig(
 		c.Config.Name,
 		c.nodeLongName(clabnodestailscale.ProxyName),
-		c.Config.Mgmt.Network,
+		ts.Network,
 		labDir,
 	)
 	c.addDefaultLabels(cfg)
@@ -330,6 +350,7 @@ func (c *CLab) addTailscaleNode(
 		RestartPolicy: def.RestartPolicy,
 		Labels:        labels,
 		Stages:        def.Stages,
+		MgmtNet:       c.tailscaleMgmtNet().Network,
 	}
 	if err := c.initNode(cfg, runtime); err != nil {
 		return fmt.Errorf("creating Tailscale sidecar %q: %w", name, err)

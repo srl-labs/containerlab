@@ -324,12 +324,22 @@ func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 
 	networks := make(map[string]bool, len(c.Config.MgmtNetworks))
+	tailscaleNet := ""
 	for idx, m := range c.Config.MgmtNetworks {
 		if m == nil {
 			return fmt.Errorf("management network entry %d is empty", idx)
 		}
 		if len(c.Config.MgmtNetworks) > 1 && m.Network == "" {
 			return fmt.Errorf("management network entry %d requires a network name", idx)
+		}
+		if m.Tailscale != nil {
+			if tailscaleNet != "" {
+				return fmt.Errorf(
+					"tailscale is set on management networks %q and %q, only one is allowed",
+					tailscaleNet, m.Network,
+				)
+			}
+			tailscaleNet = m.Network
 		}
 
 		if err := setMgmtNetworkDefaults(m, idx == 0); err != nil {
@@ -420,6 +430,27 @@ func (c *CLab) mgmtRuntime(
 	}
 	// network state lives in the shared *MgmtNet, so a fresh copy is equivalent
 	return binder.ForMgmtNet(m), nil
+}
+
+// allMgmtNetworks returns every defined management network.
+func (c *CLab) allMgmtNetworks() clabtypes.MgmtNetworks {
+	if len(c.Config.MgmtNetworks) == 0 {
+		return clabtypes.MgmtNetworks{c.Config.Mgmt}
+	}
+	return c.Config.MgmtNetworks
+}
+
+// tailscaleMgmtNet returns the management network carrying the tailscale configuration.
+func (c *CLab) tailscaleMgmtNet() *clabtypes.MgmtNet {
+	if c.Config == nil || c.Config.Mgmt == nil {
+		return nil
+	}
+	for _, m := range c.allMgmtNetworks() {
+		if m.Tailscale != nil {
+			return m
+		}
+	}
+	return nil
 }
 
 // extraMgmtNetworks returns the management networks other than the default one.

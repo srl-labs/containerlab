@@ -41,11 +41,16 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 	return nil
 }
 
-// usedMgmtNetworks returns the default management network
+// usedMgmtNetworks returns the default management network, the tailscale network
 // and the extra management networks at least one node is attached to.
 func (c *CLab) usedMgmtNetworks() clabtypes.MgmtNetworks {
 	used := clabtypes.MgmtNetworks{c.Config.Mgmt}
 	for _, m := range c.extraMgmtNetworks() {
+		// the SSO proxy is a tool container outside c.Nodes
+		if m.Tailscale != nil {
+			used = append(used, m)
+			continue
+		}
 		for _, n := range c.Nodes {
 			if n.Config().MgmtNet == m.Network {
 				used = append(used, m)
@@ -119,19 +124,20 @@ func (c *CLab) validateManagementLinks() error {
 
 // AllocateToolManagementIPs assigns addresses when the topology uses containerlab IPAM.
 func (c *CLab) AllocateToolManagementIPs(ctx context.Context, cfg *clabtypes.NodeConfig) error {
-	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+	m := c.mgmtNetByNetwork(cfg.MgmtNet)
+	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return nil
 	}
 	if err := c.CreateNetwork(ctx); err != nil {
 		return err
 	}
-	reserved, err := c.collectReservedManagementAddresses(ctx, c.Config.Mgmt, nil)
+	reserved, err := c.collectReservedManagementAddresses(ctx, m, nil)
 	if err != nil {
 		return err
 	}
 	return mgmt.AllocateManagementIPs(
 		ctx,
-		c.Config.Mgmt,
+		m,
 		[]*clabtypes.NodeConfig{cfg},
 		clabtypes.AllocationOptions{Reserved: reserved},
 	)

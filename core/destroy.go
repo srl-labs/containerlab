@@ -338,8 +338,9 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		}
 	}
 
-	// delete lab management networks
-	for _, m := range c.usedMgmtNetworks() {
+	// delete every defined management network, including extra networks
+	// that apply may have left without nodes
+	for _, m := range c.allMgmtNetworks() {
 		if m.Network == "bridge" || keepMgmtNet {
 			continue
 		}
@@ -347,7 +348,8 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
 		if rtErr != nil {
-			log.Error(rtErr)
+			// runtimes without multiple network support never created extra networks
+			log.Debug("Skipping management network deletion", "network", m.Network, "error", rtErr)
 			continue
 		}
 		if err = rt.DeleteNet(ctx); err != nil {
