@@ -5,6 +5,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -175,6 +176,15 @@ func (m MgmtNetworks) MarshalYAML() (any, error) {
 		return m[0], nil
 	}
 	return []*MgmtNet(m), nil
+}
+
+// MarshalJSON encodes a single network as an object and several networks as an array,
+// matching the topology file form.
+func (m MgmtNetworks) MarshalJSON() ([]byte, error) {
+	if len(m) == 1 {
+		return json.Marshal(m[0])
+	}
+	return json.Marshal([]*MgmtNet(m))
 }
 
 // NodeConfig contains information of a container element.

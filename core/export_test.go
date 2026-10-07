@@ -2,10 +2,14 @@ package core
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestCLab_exportTopologyDataWithMinimalTemplate(t *testing.T) {
@@ -100,4 +104,38 @@ func TestCLab_exportTopologyDataWithMinimalTemplate_NilConfig(t *testing.T) {
 
 	// This should panic
 	_ = c.exportTopologyDataWithMinimalTemplate(&buf)
+}
+
+func TestExportTopologyDataMgmtNetworksList(t *testing.T) {
+	main := &clabtypes.MgmtNet{Network: "main", IPv4Subnet: "192.0.2.0/24"}
+	oob := &clabtypes.MgmtNet{Network: "oob", IPv4Subnet: "198.51.100.0/24"}
+	c := &CLab{
+		Config: &Config{
+			Name:         "lab",
+			Mgmt:         main,
+			MgmtNetworks: clabtypes.MgmtNetworks{main, oob},
+		},
+		Nodes: map[string]clabnodes.Node{},
+	}
+
+	var buf bytes.Buffer
+	if err := c.exportTopologyDataWithTemplate(context.Background(), &buf, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	var got struct {
+		Clab struct {
+			Config struct {
+				Mgmt []clabtypes.MgmtNet `json:"mgmt"`
+			} `json:"config"`
+		} `json:"clab"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatalf("invalid export JSON: %v\n%s", err, buf.String())
+	}
+	mgmt := got.Clab.Config.Mgmt
+	if len(mgmt) != 2 || mgmt[0].Network != "main" ||
+		mgmt[1].Network != "oob" || mgmt[1].IPv4Subnet != "198.51.100.0/24" {
+		t.Fatalf("exported mgmt = %+v", mgmt)
+	}
 }

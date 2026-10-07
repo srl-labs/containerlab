@@ -53,8 +53,8 @@ const (
 type Config struct {
 	Name         string                 `json:"name,omitempty"`
 	Prefix       *string                `json:"prefix,omitempty"`
-	Mgmt         *clabtypes.MgmtNet     `json:"mgmt,omitempty"          yaml:"-"`
-	MgmtNetworks clabtypes.MgmtNetworks `json:"mgmt-networks,omitempty" yaml:"mgmt,omitempty"`
+	Mgmt         *clabtypes.MgmtNet     `json:"-" yaml:"-"`
+	MgmtNetworks clabtypes.MgmtNetworks `json:"mgmt,omitempty" yaml:"mgmt,omitempty"`
 	Settings     *clabtypes.Settings    `json:"settings,omitempty"`
 	Topology     *clabtypes.Topology    `json:"topology,omitempty"`
 	// the debug flag value as passed via cli

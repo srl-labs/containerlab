@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -74,6 +75,31 @@ func TestMgmtNetworksMarshalYAML(t *testing.T) {
 			}
 			if string(out) != tc.want {
 				t.Fatalf("Marshal() = %q; want %q", out, tc.want)
+			}
+		})
+	}
+}
+
+func TestMgmtNetworksMarshalJSON(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   MgmtNetworks
+		want string
+	}{
+		{name: "single", in: MgmtNetworks{{Network: "clab"}}, want: `{"network":"clab","ipam":{}}`},
+		{
+			name: "list",
+			in:   MgmtNetworks{{Network: "main"}, {Network: "oob"}},
+			want: `[{"network":"main","ipam":{}},{"network":"oob","ipam":{}}]`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := json.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(out) != tc.want {
+				t.Fatalf("Marshal() = %s; want %s", out, tc.want)
 			}
 		})
 	}
