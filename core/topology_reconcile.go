@@ -765,6 +765,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		PortSet:      portSet,
 		User:         topo.GetNodeUser(nodeName),
 		NetworkMode:  topo.GetNodeNetworkMode(nodeName),
+		MgmtNet:      topo.GetNodeMgmtNet(nodeName),
 		Runtime:      topo.GetNodeRuntime(nodeName),
 		CPU:          topo.GetNodeCPU(nodeName),
 		CPUSet:       topo.GetNodeCPUSet(nodeName),

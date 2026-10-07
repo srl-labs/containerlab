@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../../schemas/clab.schema.json
+name: smoke35
+
+mgmt:
+  - network: clab-smoke35-main
+    ipv4-subnet: 198.18.35.0/24
+    ipv6-subnet: fd00:35::/64
+  - network: clab-smoke35-auto
+    ipam:
+      provider: runtime
+  - network: clab-smoke35-mv
+    driver: macvlan
+    macvlan-parent: clab-smoke35
+    macvlan-aux: true
+    ipv4-subnet: 198.18.135.0/24
+    ipv4-gw: 198.18.135.1
+    ipv4-range: 198.18.135.128/25
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    r1:
+      mgmt-net: clab-smoke35-main
+    r2:
+      mgmt-net: clab-smoke35-auto
+    r3:
+      mgmt-net: clab-smoke35-mv
+    r4:
+      mgmt-net: clab-smoke35-mv
+      mgmt-ipv4: 198.18.135.140
+    h1:
+      network-mode: host

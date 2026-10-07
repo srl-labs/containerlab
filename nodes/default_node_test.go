@@ -129,6 +129,18 @@ func TestDefaultNodeComputeDiffDetectsHostnameChange(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeComputeDiffDetectsMgmtNetChange(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", MgmtNet: "oob"},
+	)
+
+	if len(diff.Fields) != 1 || diff.Fields[0] != "MgmtNet" {
+		t.Fatalf("ComputeDiff fields = %#v, want [MgmtNet]", diff.Fields)
+	}
+}
+
 func TestDefaultNodeComputeDiffIgnoresEquivalentDefaultHostname(t *testing.T) {
 	d := &DefaultNode{}
 	diff := d.ComputeDiff(

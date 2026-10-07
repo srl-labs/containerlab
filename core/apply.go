@@ -334,7 +334,7 @@ func (c *CLab) collectExistingManagementAddresses(
 	var existing []clabtypes.ExistingAddress
 	for name, group := range currentNodes {
 		for _, ctr := range group.containers {
-			if ctr.NetworkName != c.Config.Mgmt.Network {
+			if c.mgmtNetByNetwork(ctr.NetworkName).Network != ctr.NetworkName {
 				continue
 			}
 			for _, value := range []string{ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv6addr} {

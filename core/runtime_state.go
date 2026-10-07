@@ -151,7 +151,7 @@ func (c *CLab) setMgmtBridgeFromRuntime(
 	for _, runtimeNode := range currentNodes {
 		for _, ctr := range runtimeNode.containers {
 			ctrBridge := ctr.Labels[clabconstants.NodeMgmtNetBr]
-			if ctrBridge == "" {
+			if ctrBridge == "" || c.mgmtNetByNetwork(ctr.NetworkName) != c.Config.Mgmt {
 				continue
 			}
 			if bridge == "" {

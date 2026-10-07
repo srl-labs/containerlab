@@ -13,41 +13,85 @@ import (
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
-	var opts []clabruntime.NetworkCreateOptions
+	for _, m := range c.usedMgmtNetworks() {
+		var opts []clabruntime.NetworkCreateOptions
+		if addresses := c.staticManagementAddresses(m); len(addresses) != 0 {
+			opts = append(opts, clabruntime.NetworkCreateOptions{StaticAddresses: addresses})
+		}
 
-	if addresses := c.staticManagementAddresses(); len(addresses) != 0 {
-		opts = append(opts, clabruntime.NetworkCreateOptions{StaticAddresses: addresses})
-	}
-
-	// create docker network or use existing one
-	if err := c.globalRuntime().CreateNet(ctx, opts...); err != nil {
-		return err
+		rt, err := c.mgmtRuntime(c.globalRuntimeName, m)
+		if err != nil {
+			return err
+		}
+		// create docker network or use existing one
+		if err := rt.CreateNet(ctx, opts...); err != nil {
+			return err
+		}
 	}
 
 	// save mgmt bridge name as a label
 	for _, n := range c.Nodes {
-		n.Config().Labels[clabconstants.NodeMgmtNetBr] = c.globalRuntime().Mgmt().Bridge
+		bridge := c.globalRuntime().Mgmt().Bridge
+		if m := c.mgmtNetByNetwork(n.Config().MgmtNet); m != c.Config.Mgmt {
+			bridge = m.Bridge
+		}
+		n.Config().Labels[clabconstants.NodeMgmtNetBr] = bridge
 	}
 
 	return nil
 }
 
+// usedMgmtNetworks returns the default management network
+// and the extra management networks at least one node is attached to.
+func (c *CLab) usedMgmtNetworks() clabtypes.MgmtNetworks {
+	used := clabtypes.MgmtNetworks{c.Config.Mgmt}
+	for _, m := range c.extraMgmtNetworks() {
+		for _, n := range c.Nodes {
+			if n.Config().MgmtNet == m.Network {
+				used = append(used, m)
+				break
+			}
+		}
+	}
+	return used
+}
+
+// mgmtNetNodes returns the configs of the nodes attached to the given management network.
+func (c *CLab) mgmtNetNodes(m *clabtypes.MgmtNet) []*clabtypes.NodeConfig {
+	var configs []*clabtypes.NodeConfig
+	for _, node := range c.Nodes {
+		if c.mgmtNetByNetwork(node.Config().MgmtNet) == m {
+			configs = append(configs, node.Config())
+		}
+	}
+	return configs
+}
+
 // SyncMgmtHostRoutes reconciles host routes to current macvlan management endpoints.
 func (c *CLab) SyncMgmtHostRoutes(ctx context.Context) error {
-	if c.Config == nil || c.Config.Mgmt == nil ||
-		c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan ||
-		!c.Config.Mgmt.MacvlanAuxEnabled() {
+	if c.Config == nil || c.Config.Mgmt == nil {
 		return nil
 	}
 	c.mgmtRouteMu.Lock()
 	defer c.mgmtRouteMu.Unlock()
-	return c.globalRuntime().SyncMgmtHostRoutes(ctx)
+	for _, m := range c.usedMgmtNetworks() {
+		if m.Driver != clabtypes.MgmtDriverMacvlan || !m.MacvlanAuxEnabled() {
+			continue
+		}
+		rt, err := c.mgmtRuntime(c.globalRuntimeName, m)
+		if err != nil {
+			return err
+		}
+		if err := rt.SyncMgmtHostRoutes(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (c *CLab) staticManagementAddresses() []netip.Addr {
+func (c *CLab) staticManagementAddresses(m *clabtypes.MgmtNet) []netip.Addr {
 	var addresses []netip.Addr
-	for _, node := range c.Nodes {
-		config := node.Config()
+	for _, config := range c.mgmtNetNodes(m) {
 		if address, err := netip.ParseAddr(config.MgmtIPv4Address); err == nil {
 			addresses = append(addresses, address)
 		}
@@ -81,7 +125,7 @@ func (c *CLab) AllocateToolManagementIPs(ctx context.Context, cfg *clabtypes.Nod
 	if err := c.CreateNetwork(ctx); err != nil {
 		return err
 	}
-	reserved, err := c.collectReservedManagementAddresses(ctx, nil)
+	reserved, err := c.collectReservedManagementAddresses(ctx, c.Config.Mgmt, nil)
 	if err != nil {
 		return err
 	}

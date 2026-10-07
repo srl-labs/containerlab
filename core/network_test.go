@@ -7,6 +7,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -409,5 +411,282 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 				t.Fatal("foreign runtime reservation ignored")
 			}
 		})
+	}
+}
+
+func writeTopo(t *testing.T, topo string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "topo.clab.yml")
+	if err := os.WriteFile(path, []byte(topo), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestMgmtNetworkList(t *testing.T) {
+	path := writeTopo(t, `
+name: multi
+mgmt:
+  - network: multi-main
+    ipv4-subnet: 192.0.2.0/24
+  - network: multi-oob
+    driver: macvlan
+    macvlan-parent: eth0
+    ipv4-subnet: 198.51.100.0/24
+  - network: multi-auto
+    ipam:
+      provider: runtime
+topology:
+  kinds:
+    linux:
+      mgmt-net: multi-oob
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+    n2:
+      kind: linux
+      image: alpine
+      mgmt-net: multi-main
+    n3:
+      kind: linux
+      image: alpine
+      mgmt-net: multi-auto
+    n4:
+      kind: linux
+      image: alpine
+      network-mode: host
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Config.Mgmt != c.Config.MgmtNetworks[0] || c.Config.Mgmt.Network != "multi-main" {
+		t.Fatalf("default network not taken from first entry: %+v", c.Config.Mgmt)
+	}
+	if auto := c.Config.MgmtNetworks[2]; auto.IPv4Subnet != "" || auto.IPv6Subnet != "" {
+		t.Fatalf("default subnets applied to extra network: %+v", auto)
+	}
+
+	for name, want := range map[string]string{
+		"n1": "multi-oob",
+		"n2": "multi-main",
+		"n3": "multi-auto",
+		"n4": "",
+	} {
+		if got := c.Nodes[name].Config().MgmtNet; got != want {
+			t.Fatalf("node %s mgmt-net = %q; want %q", name, got, want)
+		}
+	}
+}
+
+func TestMgmtNetworkListErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		mgmt string
+		want string
+	}{
+		{
+			name: "missing network",
+			mgmt: "  - network: a\n  - ipv4-subnet: 192.0.2.0/24\n",
+			want: "entry 1 requires a network name",
+		},
+		{
+			name: "duplicate network",
+			mgmt: "  - network: x\n  - network: x\n",
+			want: `management network "x" is defined more than once`,
+		},
+		{
+			name: "invalid entry",
+			mgmt: "  - network: a\n  - network: b\n    driver: macvlan\n",
+			want: "macvlan",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeTopo(t, "name: bad\nmgmt:\n"+tc.mgmt+"topology:\n  nodes: {}\n")
+			_, err := NewContainerLab(WithTopoPath(path, nil))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v; want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestNodeUnknownMgmtNetwork(t *testing.T) {
+	path := writeTopo(t, `
+name: unknown
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+      mgmt-net: oob
+`)
+	_, err := NewContainerLab(WithTopoPath(path, nil))
+	if err == nil || !strings.Contains(err.Error(), `management network "oob" is not defined`) {
+		t.Fatalf("error = %v; want unknown management network", err)
+	}
+}
+
+func TestMgmtNetworkListRequiresNodeSelection(t *testing.T) {
+	topo := `
+name: required
+mgmt:
+  - network: main
+  - network: oob
+topology:
+  nodes:
+    br:
+      kind: bridge
+    hostnode:
+      kind: linux
+      image: alpine
+      network-mode: host
+    n1:
+      kind: linux
+      image: alpine
+      mgmt-net: oob
+%s`
+	if _, err := NewContainerLab(
+		WithTopoPath(writeTopo(t, fmt.Sprintf(topo, "")), nil),
+	); err != nil {
+		t.Fatalf("nodes outside the management network must not require mgmt-net: %v", err)
+	}
+
+	missing := "    n2:\n      kind: linux\n      image: alpine\n"
+	_, err := NewContainerLab(WithTopoPath(writeTopo(t, fmt.Sprintf(topo, missing)), nil))
+	if err == nil || !strings.Contains(err.Error(), `node "n2" must set mgmt-net`) {
+		t.Fatalf("error = %v; want missing mgmt-net", err)
+	}
+}
+
+// Runtimes without MgmtNetBinder, such as podman, only support the default network.
+func TestMgmtNetworkListUnsupportedRuntime(t *testing.T) {
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Config.MgmtNetworks = clabtypes.MgmtNetworks{
+		c.Config.Mgmt, {Network: "oob"},
+	}
+	c.Runtimes["podman"] = clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+
+	err = c.initNode(&clabtypes.NodeConfig{
+		ShortName: "n1", Kind: "linux", MgmtNet: "oob", Labels: map[string]string{},
+	}, "podman")
+	if err == nil ||
+		!strings.Contains(
+			err.Error(),
+			`runtime "podman" does not support multiple management networks`,
+		) {
+		t.Fatalf("error = %v; want unsupported runtime", err)
+	}
+}
+
+func TestSingleEntryMgmtNetworkListDefaultsNodes(t *testing.T) {
+	path := writeTopo(t, `
+name: single-list
+mgmt:
+  - network: single-list-main
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.Nodes["n1"].Config().MgmtNet; got != "single-list-main" {
+		t.Fatalf("mgmt-net = %q; want single-list-main", got)
+	}
+}
+
+// Each network is created through a runtime bound to it, unused networks are skipped,
+// and containerlab IPAM allocates from the network the node is attached to.
+func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	noDAD := false
+	clabIPAM := clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderContainerlab, DAD: &noDAD}
+	main := &clabtypes.MgmtNet{
+		Network: "main", Bridge: "br-main", IPv4Subnet: "192.0.2.0/29", IPAM: clabIPAM,
+	}
+	auto := &clabtypes.MgmtNet{
+		Network: "auto", Bridge: "br-auto",
+		IPAM: clabtypes.MgmtIPAM{Provider: clabtypes.IPAMProviderRuntime},
+	}
+	mv := &clabtypes.MgmtNet{
+		Network: "mv", Driver: clabtypes.MgmtDriverMacvlan, MacvlanParent: "eth0",
+		IPv4Subnet: "198.51.100.0/29", IPAM: clabIPAM,
+	}
+	unused := &clabtypes.MgmtNet{Network: "unused", IPAM: clabIPAM}
+
+	base := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder := clabmocksmockruntime.NewMockMgmtNetBinder(ctrl)
+	rt := struct {
+		*clabmocksmockruntime.MockContainerRuntime
+		*clabmocksmockruntime.MockMgmtNetBinder
+	}{base, binder}
+	autoRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	mvRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder.EXPECT().ForMgmtNet(auto).Return(autoRt).AnyTimes()
+	binder.EXPECT().ForMgmtNet(mv).Return(mvRt).AnyTimes()
+	for r := range map[*clabmocksmockruntime.MockContainerRuntime]bool{
+		base: true, autoRt: true, mvRt: true,
+	} {
+		r.EXPECT().CreateNet(gomock.Any()).Return(nil)
+	}
+	base.EXPECT().Mgmt().Return(main).AnyTimes()
+	// reservations are looked up across the whole runtime for main and mv, not for auto
+	base.EXPECT().NetworkAddresses(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
+
+	configs := map[string]*clabtypes.NodeConfig{
+		"r1": {ShortName: "r1", MgmtNet: "main"},
+		"r2": {ShortName: "r2", MgmtNet: "auto"},
+		"r3": {ShortName: "r3", MgmtNet: "mv"},
+		"h1": {ShortName: "h1", NetworkMode: "host"},
+	}
+	nodes := make(map[string]clabnodes.Node, len(configs))
+	for name, cfg := range configs {
+		cfg.Labels = map[string]string{}
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		node.EXPECT().Config().Return(cfg).AnyTimes()
+		nodes[name] = node
+	}
+	c := &CLab{
+		Config: &Config{
+			Mgmt:         main,
+			MgmtNetworks: clabtypes.MgmtNetworks{main, auto, mv, unused},
+		},
+		globalRuntimeName: "test",
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+		Nodes:             nodes,
+	}
+
+	if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, want := range map[string]struct{ subnet, bridge string }{
+		"r1": {"192.0.2.0/29", "br-main"},
+		"r2": {"", "br-auto"},
+		"r3": {"198.51.100.0/29", ""},
+		"h1": {"", "br-main"},
+	} {
+		cfg := configs[name]
+		if want.subnet == "" {
+			if cfg.MgmtIPv4Address != "" {
+				t.Fatalf("%s: unexpected containerlab allocation %s", name, cfg.MgmtIPv4Address)
+			}
+		} else {
+			ip, err := netip.ParseAddr(cfg.MgmtIPv4Address)
+			if err != nil || !netip.MustParsePrefix(want.subnet).Contains(ip) {
+				t.Fatalf("%s: address %q outside %s", name, cfg.MgmtIPv4Address, want.subnet)
+			}
+		}
+		if got := cfg.Labels[clabconstants.NodeMgmtNetBr]; got != want.bridge {
+			t.Fatalf("%s: bridge label = %q; want %q", name, got, want.bridge)
+		}
 	}
 }

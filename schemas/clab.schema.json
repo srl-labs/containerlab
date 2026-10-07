@@ -3,6 +3,163 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Containerlab topology definition file",
     "definitions": {
+        "mgmt-network": {
+            "description": "configuration container for management network",
+            "markdownDescription": "configuration container for [management network](https://containerlab.dev/manual/network/#management-network)",
+            "type": "object",
+            "properties": {
+                "network": {
+                    "description": "management network name",
+                    "markdownDescription": "[management network name](https://containerlab.dev/manual/network/#network-name)",
+                    "type": "string"
+                },
+                "bridge": {
+                    "description": "Set bridge to use for the management network (instead of the default generated bridge).",
+                    "markdownDescription": "Set [bridge](https://containerlab.dev/manual/network/#bridge-name) to use for the management network (instead of the default generated bridge).",
+                    "type": "string"
+                },
+                "ipv4-subnet": {
+                    "description": "IPv4 subnet to use for the custom management network. e.g. 172.100.100.0/24",
+                    "markdownDescription": "[IPv4 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
+                    "type": "string",
+                    "pattern": "(^.+/[0-9]{1,2}$)|(auto)"
+                },
+                "ipv6-subnet": {
+                    "description": "IPv6 subnet to use for the custom management network. e.g. 3fff:172:100:100::/64",
+                    "markdownDescription": "[IPv6 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 3fff:172:100:100::/64",
+                    "type": "string",
+                    "pattern": "(^.+/[0-9]{1,3}$)|(auto)"
+                },
+                "ipv4-gw": {
+                    "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
+                    "markdownDescription": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
+                    "$ref": "#/definitions/ipv4-addr"
+                },
+                "ipv6-gw": {
+                    "description": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
+                    "markdownDescription": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
+                    "type": "string",
+                    "$ref": "#/definitions/ipv6-addr"
+                },
+                "ipv4-range": {
+                    "description": "IPv4 range out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
+                    "markdownDescription": "[IPv4 range](https://containerlab.dev/manual/network/#ip-range) out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
+                    "type": "string",
+                    "pattern": "^.+/[0-9]{1,2}$"
+                },
+                "ipv6-range": {
+                    "description": "IPv6 range out of the ipv6-subnet to use for the custom management network. e.g. 3fff:172:100:100:8000::/65",
+                    "markdownDescription": "[IPv6 range](https://containerlab.dev/manual/network/#ip-range) out of the ipv6-subnet to use for the custom management network. e.g. 3fff:172:100:100:8000::/65",
+                    "type": "string",
+                    "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+                },
+                "mtu": {
+                    "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "$ref": "#/definitions/mtu"
+                },
+                "driver": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "macvlan"
+                    ],
+                    "description": "Network driver type (bridge or macvlan)"
+                },
+                "ipam": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "enum": ["containerlab", "runtime"],
+                            "default": "containerlab",
+                            "description": "Management IP allocation provider; runtime delegates to Docker or Podman"
+                        },
+                        "dad": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Duplicate Address Detection for allocated addresses. For Containerlab provider only. Checks using ARP/v6-ND DAD on the parent interface for macvlan mgmt net driver."
+                        }
+                    }
+                },
+                "macvlan-parent": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 15,
+                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
+                },
+                "macvlan-mode": {
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "vepa",
+                        "private",
+                        "passthru"
+                    ],
+                    "default": "bridge",
+                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
+                },
+                "macvlan-aux": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable automatic auxiliary host interface (for MACVLAN bridge mode only)"
+                },
+                "external-access": {
+                    "type": "boolean",
+                    "description": "controls whether the management network has external access or not",
+                    "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
+                },
+                "skip-when-unused": {
+                    "type": "boolean",
+                    "description": "skip management network creation when every node has network-mode: none",
+                    "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
+                },
+                "tailscale": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Configuration for tailscale attachment of the management network.",
+                    "markdownDescription": "[Tailscale](https://containerlab.dev/manual/network/#tailscale) sidecars for lab nodes",
+                    "not": {
+                        "required": ["auth-key", "auth-mode"]
+                    },
+                    "properties": {
+                        "auth-key": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Tailscale auth key used to join nodes to the tailnet."
+                        },
+                        "auth-mode": {
+                            "type": "string",
+                            "enum": ["sso"],
+                            "description": "Set the authentication mode for tailscale."
+                        }
+                    }
+                },
+                "driver-opts": {
+                    "type": "object",
+                    "description": "overrides for container runtime network driver options",
+                    "markdownDescription": "[driver-opts](https://containerlab.dev/manual/network/#bridge-network-driver-options) lets you set overrides for the network driver of the container runtime",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "boolean"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "minProperties": 1,
+            "additionalProperties": false
+        },
         "env": {
             "type": "object",
             "description": "environment variables",
@@ -301,6 +458,11 @@
                     "description": "IPv6 management address of the node (e.g. 172.10.10.11)",
                     "markdownDescription": "[IPv6 management address](https://containerlab.dev/manual/nodes/#mgmt-ipv6) of the node (e.g. 172.10.10.11)",
                     "$ref": "#/definitions/ipv6-addr"
+                },
+                "mgmt-net": {
+                    "type": "string",
+                    "description": "network name of the mgmt list entry the node attaches to",
+                    "markdownDescription": "network name of the [management network](https://containerlab.dev/manual/network/#multiple-management-networks) list entry the node attaches to"
                 },
                 "network-mode": {
                     "type": "string",
@@ -2475,161 +2637,29 @@
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
-            "description": "configuration container for management network",
+            "description": "management network configuration; a single network or a list of networks where the first entry is the default",
             "markdownDescription": "configuration container for [management network](https://containerlab.dev/manual/network/#management-network)",
-            "type": "object",
-            "properties": {
-                "network": {
-                    "description": "management network name",
-                    "markdownDescription": "[management network name](https://containerlab.dev/manual/network/#network-name)",
-                    "type": "string"
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/mgmt-network"
                 },
-                "bridge": {
-                    "description": "Set bridge to use for the management network (instead of the default generated bridge).",
-                    "markdownDescription": "Set [bridge](https://containerlab.dev/manual/network/#bridge-name) to use for the management network (instead of the default generated bridge).",
-                    "type": "string"
-                },
-                "ipv4-subnet": {
-                    "description": "IPv4 subnet to use for the custom management network. e.g. 172.100.100.0/24",
-                    "markdownDescription": "[IPv4 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
-                    "type": "string",
-                    "pattern": "(^.+/[0-9]{1,2}$)|(auto)"
-                },
-                "ipv6-subnet": {
-                    "description": "IPv6 subnet to use for the custom management network. e.g. 3fff:172:100:100::/64",
-                    "markdownDescription": "[IPv6 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 3fff:172:100:100::/64",
-                    "type": "string",
-                    "pattern": "(^.+/[0-9]{1,3}$)|(auto)"
-                },
-                "ipv4-gw": {
-                    "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
-                    "markdownDescription": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
-                    "$ref": "#/definitions/ipv4-addr"
-                },
-                "ipv6-gw": {
-                    "description": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
-                    "markdownDescription": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
-                    "type": "string",
-                    "$ref": "#/definitions/ipv6-addr"
-                },
-                "ipv4-range": {
-                    "description": "IPv4 range out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
-                    "markdownDescription": "[IPv4 range](https://containerlab.dev/manual/network/#ip-range) out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
-                    "type": "string",
-                    "pattern": "^.+/[0-9]{1,2}$"
-                },
-                "ipv6-range": {
-                    "description": "IPv6 range out of the ipv6-subnet to use for the custom management network. e.g. 3fff:172:100:100:8000::/65",
-                    "markdownDescription": "[IPv6 range](https://containerlab.dev/manual/network/#ip-range) out of the ipv6-subnet to use for the custom management network. e.g. 3fff:172:100:100:8000::/65",
-                    "type": "string",
-                    "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
-                },
-                "mtu": {
-                    "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "$ref": "#/definitions/mtu"
-                },
-                "driver": {
-                    "type": "string",
-                    "enum": [
-                        "bridge",
-                        "macvlan"
-                    ],
-                    "description": "Network driver type (bridge or macvlan)"
-                },
-                "ipam": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                        "provider": {
-                            "type": "string",
-                            "enum": ["containerlab", "runtime"],
-                            "default": "containerlab",
-                            "description": "Management IP allocation provider; runtime delegates to Docker or Podman"
-                        },
-                        "dad": {
-                            "type": "boolean",
-                            "default": true,
-                            "description": "Duplicate Address Detection for allocated addresses. For Containerlab provider only. Checks using ARP/v6-ND DAD on the parent interface for macvlan mgmt net driver."
-                        }
-                    }
-                },
-                "macvlan-parent": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 15,
-                    "description": "Parent interface name for MACVLAN network (required when using driver: macvlan)"
-                },
-                "macvlan-mode": {
-                    "type": "string",
-                    "enum": [
-                        "bridge",
-                        "vepa",
-                        "private",
-                        "passthru"
-                    ],
-                    "default": "bridge",
-                    "description": "Macvlan mode; macvlan-aux requires bridge mode"
-                },
-                "macvlan-aux": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable/disable automatic auxiliary host interface (for MACVLAN bridge mode only)"
-                },
-                "external-access": {
-                    "type": "boolean",
-                    "description": "controls whether the management network has external access or not",
-                    "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
-                },
-                "skip-when-unused": {
-                    "type": "boolean",
-                    "description": "skip management network creation when every node has network-mode: none",
-                    "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
-                },
-                "tailscale": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "description": "Configuration for tailscale attachment of the management network.",
-                    "markdownDescription": "[Tailscale](https://containerlab.dev/manual/network/#tailscale) sidecars for lab nodes",
-                    "not": {
-                        "required": ["auth-key", "auth-mode"]
-                    },
-                    "properties": {
-                        "auth-key": {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "Tailscale auth key used to join nodes to the tailnet."
-                        },
-                        "auth-mode": {
-                            "type": "string",
-                            "enum": ["sso"],
-                            "description": "Set the authentication mode for tailscale."
-                        }
-                    }
-                },
-                "driver-opts": {
-                    "type": "object",
-                    "description": "overrides for container runtime network driver options",
-                    "markdownDescription": "[driver-opts](https://containerlab.dev/manual/network/#bridge-network-driver-options) lets you set overrides for the network driver of the container runtime",
-                    "patternProperties": {
-                        ".+": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "number"
-                                },
-                                {
-                                    "type": "boolean"
-                                }
-                            ]
-                        }
+                {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/mgmt-network"
+                            },
+                            {
+                                "required": [
+                                    "network"
+                                ]
+                            }
+                        ]
                     }
                 }
-            },
-            "minProperties": 1,
-            "additionalProperties": false
+            ]
         },
         "topology": {
             "description": "topology configuration container",

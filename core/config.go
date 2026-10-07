@@ -51,11 +51,12 @@ const (
 
 // Config defines lab configuration as it is provided in the YAML file.
 type Config struct {
-	Name     string              `json:"name,omitempty"`
-	Prefix   *string             `json:"prefix,omitempty"`
-	Mgmt     *clabtypes.MgmtNet  `json:"mgmt,omitempty"`
-	Settings *clabtypes.Settings `json:"settings,omitempty"`
-	Topology *clabtypes.Topology `json:"topology,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	Prefix       *string                `json:"prefix,omitempty"`
+	Mgmt         *clabtypes.MgmtNet     `json:"mgmt,omitempty"          yaml:"-"`
+	MgmtNetworks clabtypes.MgmtNetworks `json:"mgmt-networks,omitempty" yaml:"mgmt,omitempty"`
+	Settings     *clabtypes.Settings    `json:"settings,omitempty"`
+	Topology     *clabtypes.Topology    `json:"topology,omitempty"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging
 	Debug bool `json:"debug"`
@@ -169,7 +170,19 @@ func (c *CLab) NewNode(
 		return err
 	}
 
-	return c.initNode(nodeCfg, nodeRuntime)
+	if err := c.initNode(nodeCfg, nodeRuntime); err != nil {
+		return err
+	}
+
+	cfg := c.Nodes[nodeName].Config()
+	if len(c.Config.MgmtNetworks) > 1 && cfg.MgmtNet == "" && cfg.ManagementIPAMEligible() {
+		return fmt.Errorf(
+			"node %q must set mgmt-net when several management networks are defined",
+			nodeName,
+		)
+	}
+
+	return nil
 }
 
 func (c *CLab) initNode(nodeCfg *clabtypes.NodeConfig, nodeRuntime string) error {
@@ -186,9 +199,17 @@ func (c *CLab) initNode(nodeCfg *clabtypes.NodeConfig, nodeRuntime string) error
 	c.addDefaultLabels(nodeCfg)
 	labelsToEnvVars(nodeCfg)
 
+	// nodes on a non-default management network get a runtime bound to that network
+	rt := c.Runtimes[nodeRuntime]
+	mgmtNet := c.mgmtNetByNetwork(nodeCfg.MgmtNet)
+	if mgmtNet != c.Config.Mgmt && rt != nil {
+		if rt, err = c.mgmtRuntime(nodeRuntime, mgmtNet); err != nil {
+			return fmt.Errorf("node %q: %w", nodeCfg.ShortName, err)
+		}
+	}
+
 	// Init
-	err = n.Init(nodeCfg, clabnodes.WithRuntime(c.Runtimes[nodeRuntime]),
-		clabnodes.WithMgmtNet(c.Config.Mgmt))
+	err = n.Init(nodeCfg, clabnodes.WithRuntime(rt), clabnodes.WithMgmtNet(mgmtNet))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 
@@ -364,7 +385,17 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6
 	}
 
-	var err error
+	mgmtNetName := c.Config.Topology.GetNodeMgmtNet(nodeName)
+	mgmtNet, err := c.mgmtNetByName(mgmtNetName)
+	if err != nil {
+		return nil, fmt.Errorf("node %q: %w", nodeName, err)
+	}
+	// with several management networks the node must select one, enforced in NewNode
+	if nodeCfg.NetworkMode != "host" && nodeCfg.NetworkMode != "none" &&
+		!strings.HasPrefix(nodeCfg.NetworkMode, "container:") &&
+		(mgmtNetName != "" || len(c.Config.MgmtNetworks) < 2) {
+		nodeCfg.MgmtNet = mgmtNet.Network
+	}
 
 	nodeCfg.KindSpecificConfig, err = c.decodeKindSpecificConfig(c.Config.Topology, nodeName, kind)
 	if err != nil {

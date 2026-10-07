@@ -329,20 +329,6 @@ func (c *CLab) allocateLabManagementIPs(
 	ctx context.Context,
 	existing []clabtypes.ExistingAddress,
 ) error {
-	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
-		return nil
-	}
-
-	configs := make([]*clabtypes.NodeConfig, 0, len(c.Nodes))
-	for _, node := range c.Nodes {
-		configs = append(configs, node.Config())
-	}
-
-	reserved, err := c.collectReservedManagementAddresses(ctx, existing)
-	if err != nil {
-		return err
-	}
-
 	preferred := make(map[string]clabtypes.NodeAddresses)
 	state, err := c.LoadState()
 	if err != nil {
@@ -355,20 +341,41 @@ func (c *CLab) allocateLabManagementIPs(
 		}
 	}
 
-	return mgmt.AllocateManagementIPs(
-		ctx,
-		c.Config.Mgmt,
-		configs,
-		clabtypes.AllocationOptions{Existing: existing, Preferred: preferred, Reserved: reserved},
-	)
+	for _, m := range c.usedMgmtNetworks() {
+		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+			continue
+		}
+
+		reserved, err := c.collectReservedManagementAddresses(ctx, m, existing)
+		if err != nil {
+			return err
+		}
+
+		err = mgmt.AllocateManagementIPs(
+			ctx,
+			m,
+			c.mgmtNetNodes(m),
+			clabtypes.AllocationOptions{
+				Existing:  existing,
+				Preferred: preferred,
+				Reserved:  reserved,
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *CLab) collectReservedManagementAddresses(
 	ctx context.Context,
+	m *clabtypes.MgmtNet,
 	existing []clabtypes.ExistingAddress,
 ) ([]netip.Addr, error) {
 	var subnets []netip.Prefix
-	for _, value := range []string{c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet} {
+	for _, value := range []string{m.IPv4Subnet, m.IPv6Subnet} {
 		if value == "" {
 			continue
 		}
@@ -395,7 +402,7 @@ func (c *CLab) collectReservedManagementAddresses(
 
 	var reserved []netip.Addr
 	for _, entry := range occupied {
-		if entry.NetworkName == c.Config.Mgmt.Network &&
+		if entry.NetworkName == m.Network &&
 			reused[ownerAddress{entry.ContainerID, entry.Address}] {
 			continue
 		}
