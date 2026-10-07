@@ -763,3 +763,38 @@ func TestCreateNetworkFillsResolvedSubnetEnv(t *testing.T) {
 		t.Fatalf("env = %v; want empty subnet filled and set subnet kept", cfg.Env)
 	}
 }
+
+func TestInitNodeBindsRuntimeToNodeMgmtNetwork(t *testing.T) {
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oob := &clabtypes.MgmtNet{Network: "oob"}
+	c.Config.MgmtNetworks = clabtypes.MgmtNetworks{c.Config.Mgmt, oob}
+
+	ctrl := gomock.NewController(t)
+	base := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder := clabmocksmockruntime.NewMockMgmtNetBinder(ctrl)
+	bound := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder.EXPECT().ForMgmtNet(oob).Return(bound)
+	c.Runtimes["docker"] = struct {
+		*clabmocksmockruntime.MockContainerRuntime
+		*clabmocksmockruntime.MockMgmtNetBinder
+	}{base, binder}
+
+	for name, network := range map[string]string{"on-oob": "oob", "on-default": ""} {
+		cfg := &clabtypes.NodeConfig{
+			ShortName: name, Kind: "linux", MgmtNet: network, Labels: map[string]string{},
+		}
+		if err := c.initNode(cfg, "docker"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if c.Nodes["on-oob"].GetRuntime() != bound {
+		t.Fatal("node on oob did not get the runtime bound to oob")
+	}
+	if c.Nodes["on-default"].GetRuntime() != c.Runtimes["docker"] {
+		t.Fatal("node on the default network did not get the base runtime")
+	}
+}

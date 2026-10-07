@@ -9,9 +9,9 @@ Suite Teardown      Cleanup
 
 *** Variables ***
 ${runtime}                     docker
-${topo}                        ${CURDIR}/32-macvlan-mgmt.clab.yml
-${inferred-topo}               ${CURDIR}/32-macvlan-mgmt-inferred.clab.yml
-${no-aux-topo}                 ${CURDIR}/32-macvlan-mgmt-no-aux.clab.yml
+${topo}                        ${CURDIR}/06-macvlan-mgmt.clab.yml
+${inferred-topo}               ${CURDIR}/06-macvlan-mgmt-inferred.clab.yml
+${no-aux-topo}                 ${CURDIR}/06-macvlan-mgmt-no-aux.clab.yml
 ${network}                     clab-smoke32
 ${no-aux-network}              clab-smoke32-no-aux
 ${parent}                      clab-smoke32

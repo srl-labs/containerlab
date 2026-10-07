@@ -12,7 +12,7 @@ Test Teardown       Destroy Labs
 *** Variables ***
 ${runtime}          docker
 ${runtime-cli}      docker
-${topo}             ${CURDIR}/34-mgmt-ipam.clab.yml
+${topo}             ${CURDIR}/08-mgmt-ipam.clab.yml
 ${vars-dir}         ${CURDIR}/clab-smoke34-vars
 @{labs}
 

@@ -9,7 +9,7 @@ Suite Teardown      Cleanup
 
 *** Variables ***
 ${lab-name}         05-docker-bridge
-${lab-file}         05-docker-bridge.clab.yml
+${lab-file}         03-docker-bridge.clab.yml
 ${runtime}          docker
 ${table-delimit}    │
 

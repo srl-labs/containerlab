@@ -10,7 +10,7 @@ Suite Teardown      Run Keyword    Teardown
 
 *** Variables ***
 ${lab-name}         mgmtnetif
-${topo}             ${CURDIR}/16-mgmtnetinterface.clab.yml
+${topo}             ${CURDIR}/05-mgmt-net-link.clab.yml
 ${runtime}          docker
 
 

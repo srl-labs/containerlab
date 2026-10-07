@@ -1112,3 +1112,21 @@ func TestComputeDiffComponents(t *testing.T) {
 		})
 	}
 }
+
+// Sub-nodes must use the parent's runtime, which is bound to the parent's management network.
+func TestDistributedSubNodesUseParentRuntime(t *testing.T) {
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	rt.EXPECT().Mgmt().Return(&clabtypes.MgmtNet{Network: "oob"}).AnyTimes()
+
+	n := newSrosInitTestNode("sr-14s", []*Component{{Slot: slotAName}, {Slot: "1"}})
+	n.Cfg.MgmtNet = "oob"
+	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(rt)))
+
+	require.NotNil(t, n.netnsNode)
+	assert.Same(t, rt, n.netnsNode.GetRuntime())
+	assert.Equal(t, "oob", n.netnsNode.Config().MgmtNet)
+	require.Len(t, n.componentNodes, 2)
+	for _, c := range n.componentNodes {
+		assert.Same(t, rt, c.GetRuntime(), "component %s", c.Config().ShortName)
+	}
+}

@@ -20,14 +20,23 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      SRSIM_IMAGE_TAG: 26.7.R1
     strategy:
       fail-fast: false
       matrix:
         test-suite:
-          - "32*.robot"
-          - "33*.robot"
-          - "34*.robot"
-          - "35*.robot"
+          - "01*.robot"
+          - "02*.robot"
+          - "03*.robot"
+          - "04*.robot"
+          - "05*.robot"
+          - "06*.robot"
+          - "07*.robot"
+          - "08*.robot"
+          - "09*.robot"
+          - "10*.robot"
+          - "11*.robot"
+          - "12*.robot"
 
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
@@ -74,6 +83,25 @@ jobs:
         run: |
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
+
+      # the SR-SIM suite skips itself when no license is available
+      - name: Prepare SR-SIM
+        if: startsWith(matrix.test-suite, '12')
+        env:
+          SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -z "$SRSIM_LICENSE" ]]; then
+            echo "SR-SIM license not available"
+            exit 0
+          fi
+          sudo mkdir -p /opt/nokia/sros/
+          echo "$SRSIM_LICENSE" | sudo tee /opt/nokia/sros/license.txt > /dev/null
+          sudo chmod 600 /opt/nokia/sros/license.txt
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG}
+          docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+          docker logout ghcr.io
 
       - name: Run mgmt tests
         run: ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/15-mgmt/${{ matrix.test-suite }}

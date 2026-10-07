@@ -1,6 +1,7 @@
 *** Settings ***
 Library             OperatingSystem
 Resource            ../common.robot
+Resource            mgmt.resource
 
 Suite Setup         Setup
 Suite Teardown      Cleanup
@@ -8,7 +9,7 @@ Suite Teardown      Cleanup
 
 *** Variables ***
 ${runtime}              docker
-${topo}                 ${CURDIR}/35-mgmt-multi.clab.yml
+${topo}                 ${CURDIR}/09-multi-mgmt.clab.yml
 ${parent}               clab-smoke35
 ${uplink}               clab-smoke35-u
 ${parent-created}       ${False}
@@ -72,27 +73,3 @@ Cleanup
         Run Keyword And Continue On Failure    Command Should Succeed    sudo ip link del ${parent}
     END
 
-Command Should Succeed
-    [Arguments]    ${command}
-    ${rc}    ${output} =    Run And Return Rc And Output    ${command} 2>&1
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0    ${command}: ${output}
-    RETURN    ${output}
-
-Network Driver Should Be
-    [Arguments]    ${network}    ${driver}
-    ${output} =    Command Should Succeed    docker network inspect -f '{{.Driver}}' ${network}
-    Should Be Equal    ${output}    ${driver}
-
-Node Address
-    [Arguments]    ${node}    ${network}    ${field}
-    ${output} =    Command Should Succeed
-    ...    docker inspect -f '{{(index .NetworkSettings.Networks "${network}").${field}}}' ${node}
-    RETURN    ${output}
-
-Address Should Be In Pool
-    [Arguments]    ${address}    ${pool}
-    ${in-pool} =    Evaluate
-    ...    ipaddress.ip_address($address) in ipaddress.ip_network($pool)
-    ...    modules=ipaddress
-    Should Be True    ${in-pool}

@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmt10
+
+mgmt:
+  - network: clab-mgmt10-main
+    ipv4-subnet: 198.18.110.0/24
+  - network: clab-mgmt10-oob
+    ipv4-subnet: 198.18.111.0/24
+{{- if .addNetwork }}
+  - network: clab-mgmt10-new
+    ipv4-subnet: 198.18.112.0/24
+{{- end }}
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    a:
+      mgmt-net: clab-mgmt10-main
+    b:
+      mgmt-net: {{ .bNetwork }}
+{{- if .addNetwork }}
+    c:
+      mgmt-net: clab-mgmt10-new
+{{- end }}

@@ -11,7 +11,7 @@ Test Teardown       Destroy Labs
 
 *** Variables ***
 ${runtime}          docker
-${topo}             ${CURDIR}/33-mgmt-ipam.clab.yml
+${topo}             ${CURDIR}/07-mgmt-ipam-macvlan.clab.yml
 ${vars-dir}         ${CURDIR}/clab-smoke33-vars
 ${network}          clab-smoke33
 ${parent}           clab-smoke33
