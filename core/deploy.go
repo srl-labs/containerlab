@@ -203,7 +203,7 @@ func (c *CLab) deploy( //nolint: funlen
 		}
 	}
 
-	_, err = c.prepareLabManagementNetwork(ctx)
+	err = c.prepareLabManagementNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -303,46 +303,27 @@ func waitForNodeDeploy(
 	return nil
 }
 
+// prepareLabManagementNetwork creates the management networks that are in use
+// and allocates addresses for the nodes attached to them.
 func (c *CLab) prepareLabManagementNetwork(
 	ctx context.Context,
 	existing ...clabtypes.ExistingAddress,
-) (bool, error) {
-	skipMgmt := c.skipMgmtNetwork()
-	if !skipMgmt {
-		if err := c.CreateNetwork(ctx); err != nil {
-			return skipMgmt, err
-		}
-
-		if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
-			return skipMgmt, err
-		}
+) error {
+	if err := c.CreateNetwork(ctx); err != nil {
+		return err
 	}
 
-	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
-		return skipMgmt, err
+	if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
+		return err
 	}
 
-	return skipMgmt, nil
+	return clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 }
 
 func (c *CLab) allocateLabManagementIPs(
 	ctx context.Context,
 	existing []clabtypes.ExistingAddress,
 ) error {
-	if c.Config.Mgmt.IPAM.Provider == clabtypes.IPAMProviderRuntime {
-		return nil
-	}
-
-	configs := make([]*clabtypes.NodeConfig, 0, len(c.Nodes))
-	for _, node := range c.Nodes {
-		configs = append(configs, node.Config())
-	}
-
-	reserved, err := c.collectReservedManagementAddresses(ctx, existing)
-	if err != nil {
-		return err
-	}
-
 	preferred := make(map[string]clabtypes.NodeAddresses)
 	state, err := c.LoadState()
 	if err != nil {
@@ -355,20 +336,45 @@ func (c *CLab) allocateLabManagementIPs(
 		}
 	}
 
-	return mgmt.AllocateManagementIPs(
-		ctx,
-		c.Config.Mgmt,
-		configs,
-		clabtypes.AllocationOptions{Existing: existing, Preferred: preferred, Reserved: reserved},
-	)
+	for _, m := range c.allMgmtNetworks() {
+		if c.skipMgmtNetwork(m) {
+			continue
+		}
+		nodes := c.mgmtNetNodes(m)
+		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime || len(nodes) == 0 {
+			continue
+		}
+
+		reserved, err := c.collectReservedManagementAddresses(ctx, m, existing)
+		if err != nil {
+			return err
+		}
+
+		err = mgmt.AllocateManagementIPs(
+			ctx,
+			m,
+			nodes,
+			clabtypes.AllocationOptions{
+				Existing:  existing,
+				Preferred: preferred,
+				Reserved:  reserved,
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *CLab) collectReservedManagementAddresses(
 	ctx context.Context,
+	m *clabtypes.MgmtNet,
 	existing []clabtypes.ExistingAddress,
 ) ([]netip.Addr, error) {
 	var subnets []netip.Prefix
-	for _, value := range []string{c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet} {
+	for _, value := range []string{m.IPv4Subnet, m.IPv6Subnet} {
 		if value == "" {
 			continue
 		}
@@ -395,7 +401,7 @@ func (c *CLab) collectReservedManagementAddresses(
 
 	var reserved []netip.Addr
 	for _, entry := range occupied {
-		if entry.NetworkName == c.Config.Mgmt.Network &&
+		if entry.NetworkName == m.Network &&
 			reused[ownerAddress{entry.ContainerID, entry.Address}] {
 			continue
 		}
@@ -903,7 +909,7 @@ func (c *CLab) finalize(
 		return nil, err
 	}
 
-	if !c.skipMgmtNetwork() {
+	if !c.mgmtNetworksSkipped() {
 		log.Info("Adding host entries", "path", "/etc/hosts")
 		if err := c.appendHostsFileEntries(ctx); err != nil {
 			log.Errorf("failed to create hosts file: %v", err)

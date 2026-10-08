@@ -111,6 +111,8 @@ type NodeDefinition struct {
 	// container networking mode. if set to `host` the host networking will be used for this node,
 	//  else bridged network
 	NetworkMode string `yaml:"network-mode,omitempty"`
+	// network name of the `mgmt` list entry the node attaches to
+	MgmtNet string `yaml:"mgmt-net,omitempty"`
 	// Override container runtime
 	Runtime string `yaml:"runtime,omitempty"`
 	// Set node CPU (cgroup or hypervisor)

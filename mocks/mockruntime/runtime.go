@@ -536,6 +536,44 @@ func (mr *MockContainerRuntimeMockRecorder) WriteToStdinNoWait(ctx, cID, data an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteToStdinNoWait", reflect.TypeOf((*MockContainerRuntime)(nil).WriteToStdinNoWait), ctx, cID, data)
 }
 
+// MockMgmtNetBinder is a mock of MgmtNetBinder interface.
+type MockMgmtNetBinder struct {
+	ctrl     *gomock.Controller
+	recorder *MockMgmtNetBinderMockRecorder
+	isgomock struct{}
+}
+
+// MockMgmtNetBinderMockRecorder is the mock recorder for MockMgmtNetBinder.
+type MockMgmtNetBinderMockRecorder struct {
+	mock *MockMgmtNetBinder
+}
+
+// NewMockMgmtNetBinder creates a new mock instance.
+func NewMockMgmtNetBinder(ctrl *gomock.Controller) *MockMgmtNetBinder {
+	mock := &MockMgmtNetBinder{ctrl: ctrl}
+	mock.recorder = &MockMgmtNetBinderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMgmtNetBinder) EXPECT() *MockMgmtNetBinderMockRecorder {
+	return m.recorder
+}
+
+// ForMgmtNet mocks base method.
+func (m *MockMgmtNetBinder) ForMgmtNet(arg0 *types.MgmtNet) runtime.ContainerRuntime {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForMgmtNet", arg0)
+	ret0, _ := ret[0].(runtime.ContainerRuntime)
+	return ret0
+}
+
+// ForMgmtNet indicates an expected call of ForMgmtNet.
+func (mr *MockMgmtNetBinderMockRecorder) ForMgmtNet(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForMgmtNet", reflect.TypeOf((*MockMgmtNetBinder)(nil).ForMgmtNet), arg0)
+}
+
 // MockNode is a mock of Node interface.
 type MockNode struct {
 	ctrl     *gomock.Controller

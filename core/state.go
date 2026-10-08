@@ -16,6 +16,9 @@ import (
 type LabState struct {
 	Topology *clabtypes.Topology                `yaml:"topology"`
 	IPAM     map[string]clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
+	// MgmtNetworks records every management network name the lab ever defined,
+	// so destroy can remove networks that the current topology no longer lists.
+	MgmtNetworks []string `yaml:"mgmt-networks,omitempty"`
 }
 
 // WriteState saves the topology to the state file.
@@ -25,6 +28,7 @@ func (c *CLab) WriteState() error {
 	}
 
 	c.writeIPAMState(state)
+	c.writeMgmtNetworksState(state)
 
 	data, err := yaml.Marshal(state)
 	if err != nil {
@@ -81,6 +85,36 @@ func (c *CLab) writeIPAMState(state *LabState) {
 			addresses.IPv6 = cfg.MgmtIPv6Address
 		}
 		state.IPAM[name] = addresses
+	}
+}
+
+// writeMgmtNetworksState records the union of the currently defined management
+// networks and the ones recorded by previous deployments. Keeping dropped
+// networks recorded lets destroy remove them even though they are no longer
+// part of the topology.
+func (c *CLab) writeMgmtNetworksState(state *LabState) {
+	seen := make(map[string]bool)
+	for _, m := range c.allMgmtNetworks() {
+		if m == nil || m.Network == "" || seen[m.Network] {
+			continue
+		}
+		seen[m.Network] = true
+		state.MgmtNetworks = append(state.MgmtNetworks, m.Network)
+	}
+
+	previous, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to preserve previously defined management networks", "error", err)
+		return
+	}
+	if previous == nil {
+		return
+	}
+	for _, name := range previous.MgmtNetworks {
+		if !seen[name] {
+			seen[name] = true
+			state.MgmtNetworks = append(state.MgmtNetworks, name)
+		}
 	}
 }
 

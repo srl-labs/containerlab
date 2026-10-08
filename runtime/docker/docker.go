@@ -132,6 +132,16 @@ func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 	}
 }
 
+var _ clabruntime.MgmtNetBinder = (*DockerRuntime)(nil)
+
+// ForMgmtNet returns a copy of the runtime that shares the client and config
+// but manages the given management network.
+func (d *DockerRuntime) ForMgmtNet(n *clabtypes.MgmtNet) clabruntime.ContainerRuntime {
+	c := *d
+	c.WithMgmtNet(n)
+	return &c
+}
+
 func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
 	if n.Driver == clabtypes.MgmtDriverMacvlan {

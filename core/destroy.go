@@ -189,12 +189,17 @@ func (c *CLab) makeCopyForDestroy(
 		return nil, err
 	}
 
-	// create management network or use existing one
-	// we call this to populate the nc.cfg.mgmt.bridge variable
-	// which is needed for the removal of the iptables rules.
-	if !cc.skipMgmtNetwork() && cc.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan {
-		err = cc.CreateNetwork(ctx)
-		if err != nil {
+	// create management networks or use existing ones
+	// we call this to populate the bridge names
+	// which are needed for the removal of the iptables rules.
+	if !cc.mgmtNetworksSkipped() {
+		var bridged clabtypes.MgmtNetworks
+		for _, m := range cc.allMgmtNetworks() {
+			if m.Driver != clabtypes.MgmtDriverMacvlan {
+				bridged = append(bridged, m)
+			}
+		}
+		if err = cc.createNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}
@@ -268,6 +273,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		return err
 	}
 
+	if len(c.Nodes) == 0 {
+		c.addMgmtNetworksFromContainers(containers)
+	}
+
 	if len(c.Nodes) > 0 {
 		tailscaleContainers, err := c.discoverTailscaleContainers(ctx, c.nodeFilter)
 		if err != nil {
@@ -338,15 +347,25 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		}
 	}
 
-	// delete lab management network
-	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
-		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
+	// delete every defined management network, including extra networks
+	// that apply may have left without nodes, and networks a previous
+	// deployment recorded in the lab state but the topology no longer defines
+	for _, m := range c.mgmtNetworksForCleanup() {
+		if m.Network == "bridge" || keepMgmtNet {
+			continue
+		}
+		log.Debugf("Calling DeleteNet method. Management network value is: %+v", m)
 
-		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
+		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
+		if rtErr != nil {
+			// runtimes without multiple network support never created extra networks
+			log.Debug("Skipping management network deletion", "network", m.Network, "error", rtErr)
+			continue
+		}
+		if err = rt.DeleteNet(ctx); err != nil {
 			switch {
-			case err.Error() == fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network):
-			case strings.Contains(err.Error(), fmt.Sprintf(
-				" network %s not found", c.Config.Mgmt.Network)):
+			case err.Error() == fmt.Sprintf("Error: No such network: %s", m.Network):
+			case strings.Contains(err.Error(), fmt.Sprintf(" network %s not found", m.Network)):
 			default:
 				log.Error(err)
 			}
@@ -354,6 +373,59 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	return nil
+}
+
+func (c *CLab) addMgmtNetworksFromContainers(containers []clabruntime.GenericContainer) {
+	for _, ctr := range containers {
+		switch name := ctr.NetworkName; name {
+		case "", "unknown", "bridge", "host", "none":
+		default:
+			if c.mgmtNetByNetwork(name).Network == name {
+				continue
+			}
+			c.Config.MgmtNetworks = append(c.Config.MgmtNetworks, &clabtypes.MgmtNet{
+				Network:        name,
+				Bridge:         ctr.Labels[clabconstants.NodeMgmtNetBr],
+				ExternalAccess: new(true),
+			})
+		}
+	}
+}
+
+// mgmtNetworksForCleanup returns the management networks to delete on destroy:
+// the topology-defined ones plus any network a previous deployment recorded in
+// the lab state but that the current topology no longer defines. Without the
+// state record a network dropped from the mgmt list would never be removed.
+func (c *CLab) mgmtNetworksForCleanup() clabtypes.MgmtNetworks {
+	networks := c.allMgmtNetworks()
+
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to load the management networks recorded in the lab state", "error", err)
+		return networks
+	}
+	if state == nil {
+		return networks
+	}
+
+	defined := make(map[string]bool, len(networks))
+	for _, m := range networks {
+		defined[m.Network] = true
+	}
+	for _, name := range state.MgmtNetworks {
+		if defined[name] {
+			continue
+		}
+		defined[name] = true
+		// ExternalAccess mirrors the default every management network gets, so
+		// the forwarding rule installed for the network is cleaned up too.
+		networks = append(networks, &clabtypes.MgmtNet{
+			Network:        name,
+			ExternalAccess: new(true),
+		})
+	}
+
+	return networks
 }
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {

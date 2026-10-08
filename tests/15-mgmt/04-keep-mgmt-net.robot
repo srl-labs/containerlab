@@ -15,7 +15,7 @@ Suite Teardown      Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} -
 
 *** Variables ***
 ${lab-name}         7-keep-mgmt-net
-${topo}             ${CURDIR}/07-linux-single-node.clab.yml
+${topo}             ${CURDIR}/04-keep-mgmt-net.clab.yml
 ${mgmt-bridge}      01-07-net
 
 

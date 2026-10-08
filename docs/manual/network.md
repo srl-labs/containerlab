@@ -241,6 +241,43 @@ mgmt:
     dad: false
 ```
 
+
+### Multiple management networks
+
+The `mgmt` section also accepts a list of networks. Nodes join a particular network by using the `mgmt-net` key under the node definition. The management network is identified by the network name provided in the `network` key.
+
+```yaml
+name: multi-mgmt-network
+mgmt:
+  - network: net1
+    ipv4-subnet: 172.31.10.0/24
+  - network: net2
+    driver: macvlan
+    macvlan-parent: eth1
+    ipv4-subnet: 172.31.20.0/24
+topology:
+  nodes:
+    r1:
+      mgmt-net: net1
+    r2:
+      mgmt-net: net2
+```
+
+/// note
+Multiple management networks are currently supported with the Docker runtime only.
+///
+
+When multiple management networks are defined, every node must have a `mgmt-net` defined (or inherited from groups/kinds/defaults).
+
+The first defined management network becomes the default network for things like tools containers.
+
+The following also should be taken into consideration:
+
+- Nodes using `network-mode` ignore the `mgmt-net` key.
+- The `--network`, `--ipv4/6-subnet` flag is not supported.
+- [`skip-when-unused`](#skipping-the-management-network) is evaluated per network: a network with the flag set is not created when every node attached to it runs with `network-mode: none`.
+- When a management network is dropped from the `mgmt` list, the next `destroy` removes it together with the networks the topology still defines.
+
 ### Drivers
 
 The driver specifies the type of network that is created. Either `bridge` or `macvlan`. 
@@ -544,6 +581,8 @@ topology:
 ```
 
 Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
+
+With [multiple management networks](#multiple-management-networks) the flag is evaluated per network: a network with `skip-when-unused: true` is not created when every node attached to it resolves to `network-mode: none`, or when no node selects it with `mgmt-net` at all. The `/etc/hosts` marker block is only omitted when every management network is skipped.
 
 ### Tailscale
 

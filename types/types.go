@@ -5,6 +5,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -140,6 +141,50 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
+}
+
+type MgmtNetworks []*MgmtNet
+
+// UnmarshalYAML decodes a single mapping or a sequence of management networks.
+func (m *MgmtNetworks) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	if _, isList := raw.([]any); isList {
+		var list []*MgmtNet
+		if err := unmarshal(&list); err != nil {
+			return err
+		}
+		*m = list
+		return nil
+	}
+
+	single := new(MgmtNet)
+	if err := unmarshal(single); err != nil {
+		return err
+	}
+	*m = MgmtNetworks{single}
+
+	return nil
+}
+
+// MarshalYAML encodes a single network as a mapping and several networks as a sequence.
+func (m MgmtNetworks) MarshalYAML() (any, error) {
+	if len(m) == 1 {
+		return m[0], nil
+	}
+	return []*MgmtNet(m), nil
+}
+
+// MarshalJSON encodes a single network as an object and several networks as an array,
+// matching the topology file form.
+func (m MgmtNetworks) MarshalJSON() ([]byte, error) {
+	if len(m) == 1 {
+		return json.Marshal(m[0])
+	}
+	return json.Marshal([]*MgmtNet(m))
 }
 
 // NodeConfig contains information of a container element.

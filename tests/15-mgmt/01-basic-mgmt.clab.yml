@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmt01
+
+mgmt:
+  network: clab-mgmt01
+  bridge: clab-mgmt01-br
+  ipv4-subnet: 198.18.101.0/24
+  ipv4-gw: 198.18.101.254
+  ipv4-range: 198.18.101.128/25
+  ipv6-subnet: fd00:101::/64
+  mtu: 1400
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    dynamic:
+    static:
+      mgmt-ipv4: 198.18.101.140
+      mgmt-ipv6: fd00:101::40
+    hostmode:
+      network-mode: host

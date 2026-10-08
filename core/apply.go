@@ -294,7 +294,7 @@ func (c *CLab) prepareApply(
 	currentNodes map[string]*runtimeNodeGroup,
 ) error {
 	existing := c.collectExistingManagementAddresses(currentNodes)
-	if _, err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
+	if err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
 		return err
 	}
 
@@ -334,7 +334,7 @@ func (c *CLab) collectExistingManagementAddresses(
 	var existing []clabtypes.ExistingAddress
 	for name, group := range currentNodes {
 		for _, ctr := range group.containers {
-			if ctr.NetworkName != c.Config.Mgmt.Network {
+			if c.mgmtNetByNetwork(ctr.NetworkName).Network != ctr.NetworkName {
 				continue
 			}
 			for _, value := range []string{ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv6addr} {

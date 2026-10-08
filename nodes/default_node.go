@@ -355,6 +355,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.NetworkMode != newCfg.NetworkMode {
 		diff.Fields = append(diff.Fields, "NetworkMode")
 	}
+	if oldCfg.MgmtNet != newCfg.MgmtNet {
+		diff.Fields = append(diff.Fields, "MgmtNet")
+	}
 	if oldCfg.Runtime != newCfg.Runtime {
 		diff.Fields = append(diff.Fields, "Runtime")
 	}

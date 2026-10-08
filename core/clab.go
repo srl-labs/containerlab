@@ -314,39 +314,150 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 
 // initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
+	if len(c.Config.MgmtNetworks) == 0 {
+		c.Config.MgmtNetworks = clabtypes.MgmtNetworks{c.Config.Mgmt}
+	} else if c.Config.MgmtNetworks[0] != c.Config.Mgmt {
+		*c.Config.Mgmt = *c.Config.MgmtNetworks[0]
+		c.Config.MgmtNetworks[0] = c.Config.Mgmt
+	}
+
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 
-	if c.Config.Mgmt.Network == "" {
-		c.Config.Mgmt.Network = dockerNetName
-	}
-
-	if c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan {
-		if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-			// assign the default subnets
-			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+	networks := make(map[string]bool, len(c.Config.MgmtNetworks))
+	bridges := make(map[string]string, len(c.Config.MgmtNetworks))
+	tailscaleNet := ""
+	for idx, m := range c.Config.MgmtNetworks {
+		if m == nil {
+			return fmt.Errorf("management network entry %d is empty", idx)
 		}
+		if len(c.Config.MgmtNetworks) > 1 && m.Network == "" {
+			return fmt.Errorf("management network entry %d requires a network name", idx)
+		}
+		if m.Tailscale != nil {
+			if tailscaleNet != "" {
+				return fmt.Errorf(
+					"tailscale is set on management networks %q and %q, only one is allowed",
+					tailscaleNet, m.Network,
+				)
+			}
+			tailscaleNet = m.Network
+		}
+
+		if err := setMgmtNetworkDefaults(m, idx == 0); err != nil {
+			return err
+		}
+
+		if networks[m.Network] {
+			return fmt.Errorf("management network %q is defined more than once", m.Network)
+		}
+		networks[m.Network] = true
+
+		if other, ok := bridges[m.Bridge]; ok && m.Bridge != "" {
+			return fmt.Errorf(
+				"management networks %q and %q use the same bridge %q", other, m.Network, m.Bridge,
+			)
+		}
+		bridges[m.Bridge] = m.Network
 	}
 
-	// by default external access is enabled if not set by a user
-	if c.Config.Mgmt.ExternalAccess == nil {
-		c.Config.Mgmt.ExternalAccess = new(bool)
-		*c.Config.Mgmt.ExternalAccess = true
-	}
-
-	if c.Config.Mgmt.IPAM.Provider == "" {
-		c.Config.Mgmt.IPAM.Provider = clabtypes.IPAMProviderContainerlab
-	}
-
-	if err := c.Config.Mgmt.Validate(); err != nil {
-		return err
-	}
 	if err := c.validateManagementLinks(); err != nil {
 		return err
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
 
+	return nil
+}
+
+func setMgmtNetworkDefaults(m *clabtypes.MgmtNet, isDefault bool) error {
+	if m.Network == "" {
+		m.Network = dockerNetName
+	}
+
+	// extra networks without subnets get them from the runtime's address pools,
+	// node addresses within them are still assigned by the IPAM provider
+	if isDefault && m.Driver != clabtypes.MgmtDriverMacvlan {
+		if m.IPv4Subnet == "" && m.IPv6Subnet == "" {
+			// assign the default subnets
+			m.IPv4Subnet = dockerNetIPv4Addr
+			m.IPv6Subnet = dockerNetIPv6Addr
+		}
+	}
+
+	// by default external access is enabled if not set by a user
+	if m.ExternalAccess == nil {
+		m.ExternalAccess = new(bool)
+		*m.ExternalAccess = true
+	}
+
+	if m.IPAM.Provider == "" {
+		m.IPAM.Provider = clabtypes.IPAMProviderContainerlab
+	}
+
+	return m.Validate()
+}
+
+// mgmtNetByName returns the management network a node selected with mgmt-net.
+// An empty name selects the default network.
+func (c *CLab) mgmtNetByName(network string) (*clabtypes.MgmtNet, error) {
+	if network == "" {
+		return c.Config.Mgmt, nil
+	}
+	for _, m := range c.Config.MgmtNetworks {
+		if m.Network == network {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("management network %q is not defined in the mgmt section", network)
+}
+
+// mgmtNetByNetwork returns the management network with the given runtime network name.
+func (c *CLab) mgmtNetByNetwork(network string) *clabtypes.MgmtNet {
+	for _, m := range c.Config.MgmtNetworks {
+		if m.Network == network {
+			return m
+		}
+	}
+	return c.Config.Mgmt
+}
+
+// mgmtRuntime returns the named runtime bound to the given management network.
+func (c *CLab) mgmtRuntime(
+	runtimeName string,
+	m *clabtypes.MgmtNet,
+) (clabruntime.ContainerRuntime, error) {
+	rt := c.Runtimes[runtimeName]
+	if m == c.Config.Mgmt {
+		return rt, nil
+	}
+	binder, ok := rt.(clabruntime.MgmtNetBinder)
+	if !ok {
+		return nil, fmt.Errorf(
+			"runtime %q does not support multiple management networks", runtimeName,
+		)
+	}
+	// network state lives in the shared *MgmtNet, so a fresh copy is equivalent
+	return binder.ForMgmtNet(m), nil
+}
+
+// allMgmtNetworks returns every defined management network.
+func (c *CLab) allMgmtNetworks() clabtypes.MgmtNetworks {
+	if len(c.Config.MgmtNetworks) == 0 {
+		return clabtypes.MgmtNetworks{c.Config.Mgmt}
+	}
+	return c.Config.MgmtNetworks
+}
+
+// tailscaleMgmtNet returns the management network carrying the tailscale configuration.
+func (c *CLab) tailscaleMgmtNet() *clabtypes.MgmtNet {
+	if c.Config == nil || c.Config.Mgmt == nil {
+		return nil
+	}
+	for _, m := range c.allMgmtNetworks() {
+		if m.Tailscale != nil {
+			return m
+		}
+	}
 	return nil
 }
 

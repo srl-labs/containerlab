@@ -721,6 +721,18 @@ func (t *Topology) GetNodeNetworkMode(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeMgmtNet(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.MgmtNet },
+		func(group *NodeDefinition) string { return group.MgmtNet },
+		func(kind *NodeDefinition) string { return kind.MgmtNet },
+		func(defaults *NodeDefinition) string { return defaults.MgmtNet },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodeLinkApplyMode(nodeName string) LinkApplyMode {
 	return getField(
 		t,

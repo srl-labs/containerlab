@@ -101,6 +101,12 @@ type ContainerRuntime interface {
 	SyncMgmtHostRoutes(context.Context) error
 }
 
+// MgmtNetBinder is implemented by runtimes that support multiple management networks.
+type MgmtNetBinder interface {
+	// ForMgmtNet returns a copy of the runtime bound to the given management network
+	ForMgmtNet(*clabtypes.MgmtNet) ContainerRuntime
+}
+
 // NetworkAddress is a runtime-owned endpoint or infrastructure reservation.
 type NetworkAddress struct {
 	NetworkName string

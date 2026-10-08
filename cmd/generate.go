@@ -283,6 +283,7 @@ func generateTopologyConfig( //nolint: funlen
 		},
 	}
 
+	config.MgmtNetworks = clabtypes.MgmtNetworks{config.Mgmt}
 	config.Mgmt.Network = network
 
 	if ipv4range != clabconstants.UnsetNetAddr {

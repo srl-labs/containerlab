@@ -150,6 +150,15 @@ func (c *CLab) setMgmtBridgeFromRuntime(
 	var bridge string
 	for _, runtimeNode := range currentNodes {
 		for _, ctr := range runtimeNode.containers {
+			// only containers attached to the default management network, or
+			// without a runtime network, carry the default network's bridge
+			// label. Unknown networks, e.g. ones dropped from the mgmt list,
+			// must not contribute their bridge.
+			switch ctr.NetworkName {
+			case "", c.Config.Mgmt.Network:
+			default:
+				continue
+			}
 			ctrBridge := ctr.Labels[clabconstants.NodeMgmtNetBr]
 			if ctrBridge == "" {
 				continue

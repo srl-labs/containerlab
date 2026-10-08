@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmt11k
+
+mgmt:
+  - network: clab-mgmt11k-main
+    ipv4-subnet: 198.18.113.0/24
+  - network: clab-mgmt11k-ts
+    ipv4-subnet: 198.18.114.0/24
+    tailscale:
+      # placeholder key: sidecars are created but never join a tailnet
+      auth-key: tskey-auth-placeholder
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    a:
+      mgmt-net: clab-mgmt11k-main
+    b:
+      mgmt-net: clab-mgmt11k-ts
