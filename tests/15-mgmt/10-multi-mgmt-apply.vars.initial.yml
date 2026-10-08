@@ -1,2 +1,3 @@
 bNetwork: clab-mgmt10-oob
 addNetwork: false
+dropOob: false

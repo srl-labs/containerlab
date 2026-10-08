@@ -14,6 +14,7 @@ ${topo}             ${CURDIR}/10-multi-mgmt-apply.clab.yml
 ${initial-vars}     ${CURDIR}/10-multi-mgmt-apply.vars.initial.yml
 ${moved-vars}       ${CURDIR}/10-multi-mgmt-apply.vars.moved.yml
 ${added-vars}       ${CURDIR}/10-multi-mgmt-apply.vars.added.yml
+${dropped-vars}     ${CURDIR}/10-multi-mgmt-apply.vars.dropped.yml
 
 
 *** Test Cases ***
@@ -49,8 +50,11 @@ Apply adds a node on a new management network
     ${c} =    Node Address    clab-mgmt10-c    clab-mgmt10-new
     Address Should Be In Pool    ${c}    198.18.112.0/24
 
-Destroy removes every management network including the emptied one
-    Destroy Lab    ${added-vars}
+Apply drops emptied management networks
+    Command Should Succeed    ${CLAB_BIN} --runtime ${runtime} apply -t ${topo} --vars ${dropped-vars}
+
+Destroy removes every management network including the dropped ones
+    Destroy Lab    ${dropped-vars}
     Network Should Not Exist    clab-mgmt10-main
     Network Should Not Exist    clab-mgmt10-oob
     Network Should Not Exist    clab-mgmt10-new

@@ -275,6 +275,7 @@ The following also should be taken into consideration:
 
 - Nodes using `network-mode` ignore the `mgmt-net` key.
 - The `--network`, `--ipv4/6-subnet` flag is not supported.
+- When a management network is dropped from the `mgmt` list, the next `destroy` removes it together with the networks the topology still defines.
 
 ### Drivers
 

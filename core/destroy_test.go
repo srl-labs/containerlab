@@ -6,6 +6,7 @@ package core
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -116,5 +117,45 @@ func TestAddMgmtNetworksFromContainers(t *testing.T) {
 	if len(got) != 2 || got[1].Network != "oob" || got[1].Bridge != "br-oob" ||
 		got[1].ExternalAccess == nil || !*got[1].ExternalAccess {
 		t.Fatalf("MgmtNetworks = %+v", got)
+	}
+}
+
+func TestMgmtNetworksForCleanupIncludesStateRecordedNetworks(t *testing.T) {
+	t.Parallel()
+
+	paths := &clabtypes.TopoPaths{}
+	if err := paths.SetLabDir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	main := &clabtypes.MgmtNet{Network: "clab-lab-main"}
+	oob := &clabtypes.MgmtNet{Network: "clab-lab-oob"}
+
+	seed := &CLab{
+		TopoPaths: paths,
+		Config:    &Config{Mgmt: main, MgmtNetworks: clabtypes.MgmtNetworks{main, oob}},
+	}
+	if err := seed.WriteState(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The topology dropped the oob network; destroy must still delete it.
+	c := &CLab{
+		TopoPaths: paths,
+		Config:    &Config{Mgmt: main, MgmtNetworks: clabtypes.MgmtNetworks{main}},
+	}
+	networks := c.mgmtNetworksForCleanup()
+	if len(networks) != 2 || networks[0] != main || networks[1].Network != "clab-lab-oob" ||
+		networks[1].ExternalAccess == nil {
+		t.Fatalf("mgmtNetworksForCleanup = %+v", networks)
+	}
+
+	// Without a state file only the topology-defined networks are returned.
+	c.Config.MgmtNetworks = clabtypes.MgmtNetworks{main, oob}
+	if err := os.Remove(paths.StateFile()); err != nil {
+		t.Fatal(err)
+	}
+	networks = c.mgmtNetworksForCleanup()
+	if len(networks) != 2 || networks[0] != main || networks[1] != oob {
+		t.Fatalf("mgmtNetworksForCleanup without state = %+v", networks)
 	}
 }

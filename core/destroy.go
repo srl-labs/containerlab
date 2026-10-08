@@ -348,8 +348,9 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	// delete every defined management network, including extra networks
-	// that apply may have left without nodes
-	for _, m := range c.allMgmtNetworks() {
+	// that apply may have left without nodes, and networks a previous
+	// deployment recorded in the lab state but the topology no longer defines
+	for _, m := range c.mgmtNetworksForCleanup() {
 		if m.Network == "bridge" || keepMgmtNet {
 			continue
 		}
@@ -389,6 +390,42 @@ func (c *CLab) addMgmtNetworksFromContainers(containers []clabruntime.GenericCon
 			})
 		}
 	}
+}
+
+// mgmtNetworksForCleanup returns the management networks to delete on destroy:
+// the topology-defined ones plus any network a previous deployment recorded in
+// the lab state but that the current topology no longer defines. Without the
+// state record a network dropped from the mgmt list would never be removed.
+func (c *CLab) mgmtNetworksForCleanup() clabtypes.MgmtNetworks {
+	networks := c.allMgmtNetworks()
+
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to load the management networks recorded in the lab state", "error", err)
+		return networks
+	}
+	if state == nil {
+		return networks
+	}
+
+	defined := make(map[string]bool, len(networks))
+	for _, m := range networks {
+		defined[m.Network] = true
+	}
+	for _, name := range state.MgmtNetworks {
+		if defined[name] {
+			continue
+		}
+		defined[name] = true
+		// ExternalAccess mirrors the default every management network gets, so
+		// the forwarding rule installed for the network is cleaned up too.
+		networks = append(networks, &clabtypes.MgmtNet{
+			Network:        name,
+			ExternalAccess: new(true),
+		})
+	}
+
+	return networks
 }
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {

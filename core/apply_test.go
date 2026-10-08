@@ -1345,6 +1345,38 @@ func TestSetMgmtBridgeFromRuntime(t *testing.T) {
 	}
 }
 
+func TestSetMgmtBridgeFromRuntimeIgnoresDroppedNetworks(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{
+		Config: &Config{Mgmt: &clabtypes.MgmtNet{Network: "clab-lab-main"}},
+	}
+
+	err := c.setMgmtBridgeFromRuntime(map[string]*runtimeNodeGroup{
+		"l1": {
+			containers: []clabruntime.GenericContainer{
+				{
+					NetworkName: "clab-lab-main",
+					Labels:      map[string]string{clabconstants.NodeMgmtNetBr: "br-main"},
+				},
+				{
+					// a node still attached to a network dropped from the
+					// mgmt list must not contribute its bridge
+					NetworkName: "clab-lab-oob",
+					Labels:      map[string]string{clabconstants.NodeMgmtNetBr: "br-oob"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Config.Mgmt.Bridge != "br-main" {
+		t.Fatalf("expected the default network bridge, got %q", c.Config.Mgmt.Bridge)
+	}
+}
+
 func TestRuntimeContainerSortsSrosComponentsInDeploymentOrder(t *testing.T) {
 	t.Parallel()
 

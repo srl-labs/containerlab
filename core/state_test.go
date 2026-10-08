@@ -101,6 +101,42 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	}
 }
 
+func TestStatePreservesNetworksDroppedFromTopology(t *testing.T) {
+	t.Parallel()
+
+	paths := &clabtypes.TopoPaths{}
+	if err := paths.SetLabDir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	main := &clabtypes.MgmtNet{Network: "clab-lab-main"}
+	oob := &clabtypes.MgmtNet{Network: "clab-lab-oob"}
+
+	write := func(networks ...*clabtypes.MgmtNet) *LabState {
+		t.Helper()
+		c := &CLab{TopoPaths: paths, Config: &Config{Mgmt: main, MgmtNetworks: networks}}
+		if err := c.WriteState(); err != nil {
+			t.Fatal(err)
+		}
+		state, err := c.LoadState()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return state
+	}
+
+	state := write(main, oob)
+	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" || got[1] != "clab-lab-oob" {
+		t.Fatalf("MgmtNetworks = %v", got)
+	}
+
+	// Dropping a network from the topology keeps it recorded, so a later
+	// destroy can still remove it.
+	state = write(main)
+	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" || got[1] != "clab-lab-oob" {
+		t.Fatalf("dropped network lost from state: %v", got)
+	}
+}
+
 func TestLegacyStateWithoutAllocationPreferences(t *testing.T) {
 	paths := &clabtypes.TopoPaths{}
 	if err := paths.SetLabDir(t.TempDir()); err != nil {
