@@ -6,7 +6,7 @@ require (
 	charm.land/fang/v2 v2.0.1
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/beevik/etree v1.8.0
-	github.com/bramvdbogaerde/go-scp v1.2.1
+	github.com/bramvdbogaerde/go-scp v1.6.1
 	github.com/brunoga/deep v1.3.1
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
