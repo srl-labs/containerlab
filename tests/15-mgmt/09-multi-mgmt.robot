@@ -22,6 +22,9 @@ Deploy lab with bridge, runtime IPAM and macvlan management networks
     Network Driver Should Be    clab-smoke35-auto    bridge
     Network Driver Should Be    clab-smoke35-mv    macvlan
 
+Network without nodes is created
+    Network Driver Should Be    clab-smoke35-spare    bridge
+
 Bridge network with containerlab IPAM assigns dual-stack addresses
     ${v4} =    Node Address    clab-smoke35-r1    clab-smoke35-main    IPAddress
     Address Should Be In Pool    ${v4}    198.18.35.0/24

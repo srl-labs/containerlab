@@ -614,8 +614,8 @@ topology:
 	}
 }
 
-// Each network is created through a runtime bound to it, unused networks are skipped,
-// and containerlab IPAM allocates from the network the node is attached to.
+// Each network is created through a runtime bound to it and containerlab IPAM allocates from the
+// network the node is attached to.
 func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	noDAD := false
@@ -631,7 +631,7 @@ func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 		Network: "mv", Driver: clabtypes.MgmtDriverMacvlan, MacvlanParent: "eth0",
 		IPv4Subnet: "198.51.100.0/29", IPAM: clabIPAM,
 	}
-	unused := &clabtypes.MgmtNet{Network: "unused", IPAM: clabIPAM}
+	spare := &clabtypes.MgmtNet{Network: "spare", IPAM: clabIPAM}
 
 	base := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	binder := clabmocksmockruntime.NewMockMgmtNetBinder(ctrl)
@@ -641,10 +641,12 @@ func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 	}{base, binder}
 	autoRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	mvRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	spareRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	binder.EXPECT().ForMgmtNet(auto).Return(autoRt).AnyTimes()
 	binder.EXPECT().ForMgmtNet(mv).Return(mvRt).AnyTimes()
+	binder.EXPECT().ForMgmtNet(spare).Return(spareRt).AnyTimes()
 	for r := range map[*clabmocksmockruntime.MockContainerRuntime]bool{
-		base: true, autoRt: true, mvRt: true,
+		base: true, autoRt: true, mvRt: true, spareRt: true,
 	} {
 		r.EXPECT().CreateNet(gomock.Any()).Return(nil)
 	}
@@ -668,7 +670,7 @@ func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 	c := &CLab{
 		Config: &Config{
 			Mgmt:         main,
-			MgmtNetworks: clabtypes.MgmtNetworks{main, auto, mv, unused},
+			MgmtNetworks: clabtypes.MgmtNetworks{main, auto, mv, spare},
 		},
 		globalRuntimeName: "test",
 		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},

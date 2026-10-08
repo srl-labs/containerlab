@@ -341,8 +341,9 @@ func (c *CLab) allocateLabManagementIPs(
 		}
 	}
 
-	for _, m := range c.usedMgmtNetworks() {
-		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
+	for _, m := range c.allMgmtNetworks() {
+		nodes := c.mgmtNetNodes(m)
+		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime || len(nodes) == 0 {
 			continue
 		}
 
@@ -354,7 +355,7 @@ func (c *CLab) allocateLabManagementIPs(
 		err = mgmt.AllocateManagementIPs(
 			ctx,
 			m,
-			c.mgmtNetNodes(m),
+			nodes,
 			clabtypes.AllocationOptions{
 				Existing:  existing,
 				Preferred: preferred,

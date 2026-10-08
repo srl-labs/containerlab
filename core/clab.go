@@ -461,14 +461,6 @@ func (c *CLab) tailscaleMgmtNet() *clabtypes.MgmtNet {
 	return nil
 }
 
-// extraMgmtNetworks returns the management networks other than the default one.
-func (c *CLab) extraMgmtNetworks() clabtypes.MgmtNetworks {
-	if len(c.Config.MgmtNetworks) < 2 {
-		return nil
-	}
-	return c.Config.MgmtNetworks[1:]
-}
-
 func (c *CLab) globalRuntime() clabruntime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntimeName]
 }

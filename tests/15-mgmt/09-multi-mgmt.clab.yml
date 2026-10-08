@@ -15,6 +15,8 @@ mgmt:
     ipv4-subnet: 198.18.135.0/24
     ipv4-gw: 198.18.135.1
     ipv4-range: 198.18.135.128/25
+  - network: clab-smoke35-spare
+    ipv4-subnet: 198.18.36.0/24
 
 topology:
   defaults:

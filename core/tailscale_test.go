@@ -958,7 +958,4 @@ topology:
 	if want := `{"TCP":{"9022":{"TCPForward":"192.0.2.2:22"}}}`; readServeConfig(t, c) != want {
 		t.Fatalf("serve.json = %s, want %s", readServeConfig(t, c), want)
 	}
-	if got := c.usedMgmtNetworks(); len(got) != 2 || got[1].Network != "ts" {
-		t.Fatalf("used networks = %v; want the tailscale network included", got)
-	}
 }

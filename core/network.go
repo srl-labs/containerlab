@@ -13,7 +13,7 @@ import (
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
-	return c.createNetworks(ctx, c.usedMgmtNetworks())
+	return c.createNetworks(ctx, c.allMgmtNetworks())
 }
 
 // createNetworks creates or inspects the given management networks
@@ -59,26 +59,6 @@ func (c *CLab) createNetworks(ctx context.Context, networks clabtypes.MgmtNetwor
 	return nil
 }
 
-// usedMgmtNetworks returns the default management network, the tailscale network
-// and the extra management networks at least one node is attached to.
-func (c *CLab) usedMgmtNetworks() clabtypes.MgmtNetworks {
-	used := clabtypes.MgmtNetworks{c.Config.Mgmt}
-	for _, m := range c.extraMgmtNetworks() {
-		// the SSO proxy is a tool container outside c.Nodes
-		if m.Tailscale != nil {
-			used = append(used, m)
-			continue
-		}
-		for _, n := range c.Nodes {
-			if n.Config().MgmtNet == m.Network {
-				used = append(used, m)
-				break
-			}
-		}
-	}
-	return used
-}
-
 // mgmtNetNodes returns the configs of the nodes attached to the given management network.
 func (c *CLab) mgmtNetNodes(m *clabtypes.MgmtNet) []*clabtypes.NodeConfig {
 	var configs []*clabtypes.NodeConfig
@@ -97,7 +77,7 @@ func (c *CLab) SyncMgmtHostRoutes(ctx context.Context) error {
 	}
 	c.mgmtRouteMu.Lock()
 	defer c.mgmtRouteMu.Unlock()
-	for _, m := range c.usedMgmtNetworks() {
+	for _, m := range c.allMgmtNetworks() {
 		if m.Driver != clabtypes.MgmtDriverMacvlan || !m.MacvlanAuxEnabled() {
 			continue
 		}

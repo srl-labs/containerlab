@@ -194,7 +194,7 @@ func (c *CLab) makeCopyForDestroy(
 	// which are needed for the removal of the iptables rules.
 	if !cc.skipMgmtNetwork() {
 		var bridged clabtypes.MgmtNetworks
-		for _, m := range cc.usedMgmtNetworks() {
+		for _, m := range cc.allMgmtNetworks() {
 			if m.Driver != clabtypes.MgmtDriverMacvlan {
 				bridged = append(bridged, m)
 			}
