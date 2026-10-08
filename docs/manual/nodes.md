@@ -657,6 +657,18 @@ topology:
           - some-opt
 ```
 
+### mgmt-net
+
+The `mgmt-net` property selects a management network for the node to join. The value should be the `network` name of the desired management network.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: nokia_srlinux
+      mgmt-net: multi-oob
+```
+
 ### network-mode
 
 By default containerlab nodes use bridge-mode driver - nodes are created with their first interface connected to a docker network (management network).
