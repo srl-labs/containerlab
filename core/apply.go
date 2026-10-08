@@ -294,7 +294,7 @@ func (c *CLab) prepareApply(
 	currentNodes map[string]*runtimeNodeGroup,
 ) error {
 	existing := c.collectExistingManagementAddresses(currentNodes)
-	if _, err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
+	if err := c.prepareLabManagementNetwork(ctx, existing...); err != nil {
 		return err
 	}
 

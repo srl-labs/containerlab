@@ -112,8 +112,8 @@
                 },
                 "skip-when-unused": {
                     "type": "boolean",
-                    "description": "skip management network creation when every node has network-mode: none",
-                    "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
+                    "description": "skip creation of this management network when every node attached to it has network-mode: none",
+                    "markdownDescription": "skip creating this [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node attached to it resolves to `network-mode: none` (per-node, group, kind, or defaults)"
                 },
                 "tailscale": {
                     "type": "object",

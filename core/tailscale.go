@@ -213,8 +213,9 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 		}
 		return os.Remove(serveFile)
 	}
-	if c.skipMgmtNetwork() {
-		log.Warn("Tailscale SSO proxy needs the management network, skipping")
+	if c.skipMgmtNetwork(c.tailscaleMgmtNet()) {
+		log.Warn("Tailscale SSO proxy needs the management network, skipping",
+			"network", c.tailscaleMgmtNet().Network)
 		return nil
 	}
 

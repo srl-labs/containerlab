@@ -192,7 +192,7 @@ func (c *CLab) makeCopyForDestroy(
 	// create management networks or use existing ones
 	// we call this to populate the bridge names
 	// which are needed for the removal of the iptables rules.
-	if !cc.skipMgmtNetwork() {
+	if !cc.mgmtNetworksSkipped() {
 		var bridged clabtypes.MgmtNetworks
 		for _, m := range cc.allMgmtNetworks() {
 			if m.Driver != clabtypes.MgmtDriverMacvlan {

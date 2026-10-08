@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 
+	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/mgmt"
@@ -13,7 +14,16 @@ import (
 )
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
-	return c.createNetworks(ctx, c.allMgmtNetworks())
+	defined := c.allMgmtNetworks()
+	networks := make(clabtypes.MgmtNetworks, 0, len(defined))
+	for _, m := range defined {
+		if c.skipMgmtNetwork(m) {
+			log.Debug("Skipping management network, no node uses it", "network", m.Network)
+			continue
+		}
+		networks = append(networks, m)
+	}
+	return c.createNetworks(ctx, networks)
 }
 
 // createNetworks creates or inspects the given management networks
@@ -126,7 +136,9 @@ func (c *CLab) AllocateToolManagementIPs(ctx context.Context, cfg *clabtypes.Nod
 	if m.IPAM.Provider == clabtypes.IPAMProviderRuntime {
 		return nil
 	}
-	if err := c.CreateNetwork(ctx); err != nil {
+	// tools attach to a network on demand, so it is created even when it is
+	// flagged as skipped-when-unused by the topology
+	if err := c.createNetworks(ctx, clabtypes.MgmtNetworks{m}); err != nil {
 		return err
 	}
 	reserved, err := c.collectReservedManagementAddresses(ctx, m, nil)
@@ -141,8 +153,11 @@ func (c *CLab) AllocateToolManagementIPs(ctx context.Context, cfg *clabtypes.Nod
 	)
 }
 
-func (c *CLab) skipMgmtNetwork() bool {
-	if c.Config.Mgmt == nil || !c.Config.Mgmt.SkipWhenUnused {
+// skipMgmtNetwork reports whether the management network m must not be created
+// because it is not used: skip-when-unused is set on it and no node attached to
+// it resolves to a network mode that attaches to the management network.
+func (c *CLab) skipMgmtNetwork(m *clabtypes.MgmtNet) bool {
+	if m == nil || !m.SkipWhenUnused {
 		return false
 	}
 
@@ -152,10 +167,24 @@ func (c *CLab) skipMgmtNetwork() bool {
 	}
 
 	for name := range topo.Nodes {
-		if topo.GetNodeNetworkMode(name) != "none" {
+		if topo.GetNodeNetworkMode(name) == "none" {
+			continue
+		}
+		if c.mgmtNetByNetwork(topo.GetNodeMgmtNet(name)) == m {
 			return false
 		}
 	}
 
+	return true
+}
+
+// mgmtNetworksSkipped reports whether every defined management network is
+// skipped because it is unused.
+func (c *CLab) mgmtNetworksSkipped() bool {
+	for _, m := range c.allMgmtNetworks() {
+		if !c.skipMgmtNetwork(m) {
+			return false
+		}
+	}
 	return true
 }

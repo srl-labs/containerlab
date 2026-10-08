@@ -119,21 +119,21 @@ func TestSyncMgmtHostRoutesReturnsRuntimeError(t *testing.T) {
 	}
 }
 
-func TestSkipMgmtNetwork(t *testing.T) {
-	withNodes := func(nodes map[string]*clabtypes.NodeDefinition) *clabtypes.Topology {
-		topo := clabtypes.NewTopology()
-		for n, d := range nodes {
-			topo.Nodes[n] = d
-		}
-
-		return topo
+func withNodes(nodes map[string]*clabtypes.NodeDefinition) *clabtypes.Topology {
+	topo := clabtypes.NewTopology()
+	for n, d := range nodes {
+		topo.Nodes[n] = d
 	}
 
+	return topo
+}
+
+func TestSkipMgmtNetwork(t *testing.T) {
 	tests := []struct {
-		name string
-		topo *clabtypes.Topology
-		mgmt clabtypes.MgmtNet
-		want bool
+		name     string
+		topo     *clabtypes.Topology
+		networks clabtypes.MgmtNetworks
+		want     map[string]bool
 	}{
 		{
 			name: "every node explicitly none",
@@ -141,8 +141,8 @@ func TestSkipMgmtNetwork(t *testing.T) {
 				"n1": {NetworkMode: "none"},
 				"n2": {NetworkMode: "none"},
 			}),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
-			want: true,
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": true},
 		},
 		{
 			name: "none inherited from defaults",
@@ -151,8 +151,8 @@ func TestSkipMgmtNetwork(t *testing.T) {
 				topo.Defaults.NetworkMode = "none"
 				return topo
 			}(),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
-			want: true,
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": true},
 		},
 		{
 			name: "none inherited from kind",
@@ -164,8 +164,8 @@ func TestSkipMgmtNetwork(t *testing.T) {
 				topo.Kinds["linux"] = &clabtypes.NodeDefinition{NetworkMode: "none"}
 				return topo
 			}(),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
-			want: true,
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": true},
 		},
 		{
 			name: "flag unset preserves old behavior even when all-none",
@@ -173,7 +173,8 @@ func TestSkipMgmtNetwork(t *testing.T) {
 				"n1": {NetworkMode: "none"},
 				"n2": {NetworkMode: "none"},
 			}),
-			want: false,
+			networks: clabtypes.MgmtNetworks{{}},
+			want:     map[string]bool{"": false},
 		},
 		{
 			name: "mixed: one node uses mgmt",
@@ -181,19 +182,112 @@ func TestSkipMgmtNetwork(t *testing.T) {
 				"n1": {NetworkMode: "none"},
 				"n2": {NetworkMode: "container:foo"},
 			}),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
-			want: false,
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": false},
 		},
 		{
-			name: "no NetworkMode anywhere (default mgmt attachment)",
+			name:     "no NetworkMode anywhere (default mgmt attachment)",
+			topo:     withNodes(map[string]*clabtypes.NodeDefinition{"n1": {}}),
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": false},
+		},
+		{
+			name:     "empty topology is not 'unused'",
+			topo:     withNodes(nil),
+			networks: clabtypes.MgmtNetworks{{SkipWhenUnused: true}},
+			want:     map[string]bool{"": false},
+		},
+		{
+			name: "unused extra network is skipped, used default is not",
 			topo: withNodes(map[string]*clabtypes.NodeDefinition{"n1": {}}),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main"},
+				{Network: "oob", SkipWhenUnused: true},
+			},
+			want: map[string]bool{"main": false, "oob": true},
+		},
+		{
+			name: "flagged networks are skipped when nothing uses them",
+			topo: withNodes(map[string]*clabtypes.NodeDefinition{
+				"n1": {NetworkMode: "none"},
+				"n2": {MgmtNet: "oob", NetworkMode: "none"},
+			}),
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main", SkipWhenUnused: true},
+				{Network: "oob", SkipWhenUnused: true},
+			},
+			want: map[string]bool{"main": true, "oob": true},
+		},
+		{
+			name: "a used network is not skipped",
+			topo: withNodes(map[string]*clabtypes.NodeDefinition{
+				"n1": {MgmtNet: "oob"},
+			}),
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main", SkipWhenUnused: true},
+				{Network: "oob", SkipWhenUnused: true},
+			},
+			want: map[string]bool{"main": true, "oob": false},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &CLab{
+				Config: &Config{
+					Mgmt:         tc.networks[0],
+					MgmtNetworks: tc.networks,
+					Topology:     tc.topo,
+				},
+			}
+
+			for name, want := range tc.want {
+				if got := c.skipMgmtNetwork(c.mgmtNetByNetwork(name)); got != want {
+					t.Errorf("skipMgmtNetwork(%q) = %v, want %v", name, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestMgmtNetworksSkipped(t *testing.T) {
+	tests := []struct {
+		name     string
+		topo     *clabtypes.Topology
+		networks clabtypes.MgmtNetworks
+		want     bool
+	}{
+		{
+			name: "all networks flagged and unused",
+			topo: withNodes(map[string]*clabtypes.NodeDefinition{
+				"n1": {NetworkMode: "none"},
+			}),
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main", SkipWhenUnused: true},
+				{Network: "oob", SkipWhenUnused: true},
+			},
+			want: true,
+		},
+		{
+			name: "unflagged network is created",
+			topo: withNodes(map[string]*clabtypes.NodeDefinition{
+				"n1": {NetworkMode: "none"},
+			}),
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main"},
+				{Network: "oob", SkipWhenUnused: true},
+			},
 			want: false,
 		},
 		{
-			name: "empty topology is not 'unused'",
-			topo: withNodes(nil),
-			mgmt: clabtypes.MgmtNet{SkipWhenUnused: true},
+			name: "a node uses a management network",
+			topo: withNodes(map[string]*clabtypes.NodeDefinition{
+				"n1": {MgmtNet: "oob"},
+			}),
+			networks: clabtypes.MgmtNetworks{
+				{Network: "main", SkipWhenUnused: true},
+				{Network: "oob", SkipWhenUnused: true},
+			},
 			want: false,
 		},
 	}
@@ -202,15 +296,71 @@ func TestSkipMgmtNetwork(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := &CLab{
 				Config: &Config{
-					Mgmt:     &tc.mgmt,
-					Topology: tc.topo,
+					Mgmt:         tc.networks[0],
+					MgmtNetworks: tc.networks,
+					Topology:     tc.topo,
 				},
 			}
 
-			if got := c.skipMgmtNetwork(); got != tc.want {
-				t.Errorf("skipMgmtNetwork() = %v, want %v", got, tc.want)
+			if got := c.mgmtNetworksSkipped(); got != tc.want {
+				t.Errorf("mgmtNetworksSkipped() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// Networks with skip-when-unused set that no node uses are not created; nodes
+// attached to them with network-mode: none do not make them used.
+func TestCreateNetworkSkipsUnusedManagementNetwork(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	base := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	binder := clabmocksmockruntime.NewMockMgmtNetBinder(ctrl)
+	oobRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	rt := struct {
+		*clabmocksmockruntime.MockContainerRuntime
+		*clabmocksmockruntime.MockMgmtNetBinder
+	}{base, binder}
+
+	main := &clabtypes.MgmtNet{Network: "main", Bridge: "br-main", IPv4Subnet: "192.0.2.0/29"}
+	oob := &clabtypes.MgmtNet{
+		Network: "oob", Bridge: "br-oob", IPv4Subnet: "198.51.100.0/29", SkipWhenUnused: true,
+	}
+	topo := withNodes(map[string]*clabtypes.NodeDefinition{
+		"r1": {MgmtNet: "main"},
+		"r2": {MgmtNet: "oob", NetworkMode: "none"},
+	})
+	configs := map[string]*clabtypes.NodeConfig{
+		"r1": {ShortName: "r1", MgmtNet: "main", Labels: map[string]string{}},
+		// a none-mode node keeps no mgmt-net in its config
+		"r2": {ShortName: "r2", Labels: map[string]string{}},
+	}
+	nodes := make(map[string]clabnodes.Node, len(configs))
+	for name, cfg := range configs {
+		node := clabmocksmocknodes.NewMockNode(ctrl)
+		node.EXPECT().Config().Return(cfg).AnyTimes()
+		nodes[name] = node
+	}
+	c := &CLab{
+		Config: &Config{
+			Mgmt:         main,
+			MgmtNetworks: clabtypes.MgmtNetworks{main, oob},
+			Topology:     topo,
+		},
+		globalRuntimeName: "test",
+		Runtimes:          map[string]clabruntime.ContainerRuntime{"test": rt},
+		Nodes:             nodes,
+	}
+
+	// oob is bound to its runtime but must never be created
+	binder.EXPECT().ForMgmtNet(oob).Return(oobRt).AnyTimes()
+	base.EXPECT().CreateNet(gomock.Any()).Return(nil)
+	base.EXPECT().Mgmt().Return(main).AnyTimes()
+
+	if err := c.CreateNetwork(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := configs["r1"].Labels[clabconstants.NodeMgmtNetBr]; got != "br-main" {
+		t.Fatalf("r1 bridge label = %q; want br-main", got)
 	}
 }
 
@@ -251,7 +401,7 @@ func TestPrepareManagementNetworkAllocatesAfterResolution(t *testing.T) {
 		})
 	rt.EXPECT().Mgmt().Return(m)
 	rt.EXPECT().NetworkAddresses(gomock.Any(), gomock.Any()).Return(nil, nil)
-	if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
+	if err := c.prepareLabManagementNetwork(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	ip, err := netip.ParseAddr(cfg.MgmtIPv4Address)
@@ -291,7 +441,7 @@ func TestPrepareManagementNetworkDelegatesRuntimeIPAM(t *testing.T) {
 				rt.EXPECT().CreateNet(gomock.Any()).Return(nil)
 			}
 			rt.EXPECT().Mgmt().Return(m)
-			if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
+			if err := c.prepareLabManagementNetwork(context.Background()); err != nil {
 				t.Fatal(err)
 			}
 			if cfg.MgmtIPv4Address != address || cfg.MgmtIPv6Address != "" {
@@ -309,7 +459,7 @@ func TestPrepareManagementNetworkLoadsPreferredAddress(t *testing.T) {
 	if err := os.WriteFile(
 		paths.StateFile(),
 		[]byte("ipam:\n  node:\n    ipv4: 192.0.2.5\n"),
-		0644,
+		0o644,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +482,7 @@ func TestPrepareManagementNetworkLoadsPreferredAddress(t *testing.T) {
 	rt.EXPECT().CreateNet(gomock.Any()).Return(nil)
 	rt.EXPECT().Mgmt().Return(m)
 	rt.EXPECT().NetworkAddresses(gomock.Any(), gomock.Any()).Return(nil, nil)
-	if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
+	if err := c.prepareLabManagementNetwork(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if cfg.MgmtIPv4Address != "192.0.2.5" {
@@ -360,7 +510,7 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			if err := os.WriteFile(
 				paths.StateFile(),
 				[]byte("ipam:\n  node:\n    ipv4: 192.0.2.5\n"),
-				0644,
+				0o644,
 			); err != nil {
 				t.Fatal(err)
 			}
@@ -393,7 +543,7 @@ func TestPrepareManagementNetworkRuntimeReservations(t *testing.T) {
 			rt.EXPECT().
 				NetworkAddresses(gomock.Any(), []netip.Prefix{netip.MustParsePrefix(m.IPv4Subnet)}).
 				Return(occupied, snapshotErr)
-			_, err := c.prepareLabManagementNetwork(context.Background(), existing...)
+			err := c.prepareLabManagementNetwork(context.Background(), existing...)
 			if scenario == "foreign-conflict" || scenario == "inspection-error" {
 				if err == nil || cfg.MgmtIPv4Address != "" {
 					t.Fatalf("conflict/error accepted or committed: %v %+v", err, cfg)
@@ -677,7 +827,7 @@ func TestPrepareManagementNetworkPerNetwork(t *testing.T) {
 		Nodes:             nodes,
 	}
 
-	if _, err := c.prepareLabManagementNetwork(context.Background()); err != nil {
+	if err := c.prepareLabManagementNetwork(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 

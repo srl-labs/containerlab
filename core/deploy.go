@@ -203,7 +203,7 @@ func (c *CLab) deploy( //nolint: funlen
 		}
 	}
 
-	_, err = c.prepareLabManagementNetwork(ctx)
+	err = c.prepareLabManagementNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -303,26 +303,21 @@ func waitForNodeDeploy(
 	return nil
 }
 
+// prepareLabManagementNetwork creates the management networks that are in use
+// and allocates addresses for the nodes attached to them.
 func (c *CLab) prepareLabManagementNetwork(
 	ctx context.Context,
 	existing ...clabtypes.ExistingAddress,
-) (bool, error) {
-	skipMgmt := c.skipMgmtNetwork()
-	if !skipMgmt {
-		if err := c.CreateNetwork(ctx); err != nil {
-			return skipMgmt, err
-		}
-
-		if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
-			return skipMgmt, err
-		}
+) error {
+	if err := c.CreateNetwork(ctx); err != nil {
+		return err
 	}
 
-	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
-		return skipMgmt, err
+	if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
+		return err
 	}
 
-	return skipMgmt, nil
+	return clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 }
 
 func (c *CLab) allocateLabManagementIPs(
@@ -342,6 +337,9 @@ func (c *CLab) allocateLabManagementIPs(
 	}
 
 	for _, m := range c.allMgmtNetworks() {
+		if c.skipMgmtNetwork(m) {
+			continue
+		}
 		nodes := c.mgmtNetNodes(m)
 		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime || len(nodes) == 0 {
 			continue
@@ -911,7 +909,7 @@ func (c *CLab) finalize(
 		return nil, err
 	}
 
-	if !c.skipMgmtNetwork() {
+	if !c.mgmtNetworksSkipped() {
 		log.Info("Adding host entries", "path", "/etc/hosts")
 		if err := c.appendHostsFileEntries(ctx); err != nil {
 			log.Errorf("failed to create hosts file: %v", err)

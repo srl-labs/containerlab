@@ -275,6 +275,7 @@ The following also should be taken into consideration:
 
 - Nodes using `network-mode` ignore the `mgmt-net` key.
 - The `--network`, `--ipv4/6-subnet` flag is not supported.
+- [`skip-when-unused`](#skipping-the-management-network) is evaluated per network: a network with the flag set is not created when every node attached to it runs with `network-mode: none`.
 - When a management network is dropped from the `mgmt` list, the next `destroy` removes it together with the networks the topology still defines.
 
 ### Drivers
@@ -580,6 +581,8 @@ topology:
 ```
 
 Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
+
+With [multiple management networks](#multiple-management-networks) the flag is evaluated per network: a network with `skip-when-unused: true` is not created when every node attached to it resolves to `network-mode: none`, or when no node selects it with `mgmt-net` at all. The `/etc/hosts` marker block is only omitted when every management network is skipped.
 
 ### Tailscale
 
