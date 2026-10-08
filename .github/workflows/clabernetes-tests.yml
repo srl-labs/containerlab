@@ -84,14 +84,14 @@ jobs:
           bash ./tests/rf-run.sh c9s ./tests/14-clabernetes
 
       - name: Upload test report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 14-clabernetes-log
           path: ./tests/out/*.html
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-clabernetes-tests
