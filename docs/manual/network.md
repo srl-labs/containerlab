@@ -264,7 +264,7 @@ topology:
 ```
 
 /// note
-Multiple management networks are currently only supported with the Docker runtime only.
+Multiple management networks are currently supported with the Docker runtime only.
 ///
 
 When multiple management networks are defined, every node must have a `mgmt-net` defined (or inherited from groups/kinds/defaults).
