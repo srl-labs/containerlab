@@ -273,6 +273,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		return err
 	}
 
+	if len(c.Nodes) == 0 {
+		c.addMgmtNetworksFromContainers(containers)
+	}
+
 	if len(c.Nodes) > 0 {
 		tailscaleContainers, err := c.discoverTailscaleContainers(ctx, c.nodeFilter)
 		if err != nil {
@@ -368,6 +372,23 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	return nil
+}
+
+func (c *CLab) addMgmtNetworksFromContainers(containers []clabruntime.GenericContainer) {
+	for _, ctr := range containers {
+		switch name := ctr.NetworkName; name {
+		case "", "unknown", "bridge", "host", "none":
+		default:
+			if c.mgmtNetByNetwork(name).Network == name {
+				continue
+			}
+			c.Config.MgmtNetworks = append(c.Config.MgmtNetworks, &clabtypes.MgmtNet{
+				Network:        name,
+				Bridge:         ctr.Labels[clabconstants.NodeMgmtNetBr],
+				ExternalAccess: new(true),
+			})
+		}
+	}
 }
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {

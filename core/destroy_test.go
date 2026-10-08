@@ -9,8 +9,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // makeCopyForDestroy must apply WithTopoPath (or WithLabNameOnly) before WithNodeFilter so that
@@ -88,5 +91,30 @@ func TestWithKeepMgmtNet_noopsForLabRuntime(t *testing.T) {
 
 	if err := WithKeepMgmtNet()(c); err != nil {
 		t.Fatalf("WithKeepMgmtNet returned error for lab runtime: %v", err)
+	}
+}
+
+func TestAddMgmtNetworksFromContainers(t *testing.T) {
+	m := &clabtypes.MgmtNet{Network: "clab"}
+	c := &CLab{Config: &Config{Mgmt: m, MgmtNetworks: clabtypes.MgmtNetworks{m}}}
+
+	ctr := func(network, bridge string) clabruntime.GenericContainer {
+		return clabruntime.GenericContainer{
+			NetworkName: network,
+			Labels:      map[string]string{clabconstants.NodeMgmtNetBr: bridge},
+		}
+	}
+	c.addMgmtNetworksFromContainers([]clabruntime.GenericContainer{
+		ctr("clab", "br-clab"),
+		ctr("oob", "br-oob"),
+		ctr("oob", "br-oob"),
+		ctr("host", ""),
+		ctr("unknown", ""),
+	})
+
+	got := c.Config.MgmtNetworks
+	if len(got) != 2 || got[1].Network != "oob" || got[1].Bridge != "br-oob" ||
+		got[1].ExternalAccess == nil || !*got[1].ExternalAccess {
+		t.Fatalf("MgmtNetworks = %+v", got)
 	}
 }
