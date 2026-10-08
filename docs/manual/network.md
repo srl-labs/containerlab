@@ -241,6 +241,41 @@ mgmt:
     dad: false
 ```
 
+
+### Multiple management networks
+
+The `mgmt` section also accepts a list of networks. Nodes join a particular network by using the `mgmt-net` key under the node definition. The management network is identified by the network name provided in the `network` key.
+
+```yaml
+name: multi-mgmt-network
+mgmt:
+  - network: net1
+    ipv4-subnet: 172.31.10.0/24
+  - network: net2
+    driver: macvlan
+    macvlan-parent: eth1
+    ipv4-subnet: 172.31.20.0/24
+topology:
+  nodes:
+    r1:
+      mgmt-net: net1
+    r2:
+      mgmt-net: net2
+```
+
+/// note
+Multiple management networks are currently only supported with the Docker runtime only.
+///
+
+When multiple management networks are defined, every node must have a `mgmt-net` defined (or inherited from groups/kinds/defaults).
+
+The first defined management network becomes the default network for things like tools containers.
+
+The following also should be taken into consideration:
+
+- Nodes using `network-mode` ignore the `mgmt-net` key.
+- The `--network`, `--ipv4/6-subnet` flag is not supported.
+
 ### Drivers
 
 The driver specifies the type of network that is created. Either `bridge` or `macvlan`. 
