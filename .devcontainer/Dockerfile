@@ -62,8 +62,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.6.2 /uv /uvx /bin/
 RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
 
 # Setup Zsh and plugins
-COPY ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
-COPY ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
+COPY --chown=vscode:vscode ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
+COPY --chown=vscode:vscode ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
 COPY ./.devcontainer/zsh/install-tools-completions.sh /tmp/install-tools-completions.sh
 RUN bash -c "/tmp/install-zsh-plugins.sh && /tmp/install-tools-completions.sh"
