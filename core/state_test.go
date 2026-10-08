@@ -125,14 +125,16 @@ func TestStatePreservesNetworksDroppedFromTopology(t *testing.T) {
 	}
 
 	state := write(main, oob)
-	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" || got[1] != "clab-lab-oob" {
+	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" ||
+		got[1] != "clab-lab-oob" {
 		t.Fatalf("MgmtNetworks = %v", got)
 	}
 
 	// Dropping a network from the topology keeps it recorded, so a later
 	// destroy can still remove it.
 	state = write(main)
-	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" || got[1] != "clab-lab-oob" {
+	if got := state.MgmtNetworks; len(got) != 2 || got[0] != "clab-lab-main" ||
+		got[1] != "clab-lab-oob" {
 		t.Fatalf("dropped network lost from state: %v", got)
 	}
 }
