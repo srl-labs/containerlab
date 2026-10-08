@@ -439,7 +439,26 @@ func TestPortLayoutDiffWithoutConfig(t *testing.T) {
 				KindSpecificConfig: clabnodes.InvalidKindSpecificConfig{Err: "unknown key"},
 			},
 			newCfg:     &clabtypes.NodeConfig{},
-			wantFields: []string{portLayoutDiffField},
+			wantFields: []string{kindConfigDiffField},
+		},
+		{
+			name: "undecodable old config with new layout",
+			oldCfg: &clabtypes.NodeConfig{
+				KindSpecificConfig: clabnodes.InvalidKindSpecificConfig{Err: "unknown key"},
+			},
+			newCfg:     withLayout,
+			wantFields: []string{kindConfigDiffField},
+		},
+		{
+			name: "old config with invalid breakout channels",
+			oldCfg: &clabtypes.NodeConfig{
+				KindSpecificConfig: &KindSpecificConfig{
+					PortCount: 4,
+					Breakouts: []Breakout{{Port: "1", Channels: 3}},
+				},
+			},
+			newCfg:     withLayout,
+			wantFields: []string{kindConfigDiffField},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -460,29 +479,33 @@ func TestPortLayoutDiff(t *testing.T) {
 		name     string
 		layout   *KindSpecificConfig
 		wantDiff bool
+		// wantPlanErr expects GetReconcilePlan to demand a fresh guest disk.
+		// Layout-invalid configs keep the generic kind config drift field and
+		// reconcile with the default action instead.
+		wantPlanErr bool
 	}{
 		{"unchanged", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
-		}}, false},
+		}}, false, false},
 		{"reordered", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "2", Channels: 2}, {Port: "10..11", Channels: 4},
-		}}, false},
+		}}, false, false},
 		{"expanded range", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "11", Channels: 4}, {Port: "2..2", Channels: 2}, {Port: "10", Channels: 4},
-		}}, false},
+		}}, false, false},
 		{"width changed", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "10..11", Channels: 8}, {Port: "2", Channels: 2},
-		}}, true},
+		}}, true, true},
 		{"range changed", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "10..12", Channels: 4}, {Port: "2", Channels: 2},
-		}}, true},
+		}}, true, true},
 		{"base changed", &KindSpecificConfig{PortCount: 32, Breakouts: []Breakout{
 			{Port: "10..11", Channels: 4}, {Port: "2", Channels: 2},
-		}}, true},
+		}}, true, true},
 		{"invalid layout", &KindSpecificConfig{PortCount: 64, Breakouts: []Breakout{
 			{Port: "10..11", Channels: 4}, {Port: "11", Channels: 2},
-		}}, true},
-		{"removed", nil, true},
+		}}, true, false},
+		{"removed", nil, true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			oldCfg := &clabtypes.NodeConfig{KindSpecificConfig: base}
@@ -498,7 +521,7 @@ func TestPortLayoutDiff(t *testing.T) {
 				t.Fatalf("action = %s, want recreate", diff.DefaultAction())
 			}
 			_, err := n.GetReconcilePlan(context.Background(), diff)
-			if tc.wantDiff {
+			if tc.wantPlanErr {
 				if err == nil || !strings.Contains(err.Error(), "--reconfigure") {
 					t.Fatalf("layout change should require a fresh guest disk: %v", err)
 				}

@@ -39,7 +39,7 @@ Leaf Should Be Healthy
     # boxen images report health only after the run process finished applying
     # the startup config, so this guarantees the L3 config is in place.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    docker inspect --format {{.State.Health.Status}} ${leaf}
+    ...    ${runtime} inspect --format {{.State.Health.Status}} ${leaf}
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    healthy
 
