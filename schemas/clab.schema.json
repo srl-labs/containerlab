@@ -585,6 +585,52 @@
                     "description": "Use the default mgmt gRPC server for EDA instead of a dedicated eda-mgmt server (nokia_srlinux kind).",
                     "markdownDescription": "Use the default `mgmt` gRPC server for EDA instead of a dedicated `eda-mgmt` server. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srlinux` kind"
                 },
+                "port-count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 999,
+                    "description": "Base port count; breakout lanes are allocated after this range (nvidia_cumulusvx kind).",
+                    "markdownDescription": "Base port count; breakout lanes are allocated after this range. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nvidia_cumulusvx` kind"
+                },
+                "breakouts": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Breakout channels for individual parent ports or inclusive port ranges; entries must not overlap (nvidia_cumulusvx kind).",
+                    "markdownDescription": "[Breakout ports](https://containerlab.dev/manual/kinds/nvidia_cumulusvx/#breakout-ports) for individual parent ports or inclusive port ranges. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nvidia_cumulusvx` kind",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "port",
+                            "channels"
+                        ],
+                        "properties": {
+                            "port": {
+                                "description": "Parent port number or inclusive range, for example 10 or 1..20, within the base port count",
+                                "anyOf": [
+                                    {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 999
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^[1-9][0-9]{0,2}(\\.\\.[1-9][0-9]{0,2})?$"
+                                    }
+                                ]
+                            },
+                            "channels": {
+                                "type": "integer",
+                                "enum": [
+                                    2,
+                                    4,
+                                    8
+                                ],
+                                "description": "Number of breakout lanes for each selected port"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                },
                 "aliases": {
                     "type": "array",
                     "description": "list of additional network aliases for the node",
@@ -982,8 +1028,23 @@
                     "if": {
                         "properties": {
                             "kind": {
+                                "pattern": "^nvidia_cumulusvx$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-specific-config-nvidia_cumulusvx"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
                                 "not": {
-                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol)$"
+                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol|nvidia_cumulusvx)$"
                                 }
                             }
                         },
@@ -2382,6 +2443,16 @@
                         "required": [
                             "bootstrap-config"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
                     }
                 ]
             },
@@ -2451,6 +2522,16 @@
                         "required": [
                             "bootstrap-config"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
                     }
                 ]
             },
@@ -2511,6 +2592,16 @@
                         "required": [
                             "bootstrap-config"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
                     }
                 ]
             },
@@ -2560,10 +2651,77 @@
                         "required": [
                             "components"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
                     }
                 ]
             },
             "description": "kind-specific config keys of the cisco_iol kind"
+        },
+        "kind-specific-config-nvidia_cumulusvx": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind-specific config keys of the nvidia_cumulusvx kind"
         },
         "kind-specific-config-other": {
             "not": {
@@ -2616,6 +2774,16 @@
                     {
                         "required": [
                             "components"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
                         ]
                     }
                 ]
@@ -3175,7 +3343,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-specific-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-nvidia_cumulusvx"
                                 }
                             ]
                         },

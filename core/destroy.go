@@ -89,7 +89,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
-	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
+	// if all, and cli doesn't have --yes flag, and in a terminal -- prompt user confirmation
 	if opts.all && opts.terminalPrompt && term.IsTerminal(int(os.Stdin.Fd())) {
 		err := cliPromptToDestroyAll(topos)
 		if err != nil {

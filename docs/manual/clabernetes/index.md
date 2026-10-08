@@ -6,7 +6,7 @@ tags:
 
 # Clabernetes
 
-<small>pronounciation: *Kla-ber-net-ees*</small>
+<small>pronunciation: *Kla-ber-net-ees*</small>
 
 Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/clabernetes/clabernetes/) or simply **c9s**.
 

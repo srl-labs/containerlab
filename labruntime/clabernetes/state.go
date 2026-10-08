@@ -178,17 +178,17 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	sort.Strings(nodeNames)
 
 	state.Nodes = make([]clablabruntime.NodeState, 0, len(nodeNames))
-	allReady := len(nodeNames) > 0
+	allReady := len(nodeNames) > 0 // codespell:ignore allready
 	allStopped := len(nodeNames) > 0
 	for _, nodeName := range nodeNames {
 		node := nodesByName[nodeName]
 		state.Nodes = append(state.Nodes, node)
-		allReady = allReady && node.Ready
+		allReady = allReady && node.Ready // codespell:ignore allready
 		allStopped = allStopped && node.State == "stopped"
 	}
 
 	switch {
-	case allReady:
+	case allReady: // codespell:ignore allready
 		state.State = "running"
 		state.Ready = true
 	case allStopped:

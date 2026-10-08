@@ -1048,7 +1048,7 @@ In the example below node four nodes are defined with different stages and `wait
           - cat /etc/os-release
 ```
 
-Containerlab's built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
+Containerlab's built-in Dependency Manager takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
 
 Note, that `wait-for` is a list, a node's stage may depend on several other nodes' stages.
 

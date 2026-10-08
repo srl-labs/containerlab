@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: cvx-breakout
+
+topology:
+  kinds:
+    nvidia_cumulusvx:
+      # Cumulus VX image built with the boxen project (vrnetlab-based, with
+      # breakout support). Set the CUMULUS_IMAGE env var when running locally;
+      # the CI workflow pins the same value.
+      image: ${CUMULUS_IMAGE}
+      # swp1 and swp2 are broken out 4x, swp4 8x (8x100g), swp8 2x.
+      # Port speeds are not simulated; only the channel count is configured.
+      port-count: 8
+      breakouts:
+        - port: 1..2
+          channels: 4
+        - port: 4
+          channels: 8
+        - port: 8
+          channels: 2
+
+  nodes:
+    leaf:
+      kind: nvidia_cumulusvx
+      # L3 config for breakout lanes and a base port, applied by the image's
+      # startup config handler after the breakout renames are done.
+      startup-config: |
+        nv set interface swp1s0 ip address 10.0.1.2/24
+        nv set interface swp2s3 ip address 10.0.2.2/24
+        nv set interface swp3 ip address 10.0.3.2/24
+        nv set interface swp4s0 ip address 10.0.4.2/24
+        nv set interface swp8s1 ip address 10.0.5.2/24
+
+    client:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool
+      exec:
+        - ip addr add 10.0.1.1/24 dev eth1
+        - ip addr add 10.0.2.1/24 dev eth2
+        - ip addr add 10.0.3.1/24 dev eth3
+        - ip addr add 10.0.4.1/24 dev eth4
+        - ip addr add 10.0.5.1/24 dev eth5
+
+  # Base ports are eth1..eth8. Lanes follow in ascending parent order:
+  # swp1s0..s3 = eth9..eth12, swp2s0..s3 = eth13..eth16, swp4s0..s7 = eth17..eth24,
+  # swp8s0..s1 = eth25..eth26.
+  links:
+    - endpoints: ["leaf:swp1s0", "client:eth1"]
+    - endpoints: ["leaf:swp2s3", "client:eth2"]
+    - endpoints: ["leaf:swp3", "client:eth3"] # regular (non-broken-out) port
+    - endpoints: ["leaf:swp4s0", "client:eth4"] # one lane of the 8x breakout
+    - endpoints: ["leaf:swp8s1", "client:eth5"]

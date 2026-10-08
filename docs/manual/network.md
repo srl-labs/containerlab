@@ -282,7 +282,7 @@ The following also should be taken into consideration:
 
 The driver specifies the type of network that is created. Either `bridge` or `macvlan`. 
 
-The default is `bridge` when the driver is not explicity specified.
+The default is `bridge` when the driver is not explicitly specified.
 
 #### Bridge
 
@@ -330,7 +330,7 @@ Since `bridge` network is created by default by docker, using its name in the co
 /// note | IPAM
 Docker's built-in `bridge` network will always uses runtime IPAM since Docker rejects user-specified IP addresses on that network.
 
-Explicity setting the provider to be `containerlab` has no effect, hence DAD is also not handled by Containerlab in this case.
+Explicitly setting the provider to be `containerlab` has no effect, hence DAD is also not handled by Containerlab in this case.
 ///
 
 ##### Bridge name
@@ -764,7 +764,7 @@ docker exec -it clab-macvlan-l1 ash
 ip address add 10.0.0.111/24 dev eth1
 ```
 
-Once v4 address is assigned to the macvlan inteface, we can test the connectivity by pinging default gateway of the host:
+Once v4 address is assigned to the macvlan interface, we can test the connectivity by pinging default gateway of the host:
 
 ```bash
 ❯ ping 10.0.0.1
@@ -773,7 +773,7 @@ PING 10.0.0.1 (10.0.0.1): 56 data bytes
 64 bytes from 10.0.0.1: seq=1 ttl=64 time=0.243 ms
 ```
 
-When capturing packets from the hosts's `enp0s3` interface we can see that the ping packets are coming through it using the mac address assigned to the macvlan inteface:
+When capturing packets from the hosts's `enp0s3` interface we can see that the ping packets are coming through it using the mac address assigned to the macvlan interface:
 
 ```bash
 ❯ tcpdump -nnei enp0s3 icmp

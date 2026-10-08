@@ -552,7 +552,7 @@ func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 		log.Warnf("failed to disable TX checksum offload for interface %q: %v", brName, err)
 		return nil
 	}
-	log.Debugf("Successully disabled Tx checksum offload for interface %q", brName)
+	log.Debugf("Successfully disabled Tx checksum offload for interface %q", brName)
 	return nil
 }
 

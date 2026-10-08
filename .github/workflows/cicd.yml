@@ -605,6 +605,17 @@ jobs:
       uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  cumulus-tests:
+    uses: ./.github/workflows/cumulus-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+
   download-tests:
     uses: ./.github/workflows/download-tests.yml
     needs:
@@ -636,6 +647,7 @@ jobs:
       - fdio_vpp-tests
       - frr-tests
       - download-tests
+      - cumulus-tests
       - process-gitref
 
     steps:
@@ -740,6 +752,7 @@ jobs:
       - fdio_vpp-tests
       - frr-tests
       - download-tests
+      - cumulus-tests
       - process-gitref
     steps:
       - name: Checkout

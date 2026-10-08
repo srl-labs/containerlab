@@ -661,7 +661,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				if ctx.Err() != nil {
 					return
 				}
-				// if there is a dependecy on the healthy state of this node, enter the
+				// if there is a dependency on the healthy state of this node, enter the
 				// checking procedure
 				for {
 					healthy, err := node.IsHealthy(ctx)
