@@ -16,11 +16,24 @@ export CLAB_RUNTIME=c9s
 containerlab deploy -t topo.clab.yml
 ```
 
-/// note | Runtime, not converter
-This page describes the native `containerlab --runtime c9s` workflow.
-The [Quickstart](quickstart.md) still shows the manifest-driven `clabverter`
-workflow, which remains useful when you want to generate and apply kubernetes
-manifests yourself.
+/// note | Runtime and c9s documentation
+This page documents the native `containerlab --runtime c9s` workflow. For c9s
+installation, concepts, guides, and CRD reference, see the
+[c9s documentation](https://c9s.run/docs).
+///
+
+/// warning | c9s version compatibility
+This guide describes containerlab 0.80+ with the direct-runtime API introduced
+in c9s 0.9. It does not apply to launcher-based c9s 0.8 and older releases.
+c9s 0.9 cannot upgrade an older installation in place; follow the
+[c9s 0.9 release notes](https://c9s.run/docs/release-notes/0.9) to uninstall
+the old release and recreate its labs.
+
+Older instructions that mention launcher Pods, nested Docker, `LauncherProfile`,
+`clabverter`, `disableExpose`, or configurable resource naming describe an
+incompatible API. In c9s 0.9, devices are direct Pod containers,
+`NodeProfile` replaces `LauncherProfile`, `exposeType: None` replaces
+`disableExpose`, and the launcher and naming fields have been removed.
 ///
 
 ## How it works
@@ -104,15 +117,22 @@ The c9s runtime expects:
 
 - a reachable kubernetes cluster
 - kubernetes 1.31 or newer
-- Clabernetes CRDs installed in the cluster
+- c9s 0.9 direct-runtime CRDs installed in the cluster
 - the Clabernetes manager running and watching all lab namespaces
 - kubernetes RBAC allowing containerlab to manage the required resources
+- permission for lab namespaces to run the privileged c9s connectivity
+  init-sidecar
 
 /// note
 Containerlab creates a dedicated namespace for each c9s lab. The kube identity
 therefore needs cluster-scoped permission to get, create, and delete namespaces
 unless you select an existing namespace with `CLAB_KUBE_NAMESPACE`.
 ///
+
+See the
+[c9s cluster requirements](https://c9s.run/docs/installation#cluster-requirements)
+for Pod Security Admission, worker kernel, network policy, registry, and KVM
+requirements.
 
 ## Selecting the cluster
 
@@ -167,7 +187,7 @@ lab name.
 
 The namespace is also the topology boundary: links can only connect Nodes in
 one namespace, wire identities are namespace-unique, and the lab's management
-subnet forms one L2 domain across the namespace.
+subnet spans the namespace through the c9s routed management mesh.
 
 Containerlab labels namespaces it creates with the runtime and lab owner. A
 normal destroy removes such a managed namespace after its lab resources are
@@ -228,11 +248,41 @@ For example:
 c9s-clos/clos/srl1
 ```
 
-Primitive-only labs created outside containerlab (for example with
-`clabverter --emit-crs`) are also manageable when their Nodes, Links, and
-NodeProfiles carry the common `c9s.run/topologyOwner=<lab-name>` label.
-Containerlab uses that label as the lab boundary for list, inspect, lifecycle,
-events, and destroy operations.
+### Labs managed as direct c9s resources
+
+This is an advanced workflow for users who manage Kubernetes resources through
+GitOps or `kubectl` instead of letting containerlab create a `Topology`.
+For example, a deployment pipeline can generate a bundle without contacting a
+cluster:
+
+```bash
+containerlab --runtime c9s deploy --no-topology-cr --emit-crs \
+  -t edge-lab.clab.yml > edge-lab.c9s.yaml
+```
+
+The bundle contains the lab's `NodeProfile`, `Node`, and `Link` resources, each
+with this ownership label:
+
+```yaml
+metadata:
+  labels:
+    c9s.run/topologyOwner: edge-lab
+```
+
+After a GitOps controller or `kubectl apply` installs that bundle, containerlab
+can discover the lab without a `Topology` resource:
+
+```bash
+containerlab --runtime c9s --namespace c9s-edge-lab \
+  inspect --name edge-lab
+```
+
+Containerlab discovers a primitive-only lab from its labeled Nodes. It uses the
+same label to associate the lab's Links, NodeProfiles, ConfigMaps, and
+c9s-generated workloads for lifecycle, events, and destroy operations. All
+resources must be in the selected namespace and use the same label value.
+Manually authored resources can use the same contract, but an incorrect or
+reused label can cause containerlab to operate on unrelated resources.
 
 ## Deploy
 
@@ -304,8 +354,8 @@ topology, then use node filtering with commands such as `start`, `stop`,
 ///
 
 Deploy reconciles an existing lab in place. A Topology-owned lab — deployed by
-containerlab, `kubectl`, or `clabverter` — has its `Topology` definition
-updated in place and the controller converges the compiled resources on it.
+containerlab or `kubectl` — has its `Topology` definition updated in place and
+the controller converges the compiled resources on it.
 For a lab deployed with `--no-topology-cr`, containerlab creates, updates, or
 removes the corresponding c9s `Node`, `Link`, `NodeProfile`, and staged
 `ConfigMap` resources directly. Deploying such a lab again without the flag
@@ -561,7 +611,7 @@ retain their `.partial` marker. Licenses can also be embedded as multiline strin
 
 ### Device state persistence
 
-By default, deploy enables [Clabernetes persistence](https://github.com/clabernetes/clabernetes/blob/main/docs/guides/persistence.md)
+By default, deploy enables [Clabernetes persistence](https://c9s.run/docs/guides/persistence)
 on the lab: every node's artifact volume is backed by a per-node
 PersistentVolumeClaim, and the in-cluster claim plays the role the
 [lab directory](../conf-artifacts.md) plays with local runtimes. The startup
@@ -789,15 +839,16 @@ The runtime divides compatibility into three categories:
 - Rejected with a named error before anything is created: every other field
   c9s cannot preserve (for example `cpu-set`, `stages`, link `labels`/`vars`,
   `mgmt-net:` and `macvlan` endpoints), bridge/ovs-bridge/host/ext-container
-  pseudo-nodes, node names that are not valid Kubernetes names, and commands
-  or flags with no c9s implementation.
+  pseudo-nodes, node-name collisions after Kubernetes sanitization, and
+  commands or flags with no c9s implementation.
 
 Management access behaves like containerlab: every node gets an allocated
 management address (honoring the topology `mgmt` subnet and static
-`mgmt-ipv4`/`mgmt-ipv6` addresses), and the management subnet is one L2 domain
-across the lab namespace, so devices reach each other's management addresses
-directly. From outside the cluster, Kubernetes Services (LoadBalancer by
-default), pod IPs, and DNS are the access paths. The `--network`,
+`mgmt-ipv4`/`mgmt-ipv6` addresses). c9s 0.9 carries the shared management
+subnet over a routed cross-Pod mesh with proxy ARP and IPv6 neighbor discovery;
+it is not a bridged L2 segment between Pods. Devices can still reach each
+other's management addresses directly. From outside the cluster, Kubernetes
+Services (LoadBalancer by default), pod IPs, and DNS are the access paths. The `--network`,
 `--ipv4-subnet`, and `--ipv6-subnet` flags remain rejected because they imply
 native Docker-network semantics.
 
@@ -818,6 +869,10 @@ Known command differences:
   the global `c9s` lab runtime.
 - A lab name maps to one canonical `c9s-<lab-name>` namespace in the selected
   cluster.
+- c9s 0.9 removed `Topology.spec.naming`. A topology with an explicit
+  `prefix: ""` currently emits that legacy field in the default Topology mode
+  and is rejected by the c9s 0.9 schema. Use `--no-topology-cr` for such a
+  topology.
 
 /// note
 Use kubernetes state as the source of truth for c9s labs:
