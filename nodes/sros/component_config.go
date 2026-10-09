@@ -6,9 +6,11 @@ package sros
 
 import (
 	"fmt"
+	"maps"
 	"slices"
-	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 const integratedSrosCardSlot = "1"
@@ -82,6 +84,13 @@ var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 		allowedSlots: []string{slotAName},
 		mdas: MDAS{
 			{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"},
+		},
+	},
+	"ixr-e2sc": {
+		cardType:     "imm16-sfp++4-sfp28",
+		allowedSlots: []string{slotAName},
+		mdas: MDAS{
+			{Slot: 1, Type: "m16-sfp++4-sfp28"},
 		},
 	},
 	"ixr-ec": {
@@ -174,62 +183,40 @@ func buildComponentCfgLines(components []*Component, sfm string) []componentCfgL
 	return lines
 }
 
-func buildIntegratedComponentCfgLines(
-	nodeType string,
-	env map[string]string,
-) []componentCfgLine {
+func buildIntegratedComponentCfgLines(nodeType string, override *Component) []componentCfgLine {
 	component, ok := integratedSrosDefaultComponents[canonicalSrosNodeType(nodeType)]
 	if !ok {
 		return nil
 	}
-
-	cardType := component.cardType
-	if envCardType := strings.TrimSpace(env[envNokiaSrosCard]); envCardType != "" {
-		cardType = envCardType
+	if override == nil {
+		override = &Component{}
 	}
 
-	lines := []componentCfgLine{
-		{Kind: "card", Slot: integratedSrosCardSlot, Type: cardType},
+	defaultMdas := component.mdas
+
+	if len(override.XIOM) > 0 {
+		defaultMdas = nil
 	}
 
-	for _, mda := range mergeIntegratedMdas(component.mdas, env) {
-		lines = append(lines, componentCfgLine{
-			Kind: "mda", Slot: integratedSrosCardSlot, MdaSlot: mda.Slot, Type: mda.Type,
-		})
+	card := &Component{
+		Slot: integratedSrosCardSlot,
+		Type: component.cardType,
+		XIOM: override.XIOM,
+		MDA:  mergeIntegratedMdas(defaultMdas, override.MDA),
 	}
 
-	return lines
+	return buildComponentCfgLines([]*Component{card}, "")
 }
 
-func mergeIntegratedMdas(defaults MDAS, env map[string]string) MDAS {
+func mergeIntegratedMdas(defaults, overrides MDAS) MDAS {
 	bySlot := map[int]string{}
-	for _, mda := range defaults {
+	for _, mda := range slices.Concat(defaults, overrides) {
 		if mda.Slot > 0 && mda.Type != "" {
 			bySlot[mda.Slot] = mda.Type
 		}
 	}
 
-	const prefix = envNokiaSrosMDA + "_"
-	for key, value := range env {
-		slotText, ok := strings.CutPrefix(key, prefix)
-		if !ok {
-			continue
-		}
-		slot, err := strconv.Atoi(slotText)
-		if err != nil || slot <= 0 {
-			continue
-		}
-		if value = strings.TrimSpace(value); value != "" {
-			bySlot[slot] = value
-		}
-	}
-
-	slots := make([]int, 0, len(bySlot))
-	for slot := range bySlot {
-		slots = append(slots, slot)
-	}
-	slices.Sort(slots)
-
+	slots := slices.Sorted(maps.Keys(bySlot))
 	mdas := make(MDAS, 0, len(slots))
 	for _, slot := range slots {
 		mdas = append(mdas, MDA{Slot: slot, Type: bySlot[slot]})
@@ -259,11 +246,16 @@ func integratedSrosAllowedSlots(nodeType string) []string {
 	return component.allowedSlots
 }
 
-func isSingleSlotIntegratedSrosNodeType(nodeType string) bool {
-	if !isIntegratedSrosNodeType(nodeType) {
+func isRedundantIntegratedSrosComponents(nodeType string, components []*Component) bool {
+	if !isIntegratedSrosNodeType(nodeType) || len(components) < 2 {
 		return false
 	}
-	return len(integratedSrosAllowedSlots(nodeType)) == 1
+	for _, c := range components {
+		if strings.TrimSpace(c.Slot) == "" || !integratedSrosSlotAllowed(nodeType, c.Slot) {
+			return false
+		}
+	}
+	return true
 }
 
 func integratedSrosSlotAllowed(nodeType, slot string) bool {
@@ -272,4 +264,94 @@ func integratedSrosSlotAllowed(nodeType, slot string) bool {
 		slot = standaloneSlotName
 	}
 	return slices.Contains(integratedSrosAllowedSlots(nodeType), slot)
+}
+
+func (n *sros) generateComponentConfig() string {
+	if !n.kindSpecificCfg().GenComponentConfig {
+		return ""
+	}
+	if n.isConfigClassic() {
+		return ""
+	}
+
+	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
+		return n.generateIntegratedComponentConfig()
+	}
+
+	components := n.rootComponents
+	if len(components) == 0 {
+		return ""
+	}
+
+	for _, c := range components {
+		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
+		if slot == slotAName || slot == slotBName {
+			continue
+		}
+		if c.Type == "" {
+			log.Warn(
+				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot,
+			)
+		}
+	}
+
+	lines := buildComponentCfgLines(components, n.kindSpecificCfg().SFM)
+	return n.componentConfigFromLines(lines)
+}
+
+func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
+	powerConfig := n.generatePowerConfig()
+	if len(lines) == 0 && powerConfig == "" {
+		return ""
+	}
+
+	var config strings.Builder
+	for _, l := range lines {
+		config.WriteString(l.String())
+	}
+	config.WriteString(powerConfig)
+	return config.String()
+}
+
+func (n *sros) generateIntegratedComponentConfig() string {
+	card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
+	if card != "" {
+		log.Info(
+			"Card type override set on integrated chassis type, skipping component SR OS config generation",
+			"node",
+			n.Cfg.ShortName,
+			"type",
+			n.Cfg.NodeType,
+			"card",
+			card,
+		)
+		return ""
+	}
+
+	lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.integratedComponentOverride())
+	return n.componentConfigFromLines(lines)
+}
+
+// integratedComponentOverride returns the component that overrides the integrated defaults:
+// the single component of a standalone node, or the component matching the slot of a
+// redundant CPM node.
+func (n *sros) integratedComponentOverride() *Component {
+	if n.rootCtrName == "" {
+		if len(n.kindSpecificCfg().Components) == 1 {
+			return n.kindSpecificCfg().Components[0]
+		}
+		return nil
+	}
+
+	slot := n.Cfg.Env[envNokiaSrosSlot]
+	for _, c := range n.rootComponents {
+		if strings.EqualFold(strings.TrimSpace(c.Slot), slot) {
+			return c
+		}
+	}
+	return nil
 }

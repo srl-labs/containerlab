@@ -241,9 +241,15 @@ topology:
 
 ///
 
-For known SR/IXR integrated nodes, containerlab's default model-driven configuration also provisions the default card and MDA configuration. The built-in defaults cover `sr-1`, `sr-1s`, `ixr-r6`, `ixr-e2`, `ixr-e2c`, `ixr-e2n`, `ixr-e2n-s`, `ixr-e3c`, `ixr-e3x` and `ixr-ec`. If the hardware is overridden with `components` or SR-SIM environment variables, the generated SR OS card/MDA configuration follows those overrides.
+For known SR & IXR integrated types, containerlab's default model-driven configuration also will provision the default card and MDA(s). 
 
-Integrated nodes accept at most one `components` entry because they still run as a single container. The component slot can be omitted or set to `A`; `ixr-r6` also accepts a single `B` slot override.
+The built-in defaults cover `sr-1`, `sr-1s`, `ixr-r6`, `ixr-e2`, `ixr-e2c`, `ixr-e2n`, `ixr-e2n-s`, `ixr-e2sc`, `ixr-e3c`, `ixr-e3x` and `ixr-ec`.
+
+Integrated nodes accept one `components` entry because they run as a single container.
+
+/// info
+The only exception is the IXR-R6 which supports slots `A` & `B` for a dual CPIOM setup, it does NOT numerical slots for LCs.
+///
 
 ### Distributed
 

@@ -119,3 +119,46 @@ func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 
 	return nil
 }
+
+func setComponentEnvVars(env map[string]string, c *Component) {
+	if c.Type != "" {
+		env[envNokiaSrosCard] = c.Type
+	}
+
+	for _, x := range c.XIOM {
+		key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+		env[key] = x.Type
+		// add the nested MDA
+		for _, m := range x.MDA {
+			key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+			env[key] = m.Type
+		}
+	}
+
+	for _, m := range c.MDA {
+		key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+		env[key] = m.Type
+	}
+}
+
+func (n *sros) checkComponentSlotsConfig() error {
+	// check Slots are unique
+	componentNames := map[string]struct{}{}
+	for _, component := range n.kindSpecificCfg().Components {
+		// convert slot to upper
+		slot := strings.ToUpper(component.Slot)
+		// check if slot exists
+		_, exists := componentNames[slot]
+		if exists {
+			return fmt.Errorf(
+				"node %s slot %s duplicate definition",
+				n.GetShortName(),
+				component.Slot,
+			)
+		}
+		// add to component names map
+		componentNames[component.Slot] = struct{}{}
+
+	}
+	return nil
+}

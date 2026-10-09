@@ -55,6 +55,7 @@ jobs:
           - "10*.robot"
           - "11*.robot"
           - "12*.robot"
+          - "13*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v7

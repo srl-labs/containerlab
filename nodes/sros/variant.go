@@ -4,7 +4,17 @@
 
 package sros
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
+
+var (
+	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
+	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
+
+	ixrRegexp = regexp.MustCompile(`(?i)\bixr-`)
+)
 
 // ConfigMode is the configuration mode (model-driven or classic).
 type ConfigMode string
@@ -142,4 +152,19 @@ func getSnippetSet(v ConfigVariant) snippetSet {
 		}
 	}
 	return snippetSet{SystemConfig: sys, GRPCConfig: grpc}
+}
+
+// isIXRNode returns true if this is an IXR node type (case-insensitive).
+func (n *sros) isIXRNode() bool {
+	return ixrRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARNode returns true if this is a SAR node type (case-insensitive).
+func (n *sros) isSARNode() bool {
+	return sarRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARHmNode returns true if this is a SAR-Hm or SAR-Hmc node type (case-insensitive).
+func (n *sros) isSARHmNode() bool {
+	return sarHmRegexp.MatchString(n.Cfg.NodeType)
 }
