@@ -820,8 +820,8 @@ func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) error {
 		// Runtime-discovered endpoints bypass topology interface-name validation.
 		if !normalizedInterfaceRegexp.MatchString(ifName) {
 			return fmt.Errorf(
-				"invalid SR Linux interface %q: expected mgmt0, eL-P or eL-P-C (L, P, C >= 1)",
-				ifName,
+				"invalid SR Linux interface %q: expected %s or %s",
+				ifName, mgmt0InterfaceName, InterfaceHelp,
 			)
 		}
 

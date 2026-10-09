@@ -168,6 +168,8 @@ You can also use breakout (or channelised) interfaces on SR Linux nodes.
 
 The breakout interfaces will have the mapped Linux interface name `eX-Y-Z` where `Z` is the breakout port number. For example, if interface `ethernet-1/3` on an IXR-D3 system is meant to act as a breakout 100Gb to 4x25Gb, and the first breakout port is used in the topology (`ethernet-1/3/1`), then the mapped interfaces in the container will be called `e1-3-1`.
 
+SR Linux interface names are validated when a lab is deployed, and only the `ethernet-L/P`, `ethernet-L/P/C` or the short `eL-P`, `eL-P-C` forms are accepted, where `L`, `P` and `C` are positive numbers. Any other name, for example `eth1`, is rejected with an error naming the offending interface.
+
 ## Features and options
 
 ### Types
