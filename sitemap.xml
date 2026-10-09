@@ -190,6 +190,9 @@
         <loc>https://containerlab.dev/manual/kinds/rare-freertr/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/manual/kinds/frr/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/manual/kinds/ovs-bridge/</loc>
       </url>
       <url>
@@ -224,6 +227,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/manual/clabernetes/quickstart/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/manual/clabernetes/runtime/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/manual/clabernetes/configuration/</loc>
@@ -499,6 +505,9 @@
         <loc>https://containerlab.dev/lab-examples/ftdv01/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/lab-examples/cisco_iol/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/lab-examples/f5bigipve01/</loc>
       </url>
       <url>
@@ -512,6 +521,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/lab-examples/generic_vm01/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/rn/0.80/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/rn/0.79/</loc>
