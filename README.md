@@ -1,4 +1,4 @@
-<p align=center><a href="https://containerlab.dev"><img src="docs/images/containerlab-animated-wordmark.svg" alt="Containerlab"/></a></p>
+<p align=center><a href="https://containerlab.dev"><img src="docs/images/containerlab-animated-wordmark.svg" alt="Containerlab" height="192"/></a></p>
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
