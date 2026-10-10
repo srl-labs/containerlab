@@ -2515,7 +2515,32 @@
             "properties": {
                 "components": {
                     "items": {
-                        "$ref": "#/definitions/sros-component"
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "not": {
+                                    "anyOf": [
+                                        {
+                                            "required": [
+                                                "cpu"
+                                            ]
+                                        },
+                                        {
+                                            "required": [
+                                                "ram"
+                                            ]
+                                        },
+                                        {
+                                            "required": [
+                                                "max-nics"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
                     }
                 }
             },
@@ -2589,7 +2614,18 @@
             "properties": {
                 "components": {
                     "items": {
-                        "$ref": "#/definitions/sros-component"
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "not": {
+                                    "required": [
+                                        "env"
+                                    ]
+                                }
+                            }
+                        ]
                     }
                 }
             },
