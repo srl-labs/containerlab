@@ -1,4 +1,4 @@
-# Containerlab runtime
+# C9s runtime
 
 Containerlab can use Clabernetes as a lab runtime. Use `c9s` to select it.
 With the c9s runtime selected,
