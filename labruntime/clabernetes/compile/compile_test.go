@@ -111,7 +111,12 @@ topology:
 	}
 
 	if len(nodes) != 2 || len(links) != 0 || len(profiles) != 1 {
-		t.Fatalf("rendered primitives: nodes=%d links=%d profiles=%d", len(nodes), len(links), len(profiles))
+		t.Fatalf(
+			"rendered primitives: nodes=%d links=%d profiles=%d",
+			len(nodes),
+			len(links),
+			len(profiles),
+		)
 	}
 }
 
@@ -591,7 +596,11 @@ topology:
 	_ = compiled
 
 	if len(nodes) != 2 || len(profiles) != 1 {
-		t.Fatalf("rendered: nodes=%d profiles=%d, want 2 nodes and one shared profile", len(nodes), len(profiles))
+		t.Fatalf(
+			"rendered: nodes=%d profiles=%d, want 2 nodes and one shared profile",
+			len(nodes),
+			len(profiles),
+		)
 	}
 
 	if profiles[0].GetName() != "lab" {
@@ -602,7 +611,11 @@ topology:
 		spec := n.Object["spec"].(map[string]any)
 		profileRef := spec["profileRef"].(map[string]any)
 		if profileRef["name"] != "lab" {
-			t.Fatalf("node %q references %q, want the shared profile", n.GetName(), profileRef["name"])
+			t.Fatalf(
+				"node %q references %q, want the shared profile",
+				n.GetName(),
+				profileRef["name"],
+			)
 		}
 	}
 }
