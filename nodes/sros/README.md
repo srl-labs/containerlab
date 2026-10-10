@@ -131,13 +131,12 @@ exit
 
 #### Configuration Mode Detection
 
-The mode is determined by the `SROS_CONFIG_MODE` environment variable:
+The mode is set by the `config-mode` kind-specific config key (`KindSpecificConfig.ConfigMode`):
 
-```go
-// Environment variable values
-"model-driven"  → Model-Driven mode (default)
-"classic"       → Classic CLI mode
-"mixed"         → Treated as Classic mode
+```yaml
+config-mode: model-driven  # Model-Driven mode (default)
+config-mode: classic       # Classic CLI mode
+config-mode: mixed         # Treated as Classic mode
 ```
 
 **Special Case: SAR-Hm Nodes**
@@ -145,12 +144,12 @@ The mode is determined by the `SROS_CONFIG_MODE` environment variable:
 SAR-Hm nodes **only support Classic mode**. The implementation automatically overrides the configuration mode:
 
 ```go
-if n.isSARHmNode() {
-    if tplData.ConfigurationMode != "classic" {
-        log.Warn("SAR-Hm nodes only support classic configuration mode. Overriding...")
-        tplData.ConfigurationMode = "classic"
-        n.Cfg.Env[envSrosConfigMode] = "classic"
-    }
+v := n.resolveConfigVariant()
+configMode := string(v.Mode)
+if v.ForceClassic {
+    log.Warn("SAR-Hm nodes only support classic configuration mode. Overriding...")
+    configMode = string(ConfigModeClassic)
+    n.kindSpecificCfg().ConfigMode = ConfigModeClassic
 }
 ```
 
@@ -269,7 +268,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error)
 tplData := &srosTemplateData{
     // Selection criteria (used by selectConfigTemplate)
     NodeType:          strings.ToLower(n.Cfg.NodeType),  // "ixr-6e", "sar-8", etc.
-    ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),  // "model-driven", "classic"
+    ConfigurationMode: configMode,                       // from the config-mode kind-specific config key
     SwVersion:         n.swVersion,                      // Detected version
     IsSecureGrpc:      *n.Cfg.Certificate.Issue,        // true/false for TLS
     
@@ -713,8 +712,7 @@ nodes:
     kind: nokia_srsim
     type: ixr-6e
     image: registry.srlinux.dev/pub/sros:25.10.R1
-    env:
-      SROS_CONFIG_MODE: model-driven
+    config-mode: model-driven
     startup-config: configs/ixr1.partial.cfg
     certificate:
       issue: true
@@ -1428,7 +1426,7 @@ sudo clab deploy -t topology.yml --debug 2>&1 | grep "template"
 ```
 
 **Common Causes:**
-- `SROS_CONFIG_MODE` environment variable incorrectly set
+- `config-mode` kind-specific config key incorrectly set
 - Node type not matching regexp patterns (check case sensitivity)
 - SAR-Hm node not forcing classic mode
 
@@ -1437,8 +1435,7 @@ sudo clab deploy -t topology.yml --debug 2>&1 | grep "template"
 # Explicitly set configuration mode
 nodes:
   router1:
-    env:
-      SROS_CONFIG_MODE: model-driven  # or classic
+    config-mode: model-driven  # or classic
 ```
 
 ### Version Detection Fails

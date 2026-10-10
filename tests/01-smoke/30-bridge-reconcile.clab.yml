@@ -11,11 +11,15 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+{{- if not .noBridge }}
     br-30-reconcile:
       kind: bridge
+{{- end }}
 
   links:
+{{- if not .noBridge }}
     - endpoints:
         ["n1:eth1", "br-30-reconcile:{{ if .remap }}e1{{ else }}e2{{ end }}"]
     - endpoints:
         ["n1:eth2", "br-30-reconcile:{{ if .remap }}e2{{ else }}e3{{ end }}"]
+{{- end }}

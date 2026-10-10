@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: srsim-pause-ctr
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+
+  nodes:
+    sr14s:
+      kind: nokia_srsim
+      type: sr-14s
+      sfm: sfm2-s
+      components:
+        - slot: A
+          type: cpm2-s
+        - slot: 2
+          type: xcm2-14s
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t
+        - slot: B
+          type: cpm2-s
+        - slot: 1
+          type: xcm2-14s
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t

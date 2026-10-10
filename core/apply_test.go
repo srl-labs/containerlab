@@ -249,6 +249,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 	mockNode.EXPECT().
 		Reconcile(gomock.Any(), diff).
 		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+	mockRuntime.EXPECT().SyncMgmtHostRoutes(gomock.Any()).Return(nil)
 
 	topo := clabtypes.NewTopology()
 	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "linux", Image: "alpine:latest"}
@@ -256,7 +257,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 	c := &CLab{
 		Config: &Config{
 			Name:     "noop",
-			Mgmt:     &clabtypes.MgmtNet{},
+			Mgmt:     &clabtypes.MgmtNet{Driver: clabtypes.MgmtDriverMacvlan},
 			Topology: topo,
 		},
 		TopoPaths: topoPaths,
@@ -267,6 +268,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 		Runtimes: map[string]clabruntime.ContainerRuntime{
 			clabruntimedocker.RuntimeName: mockRuntime,
 		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
 	}
 
 	result, err := c.Apply(context.Background(), &ApplyOptions{})
@@ -1022,6 +1024,82 @@ func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
 	}
 }
 
+func TestPlanApplyAddsNewRootNamespaceNode(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		inState   bool
+		wantAdded bool
+	}{
+		"bridge added to running lab":   {inState: false, wantAdded: true},
+		"bridge already in running lab": {inState: true, wantAdded: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			paths := &clabtypes.TopoPaths{}
+			if err := paths.SetLabDir(t.TempDir()); err != nil {
+				t.Fatal(err)
+			}
+
+			oldTopo := clabtypes.NewTopology()
+			oldTopo.Nodes["l1"] = &clabtypes.NodeDefinition{Kind: "linux"}
+			if tt.inState {
+				oldTopo.Nodes["br1"] = &clabtypes.NodeDefinition{Kind: "bridge"}
+			}
+			stateLab := &CLab{
+				Config:    &Config{Topology: oldTopo},
+				TopoPaths: paths,
+			}
+			if err := stateLab.WriteState(); err != nil {
+				t.Fatal(err)
+			}
+
+			ctrl := gomock.NewController(t)
+			br := clabmocksmocknodes.NewMockNode(ctrl)
+			br.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				ShortName:            "br1",
+				Kind:                 "bridge",
+				IsRootNamespaceBased: true,
+			}).AnyTimes()
+			br.EXPECT().GetShortName().Return("br1").AnyTimes()
+			br.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			if !tt.wantAdded {
+				// Only nodes known to the previous topology are checked for drift.
+				br.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).
+					Return(&clabtypes.TopologyDiff{})
+				br.EXPECT().GetReconcilePlan(gomock.Any(), gomock.Any()).
+					Return(&clabnodes.ReconcileResult{}, nil)
+			}
+
+			newTopo := clabtypes.NewTopology()
+			newTopo.Nodes["br1"] = &clabtypes.NodeDefinition{Kind: "bridge"}
+			c := &CLab{
+				Config:    &Config{Topology: newTopo},
+				TopoPaths: paths,
+				Nodes:     map[string]clabnodes.Node{"br1": br},
+				Links:     map[int]clablinks.Link{},
+			}
+
+			plan, err := c.planApply(
+				context.Background(),
+				map[string]*runtimeNodeGroup{"br1": {name: "br1", rootNamespaceBased: true}},
+			)
+			if err != nil {
+				t.Fatalf("planApply() error = %v", err)
+			}
+			if _, added := plan.addedNodeSet["br1"]; added != tt.wantAdded {
+				t.Fatalf("br1 added = %v, want %v", added, tt.wantAdded)
+			}
+			if len(plan.recreatedNodeSet) != 0 {
+				t.Fatalf("recreated nodes = %v, want none", plan.recreatedNodeSet)
+			}
+		})
+	}
+}
+
 func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	t.Parallel()
 
@@ -1063,6 +1141,14 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 		ListContainers(gomock.Any(), gomock.Any()).
 		Return([]clabruntime.GenericContainer{
 			{
+				Names: []string{"clab-lab-sros-netns"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "sros-netns",
+					clabconstants.RootNodeName: "sros",
+					clabconstants.InternalNode: "true",
+				},
+			},
+			{
 				Names: []string{"clab-lab-sros-a"},
 				Labels: map[string]string{
 					clabconstants.NodeName:     "sros-a",
@@ -1090,8 +1176,19 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	if !group.distributed {
 		t.Fatal("expected distributed group marker")
 	}
-	if got := len(group.containers); got != 2 {
-		t.Fatalf("expected 2 component containers, got %d", got)
+	if got := len(group.containers); got != 3 {
+		t.Fatalf("expected 2 components and their internal holder, got %d", got)
+	}
+	gomock.InOrder(
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-a").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-1").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-sros-netns").Return(nil),
+	)
+	if err := c.deleteApplyNodes(context.Background(), &applyPlan{
+		currentNodes:   currentNodes,
+		deletedNodeSet: map[string]struct{}{"sros": {}},
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -1245,6 +1342,38 @@ func TestSetMgmtBridgeFromRuntime(t *testing.T) {
 
 	if c.Config.Mgmt.Bridge != "br-test" {
 		t.Fatalf("expected bridge from runtime labels, got %q", c.Config.Mgmt.Bridge)
+	}
+}
+
+func TestSetMgmtBridgeFromRuntimeIgnoresDroppedNetworks(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{
+		Config: &Config{Mgmt: &clabtypes.MgmtNet{Network: "clab-lab-main"}},
+	}
+
+	err := c.setMgmtBridgeFromRuntime(map[string]*runtimeNodeGroup{
+		"l1": {
+			containers: []clabruntime.GenericContainer{
+				{
+					NetworkName: "clab-lab-main",
+					Labels:      map[string]string{clabconstants.NodeMgmtNetBr: "br-main"},
+				},
+				{
+					// a node still attached to a network dropped from the
+					// mgmt list must not contribute its bridge
+					NetworkName: "clab-lab-oob",
+					Labels:      map[string]string{clabconstants.NodeMgmtNetBr: "br-oob"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Config.Mgmt.Bridge != "br-main" {
+		t.Fatalf("expected the default network bridge, got %q", c.Config.Mgmt.Bridge)
 	}
 }
 

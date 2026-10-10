@@ -109,6 +109,18 @@ The local `--export-template` flag allows a user to specify a custom Go template
 
 The `--skip-labdir-acl` flag can be used to skip the lab directory access control list (ACL) provisioning during the deploy phase.
 
+#### no-topology-cr
+
+The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It makes the deploy phase skip the c9s `Topology` resource and create the compiled `Node`, `Link`, and `NodeProfile` resources directly. See [`deploy --no-topology-cr`](deploy.md#no-topology-cr).
+
+#### image-pull-secret
+
+The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR during the deploy phase. See [`deploy --image-pull-secret`](deploy.md#image-pull-secret).
+
+#### no-persistence
+
+The `--no-persistence` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It makes the deploy phase run the lab nodes on ephemeral storage instead of the default per-node persistent volumes. See [`deploy --no-persistence`](deploy.md#no-persistence).
+
 ### Examples
 
 #### Redeploy a lab using the given topology file

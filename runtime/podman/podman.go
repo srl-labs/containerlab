@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,7 +20,9 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	netTypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/podman/v6/pkg/api/handlers"
+	"go.podman.io/podman/v6/pkg/bindings"
 	"go.podman.io/podman/v6/pkg/bindings/containers"
 	"go.podman.io/podman/v6/pkg/bindings/images"
 	"go.podman.io/podman/v6/pkg/bindings/network"
@@ -87,8 +90,103 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 	r.config.KeepMgmtNet = true
 }
 
+// NetworkAddresses returns occupied addresses in the requested subnets.
+// Only networks with overlapping IPAM pools are inspected.
+func (r *PodmanRuntime) NetworkAddresses(
+	ctx context.Context,
+	subnets []netip.Prefix,
+) ([]runtime.NetworkAddress, error) {
+	if len(subnets) == 0 {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, r.config.Timeout)
+	defer cancel()
+	if _, err := bindings.GetClient(ctx); err != nil {
+		var connectErr error
+		ctx, connectErr = r.connect(ctx)
+		if connectErr != nil {
+			return nil, connectErr
+		}
+	}
+	networks, err := network.List(ctx, &network.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list Podman network pools: %w", err)
+	}
+	var addresses []runtime.NetworkAddress
+	for _, listed := range networks {
+		matches := false
+		for _, pool := range listed.Subnets {
+			prefix, err := netip.ParsePrefix(pool.Subnet.String())
+			if err != nil {
+				return nil, fmt.Errorf("network %s subnet: %w", listed.Name, err)
+			}
+			for _, subnet := range subnets {
+				if prefix.Overlaps(subnet) {
+					matches = true
+				}
+			}
+		}
+		if !matches {
+			continue
+		}
+		details, err := network.Inspect(ctx, listed.ID, &network.InspectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"inspect occupied addresses on Podman network %s: %w",
+				listed.Name,
+				err,
+			)
+		}
+		add := func(ip netip.Addr, containerID string) {
+			ip = ip.Unmap()
+			for _, subnet := range subnets {
+				if subnet.Contains(ip) {
+					addresses = append(
+						addresses,
+						runtime.NetworkAddress{
+							NetworkName: details.Name,
+							ContainerID: containerID,
+							Address:     ip,
+						},
+					)
+					break
+				}
+			}
+		}
+		for _, pool := range details.Subnets {
+			if ip, ok := netip.AddrFromSlice(pool.Gateway); ok {
+				add(ip, "")
+			}
+		}
+		for id, container := range details.Containers {
+			for _, iface := range container.Interfaces {
+				for _, address := range iface.Subnets {
+					if ip, ok := netip.AddrFromSlice(address.IPNet.IP); ok {
+						add(ip, id)
+					}
+				}
+			}
+		}
+	}
+	return addresses, nil
+}
+
+func (*PodmanRuntime) SyncMgmtHostRoutes(context.Context) error {
+	return fmt.Errorf("macvlan management host routes are not implemented for Podman runtime")
+}
+
 // CreateNet used to create a new bridge for clab mgmt network.
-func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
+func (r *PodmanRuntime) CreateNet(
+	ctx context.Context,
+	_ ...runtime.NetworkCreateOptions,
+) error {
+	if err := r.mgmt.Validate(); err != nil {
+		return err
+	}
+	if r.mgmt.Driver == types.MgmtDriverMacvlan {
+		return fmt.Errorf("macvlan management networks are not implemented for Podman runtime")
+	}
+
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
@@ -112,15 +210,40 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		}
 		log.Debugf("Create network response was: %+v", resp)
 	}
-	// set bridge name = network name if explicit name was not provided
-	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
-		details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
+	details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
+	if err != nil {
+		return err
+	}
+	if r.mgmt.Bridge == "" {
+		r.mgmt.Bridge = details.NetworkInterface
+	}
+	if err := setMgmtIPAMFromPodmanSubnets(r.mgmt, details.Subnets); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setMgmtIPAMFromPodmanSubnets(m *types.MgmtNet, subnets []netTypes.Subnet) error {
+	m.IPv4Subnet, m.IPv6Subnet = "", ""
+	m.IPv4Gw, m.IPv6Gw = "", ""
+	m.IPv4Range, m.IPv6Range = "", ""
+	for _, subnet := range subnets {
+		gateway := ""
+		if subnet.Gateway != nil {
+			gateway = subnet.Gateway.String()
+		}
+		ipRange, err := podmanLeaseRangePrefix(subnet.LeaseRange)
 		if err != nil {
 			return err
 		}
-		r.mgmt.Bridge = details.NetworkInterface
+		if subnet.Subnet.IP.To4() != nil {
+			m.IPv4Subnet, m.IPv4Gw, m.IPv4Range = subnet.Subnet.String(), gateway, ipRange
+		} else {
+			m.IPv6Subnet, m.IPv6Gw, m.IPv6Range = subnet.Subnet.String(), gateway, ipRange
+		}
 	}
-	return err
+	return nil
 }
 
 // DeleteNet deletes a clab mgmt bridge.

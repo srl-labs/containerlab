@@ -3,7 +3,7 @@ package vr_sros
 import (
 	"testing"
 
-	clabtypes "github.com/srl-labs/containerlab/types"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -11,16 +11,16 @@ import (
 func TestComponentInterfaceIndex(t *testing.T) {
 	// distributed SR-2s: two line cards, each xcm-2s with one XIOM holding mda1 (18 ports) and
 	// mda2 (24 ports) -> max_nics 42 per line card.
-	sr2s := []*clabtypes.Component{
+	sr2s := []*Component{
 		{Slot: "A", Type: "cpm-2s"},
-		{Slot: "1", Type: "xcm-2s", XIOM: clabtypes.XIOMS{
-			{Slot: 1, Type: "iom-s-3.0t", MDA: clabtypes.MDAS{
+		{Slot: "1", Type: "xcm-2s", XIOM: clabnodessros.XIOMS{
+			{Slot: 1, Type: "iom-s-3.0t", MDA: clabnodessros.MDAS{
 				{Slot: 1, Type: "ms18-100gb-qsfp28"},
 				{Slot: 2, Type: "ms24-10/100gb-sfpdd"},
 			}},
 		}},
-		{Slot: "2", Type: "xcm-2s", XIOM: clabtypes.XIOMS{
-			{Slot: 1, Type: "iom-s-3.0t", MDA: clabtypes.MDAS{
+		{Slot: "2", Type: "xcm-2s", XIOM: clabnodessros.XIOMS{
+			{Slot: 1, Type: "iom-s-3.0t", MDA: clabnodessros.MDAS{
 				{Slot: 1, Type: "ms18-100gb-qsfp28"},
 				{Slot: 2, Type: "ms24-10/100gb-sfpdd"},
 			}},
@@ -28,27 +28,27 @@ func TestComponentInterfaceIndex(t *testing.T) {
 	}
 
 	// distributed chassis with two direct-MDA line cards, 6 ports each.
-	directLCs := []*clabtypes.Component{
+	directLCs := []*Component{
 		{Slot: "A", Type: "cpm5"},
-		{Slot: "1", Type: "iom4-e", MDA: clabtypes.MDAS{{Slot: 1, Type: "me6-10gb-sfp+"}}},
-		{Slot: "2", Type: "iom4-e", MDA: clabtypes.MDAS{{Slot: 1, Type: "me6-10gb-sfp+"}}},
+		{Slot: "1", Type: "iom4-e", MDA: clabnodessros.MDAS{{Slot: 1, Type: "me6-10gb-sfp+"}}},
+		{Slot: "2", Type: "iom4-e", MDA: clabnodessros.MDAS{{Slot: 1, Type: "me6-10gb-sfp+"}}},
 	}
 
 	// integrated sr-1 with two direct MDAs, card in the default (unset -> A) slot, ports on slot 1.
-	integratedDirect := []*clabtypes.Component{
-		{MDA: clabtypes.MDAS{
+	integratedDirect := []*Component{
+		{MDA: clabnodessros.MDAS{
 			{Slot: 1, Type: "me12-100gb-qsfp28"},
 			{Slot: 2, Type: "me16-25gb-sfp28+2-100gb-qsfp28"},
 		}},
 	}
 
 	// integrated ixr-x with an embedded IMM card and no MDA list (single implicit port group).
-	integratedEmbedded := []*clabtypes.Component{
+	integratedEmbedded := []*Component{
 		{Slot: "A", Type: "cpm-ixr-x/imm6-qsfpdd+48-sfp56"},
 	}
 
 	tests := map[string]struct {
-		components []*clabtypes.Component
+		components []*Component
 		ifName     string
 		want       int
 		wantErr    bool

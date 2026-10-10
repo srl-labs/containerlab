@@ -13,6 +13,7 @@ import (
 
 	dockerTypes "github.com/docker/docker/api/types"
 	containerTypes "github.com/docker/docker/api/types/container"
+	networkTypes "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -124,5 +125,53 @@ func TestProduceGenericContainerList_MixedKeepsSurvivor(t *testing.T) {
 
 	if got[0].Pid != 1234 {
 		t.Errorf("survivor pid = %d, want 1234", got[0].Pid)
+	}
+}
+
+func TestProduceGenericContainerListUsesRequestedStoppedAddresses(t *testing.T) {
+	id := strings.Repeat("a", 64)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"Id":"` + id + `","State":{"Pid":0}}`))
+	}))
+	defer srv.Close()
+
+	cli, err := dockerC.NewClientWithOpts(
+		dockerC.WithHost(srv.URL),
+		dockerC.WithVersion("1.43"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cli.Close()
+
+	rt := &DockerRuntime{
+		Client: cli,
+		mgmt:   &clabtypes.MgmtNet{Network: "clab"},
+		config: clabruntime.RuntimeConfig{Timeout: defaultTimeout},
+	}
+	inputs := []dockerTypes.Container{{
+		ID:    id,
+		Names: []string{"/clab-x-stopped"},
+		NetworkSettings: &containerTypes.NetworkSettingsSummary{
+			Networks: map[string]*networkTypes.EndpointSettings{
+				"clab": {
+					IPAMConfig: &networkTypes.EndpointIPAMConfig{
+						IPv4Address: "192.0.2.10",
+						IPv6Address: "2001:db8::10",
+					},
+				},
+			},
+		},
+	}}
+
+	got, err := rt.produceGenericContainerList(context.Background(), inputs, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 ||
+		got[0].NetworkSettings.IPv4addr != "192.0.2.10" ||
+		got[0].NetworkSettings.IPv6addr != "2001:db8::10" {
+		t.Fatalf("requested addresses not preserved: %+v", got)
 	}
 }

@@ -137,6 +137,7 @@ The following env vars are supported:
 * `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM.
 * `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
 * `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
+* `UUID` - sets the UUID used for the VM. For the supported devices, it will keep a consistent serial number across multiple lab boots.
 
 ### Datapath connectivity
 
@@ -146,7 +147,7 @@ By hosting a VM inside a container, we made it easy to run VM-based routers in a
 Because the guest network OS runs in a VM inside the launcher container, the [`exec` node property](nodes.md#exec) and the [`exec` command](../cmd/exec.md) run inside the launcher container, not inside the guest VM. Guest network-OS commands are therefore not reachable via `exec`; connect to the node over SSH at its management address (or use the node's native CLI) instead.
 ///
 
-To solve this challenge containerlab uses **tc** backend[^4], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
+To solve this challenge containerlab uses **tc** backend[^4], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges in between, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
 

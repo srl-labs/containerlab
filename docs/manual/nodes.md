@@ -55,6 +55,26 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
+### Kind-Specific Config
+
+Certain kinds will accept extra keys in the node definition which only applies to nodes of that specific kind. However the inheritance model of groups, kinds and defaults can still be used. As with the below example:
+
+```yaml
+topology:
+  kinds:
+    cisco_iol:
+      pid-offset: 64
+  nodes:
+    sros1:
+      kind: nokia_srsim
+      config-mode: classic
+    iol1:
+      kind: cisco_iol
+      mgmt-intf: Ethernet1/0
+```
+
+A key that the node's kind does not support is an error so take caution when using `defaults` or `groups` when applied to multiple kinds.
+
 ### group
 
 `group` is a freeform string that denotes which group a node belongs to. This can be used to inherit values from the [groups](./topo-def-file.md#groups) container.
@@ -383,9 +403,12 @@ ports:
   - 80:8080 # tcp port 80 of the host is mapped to port 8080 of the container
   - 55555:43555/udp
   - 55554:43554/tcp
+  - 8022:22/ts
 ```
 
 The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--expose` flag](https://docs.docker.com/reference/cli/docker/container/run/#publish).
+
+A `/ts` suffix publishes the mapping on the lab Tailscale proxy instead of the container runtime. See [Tailscale](network.md#tailscale).
 
 This option is only configurable under the node level.
 
@@ -634,6 +657,18 @@ topology:
           - some-opt
 ```
 
+### mgmt-net
+
+The `mgmt-net` property selects a management network for the node to join. The value should be the `network` name of the desired management network.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: nokia_srlinux
+      mgmt-net: multi-oob
+```
+
 ### network-mode
 
 By default containerlab nodes use bridge-mode driver - nodes are created with their first interface connected to a docker network (management network).
@@ -676,16 +711,24 @@ If you want to completely disable the networking stack on a container, you can u
 
 ### runtime
 
-By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman` runtime.
+By default containerlab nodes will be started by the `docker` container runtime. Besides that, containerlab has experimental support for the `podman` runtime.
 
-It is possible to specify a global runtime with a global `--runtime` flag, or set the runtime on a per-node basis:
+It is possible to specify a global local container runtime with the global `--runtime` flag, or set the runtime on a per-node basis:
 
-Options for the runtime parameter are:
+Options for the per-node `runtime` parameter are:
 
 - `docker`
 - `podman`
 
-The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable, which takes the same values as mentioned above.
+The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable.
+
+/// note | Clabernetes lab runtime
+The global `--runtime` flag and `CLAB_RUNTIME` environment variable accept
+`c9s`. This is a whole-lab runtime that sends the topology to kubernetes as a
+Clabernetes `Topology` resource. It is not a valid per-node `runtime:` value.
+
+See [c9s runtime](clabernetes/runtime.md) for details.
+///
 
 ```yaml
 # example node definition with per-node runtime definition
@@ -1005,7 +1048,7 @@ In the example below node four nodes are defined with different stages and `wait
           - cat /etc/os-release
 ```
 
-Containerlab's built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
+Containerlab's built-in Dependency Manager takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
 
 Note, that `wait-for` is a list, a node's stage may depend on several other nodes' stages.
 
@@ -1159,3 +1202,4 @@ topology:
       aliases:
         - r1.example.com
 ```
+

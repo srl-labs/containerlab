@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -21,6 +22,16 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
+
+func netlinkFamily(ip netip.Addr) int {
+	if ip.Is4() {
+		return netlink.FAMILY_V4
+	}
+	if ip.Is6() {
+		return netlink.FAMILY_V6
+	}
+	return netlink.FAMILY_ALL
+}
 
 const (
 	parkingNetnsPrefix = "clab-park-"

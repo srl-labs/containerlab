@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -20,6 +21,8 @@ import (
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	_ "github.com/srl-labs/containerlab/labruntime/all"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -33,12 +36,13 @@ import (
 var ErrNodeNotFound = errors.New("node not found")
 
 type CLab struct {
-	Config    *Config `json:"config,omitempty"`
-	TopoPaths *clabtypes.TopoPaths
-	Nodes     map[string]clabnodes.Node `json:"nodes,omitempty"`
-	Links     map[int]clablinks.Link    `json:"links,omitempty"`
-	Endpoints []clablinks.Endpoint
-	Runtimes  map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
+	Config     *Config `json:"config,omitempty"`
+	TopoPaths  *clabtypes.TopoPaths
+	Nodes      map[string]clabnodes.Node `json:"nodes,omitempty"`
+	Links      map[int]clablinks.Link    `json:"links,omitempty"`
+	Endpoints  []clablinks.Endpoint
+	Runtimes   map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
+	LabRuntime clablabruntime.LabRuntime               `json:"-"`
 	// reg is a registry of node kinds
 	Reg  *clabnodes.NodeRegistry
 	Cert *clabcert.Cert
@@ -49,6 +53,7 @@ type CLab struct {
 
 	dependencyManager clabcoredependency_manager.DependencyManager
 	m                 *sync.RWMutex
+	mgmtRouteMu       sync.Mutex
 	timeout           time.Duration
 	globalRuntimeName string
 	// nodeFilter is a list of node names to be deployed,
@@ -66,6 +71,8 @@ type CLab struct {
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string
 	gitHash   string
+
+	renderedTopology []byte
 }
 
 // NewContainerLab function defines a new container lab.
@@ -97,7 +104,11 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
-		err = c.parseTopology()
+		if c.LabRuntime != nil {
+			err = c.prepareLabRuntimeTopology()
+		} else {
+			err = c.parseTopology()
+		}
 	}
 
 	// Extract the host systems DNS servers and populate the
@@ -113,16 +124,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
 // Order of preference: cli flag -> env var -> default value of docker.
 func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
-	envN := os.Getenv("CLAB_RUNTIME")
-	log.Debugf("env runtime var value is %v", envN)
-
-	switch {
-	case name != "":
-	case envN != "":
-		name = envN
-	default:
-		name = clabruntimedocker.RuntimeName
-	}
+	name = resolveRuntimeName(name)
 
 	runtimeInitializer, ok := clabruntime.ContainerRuntimes[name]
 	if !ok {
@@ -130,6 +132,103 @@ func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
 	}
 
 	return name, runtimeInitializer, nil
+}
+
+func resolveRuntimeName(name string) string {
+	envN := os.Getenv("CLAB_RUNTIME")
+	log.Debugf("env runtime var value is %v", envN)
+
+	switch {
+	case name != "":
+		return strings.ToLower(name)
+	case envN != "":
+		return strings.ToLower(envN)
+	default:
+		return clabruntimedocker.RuntimeName
+	}
+}
+
+func (c *CLab) prepareLabRuntimeTopology() error {
+	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
+
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
+		r := c.magicTopoNameReplacer()
+		oldName := c.Config.Name
+		c.Config.Name = r.Replace(c.Config.Name)
+		log.Debugf(
+			"Topology name contains Git variables, substituted topology name: %q -> %q",
+			oldName,
+			c.Config.Name,
+		)
+	}
+
+	if err := c.sanitizeLabRuntimeNames(); err != nil {
+		return err
+	}
+
+	if err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name); err != nil {
+		return err
+	}
+
+	if c.Config.Prefix == nil {
+		c.Config.Prefix = new(string)
+		*c.Config.Prefix = defaultPrefix
+	}
+
+	return nil
+}
+
+// sanitizeLabRuntimeNames aligns the lab and node names with what a lab runtime can name the
+// objects it creates with. The lab name is renamed here so containerlab and the runtime keep
+// addressing the lab by the same name; node names are renamed by the runtime itself, where the
+// topology it hands over is rewritten, and are only reported here.
+func (c *CLab) sanitizeLabRuntimeNames() error {
+	if sanitized := clablabruntime.SanitizeName(c.Config.Name); sanitized != c.Config.Name {
+		if sanitized == "" {
+			return fmt.Errorf(
+				"lab name %q holds no character a lab runtime object name can be built from",
+				c.Config.Name,
+			)
+		}
+
+		log.Warn(
+			"Lab name cannot name the objects the lab runtime creates and was sanitized",
+			"name", c.Config.Name,
+			"sanitized", sanitized,
+		)
+
+		c.Config.Name = sanitized
+	}
+
+	if c.Config.Topology == nil {
+		return nil
+	}
+
+	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
+	for nodeName := range c.Config.Topology.Nodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	if err != nil {
+		return err
+	}
+	if len(renames) == 0 {
+		return nil
+	}
+
+	renamed := make([]string, 0, len(renames))
+	for _, nodeName := range slices.Sorted(maps.Keys(renames)) {
+		renamed = append(renamed, fmt.Sprintf("%s -> %s", nodeName, renames[nodeName]))
+	}
+
+	log.Warn(
+		"Node names cannot name the objects the lab runtime creates and were sanitized",
+		"nodes", strings.Join(renamed, ", "),
+	)
+
+	return nil
 }
 
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
@@ -187,6 +286,11 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 
 	c.nodeFilter = nodeFilter
 
+	if c.LabRuntime != nil {
+		log.Infof("Applying node filter: %q", nodeFilter)
+		return nil
+	}
+
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {
@@ -210,25 +314,150 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 
 // initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
+	if len(c.Config.MgmtNetworks) == 0 {
+		c.Config.MgmtNetworks = clabtypes.MgmtNetworks{c.Config.Mgmt}
+	} else if c.Config.MgmtNetworks[0] != c.Config.Mgmt {
+		*c.Config.Mgmt = *c.Config.MgmtNetworks[0]
+		c.Config.MgmtNetworks[0] = c.Config.Mgmt
+	}
+
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 
-	if c.Config.Mgmt.Network == "" {
-		c.Config.Mgmt.Network = dockerNetName
+	networks := make(map[string]bool, len(c.Config.MgmtNetworks))
+	bridges := make(map[string]string, len(c.Config.MgmtNetworks))
+	tailscaleNet := ""
+	for idx, m := range c.Config.MgmtNetworks {
+		if m == nil {
+			return fmt.Errorf("management network entry %d is empty", idx)
+		}
+		if len(c.Config.MgmtNetworks) > 1 && m.Network == "" {
+			return fmt.Errorf("management network entry %d requires a network name", idx)
+		}
+		if m.Tailscale != nil {
+			if tailscaleNet != "" {
+				return fmt.Errorf(
+					"tailscale is set on management networks %q and %q, only one is allowed",
+					tailscaleNet, m.Network,
+				)
+			}
+			tailscaleNet = m.Network
+		}
+
+		if err := setMgmtNetworkDefaults(m, idx == 0); err != nil {
+			return err
+		}
+
+		if networks[m.Network] {
+			return fmt.Errorf("management network %q is defined more than once", m.Network)
+		}
+		networks[m.Network] = true
+
+		if other, ok := bridges[m.Bridge]; ok && m.Bridge != "" {
+			return fmt.Errorf(
+				"management networks %q and %q use the same bridge %q", other, m.Network, m.Bridge,
+			)
+		}
+		bridges[m.Bridge] = m.Network
 	}
 
-	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
-	}
-
-	// by default external access is enabled if not set by a user
-	if c.Config.Mgmt.ExternalAccess == nil {
-		c.Config.Mgmt.ExternalAccess = new(bool)
-		*c.Config.Mgmt.ExternalAccess = true
+	if err := c.validateManagementLinks(); err != nil {
+		return err
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
 
+	return nil
+}
+
+func setMgmtNetworkDefaults(m *clabtypes.MgmtNet, isDefault bool) error {
+	if m.Network == "" {
+		m.Network = dockerNetName
+	}
+
+	// extra networks without subnets get them from the runtime's address pools,
+	// node addresses within them are still assigned by the IPAM provider
+	if isDefault && m.Driver != clabtypes.MgmtDriverMacvlan {
+		if m.IPv4Subnet == "" && m.IPv6Subnet == "" {
+			// assign the default subnets
+			m.IPv4Subnet = dockerNetIPv4Addr
+			m.IPv6Subnet = dockerNetIPv6Addr
+		}
+	}
+
+	// by default external access is enabled if not set by a user
+	if m.ExternalAccess == nil {
+		m.ExternalAccess = new(bool)
+		*m.ExternalAccess = true
+	}
+
+	if m.IPAM.Provider == "" {
+		m.IPAM.Provider = clabtypes.IPAMProviderContainerlab
+	}
+
+	return m.Validate()
+}
+
+// mgmtNetByName returns the management network a node selected with mgmt-net.
+// An empty name selects the default network.
+func (c *CLab) mgmtNetByName(network string) (*clabtypes.MgmtNet, error) {
+	if network == "" {
+		return c.Config.Mgmt, nil
+	}
+	for _, m := range c.Config.MgmtNetworks {
+		if m.Network == network {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("management network %q is not defined in the mgmt section", network)
+}
+
+// mgmtNetByNetwork returns the management network with the given runtime network name.
+func (c *CLab) mgmtNetByNetwork(network string) *clabtypes.MgmtNet {
+	for _, m := range c.Config.MgmtNetworks {
+		if m.Network == network {
+			return m
+		}
+	}
+	return c.Config.Mgmt
+}
+
+// mgmtRuntime returns the named runtime bound to the given management network.
+func (c *CLab) mgmtRuntime(
+	runtimeName string,
+	m *clabtypes.MgmtNet,
+) (clabruntime.ContainerRuntime, error) {
+	rt := c.Runtimes[runtimeName]
+	if m == c.Config.Mgmt {
+		return rt, nil
+	}
+	binder, ok := rt.(clabruntime.MgmtNetBinder)
+	if !ok {
+		return nil, fmt.Errorf(
+			"runtime %q does not support multiple management networks", runtimeName,
+		)
+	}
+	// network state lives in the shared *MgmtNet, so a fresh copy is equivalent
+	return binder.ForMgmtNet(m), nil
+}
+
+// allMgmtNetworks returns every defined management network.
+func (c *CLab) allMgmtNetworks() clabtypes.MgmtNetworks {
+	if len(c.Config.MgmtNetworks) == 0 {
+		return clabtypes.MgmtNetworks{c.Config.Mgmt}
+	}
+	return c.Config.MgmtNetworks
+}
+
+// tailscaleMgmtNet returns the management network carrying the tailscale configuration.
+func (c *CLab) tailscaleMgmtNet() *clabtypes.MgmtNet {
+	if c.Config == nil || c.Config.Mgmt == nil {
+		return nil
+	}
+	for _, m := range c.allMgmtNetworks() {
+		if m.Tailscale != nil {
+			return m
+		}
+	}
 	return nil
 }
 
@@ -398,6 +627,18 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			}
 
 			if !skipPostDeploy {
+				if err = c.SyncMgmtHostRoutes(ctx); err != nil {
+					err = fmt.Errorf(
+						"node %q post-deploy: synchronize management host routes: %w",
+						node.Config().ShortName,
+						err,
+					)
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
+				}
+
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
 					err = fmt.Errorf("node %q post-deploy: %w", node.Config().ShortName, err)
@@ -420,7 +661,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				if ctx.Err() != nil {
 					return
 				}
-				// if there is a dependecy on the healthy state of this node, enter the
+				// if there is a dependency on the healthy state of this node, enter the
 				// checking procedure
 				for {
 					healthy, err := node.IsHealthy(ctx)

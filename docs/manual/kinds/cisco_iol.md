@@ -63,7 +63,7 @@ You can use [interfaces names](../topo-def-file.md#interface-naming) in the topo
 
 The interface naming convention is: `Ethernet0/X` (or `e0/X`), where `X` is the port number.
 
-With that naming convention in mind:
+With the default `Ethernet0/0` management interface:
 
 - `e0/1` - First data-plane interface available
 - `e0/2` - Second data-plane interface, and so on...
@@ -85,7 +85,7 @@ The example ports above would be mapped to the following Linux interfaces inside
 
 When containerlab launches -{{ kind_display_name }}-, the `Ethernet0/0` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. The `Ethernet0/0` interface is in it's own management VRF so that configuration in the global context will not affect the management interface.
 
-Interfaces can be defined in a non-contigous manner in your toplogy file. See the example below.
+Interfaces can be defined in a non-contiguous manner in your topology file. See the example below.
 
 ```yaml
 name: my-iol-lab
@@ -111,7 +111,32 @@ At minimum you will see all numerically-lower indexed interfaces in the CLI comp
 **Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.**
 ///
 
-Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
+### Management interface
+
+By default the containerlab reserves an interface on the router for containerlab management access.
+
+By default and for simplicity, this interface is set to `Ethernet0/0`.
+
+If you intend to use `Ethernet0/0` for links in your topology, the management interface can be changed with the `mgmt-intf` [kind-specific config key](../nodes.md#kind-specific-config).
+
+```yaml
+topology:
+  nodes:
+    iol1:
+      kind: cisco_iol
+      image: ...
+      mgmt-intf: Ethernet3/3
+```
+
+With the example above the management VRF, addressing and default routes move to `Ethernet3/3`. Furthermore links on `Ethernet3/3` are rejected instead of `Ethernet0/0`, and `Ethernet0/0` becomes available to use as a data interface in the `links` section of the topology.
+
+/// note
+Automatic slot allocation requires an IOL image built with [srl-labs/vrnetlab PR #526](https://github.com/srl-labs/vrnetlab/pull/526) or later.
+
+Images built from an older vrnetlab revision are not compatible.
+///
+
+Data interfaces other than the selected management interface need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI. With the default management interface:
 
 ```
 iol#sh ip int br
@@ -147,7 +172,7 @@ Both types of startup configurations are only be applied on the **first boot** o
 
 The full startup configuration is used to fully replace/override the default startup configuration that is applied. This means you must define IP addressing and the SSH server in your configuration to access -{{ kind_short_display_name }}-.
 
-You can use the template variables that are defined in the [default startup confguration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
+You can use the template variables that are defined in the [default startup configuration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
 
 ```yaml
 name: iol_full_startup_cfg
@@ -162,7 +187,7 @@ topology:
 
 The partial startup configuration is appended to the default startup configuration. This is useful to preconfigure certain things like loopback interfaces or IGP, while also taking advantage of the startup configuration that containerlab applies by default for management interface IP addressing and SSH access.
 
-The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`
+The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`. Templating also supported with partial configs.
 
 ```yaml
 name: iol_partial_startup_cfg
@@ -172,6 +197,24 @@ topology:
       kind: cisco_iol
       startup-config: configuration.txt.partial
 ```
+
+#### Custom baseline configuration
+
+The default startup configuration that containerlab applies (management addressing, management VRF, SSH) can be replaced or disabled with the `bootstrap-config` [kind-specific config key](../nodes.md#kind-specific-config), without giving up partial startup configurations. This is useful you need to manage advanced configuration sets for labs or set up custom management:
+
+```yaml
+topology:
+  kinds:
+    cisco_iol:
+      bootstrap-config: my-baseline.cfg # replaces the default startup configuration
+  nodes:
+    r1:
+      startup-config: r1.partial.cfg # layered on top of my-baseline.cfg
+```
+
+The file replaces the [default startup configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl) and is rendered with the same template variables; include `{{ .PartialCfg }}` where partial startup configurations should be inserted. Relative paths are resolved against the topology file directory, the same as `startup-config`.
+
+Setting `bootstrap-config: none` disables the baseline entirely: the node boots with only its partial startup configuration, or with no configuration at all. In that case containerlab also skips the management interface address update on subsequent boots.
 
 #### Link addressing
 
@@ -210,7 +253,7 @@ Containerlab automatically assigns each IOL node process ID which is used to gen
 
 When separate topologies containing IOL nodes are interconnected, duplicate IDs are generated and will result in duplicate MAC addresses.
 
-Set `CLAB_IOL_PID_OFFSET` to add an integer offset to the automatically assigned IDs generated by clab, to ensure unique IDs/MAC addresses are generated:
+Set the `pid-offset` [kind-specific config key](../nodes.md#kind-specific-config) to add an integer offset to the automatically assigned IDs generated by clab, to ensure unique IDs/MAC addresses are generated:
 
 /// tip
 Use a different offset for each interconnected topology so their PIDs do not overlap. 
@@ -222,6 +265,5 @@ See the [Cisco IOL multinode lab example](../../lab-examples/cisco_iol.md#multin
 topology:
   kinds:
     cisco_iol:
-      env:
-        CLAB_IOL_PID_OFFSET: 64
+      pid-offset: 64
 ```

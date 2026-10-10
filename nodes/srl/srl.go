@@ -108,25 +108,39 @@ var (
 		"ixr-h6":     "7220IXRH6.yml",
 		"ixr6":       "7250IXR6.yml",
 		"ixr-6":      "7250IXR6.yml",
-		"ixr6e":      "7250IXR6e.yml",
-		"ixr-6e":     "7250IXR6e.yml",
+		"ixr6e":      "7250IXR6e-gen2cp-qsfpdd.yml",
+		"ixr-6e":     "7250IXR6e-gen2cp-qsfpdd.yml",
 		"ixr10":      "7250IXR10.yml",
 		"ixr-10":     "7250IXR10.yml",
-		"ixr10e":     "7250IXR10e.yml",
-		"ixr-10e":    "7250IXR10e.yml",
-		"ixr18e":     "7250IXR18e.yml",
-		"ixr-18e":    "7250IXR18e.yml",
-		"sxr1x44s":   "7730SXR-1x-44s.yml",
-		"sxr-1x-44s": "7730SXR-1x-44s.yml",
-		"sxr1d32d":   "7730SXR-1d-32d.yml",
-		"sxr-1d-32d": "7730SXR-1d-32d.yml",
-		"sxr-1-32d":  "7730SXR-1-32d.yml",
-		"ixrx1b":     "7250IXRX1b.yml",
-		"ixr-x1b":    "7250IXRX1b.yml",
-		"ixrx3b":     "7250IXRX3b.yml",
-		"ixr-x3b":    "7250IXRX3b.yml",
-		"ixr-x4":     "7250IXRX4-QSFP-DD.yml",
-		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
+		"ixr10e":     "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr-10e":    "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr18e":     "7250IXR18e-qsfpdd.yml",
+		"ixr-18e":    "7250IXR18e-qsfpdd.yml",
+
+		"ixr-6e-gen2cp-qsfpdd":  "7250IXR6e-gen2cp-qsfpdd.yml",
+		"ixr-6e-gen2cp-qsfp28":  "7250IXR6e-gen2cp-qsfp28.yml",
+		"ixr-6e-gen2cp-sync":    "7250IXR6e-gen2cp-sync.yml",
+		"ixr-6e-gen3-qsfpdd":    "7250IXR6e-gen3-qsfpdd.yml",
+		"ixr-6e-gen3-osfp":      "7250IXR6e-gen3-osfp.yml",
+		"ixr-10e-gen2cp-qsfpdd": "7250IXR10e-gen2cp-qsfpdd.yml",
+		"ixr-10e-gen2cp-qsfp28": "7250IXR10e-gen2cp-qsfp28.yml",
+		"ixr-10e-gen2cp-sync":   "7250IXR10e-gen2cp-sync.yml",
+		"ixr-10e-gen3-qsfpdd":   "7250IXR10e-gen3-qsfpdd.yml",
+		"ixr-10e-gen3-osfp":     "7250IXR10e-gen3-osfp.yml",
+		"ixr-18e-qsfpdd":        "7250IXR18e-qsfpdd.yml",
+		"ixr-18e-gen3-sync":     "7250IXR18e-gen3-sync.yml",
+		"ixr-18e-gen3-osfp":     "7250IXR18e-gen3-osfp.yml",
+		"sxr1x44s":              "7730SXR-1x-44s.yml",
+		"sxr-1x-44s":            "7730SXR-1x-44s.yml",
+		"sxr1d32d":              "7730SXR-1d-32d.yml",
+		"sxr-1d-32d":            "7730SXR-1d-32d.yml",
+		"sxr-1-32d":             "7730SXR-1-32d.yml",
+		"ixrx1b":                "7250IXRX1b.yml",
+		"ixr-x1b":               "7250IXRX1b.yml",
+		"ixrx3b":                "7250IXRX3b.yml",
+		"ixr-x3b":               "7250IXRX3b.yml",
+		"ixr-x4":                "7250IXRX4-QSFP-DD.yml",
+		"ixr-x4-d":              "7250IXRX4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -153,6 +167,10 @@ var (
 	InterfaceRegexp = regexp.MustCompile(
 		`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`,
 	)
+	// normalizedInterfaceRegexp validates names after AddEndpoint maps interface aliases.
+	normalizedInterfaceRegexp = regexp.MustCompile(
+		`^(?:e[1-9]\d*-[1-9]\d*(?:-[1-9]\d*)?|` + mgmt0InterfaceName + `)$`,
+	)
 	InterfaceHelp = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
@@ -167,12 +185,36 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformOpts,
-	)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(srl)
 	}, nrea)
 }
+
+// KindSpecificConfig is the nokia_srlinux kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// Components are the line cards of a modular chassis.
+	Components []*Component `json:"components,omitempty" yaml:"components,omitempty"`
+	// CustomPrompt sets the containerlab CLI prompt. Defaults to true.
+	CustomPrompt bool `json:"custom-prompt" yaml:"custom-prompt"`
+	// EDADefaultGRPCServer adds the EDA TLS profile to the default mgmt gRPC server instead of
+	// adding a dedicated eda-mgmt gRPC server.
+	EDADefaultGRPCServer bool `json:"eda-default-grpc-server,omitempty" yaml:"eda-default-grpc-server,omitempty"` //nolint:lll
+}
+
+// SetDefaults implements clabnodes.KindSpecificConfigDefaulter.
+func (c *KindSpecificConfig) SetDefaults() {
+	c.CustomPrompt = true
+}
+
+// Component is an SR Linux line card.
+type Component struct {
+	Slot string `json:"slot,omitempty" yaml:"slot,omitempty"`
+	Type string `json:"type,omitempty" yaml:"type,omitempty"`
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 type srl struct {
 	clabnodes.DefaultNode
@@ -195,6 +237,8 @@ type srl struct {
 func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
+
+func (n *srl) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
 
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
@@ -240,6 +284,17 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
 			n.Cfg.NodeType, strings.Join(keys, ", "))
+	}
+
+	// fail on an unusable components block here rather than midway through the deploy
+	if _, err := resolveSRLTopology(n.Cfg); err != nil {
+		return err
+	}
+
+	if len(n.kindSpecificCfg().Components) > 1 {
+		log.Warn("Multiple line cards are rendered into the SR Linux topology file, but "+
+			"deploying a node with more than one line card is not supported yet",
+			"node", n.Cfg.ShortName, "line cards", len(n.kindSpecificCfg().Components))
 	}
 
 	if n.Cfg.Cmd == "" {
@@ -303,10 +358,16 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	n.topologyName = params.TopologyName
 
 	// platform specific pre-deploy actions
+	// modular chassis boot in the mode required by the line card generation they are populated
+	// with, unless the user pinned the mode explicitly.
 	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
-		// boot 6e/10e in GEN2CP_ONLY mode by default
-		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
-			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		topology, err := resolveSRLTopology(n.Cfg)
+		if err != nil {
+			return err
+		}
+
+		if topology.ChassisMode != "" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = topology.ChassisMode
 		}
 	}
 
@@ -612,31 +673,6 @@ func (n *srl) createSRLFiles() error {
 	return err
 }
 
-func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
-	dst := filepath.Join(cfg.LabDir, "topology.yml")
-
-	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
-	if err != nil {
-		return fmt.Errorf("failed to get srl topology file: %w", err)
-	}
-
-	mac := genMac(cfg)
-
-	log.Debug(mac, dst)
-
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := tpl.Execute(f, mac); err != nil {
-		return err
-	}
-
-	return f.Close()
-}
-
 // srlTemplateData top level data struct.
 type srlTemplateData struct {
 	TLSKey     string
@@ -685,7 +721,7 @@ type tplIFace struct {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
+func (n *srl) addDefaultConfig(ctx context.Context) error {
 	b, err := n.banner()
 	if err != nil {
 		return err
@@ -723,47 +759,8 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	// so that the two MTUs match.
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
-	// prepare the endpoints
-	const ethernetSplitParts = 3
-
-	const ethernetMTUOverhead = 14
-
-	for _, e := range n.Endpoints {
-		ifName := e.GetIfaceName()
-		if ifName == mgmt0InterfaceName {
-			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
-				tplData.MgmtMTU = m
-				tplData.MgmtIPMTU = m - ethernetMTUOverhead
-			}
-
-			continue
-		}
-
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
-
-		iface := tplIFace{}
-
-		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
-		if len(ifNameParts) == ethernetSplitParts {
-			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
-			iface.HasBreakout = true
-		} else {
-			iface.FullName = iface.BaseName
-		}
-
-		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
-			iface.Mtu = m
-		}
-
-		if a := e.GetIPv4Addr(); a.IsValid() {
-			iface.IPv4 = a.String()
-		}
-
-		if a := e.GetIPv6Addr(); a.IsValid() {
-			iface.IPv6 = a.String()
-		}
-
-		tplData.IFaces[ifName] = iface
+	if err := n.populateInterfaceConfig(&tplData); err != nil {
+		return err
 	}
 
 	buf := new(bytes.Buffer)
@@ -806,6 +803,69 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 		execResult.GetStdOutString(),
 		execResult.GetStdErrString(),
 	)
+
+	return nil
+}
+
+// populateInterfaceConfig adds endpoint settings to the default configuration,
+// returning an error for interface names that cannot be mapped to SR Linux interfaces.
+func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) error {
+	const ethernetSplitParts = 3
+
+	const ethernetMTUOverhead = 14
+
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+
+		// Runtime-discovered endpoints bypass topology interface-name validation.
+		if !normalizedInterfaceRegexp.MatchString(ifName) {
+			return fmt.Errorf(
+				"invalid SR Linux interface %q: expected %s or %s",
+				ifName, mgmt0InterfaceName, InterfaceHelp,
+			)
+		}
+
+		// Restored runtime endpoints may have no topology link or configured MTU.
+		mtu := clabconstants.DefaultLinkMTU
+		if link := e.GetLink(); link != nil {
+			mtu = link.GetMTU()
+		}
+
+		if ifName == mgmt0InterfaceName {
+			if mtu != clabconstants.DefaultLinkMTU {
+				tplData.MgmtMTU = mtu
+				tplData.MgmtIPMTU = mtu - ethernetMTUOverhead
+			}
+
+			continue
+		}
+
+		ifNameParts := strings.SplitN(strings.TrimPrefix(ifName, "e"), "-", ethernetSplitParts)
+
+		iface := tplIFace{}
+
+		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
+		if len(ifNameParts) == ethernetSplitParts {
+			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
+			iface.HasBreakout = true
+		} else {
+			iface.FullName = iface.BaseName
+		}
+
+		if mtu != clabconstants.DefaultLinkMTU {
+			iface.Mtu = mtu
+		}
+
+		if a := e.GetIPv4Addr(); a.IsValid() {
+			iface.IPv4 = a.String()
+		}
+
+		if a := e.GetIPv6Addr(); a.IsValid() {
+			iface.IPv6 = a.String()
+		}
+
+		tplData.IFaces[ifName] = iface
+	}
 
 	return nil
 }
@@ -1031,8 +1091,6 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *srl) CheckInterfaceName() error {
-	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
 	err := n.CheckInterfaceOverlap()
@@ -1041,7 +1099,7 @@ func (n *srl) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
+		if !normalizedInterfaceRegexp.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf(
 				"nokia sr linux interface name %q doesn't match the required pattern: %s",
 				e.GetIfaceName(),

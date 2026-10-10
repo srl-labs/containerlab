@@ -44,6 +44,10 @@ Apply adds links to SR-SIM nodes and connectivity succeeds
 Stopping the SR-SIM nodes breaks connectivity
     Stop Node    R1
     Stop Node    R2
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{.State.Running}}' clab-${lab-name}-R1 clab-${lab-name}-R2-a clab-${lab-name}-R2-1
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    false\nfalse\nfalse
     Client Cannot Ping    10.0.1.2
     Client Cannot Ping    10.0.2.2
 
@@ -62,11 +66,47 @@ Apply adds a components-based SR-SIM node that boots with its cards up
     Should Contain    ${output}    R3
     # node boots and is reachable over SSH
     Wait Until Keyword Succeeds    ${boot-timeout}    ${retry-interval}    SR-SIM SSH Reachable    R3
-    # both components (CPM slot A and line card slot 1) report up
+    # CPM, IOM and configured MDA all report up
     Wait Until Keyword Succeeds    ${boot-timeout}    ${retry-interval}    SR-SIM Cards Up    R3
 
+Apply recreates a running distributed node and restores its links
+    ${rc}    ${cpm} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{.Id}}' clab-${lab-name}-R2-a
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${peer} =    Run And Return Rc And Output
+    ...    docker exec clab-${lab-name}-client cat /sys/class/net/eth2/ifindex
+    Should Be Equal As Integers    ${rc}    0
+    Set Suite Variable    ${client-peer-index}    ${peer}
+    ${rc}    ${output} =    Apply    11-srsim-apply.vars.recreate.yml
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Restored link
+    ${rc}    ${replacement} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{.Id}}' clab-${lab-name}-R2-a
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Be Equal As Strings    ${cpm}    ${replacement}
+    Verify Distributed Links Recovered
+
+Apply removes a distributed node
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{.State.Running}}' clab-${lab-name}-R3-a clab-${lab-name}-R3-1
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    true\ntrue
+    ${rc}    ${output} =    Apply    ${linked-vars}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker ps -a --filter name=clab-${lab-name}-R3 --format '{{.Names}}'
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Empty    ${output}
 
 *** Keywords ***
+Verify Distributed Links Recovered
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Client Can Ping    10.0.2.2
+    ${rc}    ${peer} =    Run And Return Rc And Output
+    ...    docker exec clab-${lab-name}-client cat /sys/class/net/eth2/ifindex
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${peer}    ${client-peer-index}
+
 Apply
     [Arguments]    ${vars_file}
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -83,8 +123,12 @@ Stop Node
 
 Configure Client Interface
     [Arguments]    ${interface}    ${address}
-    Run    ${runtime} exec clab-${lab-name}-client ip link set dev ${interface} up
-    Run    ${runtime} exec clab-${lab-name}-client ip addr add ${address} dev ${interface}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-client ip link set dev ${interface} up
+    Should Be Equal As Integers    ${rc}    0    ${output}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-client ip addr add ${address} dev ${interface}
+    Should Be Equal As Integers    ${rc}    0    ${output}
 
 Client Can Ping
     [Arguments]    ${destination}
@@ -99,7 +143,8 @@ Client Cannot Ping
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime} exec clab-${lab-name}-client ping -c2 -W2 ${destination}
     Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${rc}    1
+    Should Match Regexp    ${output}    2 packets transmitted, 0 (packets )?received,.*100% packet loss
 
 SR-SIM SSH Reachable
     [Arguments]    ${node}
@@ -114,7 +159,7 @@ SR-SIM SSH Reachable
 SR-SIM Cards Up
     [Arguments]    ${node}
     # 'show card state' for an sr-1-24d lists slot 1 (IOM), 1/1 (MDA) and A (CPM),
-    # each with "<admin> <oper>" states. Assert both components are operationally up.
+    # each with "<admin> <oper>" states. Assert all three are operationally up.
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    echo "show card state" | sshpass -p 'NokiaSros1!' ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@clab-${lab-name}-${node}
     Log    ${output}
@@ -123,6 +168,15 @@ SR-SIM Cards Up
     Should Match Regexp    ${output}    (?m)^A\\s+\\S+\\s+up\\s+up
     # IOM (slot 1): "1   i24-...   up   up"
     Should Match Regexp    ${output}    (?m)^1\\s+\\S+\\s+up\\s+up
+    # MDA (slot 1/1) must finish booting too.
+    Should Match Regexp    ${output}    (?m)^1/1\\s+\\S+\\s+up\\s+up
 
 Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --vars ${CURDIR}/${linked-with-node-vars} --cleanup
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --vars ${CURDIR}/${linked-with-node-vars} --cleanup
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} ps -a --filter label=containerlab=${lab-name} --format '{{.Names}}'
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Empty    ${output}

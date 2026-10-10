@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -103,6 +105,18 @@ func (p *applyPlan) isRootNamespaceNode(nodeName string) bool {
 
 func (p *applyPlan) isNonContainerNode(nodeName string) bool {
 	return p.isExternallyManaged(nodeName) || p.isRootNamespaceNode(nodeName)
+}
+
+// isNewNonContainerNode reports whether a non-container node (bridge, host,
+// ext-container) is absent from the previously deployed topology. Such nodes
+// exist outside the lab, so they are always listed as current nodes, even
+// when the topology has just added them.
+func (p *applyPlan) isNewNonContainerNode(nodeName string) bool {
+	if !p.isNonContainerNode(nodeName) || p.state == nil || p.state.Topology == nil {
+		return false
+	}
+	_, exists := p.state.Topology.Nodes[nodeName]
+	return !exists
 }
 
 // networkModeContainerTarget returns the referenced node name for a
@@ -210,6 +224,11 @@ func (c *CLab) planApply(
 			}
 
 			plan.addedNodeSet[nodeName] = struct{}{}
+			continue
+		}
+
+		if plan.isNewNonContainerNode(nodeName) {
+			plan.addedNodeSet[nodeName] = struct{}{}
 		}
 	}
 
@@ -270,6 +289,7 @@ func (c *CLab) planApply(
 	// Link reconciliation can request additional recreations. Propagate namespace
 	// dependencies only after those decisions, then park every affected live node.
 	c.planNetworkModeCascade(plan)
+	c.planTailscaleSidecarRecreates(plan)
 	c.planParkedNodes(ctx, plan)
 	c.planRecreatedNodeLinks(plan)
 	for nodeName := range plan.recreatedNodeSet {
@@ -707,6 +727,12 @@ func (c *CLab) resolveNodeConfigFromTopology(
 	if topo == nil {
 		return nil
 	}
+	if topo.GetNodeKind(nodeName) == clabnodestailscale.KindName &&
+		topo.GetNodeLabels(nodeName)[clabconstants.InternalNode] == "true" {
+		topo = &clabtypes.Topology{Nodes: map[string]*clabtypes.NodeDefinition{
+			nodeName: topo.Nodes[nodeName],
+		}}
+	}
 
 	binds, _ := topo.GetNodeBinds(nodeName)
 	portSet, _, _ := topo.GetNodePorts(nodeName)
@@ -716,7 +742,7 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		c.privilegedByDefault(strings.ToLower(kind)),
 	)
 
-	return &clabtypes.NodeConfig{
+	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:    nodeName,
 		Hostname:     topo.GetNodeHostname(nodeName),
 		Kind:         kind,
@@ -739,13 +765,23 @@ func (c *CLab) resolveNodeConfigFromTopology(
 		PortSet:      portSet,
 		User:         topo.GetNodeUser(nodeName),
 		NetworkMode:  topo.GetNodeNetworkMode(nodeName),
+		MgmtNet:      topo.GetNodeMgmtNet(nodeName),
 		Runtime:      topo.GetNodeRuntime(nodeName),
 		CPU:          topo.GetNodeCPU(nodeName),
 		CPUSet:       topo.GetNodeCPUSet(nodeName),
 		Memory:       topo.GetNodeMemory(nodeName),
 		License:      topo.GetNodeLicense(nodeName),
-		Components:   topo.GetComponents(nodeName),
 	}
+
+	kindSpecificConfig, err := c.decodeKindSpecificConfig(topo, nodeName, strings.ToLower(kind))
+	if err != nil {
+		// A state file can hold keys a later release rejects; such a node counts as changed.
+		kindSpecificConfig = clabnodes.InvalidKindSpecificConfig{Err: err.Error()}
+	}
+
+	nodeCfg.KindSpecificConfig = kindSpecificConfig
+
+	return nodeCfg
 }
 
 func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) error {

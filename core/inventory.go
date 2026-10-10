@@ -14,6 +14,8 @@ import (
 	"text/template"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	clabnodesvr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -100,6 +102,10 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
+		if isInternalNode(n) {
+			continue
+		}
+
 		cfg := n.Config()
 		ansibleGroup := ansibleInventoryGroup(cfg)
 
@@ -155,8 +161,15 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 func ansibleInventoryGroup(cfg *clabtypes.NodeConfig) string {
 	ansibleGroup := cfg.Kind
-	if strings.EqualFold(cfg.Env["CLAB_SROS_CONFIG_MODE"], "classic") {
-		ansibleGroup = "nokia_srsim_classic"
+	switch kc := cfg.KindSpecificConfig.(type) {
+	case *clabnodessros.KindSpecificConfig:
+		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
+			ansibleGroup = "nokia_srsim_classic"
+		}
+	case *clabnodesvr_sros.KindSpecificConfig:
+		if kc.ConfigMode == clabnodessros.ConfigModeClassic {
+			ansibleGroup = "nokia_srsim_classic"
+		}
 	}
 	return ansibleGroup
 }
@@ -327,6 +340,10 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 	platformNameSchema := os.Getenv(clabconstants.ClabEnvNornirPlatformNameSchema)
 
 	for _, n := range c.Nodes {
+		if isInternalNode(n) {
+			continue
+		}
+
 		cfg := n.Config()
 		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
 		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||

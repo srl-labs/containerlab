@@ -11,7 +11,7 @@ tags:
 
 <section class="clab-hero" markdown>
 <div class="clab-hero__content" markdown>
-<p align=center><a href="https://containerlab.dev"><img src=images/containerlab_export_white_ink.svg?sanitize=true/></a></p>
+<p align=center><a href="https://containerlab.dev"><img src="images/containerlab-animated-wordmark.svg" alt="Containerlab"/></a></p>
 
 <p class="clab-badges" markdown>
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)

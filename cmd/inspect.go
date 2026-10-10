@@ -165,6 +165,10 @@ func listContainers(
 	c *clabcore.CLab,
 	o *Options,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.ListLabRuntimeContainers(ctx, o.Destroy.All)
+	}
+
 	var containers []clabruntime.GenericContainer
 
 	var err error
@@ -189,6 +193,13 @@ func listContainers(
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
 		}
+	}
+
+	// hide internal containers (ie. SR-SIM netns holder) only for non-all inspect.
+	if !o.Destroy.All {
+		containers = slices.DeleteFunc(containers, func(c clabruntime.GenericContainer) bool {
+			return c.Labels[clabconstants.InternalNode] == "true"
+		})
 	}
 
 	return containers, nil
@@ -247,6 +258,9 @@ func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWr
 func getShortestTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
+	}
+	if strings.Contains(p, "://") {
+		return p, nil
 	}
 
 	// get topo file path relative of the cwd
@@ -428,6 +442,9 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 
 	// Gather summary details of each container
 	for idx := range containers {
+		if !o.Destroy.All && containers[idx].Labels[clabconstants.InternalNode] == "true" {
+			continue
+		}
 		absPath := containers[idx].Labels[clabconstants.TopoFile]
 
 		shortPath, err := getShortestTopologyPath(absPath)

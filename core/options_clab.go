@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -78,10 +79,24 @@ func WithSkippedBindsPathsCheck() ClabOption {
 	}
 }
 
+// checkMgmtOverride rejects management network flags for topologies with several networks,
+// since a flag cannot tell which network it applies to.
+func (c *CLab) checkMgmtOverride() error {
+	if len(c.Config.MgmtNetworks) > 1 {
+		return errors.New(
+			"management network flags cannot be used with multiple management networks",
+		)
+	}
+	return nil
+}
+
 // WithManagementNetworkName sets the name of the
 // management network that is to be used.
 func WithManagementNetworkName(n string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.Network = n
 		c.managementNetworkOverridden = true
 
@@ -93,6 +108,9 @@ func WithManagementNetworkName(n string) ClabOption {
 // that will be used for the mgmt network.
 func WithManagementIpv4Subnet(s string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.IPv4Subnet = s
 		c.managementNetworkOverridden = true
 
@@ -104,6 +122,9 @@ func WithManagementIpv4Subnet(s string) ClabOption {
 // that will be used for the mgmt network.
 func WithManagementIpv6Subnet(s string) ClabOption {
 	return func(c *CLab) error {
+		if err := c.checkMgmtOverride(); err != nil {
+			return err
+		}
 		c.Config.Mgmt.IPv6Subnet = s
 		c.managementNetworkOverridden = true
 
@@ -132,11 +153,28 @@ func WithDebug(debug bool) ClabOption {
 // WithRuntime option sets a container runtime to be used by containerlab.
 func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
+		name = resolveRuntimeName(name)
+
+		if clablabruntime.IsLabRuntimeName(name) {
+			c.globalRuntimeName = name
+
+			lr, err := clablabruntime.Init(name, clablabruntime.Config{
+				Timeout:   runtimeTimeout(rtconfig),
+				Namespace: labRuntimeNamespace(rtconfig),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to init the lab runtime: %w", err)
+			}
+
+			c.LabRuntime = lr
+
+			return nil
+		}
+
 		name, rInit, err := RuntimeInitializer(name)
 		if err != nil {
 			return err
 		}
-
 		c.globalRuntimeName = name
 
 		r := rInit()
@@ -159,9 +197,37 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	}
 }
 
+func labRuntimeNamespace(config *clabruntime.RuntimeConfig) string {
+	if config == nil {
+		return ""
+	}
+
+	return config.LabNamespace
+}
+
+func runtimeTimeout(rtconfig *clabruntime.RuntimeConfig) time.Duration {
+	if rtconfig == nil {
+		return 0
+	}
+
+	return rtconfig.Timeout
+}
+
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) error {
-		c.globalRuntime().WithKeepMgmtNet()
+		if c.LabRuntime != nil {
+			log.Debug("Ignoring keep management network option for lab runtime",
+				"runtime", c.globalRuntimeName)
+
+			return nil
+		}
+
+		r := c.globalRuntime()
+		if r == nil {
+			return fmt.Errorf("container runtime %q is not initialized", c.globalRuntimeName)
+		}
+
+		r.WithKeepMgmtNet()
 
 		return nil
 	}

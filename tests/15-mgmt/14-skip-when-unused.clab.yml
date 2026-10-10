@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmtskip
+
+mgmt:
+  - network: clab-mgmtskip-main
+    ipv4-subnet: 198.18.116.0/24
+  - network: clab-mgmtskip-oob
+    ipv4-subnet: 198.18.117.0/24
+    skip-when-unused: true
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    r1:
+      mgmt-net: clab-mgmtskip-main
+    r2:
+      mgmt-net: clab-mgmtskip-oob
+      network-mode: none

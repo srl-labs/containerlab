@@ -123,7 +123,7 @@ While you can pre-pull the Nokia SR Linux image, containerlab will do it for you
 sudo containerlab deploy # (1)!
 ```
 
-1. `deploy` command will automatically lookup a file matching the `*.clab.y*ml` patter to select it.  
+1. `deploy` command will automatically lookup a file matching the `*.clab.y*ml` pattern to select it.  
   If you have several files and want to pick a specific one, use `--topo <path>` flag.
 
 In no time you will see the summary table with the deployed lab nodes.  

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -233,6 +234,13 @@ func (t *Topology) GetKind(kind string) *NodeDefinition {
 		return kdef
 	}
 
+	// kind names are case-insensitive, an exact match takes precedence
+	for _, name := range slices.Sorted(maps.Keys(t.Kinds)) {
+		if strings.EqualFold(name, kind) {
+			return t.Kinds[name]
+		}
+	}
+
 	return new(NodeDefinition)
 }
 
@@ -343,8 +351,8 @@ func (t *Topology) GetNodeType(nodeName string) string {
 	return defaultType
 }
 
-func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
-	ports := getField(
+func (t *Topology) nodePortSpecs(nodeName string) []string {
+	return getField(
 		t,
 		nodeName,
 		func(node *NodeDefinition) []string { return node.Ports },
@@ -353,12 +361,27 @@ func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, erro
 		func(defaults *NodeDefinition) []string { return defaults.Ports },
 		func(v []string) bool { return len(v) > 0 },
 	)
+}
 
-	if ports != nil {
-		return nat.ParsePortSpecs(ports)
+func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
+	ports, bindings, _, err := t.GetNodePortMappings(nodeName)
+	return ports, bindings, err
+}
+
+// GetNodePortMappings parses the node's Docker and Tailscale port mappings together.
+func (t *Topology) GetNodePortMappings(
+	nodeName string,
+) (nat.PortSet, nat.PortMap, []TailscalePort, error) {
+	docker, ts, err := SplitDockerAndTailscalePorts(t.nodePortSpecs(nodeName))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if len(docker) > 0 {
+		ports, bindings, err := nat.ParsePortSpecs(docker)
+		return ports, bindings, ts, err
 	}
 
-	return nil, nil, nil
+	return nil, nil, ts, nil
 }
 
 func (t *Topology) GetNodeEnv(nodeName string) map[string]string {
@@ -499,18 +522,6 @@ func (t *Topology) GetNodeShmSize(nodeName string) string {
 		func(kind *NodeDefinition) string { return kind.ShmSize },
 		func(defaults *NodeDefinition) string { return defaults.ShmSize },
 		func(v string) bool { return v != "" },
-	)
-}
-
-func (t *Topology) GetComponents(nodeName string) []*Component {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) []*Component { return node.Components },
-		func(group *NodeDefinition) []*Component { return group.Components },
-		func(kind *NodeDefinition) []*Component { return kind.Components },
-		func(defaults *NodeDefinition) []*Component { return defaults.Components },
-		func(v []*Component) bool { return v != nil },
 	)
 }
 
@@ -706,6 +717,18 @@ func (t *Topology) GetNodeNetworkMode(nodeName string) string {
 		func(group *NodeDefinition) string { return group.NetworkMode },
 		func(kind *NodeDefinition) string { return kind.NetworkMode },
 		func(defaults *NodeDefinition) string { return defaults.NetworkMode },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeMgmtNet(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.MgmtNet },
+		func(group *NodeDefinition) string { return group.MgmtNet },
+		func(kind *NodeDefinition) string { return kind.MgmtNet },
+		func(defaults *NodeDefinition) string { return defaults.MgmtNet },
 		func(v string) bool { return v != "" },
 	)
 }
@@ -1140,4 +1163,78 @@ const (
 func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialTopologySource {
 	_, _, src := t.resolveTopologyCredentials(nodeName)
 	return src
+}
+
+// GetComponents returns the node's raw components kind-specific config value, or nil when unset.
+//
+// Deprecated: components are kind-specific config; use GetNodeKindSpecificConfig. Kept for
+// clabernetes, which
+// transcodes the value into its own component type.
+func (t *Topology) GetComponents(nodeName string) any {
+	for _, e := range t.GetNodeKindSpecificConfig(nodeName) {
+		if e.Key == "components" {
+			return e.Value
+		}
+	}
+
+	return nil
+}
+
+// KindSpecificConfigEntry is a raw kind-specific config key of a node with the topology block it
+// came from.
+type KindSpecificConfigEntry struct {
+	Key   string
+	Value any
+	// From is the block that set the key: nodes.<name>, groups.<name>, kinds.<name> or defaults.
+	From string
+}
+
+// GetNodeKindSpecificConfig returns the node's raw kind-specific config keys merged with precedence
+// node > group > kind > defaults, sorted by key. The first block that sets a key provides its
+// whole value. Nodes absent from the topology have no kind-specific config.
+func (t *Topology) GetNodeKindSpecificConfig(nodeName string) []KindSpecificConfigEntry {
+	nodeDef, ok := t.Nodes[nodeName]
+	if !ok {
+		return nil
+	}
+
+	group := t.GetNodeGroup(nodeName)
+	kind := t.GetNodeKind(nodeName)
+
+	blocks := []struct {
+		from string
+		def  *NodeDefinition
+	}{
+		{"nodes." + nodeName, nodeDef},
+		{"groups." + group, t.GetGroup(group)},
+		{"kinds." + kind, t.GetKind(kind)},
+		{"defaults", t.GetDefaults()},
+	}
+
+	var entries []KindSpecificConfigEntry
+
+	seen := map[string]bool{}
+
+	for _, b := range blocks {
+		if b.def == nil {
+			continue
+		}
+
+		for k, v := range b.def.KindSpecificConfig {
+			if seen[k] {
+				continue
+			}
+
+			seen[k] = true
+
+			entries = append(entries, KindSpecificConfigEntry{Key: k, Value: v, From: b.from})
+		}
+	}
+
+	slices.SortFunc(
+		entries,
+		func(a, b KindSpecificConfigEntry) int { return strings.Compare(a.Key, b.Key) },
+	)
+
+	return entries
 }

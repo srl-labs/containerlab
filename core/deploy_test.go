@@ -21,6 +21,7 @@ import (
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -188,59 +189,71 @@ func TestWaitForApplyNetworkModeTargetExternalTargetDelegates(t *testing.T) {
 func TestDeployNodesWaitsForNetworkModeTargetWithSingleWorker(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	target := clabmocksmocknodes.NewMockNode(ctrl)
-	sidecar := clabmocksmocknodes.NewMockNode(ctrl)
-	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	for _, tc := range []struct {
+		name        string
+		networkMode string
+		labels      map[string]string
+	}{
+		{name: "shared namespace", networkMode: "container:target"},
+		{name: "Tailscale", labels: map[string]string{clabnodestailscale.ParentLabel: "target"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			target := clabmocksmocknodes.NewMockNode(ctrl)
+			sidecar := clabmocksmocknodes.NewMockNode(ctrl)
+			mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 
-	var targetDeployed atomic.Bool
+			var targetDeployed atomic.Bool
 
-	target.EXPECT().Config().Return(&clabtypes.NodeConfig{
-		ShortName: "target",
-		LongName:  "clab-lab-target",
-	}).AnyTimes()
-	target.EXPECT().GetShortName().Return("target").AnyTimes()
-	target.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
-	target.EXPECT().Deploy(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(context.Context, *clabnodes.DeployParams) error {
-			targetDeployed.Store(true)
-			return nil
-		},
-	)
-	target.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+			target.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				ShortName: "target",
+				LongName:  "clab-lab-target",
+			}).AnyTimes()
+			target.EXPECT().GetShortName().Return("target").AnyTimes()
+			target.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).Return(nil)
+			target.EXPECT().Deploy(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(context.Context, *clabnodes.DeployParams) error {
+					targetDeployed.Store(true)
+					return nil
+				},
+			)
+			target.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
 
-	sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
-		ShortName:   "sidecar",
-		NetworkMode: "container:target",
-	}).AnyTimes()
-	sidecar.EXPECT().GetShortName().Return("sidecar").AnyTimes()
-	sidecar.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(context.Context, *clabnodes.PreDeployParams) error {
-			if !targetDeployed.Load() {
-				t.Error("sidecar was deployed before its network-mode target")
+			sidecar.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				ShortName:   "sidecar",
+				NetworkMode: tc.networkMode,
+				Labels:      tc.labels,
+			}).AnyTimes()
+			sidecar.EXPECT().GetShortName().Return("sidecar").AnyTimes()
+			sidecar.EXPECT().PreDeploy(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(context.Context, *clabnodes.PreDeployParams) error {
+					if !targetDeployed.Load() {
+						t.Error("sidecar was deployed before its network-mode target")
+					}
+					return nil
+				},
+			)
+			sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
+			sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
+
+			c := &CLab{
+				Config: &Config{Name: "lab"},
+				Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
+				Runtimes: map[string]clabruntime.ContainerRuntime{
+					clabruntimedocker.RuntimeName: mockRuntime,
+				},
+				globalRuntimeName: clabruntimedocker.RuntimeName,
 			}
-			return nil
-		},
-	)
-	sidecar.EXPECT().Deploy(gomock.Any(), gomock.Any()).Return(nil)
-	sidecar.EXPECT().UpdateConfigWithRuntimeInfo(gomock.Any()).Return(nil)
 
-	c := &CLab{
-		Config: &Config{Name: "lab"},
-		Nodes:  map[string]clabnodes.Node{"target": target, "sidecar": sidecar},
-		Runtimes: map[string]clabruntime.ContainerRuntime{
-			clabruntimedocker.RuntimeName: mockRuntime,
-		},
-		globalRuntimeName: clabruntimedocker.RuntimeName,
-	}
-
-	// The dependent is listed before its target on purpose, with exactly
-	// one worker, so a naive in-worker wait would deadlock here.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
-	if err != nil {
-		t.Fatal(err)
+			// The dependent is listed before its target on purpose, with exactly
+			// one worker, so a naive in-worker wait would deadlock here.
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			err := c.DeployNodes(ctx, []string{"sidecar", "target"}, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

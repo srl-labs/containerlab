@@ -5,6 +5,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -70,6 +71,30 @@ type MgmtNet struct {
 	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
+
+	Driver MgmtDriver `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	IPAM MgmtIPAM `json:"ipam,omitempty" yaml:"ipam,omitempty"`
+
+	// Macvlan specific options.
+	MacvlanParent string           `json:"macvlan-parent,omitempty" yaml:"macvlan-parent,omitempty"`
+	MacvlanMode   string           `json:"macvlan-mode,omitempty" yaml:"macvlan-mode,omitempty"`
+	MacvlanAux    *bool            `json:"macvlan-aux,omitempty" yaml:"macvlan-aux,omitempty"`
+	Tailscale     *TailscaleConfig `json:"tailscale,omitempty" yaml:"tailscale,omitempty"`
+}
+
+type TailscaleConfig struct {
+	AuthKey  string `json:"-" yaml:"auth-key,omitempty"`
+	AuthMode string `json:"auth-mode,omitempty" yaml:"auth-mode,omitempty"`
+}
+
+func (t *TailscaleConfig) Proxy() bool {
+	return t != nil && strings.EqualFold(strings.TrimSpace(t.AuthMode), "sso")
+}
+
+type TailscalePort struct {
+	Listen uint16
+	Dest   uint16
 }
 
 // Interface compliance.
@@ -116,6 +141,50 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
+}
+
+type MgmtNetworks []*MgmtNet
+
+// UnmarshalYAML decodes a single mapping or a sequence of management networks.
+func (m *MgmtNetworks) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	if _, isList := raw.([]any); isList {
+		var list []*MgmtNet
+		if err := unmarshal(&list); err != nil {
+			return err
+		}
+		*m = list
+		return nil
+	}
+
+	single := new(MgmtNet)
+	if err := unmarshal(single); err != nil {
+		return err
+	}
+	*m = MgmtNetworks{single}
+
+	return nil
+}
+
+// MarshalYAML encodes a single network as a mapping and several networks as a sequence.
+func (m MgmtNetworks) MarshalYAML() (any, error) {
+	if len(m) == 1 {
+		return m[0], nil
+	}
+	return []*MgmtNet(m), nil
+}
+
+// MarshalJSON encodes a single network as an object and several networks as an array,
+// matching the topology file form.
+func (m MgmtNetworks) MarshalJSON() ([]byte, error) {
+	if len(m) == 1 {
+		return json.Marshal(m[0])
+	}
+	return json.Marshal([]*MgmtNet(m))
 }
 
 // NodeConfig contains information of a container element.
@@ -192,6 +261,8 @@ type NodeConfig struct {
 	ResultingPortBindings []*GenericPortBinding `json:"port-bindings,omitempty"`
 	// PortSet define the ports that should be exposed on a container
 	PortSet nat.PortSet `json:"portset,omitempty"`
+	// TailscalePorts are Serve mappings taken from ports: entries with a /ts suffix.
+	TailscalePorts []TailscalePort `json:"-"`
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
@@ -243,7 +314,10 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
-	Components          []*Component
+	// KindSpecificConfig is the kind-specific config, decoded from the topology into the kind's
+	// registered config type (see nodes.KindSpecificConfigSpec). Nil for kinds without a
+	// kind-specific config.
+	KindSpecificConfig any `json:"kind-specific-config,omitempty"`
 }
 
 // GetHostname returns the configured runtime hostname or the topology node name.
@@ -253,6 +327,17 @@ func (n *NodeConfig) GetHostname() string {
 	}
 
 	return n.ShortName
+}
+
+// whether a node should participate in IPAM or not.
+func (n *NodeConfig) ManagementIPAMEligible() bool {
+	if n.IsRootNamespaceBased || n.SkipUniquenessCheck {
+		return false
+	}
+	if n.NetworkMode == "host" || n.NetworkMode == "none" {
+		return false
+	}
+	return !strings.HasPrefix(n.NetworkMode, "container:")
 }
 
 type GenericFilter struct {
@@ -489,4 +574,22 @@ type ImpairmentData struct {
 	PacketLoss float64 `json:"packet_loss"`
 	Rate       int     `json:"rate"`
 	Corruption float64 `json:"corruption"`
+}
+
+// MgmtDriver selects the management network implementation.
+type MgmtDriver string
+
+const (
+	MgmtDriverBridge  MgmtDriver = "bridge"
+	MgmtDriverMacvlan MgmtDriver = "macvlan"
+
+	MacvlanModeBridge   = "bridge"
+	MacvlanModePrivate  = "private"
+	MacvlanModeVEPA     = "vepa"
+	MacvlanModePassthru = "passthru"
+)
+
+// IsValid reports whether the driver is supported.
+func (d MgmtDriver) IsValid() bool {
+	return d == "" || d == MgmtDriverBridge || d == MgmtDriverMacvlan
 }

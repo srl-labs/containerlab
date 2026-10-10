@@ -8,7 +8,7 @@ topology:
       kind: linux
       image: alpine:latest
       exec:
-        - "ip address add dev br01 192.168.0.1/24"
+        - ash -c "until ip link show br01 >/dev/null 2>&1; do sleep 0.2; done; ip address add dev br01 192.168.0.1/24"
     c1:
       kind: linux
       image: alpine:latest

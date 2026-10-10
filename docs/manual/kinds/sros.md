@@ -303,12 +303,12 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
+      sfm: m-sfm6-7/12 # maps to NOKIA_SROS_SFM
       components:
-        - slot: A # containers will be attached to this Linux NS
+        - slot: A
         - slot: B
         - slot: 1
           type: iom5-e # maps to NOKIA_SROS_CARD
-          sfm: m-sfm6-7/12 # maps to NOKIA_SROS_SFM
           mda:
             - slot: 1
               type: me6-100gb-qsfp28 # maps to NOKIA_SROS_MDA_1
@@ -316,7 +316,6 @@ topology:
               type: me3-400gb-qsfpdd # maps to NOKIA_SROS_MDA_2
         - slot: 2
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 2
               type: me6-100gb-qsfp28
@@ -335,12 +334,11 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-2s
+      sfm: sfm-2s # maps to NOKIA_SROS_SFM
       components:
-        - slot: A # containers will be attached to this Linux NS
-          sfm: sfm-2s
+        - slot: A
         - slot: 1
           type: xcm-2s # maps to NOKIA_SROS_CARD
-          sfm: sfm-2s # maps to NOKIA_SROS_SFM
           xiom:
             - slot: 1 # XIOM slot x1
               type: iom-s-3.0t # maps to NOKIA_SROS_XIOM_X1 env var
@@ -386,10 +384,10 @@ topology:
 
 When a distributed SR-SIM node is defined using `components`, we need to take into account the following:
 
-1. The component order gets sorted[^5] upon deployment of the lab. Individual containers will be attached to the namespace of the 1st element in the sorted `components` list: CPM-1 in the above examples.
+1. Component containers are attached to an internal namespace pause container.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
-4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
+4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom` and `mda` fields.
 
 ##### Configuration for components
 
@@ -397,16 +395,15 @@ When using the `components` structure in the node definition for a distributed n
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
-You can disable this config generation behavior by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the node, or on the base node for a distributed chassis.
+You can disable this config generation behavior by setting the `gen-component-config: false` [kind-specific config key](../nodes.md#kind-specific-config) on the node, or on the base node for a distributed chassis.
 
-```yaml hl_lines="6-7"
+```yaml hl_lines="6"
 topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
-      env:
-        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "xyz"
+      gen-component-config: false
       components:
         - slot: A
         - slot: B
@@ -428,12 +425,12 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       type: sr-7
+      sfm: m-sfm6-7/12
       components:
         - slot: A
         - slot: B
         - slot: 1
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 1
               type: me6-100gb-qsfp28
@@ -441,7 +438,6 @@ topology:
               type: me3-400gb-qsfpdd
         - slot: 2
           type: iom5-e
-          sfm: m-sfm6-7/12
           mda:
             - slot: 2
               type: me6-100gb-qsfp28
@@ -663,16 +659,15 @@ configure {
 /// details | Start SR OS with Classic Management
     type: tip
 
-To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `CLAB_SROS_CONFIG_MODE` environment variable. When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
+To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `config-mode` [kind-specific config key](../nodes.md#kind-specific-config). When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
 
-```yaml hl_lines="6-7"
+```yaml hl_lines="6"
 topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
       startup-config: myconfig.partial.txt
-      env:
-        CLAB_SROS_CONFIG_MODE: classic
+      config-mode: classic
 ```
 
 ///
@@ -896,7 +891,6 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^2]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
 [^3]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
 [^4]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
-[^5]: The sort order has numeric defined slots come first, in order of lowest value to highest, and then alphabetically named slots (CPM) come last. See the [sorting test](https://github.com/srl-labs/containerlab/pull/2834/files#diff-ae18606243948313f0fc2df17b8a4eefd16cfcbccfe15219a1ca649712494c6eR16-R24) for more info.
 [^6]: Power configuration is only applied for sr-1s, 1se, 2s, 2se, 7s and 14s nodes. See [sros.go](https://github.com/srl-labs/containerlab/pull/2827/files#diff-ae71218e629cf2763a2702c67297cb2ade467276acff8f39973caf1a09731d94R142-R175) for more info.
 [^7]: Full startup configs and classic/mixed configuration mode do not receive generated component configuration. In those cases users must provision cards, MDAs and power supplies manually when required.
 [^8]: `~` is the home directory of the user that runs containerlab.

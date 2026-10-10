@@ -1,0 +1,130 @@
+# this workflow builds containerlab binaries for a pull request on demand
+# and posts a comment with the download links.
+# it exists for fork PRs, for which the automatic binaries comment in cicd.yml
+# is skipped since fork pull_request events get a read-only token that cannot comment.
+# usage: maintainers comment `/build-binaries` on a PR.
+name: build-binaries
+
+"on":
+  issue_comment:
+    types: [created]
+
+jobs:
+  authorize:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/build-binaries')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    outputs:
+      authorized: ${{ steps.authorize.outputs.authorized }}
+      head_sha: ${{ steps.authorize.outputs.head_sha }}
+      build_ref: ${{ steps.authorize.outputs.build_ref }}
+    steps:
+      - name: Verify command and permissions
+        id: authorize
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const command = context.payload.comment.body.trim();
+            if (command !== '/build-binaries') {
+              core.setOutput('authorized', 'false');
+              return;
+            }
+
+            let authorized = false;
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.payload.comment.user.login,
+              });
+              authorized =
+                ['admin', 'maintain'].includes(data.role_name) ||
+                data.permissions?.admin === true ||
+                data.permissions?.maintain === true;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            core.setOutput('authorized', String(authorized));
+
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: 'Only repository maintainers can run `/build-binaries`.',
+              });
+              return;
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('head_sha', pullRequest.head.sha);
+            core.setOutput('build_ref', pullRequest.merge_commit_sha || pullRequest.head.sha);
+
+  load-vars:
+    needs: authorize
+    if: needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      go_ver: ${{ steps.vars.outputs.go_ver }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/vars.env
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: vars
+        run: |
+          source .github/vars.env
+          echo "go_ver=$GO_VER" >> "$GITHUB_OUTPUT"
+
+  build-containerlab:
+    needs:
+      - authorize
+      - load-vars
+    if: needs.authorize.outputs.authorized == 'true'
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    uses: ./.github/workflows/build-containerlab.yml
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    with:
+      go_ver: ${{ needs.load-vars.outputs.go_ver }}
+      runner: ${{ matrix.runner }}
+      arch: ${{ matrix.arch }}
+      ref: ${{ needs.authorize.outputs.build_ref }}
+
+  comment:
+    needs:
+      - authorize
+      - build-containerlab
+    if: always() && needs.authorize.outputs.authorized == 'true'
+    uses: ./.github/workflows/comment-binaries.yml
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
+    with:
+      issue_number: ${{ github.event.issue.number }}
+      head_sha: ${{ needs.authorize.outputs.head_sha }}
+      build_result: ${{ needs.build-containerlab.result }}
+      failure_message: >-
+        The `/build-binaries` run finished with result: ${{ needs.build-containerlab.result }}.
+        See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).

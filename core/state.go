@@ -3,7 +3,10 @@ package core
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"gopkg.in/yaml.v2"
 
@@ -11,7 +14,11 @@ import (
 )
 
 type LabState struct {
-	Topology *clabtypes.Topology `yaml:"topology"`
+	Topology *clabtypes.Topology                `yaml:"topology"`
+	IPAM     map[string]clabtypes.NodeAddresses `yaml:"ipam,omitempty"`
+	// MgmtNetworks records every management network name the lab ever defined,
+	// so destroy can remove networks that the current topology no longer lists.
+	MgmtNetworks []string `yaml:"mgmt-networks,omitempty"`
 }
 
 // WriteState saves the topology to the state file.
@@ -19,6 +26,9 @@ func (c *CLab) WriteState() error {
 	state := &LabState{
 		Topology: c.Config.Topology,
 	}
+
+	c.writeIPAMState(state)
+	c.writeMgmtNetworksState(state)
 
 	data, err := yaml.Marshal(state)
 	if err != nil {
@@ -29,15 +39,90 @@ func (c *CLab) WriteState() error {
 	content := append([]byte(header), data...)
 
 	statePath := c.TopoPaths.StateFile()
-	if err := os.WriteFile(statePath, content, 0644); err != nil {
-		return fmt.Errorf("failed to write state file %s: %w", statePath, err)
+	temp, err := os.CreateTemp(filepath.Dir(statePath), ".state.clab-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create state file: %w", err)
+	}
+	defer os.Remove(temp.Name())
+	if err := temp.Chmod(0644); err != nil {
+		temp.Close()
+		return err
+	}
+	if _, err := temp.Write(content); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Sync(); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(temp.Name(), statePath); err != nil {
+		return fmt.Errorf("replace state file %s: %w", statePath, err)
 	}
 
 	return nil
 }
 
-// LoadState reads the NodeConfigs from labdir/.state.clab.yaml.
+func (c *CLab) writeIPAMState(state *LabState) {
+	state.IPAM = make(map[string]clabtypes.NodeAddresses)
+	previous, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to preserve previous allocation preferences", "error", err)
+	}
+	for name, node := range c.Nodes {
+		cfg := node.Config()
+		addresses := clabtypes.NodeAddresses{}
+		if previous != nil {
+			addresses = previous.IPAM[name]
+		}
+		if cfg.MgmtIPv4Address != "" {
+			addresses.IPv4 = cfg.MgmtIPv4Address
+		}
+		if cfg.MgmtIPv6Address != "" {
+			addresses.IPv6 = cfg.MgmtIPv6Address
+		}
+		state.IPAM[name] = addresses
+	}
+}
+
+// writeMgmtNetworksState records the union of the currently defined management
+// networks and the ones recorded by previous deployments. Keeping dropped
+// networks recorded lets destroy remove them even though they are no longer
+// part of the topology.
+func (c *CLab) writeMgmtNetworksState(state *LabState) {
+	seen := make(map[string]bool)
+	for _, m := range c.allMgmtNetworks() {
+		if m == nil || m.Network == "" || seen[m.Network] {
+			continue
+		}
+		seen[m.Network] = true
+		state.MgmtNetworks = append(state.MgmtNetworks, m.Network)
+	}
+
+	previous, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to preserve previously defined management networks", "error", err)
+		return
+	}
+	if previous == nil {
+		return
+	}
+	for _, name := range previous.MgmtNetworks {
+		if !seen[name] {
+			seen[name] = true
+			state.MgmtNetworks = append(state.MgmtNetworks, name)
+		}
+	}
+}
+
+// LoadState reads the desired topology and optional allocation preferences from the labdir.
 func (c *CLab) LoadState() (*LabState, error) {
+	if c.TopoPaths == nil {
+		return nil, nil
+	}
 	statePath := c.TopoPaths.StateFile()
 
 	data, err := os.ReadFile(statePath)

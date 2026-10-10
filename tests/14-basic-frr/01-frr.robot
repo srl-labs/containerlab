@@ -48,6 +48,22 @@ OSPF installs a route to the remote loopback
     Wait Until Keyword Succeeds    90s    2s    OSPF Route Exists
     Node Command    r1    ping -c 3 -W 2 -I 10.31.1.1 10.31.2.1
 
+CLI saves remain readable on the host
+    Wait Until Keyword Succeeds    60s    2s    Running Config Contains    r1    ip address 10.31.1.1/32
+    ${uid} =    Evaluate    os.getuid()    modules=os
+    ${gid} =    Evaluate    os.getgid()    modules=os
+    FOR    ${command}    IN    write memory    copy running-config startup-config
+        Node Command    r1    vtysh -c '${command}'
+        ${config} =    Get File    ${config-dir}/frr.conf
+        Should Contain    ${config}    ip address 10.31.1.1/32
+        ${backup} =    Get File    ${config-dir}/frr.conf.sav
+        Should Contain    ${backup}    ip address 10.31.1.1/32
+        ${rc}    ${metadata} =    Run And Return Rc And Output
+        ...    stat -c '%u:%g:%a' '${config-dir}/frr.conf'
+        Should Be Equal As Integers    ${rc}    0
+        Should Be Equal    ${metadata}    ${uid}:${gid}:644
+    END
+
 Saved configuration survives redeployment
     Node Command    r1    vtysh -c 'configure terminal' -c 'interface lo' -c 'description saved-by-containerlab'
     Clab Command    save -t ${topology}

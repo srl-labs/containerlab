@@ -51,11 +51,12 @@ const (
 
 // Config defines lab configuration as it is provided in the YAML file.
 type Config struct {
-	Name     string              `json:"name,omitempty"`
-	Prefix   *string             `json:"prefix,omitempty"`
-	Mgmt     *clabtypes.MgmtNet  `json:"mgmt,omitempty"`
-	Settings *clabtypes.Settings `json:"settings,omitempty"`
-	Topology *clabtypes.Topology `json:"topology,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	Prefix       *string                `json:"prefix,omitempty"`
+	Mgmt         *clabtypes.MgmtNet     `json:"-" yaml:"-"`
+	MgmtNetworks clabtypes.MgmtNetworks `json:"mgmt,omitempty" yaml:"mgmt,omitempty"`
+	Settings     *clabtypes.Settings    `json:"settings,omitempty"`
+	Topology     *clabtypes.Topology    `json:"topology,omitempty"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging
 	Debug bool `json:"debug"`
@@ -85,6 +86,10 @@ func (c *CLab) parseTopology() error {
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
+	}
+
+	if err := c.validateKindSpecificConfigKeys(); err != nil {
+		return err
 	}
 
 	// initialize Nodes and Links variable
@@ -150,7 +155,7 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	return nil
+	return c.injectTailscaleSidecars()
 }
 
 // NewNode initializes a new node object.
@@ -165,6 +170,22 @@ func (c *CLab) NewNode(
 		return err
 	}
 
+	if err := c.initNode(nodeCfg, nodeRuntime); err != nil {
+		return err
+	}
+
+	cfg := c.Nodes[nodeName].Config()
+	if len(c.Config.MgmtNetworks) > 1 && cfg.MgmtNet == "" && cfg.ManagementIPAMEligible() {
+		return fmt.Errorf(
+			"node %q must set mgmt-net when several management networks are defined",
+			nodeName,
+		)
+	}
+
+	return nil
+}
+
+func (c *CLab) initNode(nodeCfg *clabtypes.NodeConfig, nodeRuntime string) error {
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
@@ -178,16 +199,24 @@ func (c *CLab) NewNode(
 	c.addDefaultLabels(nodeCfg)
 	labelsToEnvVars(nodeCfg)
 
+	// nodes on a non-default management network get a runtime bound to that network
+	rt := c.Runtimes[nodeRuntime]
+	mgmtNet := c.mgmtNetByNetwork(nodeCfg.MgmtNet)
+	if mgmtNet != c.Config.Mgmt && rt != nil {
+		if rt, err = c.mgmtRuntime(nodeRuntime, mgmtNet); err != nil {
+			return fmt.Errorf("node %q: %w", nodeCfg.ShortName, err)
+		}
+	}
+
 	// Init
-	err = n.Init(nodeCfg, clabnodes.WithRuntime(c.Runtimes[nodeRuntime]),
-		clabnodes.WithMgmtNet(c.Config.Mgmt))
+	err = n.Init(nodeCfg, clabnodes.WithRuntime(rt), clabnodes.WithMgmtNet(mgmtNet))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	c.Nodes[nodeName] = n
+	c.Nodes[nodeCfg.ShortName] = n
 	// adding default labels 2nd time in case node init
 	// overwrote original values for the default labels
 	c.addDefaultLabels(n.Config())
@@ -313,7 +342,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
-		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 
 	if nodeCfg.LinkApplyMode != "" && !nodeCfg.LinkApplyMode.IsValid() {
@@ -357,7 +385,22 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6
 	}
 
-	var err error
+	mgmtNetName := c.Config.Topology.GetNodeMgmtNet(nodeName)
+	mgmtNet, err := c.mgmtNetByName(mgmtNetName)
+	if err != nil {
+		return nil, fmt.Errorf("node %q: %w", nodeName, err)
+	}
+	// with several management networks the node must select one, enforced in NewNode
+	if nodeCfg.NetworkMode != "host" && nodeCfg.NetworkMode != "none" &&
+		!strings.HasPrefix(nodeCfg.NetworkMode, "container:") &&
+		(mgmtNetName != "" || len(c.Config.MgmtNetworks) < 2) {
+		nodeCfg.MgmtNet = mgmtNet.Network
+	}
+
+	nodeCfg.KindSpecificConfig, err = c.decodeKindSpecificConfig(c.Config.Topology, nodeName, kind)
+	if err != nil {
+		return nil, err
+	}
 
 	nodeCfg.Stages, err = c.Config.Topology.GetStages(nodeName)
 	if err != nil {
@@ -414,7 +457,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 	nodeCfg.Volumes = volumes
 
-	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
+	nodeCfg.PortSet, nodeCfg.PortBindings, nodeCfg.TailscalePorts, err =
+		c.Config.Topology.GetNodePortMappings(nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -500,6 +544,10 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	}
 
 	if err := c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
+
+	if err := c.verifyTailscaleProxy(); err != nil {
 		return err
 	}
 
@@ -789,9 +837,6 @@ func (c *CLab) HasKind(k string) bool {
 	return false
 }
 
-// addDefaultLabels adds default labels to node's config struct.
-// Update the addDefaultLabels function in clab/config.go
-// addDefaultLabels adds default labels to node's config struct.
 func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
@@ -806,16 +851,7 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	cfg.Labels[clabconstants.NodeLabDir] = cfg.LabDir
 	cfg.Labels[clabconstants.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 
-	// Use custom owner if set, otherwise use current user
-	owner := c.customOwner
-	if owner == "" {
-		owner = os.Getenv("SUDO_USER")
-		if owner == "" {
-			owner = os.Getenv("USER")
-		}
-	}
-
-	cfg.Labels[clabconstants.Owner] = owner
+	cfg.Labels[clabconstants.Owner] = c.labOwner()
 
 	gitBranch, gitHash := c.getGitInfo()
 
@@ -825,6 +861,18 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 			cfg.Labels[clabconstants.GitHash] = gitHash
 		}
 	}
+}
+
+func (c *CLab) labOwner() string {
+	if c.customOwner != "" {
+		return c.customOwner
+	}
+
+	if owner := os.Getenv("SUDO_USER"); owner != "" {
+		return owner
+	}
+
+	return os.Getenv("USER")
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

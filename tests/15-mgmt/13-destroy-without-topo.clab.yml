@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmt13
+
+mgmt:
+  - network: clab-mgmt13-main
+    ipv4-subnet: 198.18.113.0/24
+  - network: clab-mgmt13-oob
+    ipv4-subnet: 198.18.114.0/24
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    n1:
+      mgmt-net: clab-mgmt13-main
+    n2:
+      mgmt-net: clab-mgmt13-oob

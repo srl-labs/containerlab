@@ -4,18 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/srl-labs/containerlab/mgmt"
+	clabtypes "github.com/srl-labs/containerlab/types"
+
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sync/errgroup"
@@ -27,6 +33,8 @@ type DeployResult struct {
 	// Apply summarizes the reconciliation of an already deployed lab or the dry-run plan;
 	// it is nil when Deploy performed a fresh full deployment.
 	Apply *ApplyResult
+	// RuntimePlan is the remote resource plan produced by a controller-driven runtime dry-run.
+	RuntimePlan *clablabruntime.DeployPlan
 }
 
 // Deploy converges the lab to the requested topology. A lab without runtime state is
@@ -57,6 +65,26 @@ func (c *CLab) Deploy(
 		}
 
 		return &DeployResult{Containers: containers}, nil
+	}
+
+	if c.LabRuntime != nil && options.dryRun {
+		planner, ok := c.LabRuntime.(clablabruntime.TopologyPlanner)
+		if !ok {
+			return nil, fmt.Errorf("lab runtime %q does not support dry-run", c.globalRuntimeName)
+		}
+
+		req, err := c.labRuntimeDeployRequest()
+		if err != nil {
+			return nil, err
+		}
+		applyLabRuntimeDeployOptions(&req, options)
+
+		plan, err := planner.Plan(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		return &DeployResult{RuntimePlan: plan}, nil
 	}
 
 	currentNodes, err := c.runtimeNodeGroups(ctx)
@@ -153,6 +181,10 @@ func (c *CLab) deploy( //nolint: funlen
 	ctx context.Context,
 	options *DeployOptions,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.deployWithLabRuntime(ctx, options)
+	}
+
 	var err error
 
 	err = c.ResolveLinks()
@@ -171,7 +203,7 @@ func (c *CLab) deploy( //nolint: funlen
 		}
 	}
 
-	_, err = c.prepareLabManagementNetwork(ctx)
+	err = c.prepareLabManagementNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +231,12 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 
 	if err := waitForNodeDeploy(ctx, nodesWg, nodeFailCh); err != nil {
+		return nil, err
+	}
+	if err := c.syncTailscaleProxy(ctx); err != nil {
+		return nil, err
+	}
+	if err := c.SyncMgmtHostRoutes(ctx); err != nil {
 		return nil, err
 	}
 
@@ -265,19 +303,111 @@ func waitForNodeDeploy(
 	return nil
 }
 
-func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
-	skipMgmt := c.skipMgmtNetwork()
-	if !skipMgmt {
-		if err := c.CreateNetwork(ctx); err != nil {
-			return skipMgmt, err
+// prepareLabManagementNetwork creates the management networks that are in use
+// and allocates addresses for the nodes attached to them.
+func (c *CLab) prepareLabManagementNetwork(
+	ctx context.Context,
+	existing ...clabtypes.ExistingAddress,
+) error {
+	if err := c.CreateNetwork(ctx); err != nil {
+		return err
+	}
+
+	if err := c.allocateLabManagementIPs(ctx, existing); err != nil {
+		return err
+	}
+
+	return clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+}
+
+func (c *CLab) allocateLabManagementIPs(
+	ctx context.Context,
+	existing []clabtypes.ExistingAddress,
+) error {
+	preferred := make(map[string]clabtypes.NodeAddresses)
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Ignoring preferred management addresses", "error", err)
+	}
+
+	if state != nil {
+		for name, addresses := range state.IPAM {
+			preferred[name] = addresses
 		}
 	}
 
-	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
-		return skipMgmt, err
+	for _, m := range c.allMgmtNetworks() {
+		if c.skipMgmtNetwork(m) {
+			continue
+		}
+		nodes := c.mgmtNetNodes(m)
+		if m.IPAM.Provider == clabtypes.IPAMProviderRuntime || len(nodes) == 0 {
+			continue
+		}
+
+		reserved, err := c.collectReservedManagementAddresses(ctx, m, existing)
+		if err != nil {
+			return err
+		}
+
+		err = mgmt.AllocateManagementIPs(
+			ctx,
+			m,
+			nodes,
+			clabtypes.AllocationOptions{
+				Existing:  existing,
+				Preferred: preferred,
+				Reserved:  reserved,
+			},
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	return skipMgmt, nil
+	return nil
+}
+
+func (c *CLab) collectReservedManagementAddresses(
+	ctx context.Context,
+	m *clabtypes.MgmtNet,
+	existing []clabtypes.ExistingAddress,
+) ([]netip.Addr, error) {
+	var subnets []netip.Prefix
+	for _, value := range []string{m.IPv4Subnet, m.IPv6Subnet} {
+		if value == "" {
+			continue
+		}
+		subnet, err := netip.ParsePrefix(value)
+		if err != nil {
+			return nil, fmt.Errorf("management subnet %q: %w", value, err)
+		}
+		subnets = append(subnets, subnet)
+	}
+	occupied, err := c.globalRuntime().NetworkAddresses(ctx, subnets)
+	if err != nil {
+		return nil, err
+	}
+	type ownerAddress struct {
+		containerID string
+		address     netip.Addr
+	}
+	reused := make(map[ownerAddress]bool, len(existing))
+	for _, entry := range existing {
+		if entry.ContainerID != "" {
+			reused[ownerAddress{entry.ContainerID, entry.Address}] = true
+		}
+	}
+
+	var reserved []netip.Addr
+	for _, entry := range occupied {
+		if entry.NetworkName == m.Network &&
+			reused[ownerAddress{entry.ContainerID, entry.Address}] {
+			continue
+		}
+		reserved = append(reserved, entry.Address)
+	}
+	return reserved, nil
 }
 
 func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bool) error {
@@ -604,6 +734,9 @@ func (c *CLab) waitForNodeDeployTarget(
 		return err
 	}
 	target := networkModeContainerTarget(c.Nodes[name].Config().NetworkMode)
+	if target == "" {
+		target = c.Nodes[name].Config().Labels[clabnodestailscale.ParentLabel]
+	}
 	if completion, selected := completed[target]; selected {
 		select {
 		case <-completion.done:
@@ -776,7 +909,7 @@ func (c *CLab) finalize(
 		return nil, err
 	}
 
-	if !c.skipMgmtNetwork() {
+	if !c.mgmtNetworksSkipped() {
 		log.Info("Adding host entries", "path", "/etc/hosts")
 		if err := c.appendHostsFileEntries(ctx); err != nil {
 			log.Errorf("failed to create hosts file: %v", err)

@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -16,6 +18,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -29,6 +32,10 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		opt(opts)
 	}
 
+	if c.LabRuntime != nil {
+		return c.destroyWithLabRuntime(ctx, opts)
+	}
+
 	var containers []clabruntime.GenericContainer
 
 	switch {
@@ -36,6 +43,11 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		containers, err = c.ListContainers(ctx)
 	case c.TopoPaths.TopologyFilenameAbsPath() != "":
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+		if err == nil {
+			var tailscaleContainers []clabruntime.GenericContainer
+			tailscaleContainers, err = c.discoverTailscaleContainers(ctx, opts.nodeFilter)
+			containers = append(containers, tailscaleContainers...)
+		}
 	default:
 		var listOpts []ListOption
 
@@ -77,7 +89,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
-	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
+	// if all, and cli doesn't have --yes flag, and in a terminal -- prompt user confirmation
 	if opts.all && opts.terminalPrompt && term.IsTerminal(int(os.Stdin.Fd())) {
 		err := cliPromptToDestroyAll(topos)
 		if err != nil {
@@ -163,7 +175,6 @@ func (c *CLab) makeCopyForDestroy(
 	if err != nil {
 		return nil, err
 	}
-
 	if labDir != "" && clabutils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
 		// we might be in a different Dir.
@@ -178,12 +189,17 @@ func (c *CLab) makeCopyForDestroy(
 		return nil, err
 	}
 
-	// create management network or use existing one
-	// we call this to populate the nc.cfg.mgmt.bridge variable
-	// which is needed for the removal of the iptables rules
-	if !cc.skipMgmtNetwork() {
-		err = cc.CreateNetwork(ctx)
-		if err != nil {
+	// create management networks or use existing ones
+	// we call this to populate the bridge names
+	// which are needed for the removal of the iptables rules.
+	if !cc.mgmtNetworksSkipped() {
+		var bridged clabtypes.MgmtNetworks
+		for _, m := range cc.allMgmtNetworks() {
+			if m.Driver != clabtypes.MgmtDriverMacvlan {
+				bridged = append(bridged, m)
+			}
+		}
+		if err = cc.createNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}
@@ -242,6 +258,7 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 
 func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
 	var containers []clabruntime.GenericContainer
+	var orphanSidecars []clabruntime.GenericContainer
 	var err error
 
 	// If we have nodes defined (from topology file), list containers by node.
@@ -254,6 +271,26 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	if err != nil {
 		return err
+	}
+
+	if len(c.Nodes) == 0 {
+		c.addMgmtNetworksFromContainers(containers)
+	}
+
+	if len(c.Nodes) > 0 {
+		tailscaleContainers, err := c.discoverTailscaleContainers(ctx, c.nodeFilter)
+		if err != nil {
+			return err
+		}
+		for _, ctr := range tailscaleContainers {
+			if _, desired := c.Nodes[ctr.Labels[clabconstants.NodeName]]; desired {
+				continue
+			}
+			containers = append(containers, ctr)
+			if ctr.Labels[clabconstants.ToolType] == "" {
+				orphanSidecars = append(orphanSidecars, ctr)
+			}
+		}
 	}
 
 	if len(containers) == 0 {
@@ -269,6 +306,8 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
 	if len(c.Nodes) > 0 {
+		c.preDestroyNodes(ctx, slices.Collect(maps.Values(c.Nodes)), maxWorkers)
+
 		err := clablinks.CleanupFilteredLinks(
 			ctx,
 			c.Config.Topology.Links,
@@ -279,6 +318,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			return err
 		}
 		c.deleteNodes(ctx, maxWorkers)
+		c.deleteContainersDirect(ctx, orphanSidecars)
 	} else {
 		c.deleteContainersDirect(ctx, containers)
 	}
@@ -307,15 +347,25 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		}
 	}
 
-	// delete lab management network
-	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
-		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
+	// delete every defined management network, including extra networks
+	// that apply may have left without nodes, and networks a previous
+	// deployment recorded in the lab state but the topology no longer defines
+	for _, m := range c.mgmtNetworksForCleanup() {
+		if m.Network == "bridge" || keepMgmtNet {
+			continue
+		}
+		log.Debugf("Calling DeleteNet method. Management network value is: %+v", m)
 
-		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
+		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
+		if rtErr != nil {
+			// runtimes without multiple network support never created extra networks
+			log.Debug("Skipping management network deletion", "network", m.Network, "error", rtErr)
+			continue
+		}
+		if err = rt.DeleteNet(ctx); err != nil {
 			switch {
-			case err.Error() == fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network):
-			case strings.Contains(err.Error(), fmt.Sprintf(
-				" network %s not found", c.Config.Mgmt.Network)):
+			case err.Error() == fmt.Sprintf("Error: No such network: %s", m.Network):
+			case strings.Contains(err.Error(), fmt.Sprintf(" network %s not found", m.Network)):
 			default:
 				log.Error(err)
 			}
@@ -323,6 +373,59 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	return nil
+}
+
+func (c *CLab) addMgmtNetworksFromContainers(containers []clabruntime.GenericContainer) {
+	for _, ctr := range containers {
+		switch name := ctr.NetworkName; name {
+		case "", "unknown", "bridge", "host", "none":
+		default:
+			if c.mgmtNetByNetwork(name).Network == name {
+				continue
+			}
+			c.Config.MgmtNetworks = append(c.Config.MgmtNetworks, &clabtypes.MgmtNet{
+				Network:        name,
+				Bridge:         ctr.Labels[clabconstants.NodeMgmtNetBr],
+				ExternalAccess: new(true),
+			})
+		}
+	}
+}
+
+// mgmtNetworksForCleanup returns the management networks to delete on destroy:
+// the topology-defined ones plus any network a previous deployment recorded in
+// the lab state but that the current topology no longer defines. Without the
+// state record a network dropped from the mgmt list would never be removed.
+func (c *CLab) mgmtNetworksForCleanup() clabtypes.MgmtNetworks {
+	networks := c.allMgmtNetworks()
+
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Unable to load the management networks recorded in the lab state", "error", err)
+		return networks
+	}
+	if state == nil {
+		return networks
+	}
+
+	defined := make(map[string]bool, len(networks))
+	for _, m := range networks {
+		defined[m.Network] = true
+	}
+	for _, name := range state.MgmtNetworks {
+		if defined[name] {
+			continue
+		}
+		defined[name] = true
+		// ExternalAccess mirrors the default every management network gets, so
+		// the forwarding rule installed for the network is cleaned up too.
+		networks = append(networks, &clabtypes.MgmtNet{
+			Network:        name,
+			ExternalAccess: new(true),
+		})
+	}
+
+	return networks
 }
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
@@ -335,11 +438,34 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	}
 	sort.Strings(nodeNames)
 
+	hookNodes := make([]clabnodes.Node, 0, len(nodeNames))
+	var tailscaleContainers []clabruntime.GenericContainer
 	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode == nil {
 			return fmt.Errorf("runtime node %q not found", nodeName)
 		}
+		if runtimeNode.external || runtimeNode.rootNamespaceBased {
+			continue
+		}
+		if len(runtimeNode.containers) > 0 &&
+			runtimeNode.containers[0].Labels[clabconstants.NodeKind] == clabnodestailscale.KindName {
+			tailscaleContainers = append(tailscaleContainers, runtimeNode.containers...)
+			continue
+		}
+		if node, ok := c.Nodes[nodeName]; ok {
+			hookNodes = append(hookNodes, node)
+		}
+	}
+	var logoutWg sync.WaitGroup
+	for _, ctr := range tailscaleContainers {
+		logoutWg.Go(func() { c.logoutTailscaleContainer(ctx, ctr) })
+	}
+	c.preDestroyNodes(ctx, hookNodes, 0)
+	logoutWg.Wait()
+
+	for _, nodeName := range nodeNames {
+		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode.external || runtimeNode.rootNamespaceBased {
 			continue
 		}
@@ -369,6 +495,37 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	}
 
 	return nil
+}
+
+// preDestroyNodes runs the PreDestroy stage of the given nodes concurrently, before any of them
+// is deleted. Nodes without a container are skipped. A workers value of 0 runs all hooks at once.
+func (*CLab) preDestroyNodes(ctx context.Context, nodes []clabnodes.Node, workers uint) {
+	if workers == 0 || workers > uint(len(nodes)) {
+		workers = uint(len(nodes))
+	}
+
+	sem := make(chan struct{}, workers)
+	wg := new(sync.WaitGroup)
+
+	for _, n := range nodes {
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if n.GetContainerStatus(ctx) == clabruntime.NotFound {
+				return
+			}
+
+			if err := n.PreDestroy(ctx); err != nil {
+				log.Warnf("node %q pre-destroy hook failed: %v", n.Config().ShortName, err)
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
@@ -437,7 +594,12 @@ func (c *CLab) deleteContainersDirect(
 		name := cont.Names[0]
 		log.Infof("Removing container: %s", name)
 
-		err := c.globalRuntime().DeleteContainer(ctx, name)
+		c.logoutTailscaleContainer(ctx, cont)
+		rt := cont.Runtime
+		if rt == nil {
+			rt = c.globalRuntime()
+		}
+		err := rt.DeleteContainer(ctx, name)
 		if err != nil {
 			log.Errorf("could not remove container %q: %v", name, err)
 		}
@@ -446,6 +608,10 @@ func (c *CLab) deleteContainersDirect(
 
 func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
+
+	if len(c.nodeFilter) == 0 {
+		toolTypes = append(toolTypes, clabnodestailscale.ToolType)
+	}
 
 	for _, toolType := range toolTypes {
 		toolFilter := []*clabtypes.GenericFilter{
@@ -482,6 +648,7 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
 
+			c.logoutTailscaleContainer(ctx, containers[idx])
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
 				log.Error("Failed to remove tool container", "tool", toolType,
 					"container", containerName, "error", err)

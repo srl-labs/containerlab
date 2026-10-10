@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: mgmt11s
+
+mgmt:
+  - network: clab-mgmt11s-main
+    ipv4-subnet: 198.18.115.0/24
+  - network: clab-mgmt11s-ts
+    ipv4-subnet: 198.18.116.0/24
+    tailscale:
+      auth-mode: sso
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+  nodes:
+    a:
+      mgmt-net: clab-mgmt11s-main
+      ports:
+        - 8022:22/ts
+    b:
+      mgmt-net: clab-mgmt11s-ts
+      ports:
+        - 9022:22/ts
