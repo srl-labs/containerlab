@@ -417,6 +417,118 @@ func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
 	}
 }
 
+func TestApplyPlanPreservesFRRToCJunosevolvedVethByPeer(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth1", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.addedNodeSet["dut"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth1"}:  {},
+		{node: "peer", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth1"}:  {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "peer", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+
+	if plan.linkNeedsDeploy(link) {
+		t.Fatal("expected cJunosEvolved dut:eth4 to preserve parked FRR dut:eth1 paired with peer:eth1")
+	}
+}
+
+func TestApplyPlanMatchesParkedVethByPeerWhenDesiredNameIsOccupied(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth2", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.addedNodeSet["dut"] = struct{}{}
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth4"}:  {},
+		{node: "dut", iface: "eth7"}:  {},
+		{node: "peer", iface: "eth2"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth4"}:  {Name: "eth4", Index: 11, PeerIndex: 31},
+		{node: "dut", iface: "eth7"}:  {Name: "eth7", Index: 19, PeerIndex: 22},
+		{node: "peer", iface: "eth2"}: {Name: "eth2", Index: 22, PeerIndex: 19},
+	}
+
+	if plan.linkNeedsDeploy(link) {
+		t.Fatal("expected desired dut:eth4 to preserve parked dut:eth7 paired with peer:eth2")
+	}
+}
+
+func TestApplyPlanRejectsReplacementVethForKeepLinksNode(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth2", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.addedNodeSet["dut"] = struct{}{}
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth1"}:  {},
+		{node: "peer", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth1"}:  {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "peer", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+
+	if !plan.linkNeedsDeploy(link) {
+		t.Fatal("expected mismatched desired peer name to require link deployment")
+	}
+	err := plan.validatePreservedLinkDeploy(link)
+	if err == nil || !strings.Contains(err.Error(), "refusing to create a replacement veth") {
+		t.Fatalf("validatePreservedLinkDeploy() error = %v, want replacement-veth rejection", err)
+	}
+	for _, want := range []string{
+		"dut:eth4 parked=[name=eth1 idx=11 peer=22]",
+		"peer:eth2 live=none",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("validatePreservedLinkDeploy() error = %v, want %q", err, want)
+		}
+	}
+}
+
+func TestTreatAsAddedParkedNodeWithStaleRuntimeEntry(t *testing.T) {
+	t.Parallel()
+
+	if !treatAsAddedParkedNode(true, clabruntime.NotFound, true) {
+		t.Fatal("expected missing container with stale runtime entry and parking namespace to be added+parked")
+	}
+	if treatAsAddedParkedNode(true, clabruntime.Running, true) {
+		t.Fatal("running container must not be reclassified")
+	}
+	if treatAsAddedParkedNode(true, clabruntime.NotFound, false) {
+		t.Fatal("missing container without parking namespace must not be reclassified as parked")
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 

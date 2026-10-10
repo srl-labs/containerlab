@@ -56,6 +56,30 @@ clab destroy --node-filter node1,node2
 
 And only these two nodes will be destroyed (with all links connected to them), leaving the rest of the lab intact.
 
+## Replacing selected nodes while keeping their links
+
+Filtered destruction normally removes the links attached to the selected nodes. Add
+[`--keep-links`](../cmd/destroy.md#keep-links) to park their data-plane interfaces before
+removing the containers:
+
+```bash
+clab destroy -t filter.clab.yml --node-filter node1,node2 --keep-links --keep-mgmt-net
+clab apply -t filter.clab.yml
+```
+
+In the example topology, endpoints on `node1` and `node2` are parked. Their peers on `node3`
+and `node4` stay in those nodes, and both ends of the `node1`–`node2` link are parked.
+Applying the topology creates the missing nodes and restores the parked interfaces. The
+other nodes remain in place when their definitions and links are unchanged.
+
+Keep the lab and node names stable. You can update the replacement's image or kind and rename
+its veth endpoints while retaining their peer relationships. Link preservation does not keep
+traffic flowing through a removed node or save its running configuration. `--cleanup` cannot
+be used with this workflow.
+
+See [replacing nodes while preserving links](../cmd/destroy.md#replacing-nodes-while-preserving-links)
+for interface rename examples, limitations, and diagnostic guidance.
+
 ## Other commands
 
 The following commands have support for `--node-filter` flag:
