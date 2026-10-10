@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	yamlv2 "gopkg.in/yaml.v2"
 	yamlv3 "gopkg.in/yaml.v3"
@@ -49,14 +50,6 @@ const nameMaxLen = 63
 // to fit nameMaxLen.
 const nameDigestLen = 7
 
-// leadingLetterPrefix prefixes a name that would otherwise start with a digit or a dash, which
-// a DNS-1035 label cannot do.
-const leadingLetterPrefix = "clab-"
-
-// nonNameChars matches every run of characters a DNS label cannot carry, once the name has been
-// lower-cased.
-var nonNameChars = regexp.MustCompile(`[^a-z0-9-]+`)
-
 // SanitizeName maps a containerlab name onto the DNS-1035 label Kubernetes can name an object
 // with: lower case, made up of a-z, 0-9 and '-', starting with a letter and at most 63 characters
 // long. A large share of public labs name their routers R1/PE_1, and Kubernetes cannot carry
@@ -65,25 +58,11 @@ var nonNameChars = regexp.MustCompile(`[^a-z0-9-]+`)
 // Unlike a lossy enforcement this never rewrites a character a DNS label can carry, so a name
 // Kubernetes already accepts maps onto itself and the mapping is idempotent. The result is empty
 // only for a name holding nothing a Kubernetes name can be built from.
+//
+// The implementation is shared with the lab runtime in the names package, so a name the engine
+// emits and a name the direct runtime resolves against always agree.
 func SanitizeName(name string) string {
-	sanitized := strings.Trim(nonNameChars.ReplaceAllString(strings.ToLower(name), "-"), "-")
-	if sanitized == "" {
-		return ""
-	}
-
-	if sanitized[0] < 'a' || sanitized[0] > 'z' {
-		sanitized = leadingLetterPrefix + sanitized
-	}
-
-	if len(sanitized) > nameMaxLen {
-		digest := sha256.Sum256([]byte(name))
-		sanitized = strings.TrimRight(
-			sanitized[:nameMaxLen-nameDigestLen-1],
-			"-",
-		) + "-" + hex.EncodeToString(digest[:])[:nameDigestLen]
-	}
-
-	return sanitized
+	return clabnames.SanitizeName(name)
 }
 
 // SafeConcatNameKubernetes concats all provided strings into a string joined by "-" - if the

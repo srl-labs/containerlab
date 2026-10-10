@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -132,34 +133,9 @@ func sanitizeCompiledNodeNames(
 func nodeNameRenames(
 	nodes map[string]*clabtypes.NodeDefinition,
 ) (map[string]string, error) {
-	renames := map[string]string{}
-	origins := make(map[string]string, len(nodes))
-
-	for _, nodeName := range sortedNodeNames(nodes) {
-		sanitized := SanitizeName(nodeName)
-		if sanitized == "" {
-			return nil, fmt.Errorf(
-				"%w: node name %q holds no character a Kubernetes object name can be built from",
-				errInvalidData,
-				nodeName,
-			)
-		}
-
-		if origin, taken := origins[sanitized]; taken {
-			return nil, fmt.Errorf(
-				"%w: node names %q and %q both map onto the Kubernetes name %q; rename one of them",
-				errInvalidData,
-				origin,
-				nodeName,
-				sanitized,
-			)
-		}
-
-		origins[sanitized] = nodeName
-
-		if sanitized != nodeName {
-			renames[nodeName] = sanitized
-		}
+	renames, err := clabnames.SanitizeNodeNames(sortedNodeNames(nodes))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errInvalidData, err)
 	}
 
 	return renames, nil

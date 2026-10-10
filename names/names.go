@@ -1,4 +1,4 @@
-package labruntime
+package names
 
 import (
 	"crypto/sha256"

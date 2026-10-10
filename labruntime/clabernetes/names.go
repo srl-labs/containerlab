@@ -3,9 +3,9 @@ package clabernetes
 import (
 	"strings"
 
-	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabcompile "github.com/srl-labs/containerlab/labruntime/clabernetes/compile"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -17,7 +17,7 @@ func sanitizeNodeNames(
 	config *clabRuntimeConfig,
 	nodeNames []string,
 ) (map[string]string, error) {
-	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	renames, err := clabnames.SanitizeNodeNames(nodeNames)
 	if err != nil || len(renames) == 0 {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func resolveKnownNodeName[V any](known map[string]V, nodeName string) (string, b
 		return nodeName, true
 	}
 
-	sanitized := clablabruntime.SanitizeName(nodeName)
+	sanitized := clabnames.SanitizeName(nodeName)
 	if _, ok := known[sanitized]; ok {
 		return sanitized, true
 	}
