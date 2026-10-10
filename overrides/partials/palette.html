@@ -1,0 +1,42 @@
+{#-
+  Light/dark switcher styled after the search button of the Zensical modern
+  variant: a square host (1.6rem, 0.4rem corner radius, faint fg--lightest
+  fill, hover fg--lighter) holding a single animated sun/moon glyph. The glyph
+  is a sun whose core scales up while a mask circle slides in to carve the
+  crescent and the beams fade out — the scheme change drives the whole morph
+  from CSS alone. The palette <input>s and their <label> click targets keep
+  the markup that the Zensical palette JS expects: every input is followed by
+  its label, and the JS unhides the label of the active palette and reacts to
+  radio change events. The visible control is a persistent sibling, so the
+  glyph morphs in place instead of the whole button being swapped.
+-#}
+<form class="md-header__option md-switch" data-md-component="palette">
+  {% for option in config.theme.palette %}
+    {% set scheme  = option.scheme  | d("default", true) %}
+    {% set primary = option.primary | d("indigo", true) %}
+    {% set accent  = option.accent  | d("indigo", true) %}
+    <input class="md-option" data-md-color-media="{{ option.media }}" data-md-color-scheme="{{ scheme | replace(' ', '-') }}" data-md-color-primary="{{ primary | replace(' ', '-') }}" data-md-color-accent="{{ accent | replace(' ', '-') }}" {% if option.toggle %} aria-label="{{ option.toggle.name }}" {% else %} aria-hidden="true" {% endif %} type="radio" name="__palette" id="__palette_{{ loop.index0 }}">
+    {% if option.toggle %}
+      <label class="md-switch__target" title="{{ option.toggle.name }}" for="__palette_{{ loop.index % loop.length }}" hidden></label>
+    {% endif %}
+  {% endfor %}
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
+</form>
