@@ -23,19 +23,18 @@ import (
 )
 
 const (
-	c9sAPIVersion  = "c9s.run/v1alpha1"
-	nodeKind       = "Node"
-	linkKind       = "Link"
-	nodeProfile    = "NodeProfile"
-	labelPrefix    = "c9s.run"
-	labelApp       = labelPrefix + "/app"
-	labelName      = labelPrefix + "/name"
-	labelOwner     = labelPrefix + "/topologyOwner"
-	labelKind      = labelPrefix + "/topologyKind"
-	labelNode      = labelPrefix + "/topologyNode"
-	labelGroup     = labelPrefix + "/topologyGroup"
-	labelAppValue  = "clabernetes"
-	defaultTopoKey = "default"
+	c9sAPIVersion = "c9s.run/v1alpha1"
+	nodeKind      = "Node"
+	linkKind      = "Link"
+	nodeProfile   = "NodeProfile"
+	labelPrefix   = "c9s.run"
+	labelApp      = labelPrefix + "/app"
+	labelName     = labelPrefix + "/name"
+	labelOwner    = labelPrefix + "/topologyOwner"
+	labelKind     = labelPrefix + "/topologyKind"
+	labelNode     = labelPrefix + "/topologyNode"
+	labelGroup    = labelPrefix + "/topologyGroup"
+	labelAppValue = "clabernetes"
 )
 
 // LinkHostNodeName is the reserved endpoint node name for a node-local host link.
@@ -379,7 +378,7 @@ func hasDistinctProfilePolicy(input *Input, nodeName string) bool {
 		return false
 	}
 
-	defaultResources, hasDefaultResources := input.Deployment.Resources[defaultTopoKey]
+	defaultResources, hasDefaultResources := input.Deployment.Resources[DefaultResourceName]
 	if !hasDefaultResources {
 		// The map entry is itself meaningful, including an explicitly empty resource policy.
 		return true
@@ -530,7 +529,7 @@ func renderTopologyNodeProfile(
 		spec["imagePull"] = imagePull
 	}
 
-	if defaultResources, ok := input.Deployment.Resources[defaultTopoKey]; ok {
+	if defaultResources, ok := input.Deployment.Resources[DefaultResourceName]; ok {
 		raw, err := jsonPayload(defaultResources)
 		if err != nil {
 			return unstructured.Unstructured{}, err

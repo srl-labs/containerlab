@@ -85,17 +85,6 @@ func processPortDefinition(portDefinition string) (*typedPort, error) {
 	}, nil
 }
 
-// parseNetworkModeContainer parses a network-mode value and returns the referenced (primary)
-// node name if it is a container network-mode (i.e. "container:node-a" returns "node-a"), or an
-// empty string otherwise.
-func parseNetworkModeContainer(networkMode string) string {
-	if !strings.HasPrefix(networkMode, networkModeContainerPrefix) {
-		return ""
-	}
-
-	return strings.TrimPrefix(networkMode, networkModeContainerPrefix)
-}
-
 // ReservedContainerPathReason reports whether an absolute container path is owned by the
 // kubelet or the direct runtime, and why. The returned reason is suitable for a diagnostic.
 // A user bind or payload landing on a reserved path either renders an invalid Deployment (the

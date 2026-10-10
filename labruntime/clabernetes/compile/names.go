@@ -12,6 +12,43 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+// NetworkModeContainerPrefix is the prefix of the `network-mode` node setting expressing that a
+// node shares the network namespace of another (containerlab) node.
+const NetworkModeContainerPrefix = "container:"
+
+// ParseNetworkModeContainer parses a network-mode value and returns the referenced (primary)
+// node name if it is a container network-mode (i.e. "container:node-a" returns "node-a"), or an
+// empty string otherwise.
+func ParseNetworkModeContainer(networkMode string) string {
+	if !strings.HasPrefix(networkMode, NetworkModeContainerPrefix) {
+		return ""
+	}
+
+	return strings.TrimPrefix(networkMode, NetworkModeContainerPrefix)
+}
+
+// RenameNetworkModePrimary points a node definition's container network-mode at the sanitized
+// name of the node it shares a network namespace with. Definitions that do not reference a
+// renamed node are left untouched. It serves both the compile, which renames the flattened
+// nodes, and the direct runtime, which renames the topology before compiling it.
+func RenameNetworkModePrimary(
+	nodeDefinition *clabtypes.NodeDefinition,
+	renames map[string]string,
+) {
+	if nodeDefinition == nil {
+		return
+	}
+
+	primary := ParseNetworkModeContainer(nodeDefinition.NetworkMode)
+
+	compiledName, renamed := renames[primary]
+	if !renamed {
+		return
+	}
+
+	nodeDefinition.NetworkMode = NetworkModeContainerPrefix + compiledName
+}
+
 // sanitizeCompiledNodeNames renames the compiled nodes whose containerlab name Kubernetes cannot
 // carry, and points every reference to them at the new name. c9s names the Node, Deployment and
 // Service objects after the containerlab node, so a topology naming its routers R1..R5 -- the most
@@ -75,7 +112,7 @@ func sanitizeCompiledNodeNames(
 	}
 
 	for _, nodeDefinition := range compiled.Nodes {
-		renameNetworkModePrimary(nodeDefinition, renames)
+		RenameNetworkModePrimary(nodeDefinition, renames)
 	}
 
 	for idx := range compiled.Links {
@@ -126,24 +163,6 @@ func nodeNameRenames(
 	}
 
 	return renames, nil
-}
-
-func renameNetworkModePrimary(
-	nodeDefinition *clabtypes.NodeDefinition,
-	renames map[string]string,
-) {
-	if nodeDefinition == nil {
-		return
-	}
-
-	primary := parseNetworkModeContainer(nodeDefinition.NetworkMode)
-
-	compiledName, renamed := renames[primary]
-	if !renamed {
-		return
-	}
-
-	nodeDefinition.NetworkMode = networkModeContainerPrefix + compiledName
 }
 
 func renameLinkEndpointNode(
