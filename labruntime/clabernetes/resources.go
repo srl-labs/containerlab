@@ -79,7 +79,8 @@ type createdPrimitiveResource struct {
 
 func (r *Runtime) waitPrimitiveLinksResolved(
 	ctx context.Context,
-	namespace string,
+	namespace,
+	topologyName string,
 	desiredLinks []*unstructured.Unstructured,
 	timeout time.Duration,
 ) error {
@@ -88,6 +89,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	}
 	log.Info(
 		"Waiting for C9s links to resolve",
+		"lab", topologyName,
 		"namespace", namespace,
 		"links", len(desiredLinks),
 	)
@@ -104,8 +106,13 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	var pending []string
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
 		func(ctx context.Context) (bool, error) {
+			// List only this lab's links, exactly like every other primitive list: in a shared
+			// namespace a server-side selector keeps the poll proportional to the lab instead
+			// of the namespace, and foreign links are not interesting to wait on.
 			links, err := r.client.Resource(linkGVR).Namespace(namespace).
-				List(ctx, metav1.ListOptions{})
+				List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set{labelTopologyOwner: topologyName}.String(),
+				})
 			if err != nil {
 				if ctx.Err() != nil || contextDeadlineIsImminent(ctx) {
 					return false, nil

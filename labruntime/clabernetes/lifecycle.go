@@ -172,6 +172,7 @@ func (r *Runtime) Deploy(
 	if err = r.waitPrimitiveLinksResolved(
 		ctx,
 		namespace,
+		req.Name,
 		primitives.links,
 		req.Timeout,
 	); err != nil {
