@@ -289,6 +289,28 @@ func validateAbsorbedNodeVocabulary(
 	for _, block := range blocks {
 		for _, definition := range block.definitions {
 			for _, key := range sortedVocabularyBlockNames(definition.KindSpecificConfig) {
+				// An explicit `kind-specific-config` wrapper may carry generic fields; unwrap it
+				// so a masquerading generic field is caught wherever it hides.
+				if key == kindSpecificWrapperKey {
+					wrapper := kindSpecificWrapperEntries(definition.KindSpecificConfig[key])
+					if wrapper == nil {
+						continue
+					}
+
+					for wrapperKey := range wrapper {
+						if !vocabulary[wrapperKey] {
+							continue
+						}
+
+						diagnostics.add(absorbedGenericFieldDiagnostic(
+							wrapperKey,
+							fieldLines[block.from][wrapperKey],
+						))
+					}
+
+					continue
+				}
+
 				if !vocabulary[key] {
 					continue
 				}
