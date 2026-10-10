@@ -252,7 +252,6 @@
                         "linux",
                         "bridge",
                         "ovs-bridge",
-                        "border0",
                         "host",
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
@@ -496,10 +495,6 @@
                     "description": "CPU cores to use by this node/container",
                     "markdownDescription": "[CPU cores](https://containerlab.dev/manual/nodes/#cpu-set) to be used by the node/container"
                 },
-                "extras": {
-                    "type": "object",
-                    "$ref": "#/definitions/extras-config"
-                },
                 "config": {
                     "$ref": "#/definitions/config-config"
                 },
@@ -630,6 +625,60 @@
                         },
                         "additionalProperties": false
                     }
+                },
+                "copy-to-flash": {
+                    "type": "array",
+                    "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup (arista_ceos kind).",
+                    "markdownDescription": "list of [cEOS-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `arista_ceos` kind",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "daemons": {
+                    "type": "array",
+                    "description": "list of FRR routing daemons to enable; when omitted, all daemons are enabled (frr and frrouting kinds).",
+                    "markdownDescription": "list of [FRR routing daemons](https://containerlab.dev/manual/kinds/frr/#daemons) to enable; when omitted, all daemons are enabled. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `frr` and `frrouting` kinds",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "bgpd",
+                            "ospfd",
+                            "ospf6d",
+                            "ripd",
+                            "ripngd",
+                            "isisd",
+                            "pimd",
+                            "pim6d",
+                            "ldpd",
+                            "nhrpd",
+                            "eigrpd",
+                            "babeld",
+                            "sharpd",
+                            "pbrd",
+                            "bfdd",
+                            "fabricd",
+                            "vrrpd",
+                            "pathd",
+                            "zebra",
+                            "staticd",
+                            "mgmtd",
+                            "watchfrr"
+                        ]
+                    },
+                    "uniqueItems": true
+                },
+                "kubeconfig": {
+                    "type": "string",
+                    "description": "path where kind writes the cluster's kubeconfig file, absolute or relative to the topology file (k8s-kind kind).",
+                    "markdownDescription": "path where kind writes the [cluster's kubeconfig file](https://containerlab.dev/manual/kinds/k8s-kind/#kind-specific-config), absolute or relative to the topology file. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `k8s-kind` kind"
+                },
+                "wait": {
+                    "type": "string",
+                    "description": "duration to wait for the kind cluster to become ready, e.g. 0s or 2m (k8s-kind kind).",
+                    "markdownDescription": "duration to wait for the [kind cluster to become ready](https://containerlab.dev/manual/kinds/k8s-kind/#kind-specific-config), e.g. `0s` or `2m`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `k8s-kind` kind"
                 },
                 "aliases": {
                     "type": "array",
@@ -1043,8 +1092,53 @@
                     "if": {
                         "properties": {
                             "kind": {
+                                "pattern": "^arista_ceos$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-specific-config-arista_ceos"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^(frr|frrouting)$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-specific-config-frr"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "^k8s-kind$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-specific-config-k8s-kind"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
                                 "not": {
-                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol|nvidia_cumulusvx)$"
+                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol|nvidia_cumulusvx|arista_ceos|frr|frrouting|k8s-kind)$"
                                 }
                             }
                         },
@@ -1522,64 +1616,6 @@
                 "passthru",
                 "source"
             ]
-        },
-        "extras-config": {
-            "type": "object",
-            "description": "node's extra configurations",
-            "properties": {
-                "ceos-copy-to-flash": {
-                    "type": "array",
-                    "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup",
-                    "markdownDescription": "list of [cEOS-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    },
-                    "uniqueItems": true
-                },
-                "frr": {
-                    "type": "object",
-                    "description": "FRRouting-specific extra options",
-                    "markdownDescription": "[FRRouting-specific extra options](https://containerlab.dev/manual/kinds/frr/#daemons)",
-                    "properties": {
-                        "daemons": {
-                            "type": "array",
-                            "description": "list of FRR routing daemons to enable; when omitted, all daemons are enabled",
-                            "markdownDescription": "list of [FRR routing daemons](https://containerlab.dev/manual/kinds/frr/#daemons) to enable; when omitted, all daemons are enabled",
-                            "items": {
-                                "type": "string",
-                                "enum": [
-                                    "bgpd",
-                                    "ospfd",
-                                    "ospf6d",
-                                    "ripd",
-                                    "ripngd",
-                                    "isisd",
-                                    "pimd",
-                                    "pim6d",
-                                    "ldpd",
-                                    "nhrpd",
-                                    "eigrpd",
-                                    "babeld",
-                                    "sharpd",
-                                    "pbrd",
-                                    "bfdd",
-                                    "fabricd",
-                                    "vrrpd",
-                                    "pathd",
-                                    "zebra",
-                                    "staticd",
-                                    "mgmtd",
-                                    "watchfrr"
-                                ]
-                            },
-                            "uniqueItems": true
-                        }
-                    },
-                    "additionalProperties": false
-                }
-            },
-            "additionalProperties": false
         },
         "config-config": {
             "type": "object",
@@ -2453,38 +2489,33 @@
                         "required": [
                             "breakouts"
                         ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
                     }
                 ]
             },
             "properties": {
                 "components": {
                     "items": {
-                        "allOf": [
-                            {
-                                "$ref": "#/definitions/sros-component"
-                            },
-                            {
-                                "not": {
-                                    "anyOf": [
-                                        {
-                                            "required": [
-                                                "cpu"
-                                            ]
-                                        },
-                                        {
-                                            "required": [
-                                                "ram"
-                                            ]
-                                        },
-                                        {
-                                            "required": [
-                                                "max-nics"
-                                            ]
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
+                        "$ref": "#/definitions/sros-component"
                     }
                 }
             },
@@ -2532,24 +2563,33 @@
                         "required": [
                             "breakouts"
                         ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
                     }
                 ]
             },
             "properties": {
                 "components": {
                     "items": {
-                        "allOf": [
-                            {
-                                "$ref": "#/definitions/sros-component"
-                            },
-                            {
-                                "not": {
-                                    "required": [
-                                        "env"
-                                    ]
-                                }
-                            }
-                        ]
+                        "$ref": "#/definitions/sros-component"
                     }
                 }
             },
@@ -2602,6 +2642,26 @@
                         "required": [
                             "breakouts"
                         ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
                     }
                 ]
             },
@@ -2619,6 +2679,11 @@
                 "anyOf": [
                     {
                         "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
                             "config-mode"
                         ]
                     },
@@ -2649,17 +2714,32 @@
                     },
                     {
                         "required": [
-                            "components"
-                        ]
-                    },
-                    {
-                        "required": [
                             "port-count"
                         ]
                     },
                     {
                         "required": [
                             "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
                         ]
                     }
                 ]
@@ -2671,6 +2751,11 @@
                 "anyOf": [
                     {
                         "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
                             "config-mode"
                         ]
                     },
@@ -2716,16 +2801,36 @@
                     },
                     {
                         "required": [
-                            "components"
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
                         ]
                     }
                 ]
             },
             "description": "kind-specific config keys of the nvidia_cumulusvx kind"
         },
-        "kind-specific-config-other": {
+        "kind-specific-config-arista_ceos": {
             "not": {
                 "anyOf": [
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    },
                     {
                         "required": [
                             "config-mode"
@@ -2769,11 +2874,6 @@
                     {
                         "required": [
                             "bootstrap-config"
-                        ]
-                    },
-                    {
-                        "required": [
-                            "components"
                         ]
                     },
                     {
@@ -2784,6 +2884,267 @@
                     {
                         "required": [
                             "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind-specific config keys of the arista_ceos kind"
+        },
+        "kind-specific-config-frr": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind-specific config keys of the frr and frrouting kinds"
+        },
+        "kind-specific-config-k8s-kind": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind-specific config keys of the k8s-kind kind"
+        },
+        "kind-specific-config-other": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
                         ]
                     }
                 ]
@@ -2903,7 +3264,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-specific-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-arista_ceos"
                                 }
                             ]
                         },
@@ -3323,7 +3684,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-specific-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-frr"
                                 }
                             ]
                         },
@@ -3333,7 +3694,17 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-specific-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-frr"
+                                }
+                            ]
+                        },
+                        "k8s-kind": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-k8s-kind"
                                 }
                             ]
                         },

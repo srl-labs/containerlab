@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -178,7 +177,7 @@ func primitiveLinkPendingReason(link *unstructured.Unstructured) string {
 		if nodeName == "" {
 			return "waiting for endpoint binding"
 		}
-		if nodeName == clabernetesapisv1alpha1.LinkHostNodeName {
+		if nodeName == linkHostNodeName {
 			continue
 		}
 
@@ -344,3 +343,6 @@ func uniquePrimaryNodes(nodeNames []string, primaries map[string]string) []strin
 
 	return unique
 }
+
+// linkHostNodeName is the reserved endpoint node name for a node-local host link.
+const linkHostNodeName = "host"

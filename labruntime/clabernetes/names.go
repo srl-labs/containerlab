@@ -3,7 +3,6 @@ package clabernetes
 import (
 	"strings"
 
-	clabernetesutilcontainerlab "github.com/clabernetes/clabernetes/util/containerlab"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -72,9 +71,9 @@ func renameNetworkModePrimary(
 		return
 	}
 
-	primary := clabernetesutilcontainerlab.ParseNetworkModeContainer(nodeDefinition.NetworkMode)
+	primary := parseNetworkModeContainer(nodeDefinition.NetworkMode)
 	if sanitized, renamed := renames[primary]; renamed {
-		nodeDefinition.NetworkMode = clabernetesutilcontainerlab.NetworkModeContainerPrefix +
+		nodeDefinition.NetworkMode = networkModeContainerPrefix +
 			sanitized
 	}
 }
@@ -142,4 +141,19 @@ func resolveKnownNodeName[V any](known map[string]V, nodeName string) (string, b
 	}
 
 	return "", false
+}
+
+// networkModeContainerPrefix is the prefix of the `network-mode` node setting expressing that a
+// node shares the network namespace of another (containerlab) node.
+const networkModeContainerPrefix = "container:"
+
+// parseNetworkModeContainer parses a network-mode value and returns the referenced (primary)
+// node name if it is a container network-mode (i.e. "container:node-a" returns "node-a"), or an
+// empty string otherwise.
+func parseNetworkModeContainer(networkMode string) string {
+	if !strings.HasPrefix(networkMode, networkModeContainerPrefix) {
+		return ""
+	}
+
+	return strings.TrimPrefix(networkMode, networkModeContainerPrefix)
 }

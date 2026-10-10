@@ -300,10 +300,8 @@ type NodeConfig struct {
 	// Credentials for SSH/NETCONF/GNMI/etc. Populated from the topology file
 	// (defaults/kinds/nodes), falling back to the kind's hardcoded default when not set.
 	Credentials NodeCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
-	// Extra node parameters
-	Extras *Extras    `json:"extras,omitempty"`
-	Stages *Stages    `json:"stages,omitempty"`
-	DNS    *DNSConfig `json:"dns,omitempty"`
+	Stages      *Stages         `json:"stages,omitempty"`
+	DNS         *DNSConfig      `json:"dns,omitempty"`
 	// Kind parameters
 	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network
@@ -364,41 +362,6 @@ func (cd *ConfigDispatcher) GetVars() map[string]any {
 	}
 
 	return cd.Vars
-}
-
-// Extras contains extra node parameters which are not entitled to be part of a generic node config.
-type Extras struct {
-	// Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	SRLAgents []string `yaml:"srl-agents,omitempty"`
-	// Proxy address that mysocketctl will use
-	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
-	// paths to files which are to be copied to ceos flash dir
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
-	// k8s-kind node specific options
-	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
-	// frr node specific options
-	FRR *FRRExtras `yaml:"frr,omitempty"`
-}
-
-// FRRExtras represents the frr-specific extra options.
-type FRRExtras struct {
-	// Daemons is the list of FRR routing daemons to enable. When empty, all
-	// daemons known to the kind are enabled. The always-on daemons (zebra,
-	// staticd, mgmtd, watchfrr) need not be listed.
-	Daemons []string `yaml:"daemons,omitempty"`
-}
-
-// K8sKindExtras represents the k8s-kind-specific extra options.
-type K8sKindExtras struct {
-	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
-}
-
-// K8sKindDeployExtras represents the options used for the kind cluster creation.
-// It is aligned with the `kind create cluster` command options, but exposes
-// only the ones that are relevant for containerlab.
-type K8sKindDeployExtras struct {
-	KubeconfigPath *string `yaml:"kubeconfig,omitempty"`
-	Wait           *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.

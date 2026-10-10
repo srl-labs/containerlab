@@ -18,6 +18,7 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -1143,21 +1144,17 @@ func TestStageExecMagicVarsInit(t *testing.T) {
 	}
 }
 
-func TestExtrasInit(t *testing.T) {
+func TestKindSpecificConfigInit(t *testing.T) {
 	tests := map[string]struct {
-		got           string
-		node          string
-		wantCeosCopy  []string
-		wantSRLAgents []string
+		got          string
+		node         string
+		wantCeosCopy []string
 	}{
-		"extras_with_magic_vars": {
+		"kind_specific_config_with_magic_vars": {
 			got:  "test_data/topo14.yml",
-			node: "node1",
+			node: "node2",
 			wantCeosCopy: []string{
-				"ceos-configs/node1/ceos-config",
-			},
-			wantSRLAgents: []string{
-				"agents/node1/agent.yml",
+				"ceos-configs/node2/ceos-config",
 			},
 		},
 	}
@@ -1173,23 +1170,19 @@ func TestExtrasInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			extras := c.Nodes[tc.node].Config().Extras
-			if extras == nil {
-				t.Fatal("extras is nil")
+			ceosCfg, ok := c.Nodes[tc.node].Config().KindSpecificConfig.(*clabnodesceos.KindSpecificConfig)
+			if !ok {
+				t.Fatal("kind-specific config is not of the arista_ceos kind")
 			}
 
-			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
-				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
-			}
-
-			if d := cmp.Diff(extras.SRLAgents, tc.wantSRLAgents); d != "" {
-				t.Errorf("srl-agents mismatch (-want +got):\n%s", d)
+			if d := cmp.Diff(ceosCfg.CopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("copy-to-flash mismatch (-want +got):\n%s", d)
 			}
 		})
 	}
 }
 
-func TestKindExtrasMagicVarsAreNodeScoped(t *testing.T) {
+func TestKindSpecificConfigMagicVarsAreNodeScoped(t *testing.T) {
 	opts := []ClabOption{
 		WithTopoPath("test_data/topo16.yml", nil),
 	}
@@ -1219,13 +1212,13 @@ func TestKindExtrasMagicVarsAreNodeScoped(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			extras := c.Nodes[tc.node].Config().Extras
-			if extras == nil {
-				t.Fatal("extras is nil")
+			ceosCfg, ok := c.Nodes[tc.node].Config().KindSpecificConfig.(*clabnodesceos.KindSpecificConfig)
+			if !ok {
+				t.Fatal("kind-specific config is not of the arista_ceos kind")
 			}
 
-			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
-				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
+			if d := cmp.Diff(ceosCfg.CopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("copy-to-flash mismatch (-want +got):\n%s", d)
 			}
 		})
 	}

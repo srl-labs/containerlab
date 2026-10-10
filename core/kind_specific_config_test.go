@@ -228,6 +228,22 @@ topology:
 `,
 			wantErr: `no kind supports key "not-a-key" (set in groups.unused)`,
 		},
+		"legacy_extras_key_is_rejected": {
+			topo: `
+name: kc
+topology:
+  nodes:
+    frr1:
+      kind: frr
+      image: frr:test
+      extras:
+        frr:
+          daemons:
+            - ospfd
+`,
+			wantErr: `the "extras" node field is removed; ` +
+				"set its kind-specific config keys directly on the node definition instead",
+		},
 	}
 
 	for name, tc := range tests {

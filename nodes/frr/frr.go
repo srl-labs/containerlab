@@ -116,13 +116,26 @@ var (
 	vtyshCfg string
 )
 
+// KindSpecificConfig is the frr kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// Daemons is the list of FRR routing daemons to enable. When empty, all
+	// daemons known to the kind are enabled. The always-on daemons (zebra,
+	// staticd, mgmtd, watchfrr) need not be listed.
+	Daemons []string `yaml:"daemons,omitempty" json:"daemons,omitempty"`
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
+
+func (n *frr) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
+
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 
 	// FRR has no scrapli or napalm platform, so no PlatformAttrs are set.
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(
-		defaultCredentials, generateNodeAttributes, nil)
+		defaultCredentials, generateNodeAttributes, nil,
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(frr)
@@ -214,12 +227,7 @@ func (n *frr) createFRRFiles() error {
 		return fmt.Errorf("node=%s: %w", nodeCfg.ShortName, err)
 	}
 
-	var daemons []string
-	if nodeCfg.Extras != nil && nodeCfg.Extras.FRR != nil {
-		daemons = nodeCfg.Extras.FRR.Daemons
-	}
-
-	rendered, err := renderDaemons(daemons)
+	rendered, err := renderDaemons(n.kindSpecificCfg().Daemons)
 	if err != nil {
 		return fmt.Errorf("node=%s: %w", nodeCfg.ShortName, err)
 	}

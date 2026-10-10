@@ -2,9 +2,8 @@ name: topo16
 topology:
   kinds:
     arista_ceos:
-      extras:
-        ceos-copy-to-flash:
-          - ceos-configs/__clabNodeName__/ceos-config
+      copy-to-flash:
+        - ceos-configs/__clabNodeName__/ceos-config
   nodes:
     node1:
       kind: arista_ceos

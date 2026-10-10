@@ -13,7 +13,6 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v1.0.0
 	github.com/charmbracelet/x/term v0.2.2
-	github.com/clabernetes/clabernetes v0.8.1-0.20260827171658-2a1f5c2ed0be
 	github.com/containerd/errdefs v1.0.0
 	github.com/containernetworking/plugins v1.9.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20250625173537-a00eb8d2cfce
