@@ -92,8 +92,6 @@ github.com/cilium/ebpf v0.7.0/go.mod h1:/oI2+1shJiTGAMgl6/RgJr36Eo1jzrRcAWbcXO2u
 github.com/cilium/ebpf v0.8.1/go.mod h1:f5zLIM0FSNuAkSyLAN7X+Hy6yznlF1mNiWUMfxMtrgk=
 github.com/cilium/ebpf v0.17.3 h1:FnP4r16PWYSE4ux6zN+//jMcW4nMVRvuTLVTvCjyyjg=
 github.com/cilium/ebpf v0.17.3/go.mod h1:G5EDHij8yiLzaqn0WjyfJHvRa+3aDlReIaLVRMvOyJk=
-github.com/clabernetes/clabernetes v0.8.1-0.20260827171658-2a1f5c2ed0be h1:EONb+58zWrtbIKjgKY7nLtElh0DSgjTz78QG95Yj9iw=
-github.com/clabernetes/clabernetes v0.8.1-0.20260827171658-2a1f5c2ed0be/go.mod h1:ao7KEy0oeuVeIQESoXgLFNcCNfpuCjm3fxIF7kukbE0=
 github.com/clipperhouse/displaywidth v0.11.0 h1:lBc6kY44VFw+TDx4I8opi/EtL9m20WSEFgwIwO+UVM8=
 github.com/clipperhouse/displaywidth v0.11.0/go.mod h1:bkrFNkf81G8HyVqmKGxsPufD3JhNl3dSqnGhOoSD/o0=
 github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=
@@ -806,8 +804,6 @@ gotest.tools/v3 v3.5.2 h1:7koQfIKdy+I8UTetycgUqXWSDwpgv193Ka+qRsmBY8Q=
 gotest.tools/v3 v3.5.2/go.mod h1:LtdLGcnqToBH83WByAAi/wiwSFCArdFIUV/xxN4pcjA=
 k8s.io/api v0.36.4 h1:RxrvqCL6vgH5/+UnTeu1IIFqYmGfy0hnyrod1rn35Oo=
 k8s.io/api v0.36.4/go.mod h1:S2B3orCFBDhrgyWbLeuKcT2QdHIpQesBkCYSlWtwUOw=
-k8s.io/apiextensions-apiserver v0.36.0 h1:Wt7E8J+VBCbj4FjiBfDTK/neXDDjyJVJc7xfuOHImZ0=
-k8s.io/apiextensions-apiserver v0.36.0/go.mod h1:kGDjH0msuiIB3tgsYRV0kS9GqpMYMUsQ3GHv7TApyug=
 k8s.io/apimachinery v0.36.4 h1:PT2UzkupGuAx/+xT5XjiMJ1WGpY3fn9/hdAvjweRet4=
 k8s.io/apimachinery v0.36.4/go.mod h1:p2I2dipt7JHG+quVwQ1d02d28O4GdDi77RByQ13MTpk=
 k8s.io/client-go v0.36.4 h1:MDvfDNvMSt0Br94SK8neviVlwL9qifw9B26hJCpD1K0=
