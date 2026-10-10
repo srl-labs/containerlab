@@ -220,8 +220,6 @@ func (c *CLab) planApply(
 			if _, parked := c.applyParkingLinkNode(nodeName); parked {
 				parkingExists = true
 				status = c.Nodes[nodeName].GetContainerStatus(ctx)
-			} else {
-				continue
 			}
 		} else {
 			status = c.Nodes[nodeName].GetContainerStatus(ctx)
