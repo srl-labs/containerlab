@@ -697,3 +697,157 @@ func keys[V any](values map[string]V) []string {
 
 	return out
 }
+
+func TestCompileUnknownFieldsPointAtTheirSection(t *testing.T) {
+	cases := []struct {
+		name       string
+		definition string
+		want       string
+	}{
+		{
+			name: "unknown link field",
+			definition: `
+name: lab
+topology:
+  nodes:
+    r1: { kind: linux, image: img }
+  links:
+    - endpoints: [r1:eth1, r1:eth2]
+      bogus: true
+`,
+			want: "topology.links (line",
+		},
+		{
+			name: "unknown topology field",
+			definition: `
+name: lab
+topology:
+  bogus: true
+  nodes:
+    r1: { kind: linux, image: img }
+`,
+			want: "topology (line",
+		},
+		{
+			name: "unknown lab field",
+			definition: `
+name: lab
+bogus: true
+topology:
+  nodes:
+    r1: { kind: linux, image: img }
+`,
+			want: "topology (line",
+		},
+		{
+			name: "rejected topology field",
+			definition: `
+name: lab
+topology:
+  stages:
+    - r1
+  nodes:
+    r1: { kind: linux, image: img }
+`,
+			want: `field "stages" is rejected:`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Compile(&testLogger{}, &Input{Definition: tc.definition})
+			if err == nil {
+				t.Fatalf("expected a compile error containing %q, got none", tc.want)
+			}
+
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error %q does not mention %q", err, tc.want)
+			}
+
+			if strings.Contains(err.Error(), "not found in type") {
+				t.Errorf("error %q leaks the raw yaml error", err)
+			}
+		})
+	}
+}
+
+func TestCompileMgmtNetWarningPointsAtItsDeclaration(t *testing.T) {
+	cases := []struct {
+		name       string
+		definition string
+		wantPath   string
+	}{
+		{
+			name: "node declared",
+			definition: `
+name: lab
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: img
+      mgmt-net: mgmt
+`,
+			wantPath: "topology.nodes.r1.mgmt-net (line",
+		},
+		{
+			name: "inherited from defaults",
+			definition: `
+name: lab
+topology:
+  defaults:
+    mgmt-net: mgmt
+  nodes:
+    r1: { kind: linux, image: img }
+`,
+			wantPath: "topology.defaults.mgmt-net (line",
+		},
+		{
+			name: "inherited from kind",
+			definition: `
+name: lab
+topology:
+  kinds:
+    linux:
+      mgmt-net: mgmt
+  nodes:
+    r1: { kind: linux, image: img }
+`,
+			wantPath: "topology.kinds.linux.mgmt-net (line",
+		},
+		{
+			name: "inherited from group",
+			definition: `
+name: lab
+topology:
+  groups:
+    leafs:
+      mgmt-net: mgmt
+  nodes:
+    r1: { kind: linux, image: img, group: leafs }
+`,
+			wantPath: "topology.groups.leafs.mgmt-net (line",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := &testLogger{}
+
+			if _, err := Compile(logger, &Input{Definition: tc.definition}); err != nil {
+				t.Fatal(err)
+			}
+
+			matched := false
+			for _, warning := range logger.warnings {
+				if strings.Contains(warning, tc.wantPath) {
+					matched = true
+				}
+			}
+
+			if !matched {
+				t.Fatalf("warnings %v do not point at %s", logger.warnings, tc.wantPath)
+			}
+		})
+	}
+}

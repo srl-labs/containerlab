@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	unknownFieldMatchCount = 3
+	unknownFieldMatchCount = 4
 	yamlMappingPairSize    = 2
 	importedNodeLayerCount = 4
 
@@ -39,10 +39,6 @@ const (
 	// labelAppProtocols is a definition-only containerlab label that declares per-destination
 	// port application protocols.
 	labelAppProtocols = labelPrefix + "/appProtocols"
-
-	// networkModeContainerPrefix is the prefix of the `network-mode` node setting expressing
-	// that a node shares the network namespace of another (containerlab) node.
-	networkModeContainerPrefix = "container:"
 
 	linkEndpointElementCount = 2
 )
@@ -474,29 +470,50 @@ func rejectedContainerlabFieldReason(field string) (string, bool) {
 	}
 }
 
-var unknownFieldPattern = regexp.MustCompile(`^line (\d+): field ([^ ]+)`)
+// unknownFieldPattern matches a yaml.v3 unknown-field error, which reads
+// "line N: field X not found in type T". The type T is the Go struct the field was looked up in
+// and is what tells which topology section the field belongs to; it is an internal name users
+// should never see, so it is mapped onto the topology path below and never rendered.
+var unknownFieldPattern = regexp.MustCompile(`^line (\d+): field ([^ ]+) not found in type (.+)$`)
+
+// unknownFieldPaths maps the Go type a yaml unknown-field error reports onto the topology path
+// the unknown field lives at, so the diagnostic points at the topology section it belongs to.
+// Types absent from the map fall back to no path, which the formatter renders as the whole
+// topology. The node definitions are absent on purpose: their unknown keys are absorbed into the
+// kind-specific config instead of reaching the strict parser.
+var unknownFieldPaths = map[string]string{
+	"compile.definitionFile": "",
+	"compile.fileTopology":   "topology",
+	"compile.linkDefinition": "topology.links",
+	"compile.linkConfig":     "topology.links",
+}
 
 func diagnosticFromUnknownField(message string) Diagnostic {
-	diagnostic := Diagnostic{
-		Code:    "unsupported-field",
-		Message: message,
-	}
+	diagnostic := Diagnostic{Code: "unsupported-field"}
 
 	matches := unknownFieldPattern.FindStringSubmatch(message)
 	if len(matches) != unknownFieldMatchCount {
+		diagnostic.Message = message
+
 		return diagnostic
 	}
 
 	diagnostic.Line, _ = strconv.Atoi(matches[1])
-	diagnostic.Path = matches[2]
 
-	if reason, rejected := rejectedContainerlabFieldReason(diagnostic.Path); rejected {
+	if reason, rejected := rejectedContainerlabFieldReason(matches[2]); rejected {
 		diagnostic.Message = fmt.Sprintf(
 			"field %q is rejected: %s",
-			diagnostic.Path,
+			matches[2],
 			reason,
 		)
+	} else {
+		diagnostic.Message = fmt.Sprintf(
+			"field %q is not a known containerlab field",
+			matches[2],
+		)
 	}
+
+	diagnostic.Path = unknownFieldPaths[matches[3]]
 
 	return diagnostic
 }
@@ -769,14 +786,15 @@ func collectKindSpecificConfig(
 	if mgmtNet := topology.GetNodeMgmtNet(nodeName); mgmtNet != "" {
 		flattened.MgmtNet = mgmtNet
 
+		from := mgmtNetSourceBlock(topology, nodeName, mgmtNet)
+
 		diagnostics.add(Diagnostic{
 			Code: "ignored-node-field",
-			Path: "topology.nodes." + nodeName + ".mgmt-net",
-			Line: fieldLines["nodes."+nodeName]["mgmt-net"],
+			Path: "topology." + from + ".mgmt-net",
+			Line: fieldLines[from]["mgmt-net"],
 			Message: fmt.Sprintf(
-				"node %q mgmt-net %q is accepted and ignored; c9s realizes a single management "+
+				"mgmt-net %q is accepted and ignored; c9s realizes a single management "+
 					"network per namespace",
-				nodeName,
 				mgmtNet,
 			),
 			Warning: true,
@@ -831,6 +849,34 @@ func collectKindSpecificConfig(
 	}
 
 	return nil
+}
+
+// mgmtNetSourceBlock returns the topology block that supplied the node's resolved mgmt-net
+// value, walking the same node > group > kind > defaults precedence containerlab's inheritance
+// uses. The block is what diagnostics point at: a value inherited from defaults or a kind must
+// not be reported at a node path the definition does not declare. The node block is the fallback
+// for a value no reachable block matches.
+func mgmtNetSourceBlock(topology *clabtypes.Topology, nodeName, mgmtNet string) string {
+	group := topology.GetNodeGroup(nodeName)
+	kind := topology.GetNodeKind(nodeName)
+
+	blocks := []struct {
+		from string
+		def  *clabtypes.NodeDefinition
+	}{
+		{"nodes." + nodeName, topology.Nodes[nodeName]},
+		{"groups." + group, topology.GetGroup(group)},
+		{"kinds." + kind, topology.GetKind(kind)},
+		{"defaults", topology.GetDefaults()},
+	}
+
+	for _, block := range blocks {
+		if block.def != nil && block.def.MgmtNet == mgmtNet {
+			return block.from
+		}
+	}
+
+	return "nodes." + nodeName
 }
 
 // kindSpecificWrapperEntries flattens a kind-specific config wrapper mapping into per-key
@@ -1153,7 +1199,7 @@ func validateNodeNetworkModes(
 			continue
 		}
 
-		primary := parseNetworkModeContainer(networkMode)
+		primary := ParseNetworkModeContainer(networkMode)
 
 		path := fmt.Sprintf("topology.nodes.%s.network-mode", nodeName)
 		// The primary is a containerlab node name, and node names Kubernetes cannot carry are
@@ -1212,7 +1258,7 @@ func validateNodeNetworkModes(
 				break
 			}
 
-			current = parseNetworkModeContainer(
+			current = ParseNetworkModeContainer(
 				nextNode.NetworkMode,
 			)
 		}
