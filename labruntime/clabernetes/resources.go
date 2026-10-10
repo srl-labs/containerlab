@@ -157,9 +157,10 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	}
 
 	return fmt.Errorf(
-		"timed out after %s waiting for c9s links in namespace %s to resolve; pending links: %s",
+		"timed out after %s waiting for c9s links of lab %s/%s to resolve; pending links: %s",
 		effectiveTimeout,
 		namespace,
+		topologyName,
 		strings.Join(pending, ", "),
 	)
 }
