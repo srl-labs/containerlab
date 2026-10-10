@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabnames "github.com/srl-labs/containerlab/names"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -182,7 +183,7 @@ func (r *Runtime) resolveNodeName(
 	namespace,
 	nodeName string,
 ) (string, error) {
-	if clablabruntime.SanitizeName(nodeName) == nodeName {
+	if clabnames.SanitizeName(nodeName) == nodeName {
 		return nodeName, nil
 	}
 
