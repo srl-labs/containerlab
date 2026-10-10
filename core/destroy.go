@@ -119,7 +119,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 			continue
 		}
 
-		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
+		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet, opts.keepLinks)
 		if err != nil {
 			log.Errorf("Error occurred during the %s lab deletion: %v", cc.Config.Name, err)
 			errs = append(errs, err)
@@ -155,8 +155,20 @@ func (c *CLab) makeCopyForDestroy(
 		varsFiles = c.TopoPaths.VarsFilenamesAbsPath()
 	}
 
-	if clabutils.FileOrDirExists(topo) {
-		newOpts = append(newOpts, WithTopoPath(topo, varsFiles))
+	destroyTopo := availableDestroyTopology(
+		topo,
+		c.TopoPaths.TopologyFilenameAbsPath(),
+		opts.all,
+	)
+	if destroyTopo != "" {
+		if destroyTopo != topo {
+			log.Debugf(
+				"labeled topology file %q not found, using requested topology %q for destroy",
+				topo,
+				destroyTopo,
+			)
+		}
+		newOpts = append(newOpts, WithTopoPath(destroyTopo, varsFiles))
 	} else {
 		// Derive lab name from lab directory (format: clab-<labname>)
 		labName := filepath.Base(labDir)
@@ -269,6 +281,16 @@ func (c *CLab) resolveMgmtNetworksForDestroy(
 	return c.createNetworks(ctx, existing)
 }
 
+func availableDestroyTopology(labeledTopo, requestedTopo string, all bool) string {
+	if clabutils.FileOrDirExists(labeledTopo) {
+		return labeledTopo
+	}
+	if !all && clabutils.FileOrDirExists(requestedTopo) {
+		return requestedTopo
+	}
+	return ""
+}
+
 // destroyLabDirs removes the lab directories of the destroyed labs. Directories
 // recorded in failedLabDirs are kept: their labs are still running, and the
 // directory holds the lab state a later destroy attempt relies on.
@@ -379,7 +401,12 @@ func (c *CLab) destroyLabDirs(
 	return nil
 }
 
-func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
+func (c *CLab) destroy(
+	ctx context.Context,
+	maxWorkers uint,
+	keepMgmtNet,
+	keepLinks bool,
+) error {
 	var containers []clabruntime.GenericContainer
 	var orphanSidecars []clabruntime.GenericContainer
 	var err error
@@ -431,14 +458,24 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	if len(c.Nodes) > 0 {
 		c.preDestroyNodes(ctx, slices.Collect(maps.Values(c.Nodes)), maxWorkers)
 
-		err := clablinks.CleanupFilteredLinks(
-			ctx,
-			c.Config.Topology.Links,
-			c.Config.Name,
-			c.nodeFilter,
-		)
-		if err != nil {
-			return err
+		if keepLinks {
+			for _, nodeName := range sortedNodeNames(c.Nodes) {
+				node := c.Nodes[nodeName]
+				log.Info("Parking links for node replacement", "node", nodeName)
+				if err := node.ParkEndpoints(ctx); err != nil {
+					return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
+				}
+			}
+		} else {
+			err := clablinks.CleanupFilteredLinks(
+				ctx,
+				c.Config.Topology.Links,
+				c.Config.Name,
+				c.nodeFilter,
+			)
+			if err != nil {
+				return err
+			}
 		}
 		c.deleteNodes(ctx, maxWorkers)
 		c.deleteContainersDirect(ctx, orphanSidecars)
