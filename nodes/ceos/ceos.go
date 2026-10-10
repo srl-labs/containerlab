@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -57,8 +57,29 @@ var (
 
 	saveCmd = "Cli -p 15 -c wr"
 
+	ceosPostDeployExec = func(
+		n *ceos,
+		ctx context.Context,
+		execCmd *clabexec.ExecCmd,
+	) (*clabexec.ExecResult, error) {
+		return n.RunExec(ctx, execCmd)
+	}
+	ceosPostDeployWait = waitForCeosPostDeployRetry
+
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 )
+
+func waitForCeosPostDeployRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -347,16 +368,10 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
+func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
-	if err != nil {
-		return err
-	}
-
-	defer d.Close()
-
 	cfgs := []string{
+		"configure terminal",
 		"interface " + nodeCfg.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",
@@ -410,18 +425,80 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	}
 
 	// add save to startup cmd
-	cfgs = append(cfgs, "wr")
+	cfgs = append(cfgs, "end", "write memory")
 
 	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
 
-	resp, err := d.SendConfigs(cfgs)
-	if err != nil {
-		return err
-	} else if resp.Failed != nil {
-		return errors.New("failed CLI configuration")
+	var lastErr error
+	var lastResp *clabexec.ExecResult
+	readyCmd := clabexec.NewExecCmdFromSlice([]string{"Cli", "-p", "15", "-c", "show version"})
+	ready := false
+
+	for attempt := range 60 {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("cEOS CLI readiness canceled: %w", err)
+		}
+
+		lastResp, lastErr = ceosPostDeployExec(n, ctx, readyCmd)
+		if lastErr == nil && lastResp != nil && lastResp.GetReturnCode() == 0 {
+			ready = true
+			break
+		}
+
+		log.Debugf(
+			"%s - Cli not ready (%v, %v) - waiting.",
+			nodeCfg.LongName,
+			lastErr,
+			lastResp,
+		)
+		if attempt == 59 {
+			break
+		}
+		if err := ceosPostDeployWait(ctx, 2*time.Second); err != nil {
+			return fmt.Errorf("cEOS CLI readiness canceled: %w", err)
+		}
 	}
 
-	return err
+	if !ready {
+		if lastErr != nil {
+			return fmt.Errorf("failed waiting for cEOS CLI readiness: %w", lastErr)
+		}
+		if lastResp != nil {
+			return fmt.Errorf(
+				"cEOS CLI did not become ready: rc=%d stdout=%q stderr=%q",
+				lastResp.GetReturnCode(),
+				lastResp.GetStdOutString(),
+				lastResp.GetStdErrString(),
+			)
+		}
+
+		return fmt.Errorf("cEOS CLI did not become ready")
+	}
+
+	cliCmd := []string{
+		"Cli",
+		"-p", "15",
+		"--abort-on-error",
+		"-c", strings.Join(cfgs, "\n"),
+	}
+	execCmd := clabexec.NewExecCmdFromSlice(cliCmd)
+	resp, err := ceosPostDeployExec(n, ctx, execCmd)
+	if err != nil {
+		return fmt.Errorf("failed CLI configuration: %w", err)
+	}
+	if resp == nil {
+		return fmt.Errorf("failed CLI configuration: empty runtime response")
+	}
+	if resp.GetReturnCode() != 0 {
+		return fmt.Errorf(
+			"failed CLI configuration: rc=%d stdout=%q stderr=%q",
+			resp.GetReturnCode(),
+			resp.GetStdOutString(),
+			resp.GetStdErrString(),
+		)
+	}
+
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
