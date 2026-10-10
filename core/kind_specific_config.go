@@ -26,8 +26,67 @@ func (c *CLab) decodeKindSpecificConfig(
 		entry,
 		nodeName,
 		kind,
-		topo.GetNodeKindSpecificConfig(nodeName),
+		c.expandKindSpecificConfigMagicVars(
+			topo.GetNodeKindSpecificConfig(nodeName),
+			nodeName,
+		),
 	)
+}
+
+// expandKindSpecificConfigMagicVars replaces magic variables in every string of the given raw
+// kind-specific config entries. Values are copied, so the topology definitions the entries point
+// at are left untouched and keep serving other nodes unchanged.
+func (c *CLab) expandKindSpecificConfigMagicVars(
+	entries []clabtypes.KindSpecificConfigEntry,
+	nodeName string,
+) []clabtypes.KindSpecificConfigEntry {
+	if c.TopoPaths == nil || !c.TopoPaths.TopologyFileIsSet() {
+		// Without the topology paths the magic variables cannot be resolved; the entries are
+		// returned as parsed.
+		return entries
+	}
+
+	r := c.magicVarReplacer(nodeName)
+
+	var expand func(any) any
+
+	expand = func(v any) any {
+		switch v := v.(type) {
+		case string:
+			return r.Replace(v)
+		case []any:
+			out := make([]any, len(v))
+			for i, e := range v {
+				out[i] = expand(e)
+			}
+
+			return out
+		case map[string]any:
+			out := make(map[string]any, len(v))
+			for k, e := range v {
+				out[k] = expand(e)
+			}
+
+			return out
+		case map[any]any:
+			out := make(map[any]any, len(v))
+			for k, e := range v {
+				out[expand(k)] = expand(e)
+			}
+
+			return out
+		default:
+			return v
+		}
+	}
+
+	out := make([]clabtypes.KindSpecificConfigEntry, len(entries))
+	for i, e := range entries {
+		out[i] = e
+		out[i].Value = expand(e.Value)
+	}
+
+	return out
 }
 
 // validateKindSpecificConfigKeys checks the kind-specific config keys of the defaults, kinds and

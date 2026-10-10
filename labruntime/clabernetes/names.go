@@ -3,8 +3,8 @@ package clabernetes
 import (
 	"strings"
 
-	clabernetesutilcontainerlab "github.com/clabernetes/clabernetes/util/containerlab"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabcompile "github.com/srl-labs/containerlab/labruntime/clabernetes/compile"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -35,7 +35,7 @@ func sanitizeNodeNames(
 	// A node can share the network namespace of another node by name, and the compiler resolves
 	// that setting through the kind, group and defaults sections as well.
 	for _, nodeDefinition := range referencingNodeDefinitions(config.Topology) {
-		renameNetworkModePrimary(nodeDefinition, renames)
+		clabcompile.RenameNetworkModePrimary(nodeDefinition, renames)
 	}
 
 	return renames, nil
@@ -62,21 +62,6 @@ func referencingNodeDefinitions(topology *clabtypes.Topology) []*clabtypes.NodeD
 	}
 
 	return definitions
-}
-
-func renameNetworkModePrimary(
-	nodeDefinition *clabtypes.NodeDefinition,
-	renames map[string]string,
-) {
-	if nodeDefinition == nil {
-		return
-	}
-
-	primary := clabernetesutilcontainerlab.ParseNetworkModeContainer(nodeDefinition.NetworkMode)
-	if sanitized, renamed := renames[primary]; renamed {
-		nodeDefinition.NetworkMode = clabernetesutilcontainerlab.NetworkModeContainerPrefix +
-			sanitized
-	}
 }
 
 // renameBriefLinkEndpoints points the wiring at the sanitized node names. Endpoints that do not

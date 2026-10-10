@@ -544,9 +544,11 @@ kubectl -n <namespace> get pod -l c9s.run/direct-workload=<node>
 application container. Add `-c` to reach a specific chassis component, the
 `clabwire` connectivity sidecar, or the `planner` preparation container.
 
-Local startup configurations, licenses, bind sources, `env-files`,
-`extras.srl-agents`, and `extras.ceos-copy-to-flash` paths are copied into
-per-node ConfigMaps and staged at the paths the node expects. An inline
+Local startup configurations, licenses, bind sources, `env-files`, the
+`copy-to-flash` [kind-specific config
+key](../nodes.md#kind-specific-config), and other path-bearing node fields
+are copied into per-node ConfigMaps and staged at the paths the node expects.
+An inline
 `startup-config` is staged as a partial configuration and merged over the
 kind's default config, exactly like the local runtimes. Each staged file is
 currently limited to 950 KB. These projections are snapshots taken at deploy

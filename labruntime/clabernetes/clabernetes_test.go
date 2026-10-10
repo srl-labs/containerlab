@@ -2156,8 +2156,6 @@ func TestDeployStagesLocalFilesFromTopology(t *testing.T) {
 		0o644,
 	)
 	writeFile(t, filepath.Join(topologyDir, "configs", "client2.env"), "MODE=test\n", 0o644)
-	writeFile(t, filepath.Join(topologyDir, "configs", "agent.yml"), "name: agent\n", 0o644)
-	writeFile(t, filepath.Join(topologyDir, "configs", "flash.cfg"), "hostname ceos\n", 0o644)
 
 	const definition = `name: lab1
 topology:
@@ -2170,11 +2168,6 @@ topology:
       kind: linux
       env-files:
         - configs/client2.env
-      extras:
-        srl-agents:
-          - configs/agent.yml
-        ceos-copy-to-flash:
-          - configs/flash.cfg
       binds:
         - configs/client2:/config
     prometheus:
@@ -2210,8 +2203,6 @@ topology:
 	}{
 		"configs/client2/iperf.sh":          {"client2", "#!/bin/sh\n", "execute"},
 		"configs/client2.env":               {"client2", "MODE=test\n", "read"},
-		"configs/agent.yml":                 {"client2", "name: agent\n", "read"},
-		"configs/flash.cfg":                 {"client2", "hostname ceos\n", "read"},
 		"configs/prometheus/prometheus.yml": {"prometheus", "global: {}\n", "read"},
 		"configs/fabric/leaf1.cfg":          {"leaf1", "set / system name leaf1\n", "read"},
 	}

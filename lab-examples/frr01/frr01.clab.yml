@@ -6,10 +6,8 @@ topology:
       kind: frr
       image: quay.io/frrouting/frr:containerlab-10.7.1
       # This lab only runs OSPF. Omit this to start every FRR daemon instead.
-      extras:
-        frr:
-          daemons:
-            - ospfd
+      daemons:
+        - ospfd
     hosts:
       kind: linux
       image: wbitt/network-multitool:3.22.2
