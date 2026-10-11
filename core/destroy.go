@@ -202,9 +202,11 @@ func (c *CLab) makeCopyForDestroy(
 		return nil, err
 	}
 
-	// create management networks or use existing ones
-	// we call this to populate the bridge names
-	// which are needed for the removal of the iptables rules.
+	// populate the management network state (bridge names) destroy needs for the
+	// removal of the iptables rules, without creating networks that are missing:
+	// a lab deployed with a management network override leaves the topology's
+	// default network uncreated, and creating it here would collide with the
+	// subnets the override is using.
 	if !cc.mgmtNetworksSkipped() {
 		var bridged clabtypes.MgmtNetworks
 		for _, m := range cc.allMgmtNetworks() {
@@ -212,7 +214,7 @@ func (c *CLab) makeCopyForDestroy(
 				bridged = append(bridged, m)
 			}
 		}
-		if err = cc.createNetworks(ctx, bridged); err != nil {
+		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}
@@ -223,6 +225,48 @@ func (c *CLab) makeCopyForDestroy(
 	}
 
 	return cc, nil
+}
+
+// resolveMgmtNetworksForDestroy inspects the management networks that already exist
+// so their bridge names are populated for the iptables cleanup. Networks that do not
+// exist are skipped: they hold no bridge to clean up, and destroy must not create
+// management networks. Runtimes that cannot check network existence keep the
+// create-or-inspect behavior.
+func (c *CLab) resolveMgmtNetworksForDestroy(
+	ctx context.Context,
+	networks clabtypes.MgmtNetworks,
+) error {
+	var existing clabtypes.MgmtNetworks
+
+	for _, m := range networks {
+		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
+		if rtErr != nil {
+			// runtimes without multiple network support never created extra networks
+			log.Debug(
+				"Skipping management network resolution", "network", m.Network, "error", rtErr,
+			)
+			continue
+		}
+
+		checker, ok := rt.(clabruntime.MgmtNetworkChecker)
+		if !ok {
+			existing = append(existing, m)
+			continue
+		}
+
+		exists, err := checker.MgmtNetworkExists(ctx)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			log.Debug("Skipping management network that does not exist", "network", m.Network)
+			continue
+		}
+
+		existing = append(existing, m)
+	}
+
+	return c.createNetworks(ctx, existing)
 }
 
 // destroyLabDirs removes the lab directories of the destroyed labs. Directories

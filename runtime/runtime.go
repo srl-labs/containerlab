@@ -107,6 +107,14 @@ type MgmtNetBinder interface {
 	ForMgmtNet(*clabtypes.MgmtNet) ContainerRuntime
 }
 
+// MgmtNetworkChecker is implemented by runtimes that can report whether their bound
+// management network exists without creating it.
+type MgmtNetworkChecker interface {
+	// MgmtNetworkExists reports whether the management network bound to the runtime
+	// exists.
+	MgmtNetworkExists(context.Context) (bool, error)
+}
+
 // NetworkAddress is a runtime-owned endpoint or infrastructure reservation.
 type NetworkAddress struct {
 	NetworkName string
