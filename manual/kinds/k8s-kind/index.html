@@ -312,16 +312,14 @@
     </div>
     
       
-        <form class="md-header__option" data-md-component="palette">
+        <form class="md-header__option md-switch" data-md-component="palette">
   
     
     
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to dark mode" for="__palette_1" hidden></label>
     
   
     
@@ -329,11 +327,28 @@
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to light mode" for="__palette_0" hidden></label>
     
   
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
 </form>
       
     
@@ -902,12 +917,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.80/" class="md-tabs__link">
+        <a href="../../../rn/0.81/" class="md-tabs__link">
           
   
   Release notes
@@ -2334,10 +2351,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#extra-parameters" class="md-nav__link">
+  <a href="#kind-specific-config" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Extra parameters
+        Kind-specific config
       </span>
     </span>
   </a>
@@ -3090,6 +3107,8 @@
       
         
       
+        
+      
     
     
     
@@ -3108,7 +3127,7 @@
   
   
   
-    <a href="../../../rn/0.80/" class="md-nav__link">
+    <a href="../../../rn/0.81/" class="md-nav__link">
       
   
   
@@ -3245,10 +3264,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#extra-parameters" class="md-nav__link">
+  <a href="#kind-specific-config" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Extra parameters
+        Kind-specific config
       </span>
     </span>
   </a>
@@ -3578,20 +3597,17 @@
 <li><a href="../../nodes/#image">image</a> - to define the kind container image to use for the kind cluster</li>
 <li><a href="../../nodes/#startup-config">startup-config</a> - to provide a kind cluster configuration (optional, kind defaults apply otherwise)</li>
 </ul>
-<h3 id="extra-parameters">Extra parameters<a class="headerlink" href="#extra-parameters" title="Permanent link">#</a></h3>
-<p>In addition to the generic node parameters, <code>k8s-kind</code> can take following extra parameters from <code>extras</code> field.</p>
+<h3 id="kind-specific-config">Kind-specific config<a class="headerlink" href="#kind-specific-config" title="Permanent link">#</a></h3>
+<p>In addition to the generic node parameters, <code>k8s-kind</code> accepts the following <a href="../../nodes/#kind-specific-config">kind-specific config keys</a>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">topology</span><span class="p">:</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">kind0</span><span class="p">:</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s-kind</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">extras</span><span class="p">:</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="nt">k8s_kind</span><span class="p">:</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">          </span><span class="nt">deploy</span><span class="p">:</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">            </span><span class="c1"># Corresponds to --kubeconfig option.</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">            </span><span class="c1"># Path can be absolute or relative to the topology file</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">            </span><span class="nt">kubeconfig</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./kubeconfig</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">            </span><span class="c1"># Corresponds to --wait option. Wait given duration until the cluster becomes ready.</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">            </span><span class="nt">wait</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0s</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="c1"># Corresponds to the --kubeconfig option.</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="c1"># Path can be absolute or relative to the topology file</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="nt">kubeconfig</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./kubeconfig</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="c1"># Corresponds to the --wait option. Wait given duration until the cluster becomes ready.</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">      </span><span class="nt">wait</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0s</span>
 </span></code></pre></div>
 <h2 id="known-issues">Known issues<a class="headerlink" href="#known-issues" title="Permanent link">#</a></h2>
 <h3 id="duplication-of-nodes-in-the-output">Duplication of nodes in the output<a class="headerlink" href="#duplication-of-nodes-in-the-output" title="Permanent link">#</a></h3>

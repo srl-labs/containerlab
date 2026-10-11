@@ -312,16 +312,14 @@
     </div>
     
       
-        <form class="md-header__option" data-md-component="palette">
+        <form class="md-header__option md-switch" data-md-component="palette">
   
     
     
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to dark mode" for="__palette_1" hidden></label>
     
   
     
@@ -329,11 +327,28 @@
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to light mode" for="__palette_0" hidden></label>
     
   
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
 </form>
       
     
@@ -902,12 +917,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.80/" class="md-tabs__link">
+        <a href="../../../rn/0.81/" class="md-tabs__link">
           
   
   Release notes
@@ -3095,6 +3112,8 @@
       
         
       
+        
+      
     
     
     
@@ -3113,7 +3132,7 @@
   
   
   
-    <a href="../../../rn/0.80/" class="md-nav__link">
+    <a href="../../../rn/0.81/" class="md-nav__link">
       
   
   
@@ -3490,7 +3509,7 @@
 <p><a href="https://frrouting.org">FRRouting</a> is an open source internet routing protocol suite for Linux. It is identified with the <code>frr</code> kind in the <a href="../../topo-def-file/">topology file</a>. The <code>frrouting</code> kind name is accepted as an alias.</p>
 <h2 id="frr-via-the-linux-kind">FRR via the <code>linux</code> kind<a class="headerlink" href="#frr-via-the-linux-kind" title="Permanent link">#</a></h2>
 <p>Earlier containerlab labs ran FRR containers with the <a href="../linux/"><code>linux</code></a> kind, supplying <code>frr.conf</code> and <code>daemons</code> through explicit bind mounts. The native <code>frr</code> kind builds on that work and makes FRR a first-class citizen in containerlab: it manages configuration files, daemon selection, forwarding, SSH public keys, and saving the running configuration.</p>
-<p>To adapt an existing lab, change <code>kind: linux</code> to <code>kind: frr</code>, replace the bind mount for <code>/etc/frr/frr.conf</code> with <code>startup-config</code>, and replace the <code>/etc/frr/daemons</code> bind mount with <code>extras.frr.daemons</code>. Remove any bind for <code>/etc/frr/vtysh.conf</code>, since the kind generates it. Use the containerlab image below if you need SSH access. Existing labs can continue using the <code>linux</code> kind.</p>
+<p>To adapt an existing lab, change <code>kind: linux</code> to <code>kind: frr</code>, replace the bind mount for <code>/etc/frr/frr.conf</code> with <code>startup-config</code>, and replace the <code>/etc/frr/daemons</code> bind mount with the <code>daemons</code> <a href="../../nodes/#kind-specific-config">kind-specific config key</a>. Remove any bind for <code>/etc/frr/vtysh.conf</code>, since the kind generates it. Use the containerlab image below if you need SSH access. Existing labs can continue using the <code>linux</code> kind.</p>
 <h2 id="getting-frrouting-image">Getting FRRouting image<a class="headerlink" href="#getting-frrouting-image" title="Permanent link">#</a></h2>
 <p>FRR publishes a containerlab image alongside its plain release image, tagged <code>containerlab-&lt;version&gt;</code> in the same <a href="https://quay.io/repository/frrouting/frr"><code>quay.io/frrouting/frr</code></a> repository. This image was introduced with <strong>FRR 10.7.1</strong> and is published for 10.7.1 and later releases. <strong>Releases older than 10.7.1 will not receive containerlab-native images.</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>quay.io/frrouting/frr:containerlab-10.7.1
@@ -3570,25 +3589,23 @@
 <p>Without a <code>startup-config</code> the node comes up with a minimal configuration that only sets <code>frr defaults traditional</code> and logging.</p>
 <p>The hostname is not set in the generated config on purpose. FRR picks up the container's hostname, which containerlab already sets to the node name.</p>
 <h3 id="daemons">Daemons<a class="headerlink" href="#daemons" title="Permanent link">#</a></h3>
-<p>By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under <code>extras</code>:</p>
+<p>By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under the <code>daemons</code> <a href="../../nodes/#kind-specific-config">kind-specific config key</a>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">topology</span><span class="p">:</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">router1</span><span class="p">:</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frr</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/frrouting/frr:containerlab-10.7.1</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">extras</span><span class="p">:</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="nt">frr</span><span class="p">:</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">          </span><span class="nt">daemons</span><span class="p">:</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ospfd</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bfdd</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">daemons</span><span class="p">:</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ospfd</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bfdd</span>
 </span></code></pre></div>
 <p>Naming any daemon switches off all the ones you did not name. <code>zebra</code>, <code>staticd</code>, <code>mgmtd</code> and <code>watchfrr</code> are always started by FRR and may be listed or left out; either way they run.</p>
 <p>The list accepts <code>bgpd</code>, <code>ospfd</code>, <code>ospf6d</code>, <code>ripd</code>, <code>ripngd</code>, <code>isisd</code>, <code>pimd</code>, <code>pim6d</code>, <code>ldpd</code>, <code>nhrpd</code>, <code>eigrpd</code>, <code>babeld</code>, <code>sharpd</code>, <code>pbrd</code>, <code>bfdd</code>, <code>fabricd</code>, <code>vrrpd</code> and <code>pathd</code>. Any other name is an error naming the offending entry.</p>
+<p><code>daemons</code> can be set on a group or a kind as well as on a single node, so a whole class of routers can share one daemon list. See the <a href="../../../lab-examples/frr01/">frr01 lab</a> for that.</p>
 <div class="admonition subtle-note">
 <p class="admonition-title">Daemons and topology size</p>
 <p>Starting all daemons increases the number of processes and memory usage per node. For larger topologies, list only the daemons the lab needs.</p>
 </div>
-<p><code>extras</code> can be set on a group or a kind as well as on a single node, so a whole class of routers can share one daemon list. See the <a href="../../../lab-examples/frr01/">frr01 lab</a> for that.</p>
 <h3 id="saving-configuration">Saving configuration<a class="headerlink" href="#saving-configuration" title="Permanent link">#</a></h3>
 <p><code>containerlab save</code> writes each node's running configuration back to <code>config/frr.conf</code> in its lab directory:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>containerlab<span class="w"> </span>save<span class="w"> </span>-t<span class="w"> </span>&lt;topology-file&gt;

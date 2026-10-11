@@ -312,16 +312,14 @@
     </div>
     
       
-        <form class="md-header__option" data-md-component="palette">
+        <form class="md-header__option md-switch" data-md-component="palette">
   
     
     
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to dark mode" for="__palette_1" hidden></label>
     
   
     
@@ -329,11 +327,28 @@
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to light mode" for="__palette_0" hidden></label>
     
   
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
 </form>
       
     
@@ -902,12 +917,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.80/" class="md-tabs__link">
+        <a href="../../rn/0.81/" class="md-tabs__link">
           
   
   Release notes
@@ -1782,6 +1799,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         image-pull-secret
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expose-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        expose-type
       </span>
     </span>
   </a>
@@ -2800,6 +2828,8 @@
       
         
       
+        
+      
     
     
     
@@ -2818,7 +2848,7 @@
   
   
   
-    <a href="../../rn/0.80/" class="md-nav__link">
+    <a href="../../rn/0.81/" class="md-nav__link">
       
   
   
@@ -3242,6 +3272,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         image-pull-secret
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expose-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        expose-type
       </span>
     </span>
   </a>
@@ -3829,6 +3870,7 @@ deployment. They are rejected when an existing lab is reconciled; use <code>--re
 them by destroying and redeploying the lab.</p>
 <h4 id="dry-run">dry-run<a class="headerlink" href="#dry-run" title="Permanent link">#</a></h4>
 <p>The local <code>--dry-run</code> flag prints the planned changes without applying them. For an already deployed lab this shows the <a href="#reconciliation-behavior">reconciliation plan</a>—the nodes and links to add, delete, recreate, or restart. For a lab that is not deployed yet it reports that the lab would be deployed.</p>
+<p>With the <code>c9s</code> runtime the plan also lists the Pods that a link change replaces, so a <code>recreate</code> on a VM-backed node is visible before it reboots. Nodes whose kind declares <code>live</code> link handling do not appear.</p>
 <p><code>--dry-run</code> cannot be combined with <code>--reconfigure</code>, since reconfigure always destroys and redeploys the full lab.</p>
 <h4 id="max-workers">max-workers<a class="headerlink" href="#max-workers" title="Permanent link">#</a></h4>
 <p>With <code>--max-workers</code> flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.</p>
@@ -3910,46 +3952,57 @@ short form, to target an existing namespace instead:</p>
 <p>When the flag is not set, no pull secret is referenced at all: public images and clusters whose container runtime already holds registry credentials need none.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--image-pull-secret<span class="w"> </span>my-registry-secret
 </span></code></pre></div>
+<h4 id="expose-type">expose-type<a class="headerlink" href="#expose-type" title="Permanent link">#</a></h4>
+<p>The <code>--expose-type</code> flag applies to the
+<a href="../../manual/clabernetes/runtime/">clabernetes runtime</a> only. It sets
+<code>spec.expose.exposeType</code> on the generated <code>Topology</code>, or on the generated
+<code>NodeProfile</code> with <code>--no-topology-cr</code>. Accepted values are <code>LoadBalancer</code>,
+<code>ClusterIP</code>, <code>Headless</code>, and <code>None</code>.</p>
+<p>Use <code>None</code> to disable node exposure Services:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--expose-type<span class="w"> </span>None
+</span></code></pre></div>
+<p>c9s 0.9 removed the older <code>disableExpose</code> field. Existing manifests must use
+<code>exposeType: None</code> instead.</p>
 <h4 id="no-persistence">no-persistence<a class="headerlink" href="#no-persistence" title="Permanent link">#</a></h4>
 <p>The <code>--no-persistence</code> flag applies to the <a href="../../manual/clabernetes/runtime/">clabernetes runtime</a> only. By default, deploy enables persistence on the c9s <code>Topology</code> CR (<code>spec.deployment.persistence.enabled</code>), backing every node's artifact volume with a PersistentVolumeClaim so saved device configuration survives pod replacement -- the same contract the lab directory provides with local runtimes. This requires a dynamically provisionable (default) storage class in the cluster.</p>
 <p>With this flag, nodes run on ephemeral storage instead: no storage class is needed, and every pod replacement resets the node to its declared startup configuration.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--no-persistence
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--no-persistence
 </span></code></pre></div>
 <h4 id="owner">owner<a class="headerlink" href="#owner" title="Permanent link">#</a></h4>
 <p>The local <code>--owner</code> flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.</p>
 <p>This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the <code>clab_admins</code> group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.</p>
 <p>Example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--owner<span class="w"> </span>alice
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--owner<span class="w"> </span>alice
 </span></code></pre></div>
 <h4 id="restore-all">restore-all<a class="headerlink" href="#restore-all" title="Permanent link">#</a></h4>
 <p>The local <code>--restore-all</code> flag enables restoring vrnetlab-based nodes from previously saved snapshots. When specified, containerlab will look for snapshot files named <code>{nodename}.tar</code> in the provided directory and automatically restore nodes that have matching snapshots.</p>
 <p>Nodes without snapshots in the directory will deploy normally (fresh deployment).</p>
 <p><strong>Default directory</strong>: <code>./snapshots</code> (if flag is used without a value)</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Restore all nodes that have snapshots in ./snapshots directory</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Restore from custom directory</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all<span class="w"> </span>/backups/lab1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restore all nodes that have snapshots in ./snapshots directory</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Restore from custom directory</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore-all<span class="w"> </span>/backups/lab1
 </span></code></pre></div>
 <p><strong>Note</strong>: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.</p>
 <p><strong>Note</strong>: Snapshot restore requires a fresh deployment. Restoring into an already deployed lab is rejected; use <code>--reconfigure</code> to destroy the lab and redeploy it from snapshots.</p>
 <h4 id="restore">restore<a class="headerlink" href="#restore" title="Permanent link">#</a></h4>
 <p>The local <code>--restore</code> flag allows per-node snapshot restoration by explicitly specifying the snapshot file path for individual nodes. This flag can be specified multiple times to restore different nodes from different snapshot files.</p>
 <p><strong>Format</strong>: <code>--restore node=path/to/snapshot.tar</code></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restore only r1 from a specific snapshot</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Restore multiple nodes with specific snapshots</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r2</span><span class="o">=</span>./snapshots/r2.tar
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Restore only r1 from a specific snapshot</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Restore multiple nodes with specific snapshots</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r1</span><span class="o">=</span>./snapshots/r1.tar<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r2</span><span class="o">=</span>./snapshots/r2.tar
 </span></code></pre></div>
 <p><strong>Priority</strong>: Per-node <code>--restore</code> specifications override <code>--restore-all</code> for the specified nodes.</p>
 <p><strong>Combined usage</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Restore all from ./snapshots, but override r3 with a different snapshot</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--restore-all<span class="w"> </span>./snapshots<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r3</span><span class="o">=</span>./backups/r3-old.tar
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Restore all from ./snapshots, but override r3 with a different snapshot</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--restore-all<span class="w"> </span>./snapshots<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--restore<span class="w"> </span><span class="nv">r3</span><span class="o">=</span>./backups/r3-old.tar
 </span></code></pre></div>
 <p>In this example:</p>
 <ul>
@@ -3965,8 +4018,8 @@ short form, to target an existing namespace instead:</p>
 <p>Default value for the global <code>--runtime | -r</code> flag described above. It affects all containerlab commands in the same way, not just <code>deploy</code>.</p>
 <p>For <code>docker</code> or <code>podman</code>, it selects the default local container runtime. For <code>c9s</code>, it selects the whole-lab Clabernetes runtime.</p>
 <p>Example command-line usage:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">CLAB_RUNTIME</span><span class="o">=</span>podman<span class="w"> </span>containerlab<span class="w"> </span>deploy
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nv">CLAB_RUNTIME</span><span class="o">=</span>c9s<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">CLAB_RUNTIME</span><span class="o">=</span>podman<span class="w"> </span>containerlab<span class="w"> </span>deploy
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nv">CLAB_RUNTIME</span><span class="o">=</span>c9s<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <h4 id="clab_version_check"><code>CLAB_VERSION_CHECK</code><a class="headerlink" href="#clab_version_check" title="Permanent link">#</a></h4>
 <p>Can be set to "disable" value to prevent deploy command making a network request to check new version to report if one is available.</p>
@@ -3977,35 +4030,35 @@ short form, to target an existing namespace instead:</p>
 <p>The default behavior is to create the lab directory in the same directory as the topology file (<code>clab.yml</code> file).</p>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h3>
 <h4 id="deploy-a-lab-using-the-given-topology-file">Deploy a lab using the given topology file<a class="headerlink" href="#deploy-a-lab-using-the-given-topology-file" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
 <h4 id="deploy-a-lab-and-regenerate-all-configuration-artifacts">Deploy a lab and regenerate all configuration artifacts<a class="headerlink" href="#deploy-a-lab-and-regenerate-all-configuration-artifacts" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--reconfigure
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--reconfigure
 </span></code></pre></div>
 <h4 id="preview-changes-to-an-already-deployed-lab">Preview changes to an already deployed lab<a class="headerlink" href="#preview-changes-to-an-already-deployed-lab" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--dry-run
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--dry-run
 </span></code></pre></div>
 <p>Shows the <a href="#reconciliation-behavior">reconciliation plan</a> without applying it. Running the same command without <code>--dry-run</code> applies the changes in place.</p>
 <p>The <code>apply</code> alias can be used for the same operation:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
 <p>It can also reconcile an already deployed lab by name:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>--name<span class="w"> </span>mylab
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>containerlab<span class="w"> </span>apply<span class="w"> </span>--name<span class="w"> </span>mylab
 </span></code></pre></div>
 <h4 id="emit-the-clabernetes-manifests-instead-of-deploying">Emit the clabernetes manifests instead of deploying<a class="headerlink" href="#emit-the-clabernetes-manifests-instead-of-deploying" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--emit-crs<span class="w"> </span>&gt;<span class="w"> </span>mylab-crs.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--emit-crs<span class="w"> </span>&gt;<span class="w"> </span>mylab-crs.yaml
 </span></code></pre></div>
 <p>Prints the <code>Namespace</code>, <code>ConfigMap</code>, and <code>Topology</code> manifests deploy would create to stdout without touching the cluster. Edit the file and apply it with <code>kubectl apply -f mylab-crs.yaml</code>. Add <code>--no-topology-cr</code> to emit the compiled <code>NodeProfile</code>, <code>Link</code>, and <code>Node</code> resources instead of the <code>Topology</code>.</p>
 <h4 id="deploy-a-lab-without-specifying-topology-file">Deploy a lab without specifying topology file<a class="headerlink" href="#deploy-a-lab-without-specifying-topology-file" title="Permanent link">#</a></h4>
 <p>Given that a single topology file is present in the current directory.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>containerlab<span class="w"> </span>deploy
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>containerlab<span class="w"> </span>deploy
 </span></code></pre></div>
 <h4 id="deploy-a-lab-using-short-flag-names">Deploy a lab using short flag names<a class="headerlink" href="#deploy-a-lab-using-short-flag-names" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>clab<span class="w"> </span>dep<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>clab<span class="w"> </span>dep<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml
 </span></code></pre></div>
 <h4 id="deploy-a-lab-from-a-remote-url-with-curl">Deploy a lab from a remote URL with curl<a class="headerlink" href="#deploy-a-lab-from-a-remote-url-with-curl" title="Permanent link">#</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>-
 </span></code></pre></div>
 <div class="footnote">
 <hr />

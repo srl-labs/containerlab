@@ -223,19 +223,7 @@
         <loc>https://containerlab.dev/manual/clabernetes/</loc>
       </url>
       <url>
-        <loc>https://containerlab.dev/manual/clabernetes/install/</loc>
-      </url>
-      <url>
-        <loc>https://containerlab.dev/manual/clabernetes/quickstart/</loc>
-      </url>
-      <url>
         <loc>https://containerlab.dev/manual/clabernetes/runtime/</loc>
-      </url>
-      <url>
-        <loc>https://containerlab.dev/manual/clabernetes/configuration/</loc>
-      </url>
-      <url>
-        <loc>https://containerlab.dev/manual/clabernetes/pcap/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/manual/node-filtering/</loc>
@@ -521,6 +509,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/lab-examples/generic_vm01/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/rn/0.81/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/rn/0.80/</loc>

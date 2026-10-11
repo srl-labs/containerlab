@@ -18,7 +18,7 @@
         <link rel="prev" href="../vrnetlab/">
       
       
-        <link rel="next" href="./install/">
+        <link rel="next" href="./runtime/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Clabernetes - containerlab</title>
+        <title>Clabernetes (c9s) - containerlab</title>
       
     
     
@@ -167,7 +167,7 @@
 
 <!-- Open graph meta tags -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="containerlab - Clabernetes" />
+<meta property="og:title" content="containerlab - Clabernetes (c9s)" />
 <meta property="og:description" content="Containerlab deploys docker based meshed lab topologies" />
 <meta property="og:url" content="https://containerlab.dev/manual/clabernetes/" />
 <meta property="og:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
@@ -179,7 +179,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@ntdvps" />
 <meta name="twitter:creator" content="@ntdvps" />
-<meta name="twitter:title" content="containerlab - Clabernetes" />
+<meta name="twitter:title" content="containerlab - Clabernetes (c9s)" />
 <meta name="twitter:description" content="Containerlab deploys docker based meshed lab topologies" />
 <meta name="twitter:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
 
@@ -203,7 +203,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clabernetes" class="md-skip">
+        <a href="#clabernetes-c9s" class="md-skip">
           Skip to content
         </a>
       
@@ -304,7 +304,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Clabernetes
+              Clabernetes (c9s)
             
           </span>
         </div>
@@ -312,16 +312,14 @@
     </div>
     
       
-        <form class="md-header__option" data-md-component="palette">
+        <form class="md-header__option md-switch" data-md-component="palette">
   
     
     
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to dark mode" for="__palette_1" hidden></label>
     
   
     
@@ -329,11 +327,28 @@
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to light mode" for="__palette_0" hidden></label>
     
   
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
 </form>
       
     
@@ -902,12 +917,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.80/" class="md-tabs__link">
+        <a href="../../rn/0.81/" class="md-tabs__link">
           
   
   Release notes
@@ -1479,14 +1496,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -1511,7 +1520,7 @@
   <span class="md-ellipsis">
     
   
-  Clabernetes
+  C9s (Clabernetes)
 
     
   </span>
@@ -1539,65 +1548,11 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-  Clabernetes
+  C9s (Clabernetes)
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./install/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Install
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./quickstart/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Quickstart
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1614,61 +1569,7 @@
   <span class="md-ellipsis">
     
   
-  Containerlab runtime
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./pcap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Packet capture in c9s
+  C9s runtime
 
     
   </span>
@@ -2468,6 +2369,8 @@
       
         
       
+        
+      
     
     
     
@@ -2486,7 +2389,7 @@
   
   
   
-    <a href="../../rn/0.80/" class="md-nav__link">
+    <a href="../../rn/0.81/" class="md-nav__link">
       
   
   
@@ -2554,11 +2457,6 @@
                       
                     
                     
-                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-                      <div class="md-sidebar-button__wrapper">
-                        <label class="md-sidebar-button" for="__toc"></label>
-                      </div>
-                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -2570,25 +2468,6 @@
   
     
   
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-links" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Quick Links
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -2700,14 +2579,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -2717,7 +2588,7 @@
           
   
   <span class="md-ellipsis">
-    Clabernetes
+    C9s (Clabernetes)
   </span>
 
         </a>
@@ -2752,34 +2623,16 @@
 
 
   
-  <h1 id="clabernetes">Clabernetes<a class="headerlink" href="#clabernetes" title="Permanent link">#</a></h1>
-<p><small>pronunciation: <em>Kla-ber-net-ees</em></small></p>
-<p>Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter <a href="https://github.com/clabernetes/clabernetes/"><strong>clabernetes</strong></a> or simply <strong>c9s</strong>.</p>
-<p><a class="glightbox" data-type="image" href="https://gitlab.com/rdodin/pics/-/wikis/uploads/9d8c5abcb8db2c80811635d928aa98df/c9s_logo1_border_2.webp"><img align="left" alt="Clabernetes" src="https://gitlab.com/rdodin/pics/-/wikis/uploads/9d8c5abcb8db2c80811635d928aa98df/c9s_logo1_border_2.webp" width="300" /></a></p>
-<figure>
-<p><a class="glightbox" data-type="image" href="https://gitlab.com/rdodin/pics/-/wikis/uploads/4fdd35b5f4553d766216a4bda2b9a20c/geogebra-export.svg#only-light"><img alt="pic" src="https://gitlab.com/rdodin/pics/-/wikis/uploads/4fdd35b5f4553d766216a4bda2b9a20c/geogebra-export.svg#only-light" /></a>
-<a class="glightbox" data-type="image" href="https://gitlab.com/rdodin/pics/-/wikis/uploads/a139e454c70614298f5bf5b86fe1eeb0/geogebra-export-darkbg.svg#only-dark"><img alt="pic" src="https://gitlab.com/rdodin/pics/-/wikis/uploads/a139e454c70614298f5bf5b86fe1eeb0/geogebra-export-darkbg.svg#only-dark" /></a></p>
-</figure>
-<p>Clabernetes deploys containerlab topologies into a kubernetes cluster. The goal of Clabernetes is to scale Containerlab beyond a single node while keeping the user experience you love.</p>
-<p>You can use clabernetes in two ways:</p>
-<ul>
-<li>with the native <a href="runtime/"><code>containerlab --runtime c9s</code></a> workflow</li>
-<li>with <a href="install/#clabverter"><code>clabverter</code></a>, which converts topology files into kubernetes manifests</li>
-</ul>
-<p>If all goes to plan, Clabernetes is going to be one of the solutions to enable <a href="../multi-node/">multi-node labs</a> and allow its users to create large topologies powered by a k8s cluster.</p>
-<p>Eager to try it out? Check out the <a href="quickstart/">Quickstart</a>! Have questions, join our <a href="https://discord.gg/2A8ZxM7hD9">Discord</a>.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>We are sharing Clabernetes β version to allow people to see what we're working on and potentially attract contributors and early adopters. You may not need any k8s knowledge to use it, but if something goes wrong, you might need to dig into k8s logs and resources to figure out what's happening.</p>
-<p>In the beta release we focus on the core topology constructs working our way towards full feature parity with Containerlab (and even more).</p>
-</div>
-<h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">#</a></h2>
-<ul>
-<li><a href="https://artifacthub.io/packages/helm/clabernetes/clabernetes">Helm chart on ArtifactHub</a></li>
-<li><a href="https://c9s.run/docs/crd">CRD reference</a></li>
-<li><a href="runtime/">Native containerlab runtime</a></li>
-<li>Source code on <a href="https://github.com/clabernetes/clabernetes">GitHub</a></li>
-</ul>
+  <h1 id="clabernetes-c9s">Clabernetes (c9s)<a class="headerlink" href="#clabernetes-c9s" title="Permanent link">#</a></h1>
+<p><a href="https://c9s.run">Clabernetes</a>, or c9s, schedules containerlab topologies across the nodes of a
+Kubernetes cluster. It allows users to run massive labs with hundreds of nodes across the horizontally scalable infrastructure or using familiar Kubernetes interface for lab purposes of any size.</p>
+<p>The c9s project maintains <a href="https://c9s.run/docs">its own documentation site</a> covering installation,
+architecture, API, configuration, and operations:</p>
+<p>Understanding that Kubernetes workflows may be challenging to grasp from the get-go, Containerlab strives to provide a seamless experience for its user by offering adding C9s as a lab runtime. The same containerlab commands - deploy, destroy, inspect, and others - can be used to manage labs on Kubernetes clusters.<br />
+See the <a href="runtime/">C9s runtime</a> for details.</p>
+<blockquote>
+<p>The former <code>clabverter</code> workflow was removed in c9s 0.9. Use the native containerlab runtime for new deployments.</p>
+</blockquote>
   
 
   <nav class="md-tags" >
@@ -2869,13 +2722,13 @@
         
         
           
-          <a href="./install/" class="md-footer__link md-footer__link--next" aria-label="Next: Install">
+          <a href="./runtime/" class="md-footer__link md-footer__link--next" aria-label="Next: C9s runtime">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Install
+                C9s runtime
               </div>
             </div>
             <div class="md-footer__button md-icon">

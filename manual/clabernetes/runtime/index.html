@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://containerlab.dev/manual/clabernetes/runtime/">
       
       
-        <link rel="prev" href="../quickstart/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../../node-filtering/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Containerlab runtime - containerlab</title>
+        <title>C9s runtime - containerlab</title>
       
     
     
@@ -167,7 +167,7 @@
 
 <!-- Open graph meta tags -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="containerlab - Containerlab runtime" />
+<meta property="og:title" content="containerlab - C9s runtime" />
 <meta property="og:description" content="Containerlab deploys docker based meshed lab topologies" />
 <meta property="og:url" content="https://containerlab.dev/manual/clabernetes/runtime/" />
 <meta property="og:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
@@ -179,7 +179,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@ntdvps" />
 <meta name="twitter:creator" content="@ntdvps" />
-<meta name="twitter:title" content="containerlab - Containerlab runtime" />
+<meta name="twitter:title" content="containerlab - C9s runtime" />
 <meta name="twitter:description" content="Containerlab deploys docker based meshed lab topologies" />
 <meta name="twitter:image" content="https://github.com/srl-labs/containerlab/blob/main/docs/images/containerlab-og.png?raw=true" />
 
@@ -203,7 +203,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#containerlab-runtime" class="md-skip">
+        <a href="#c9s-runtime" class="md-skip">
           Skip to content
         </a>
       
@@ -304,7 +304,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Containerlab runtime
+              C9s runtime
             
           </span>
         </div>
@@ -312,16 +312,14 @@
     </div>
     
       
-        <form class="md-header__option" data-md-component="palette">
+        <form class="md-header__option md-switch" data-md-component="palette">
   
     
     
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to dark mode" for="__palette_1" hidden></label>
     
   
     
@@ -329,11 +327,28 @@
     
     <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
+      <label class="md-switch__target" title="Switch to light mode" for="__palette_0" hidden></label>
     
   
+  <span class="md-switch__track">
+    <svg class="sun-and-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <mask class="moon" id="moon-mask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <circle cx="24" cy="10" r="6" fill="black"/>
+      </mask>
+      <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor"/>
+      <g class="sun-beams" stroke="currentColor">
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </g>
+    </svg>
+  </span>
 </form>
       
     
@@ -902,12 +917,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.80/" class="md-tabs__link">
+        <a href="../../../rn/0.81/" class="md-tabs__link">
           
   
   Release notes
@@ -1479,14 +1496,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -1511,7 +1520,7 @@
   <span class="md-ellipsis">
     
   
-  Clabernetes
+  C9s (Clabernetes)
 
     
   </span>
@@ -1539,65 +1548,11 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-  Clabernetes
+  C9s (Clabernetes)
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../install/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Install
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Quickstart
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1623,7 +1578,7 @@
   <span class="md-ellipsis">
     
   
-  Containerlab runtime
+  C9s runtime
 
     
   </span>
@@ -1640,7 +1595,7 @@
   <span class="md-ellipsis">
     
   
-  Containerlab runtime
+  C9s runtime
 
     
   </span>
@@ -1706,6 +1661,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Namespace rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#labs-managed-as-direct-c9s-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Labs managed as direct c9s resources
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1940,60 +1912,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../pcap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Packet capture in c9s
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2786,6 +2704,8 @@
       
         
       
+        
+      
     
     
     
@@ -2804,7 +2724,7 @@
   
   
   
-    <a href="../../../rn/0.80/" class="md-nav__link">
+    <a href="../../../rn/0.81/" class="md-nav__link">
       
   
   
@@ -2936,6 +2856,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Namespace rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#labs-managed-as-direct-c9s-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Labs managed as direct c9s resources
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3278,14 +3215,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -3295,7 +3224,7 @@
           
   
   <span class="md-ellipsis">
-    Clabernetes
+    C9s (Clabernetes)
   </span>
 
         </a>
@@ -3330,7 +3259,7 @@
 
 
   
-  <h1 id="containerlab-runtime">Containerlab runtime<a class="headerlink" href="#containerlab-runtime" title="Permanent link">#</a></h1>
+  <h1 id="c9s-runtime">C9s runtime<a class="headerlink" href="#c9s-runtime" title="Permanent link">#</a></h1>
 <p>Containerlab can use Clabernetes as a lab runtime. Use <code>c9s</code> to select it.
 With the c9s runtime selected,
 containerlab keeps the familiar CLI workflow, but the actual lab runs in a
@@ -3342,11 +3271,23 @@ kubernetes cluster.</p>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <div class="admonition note">
-<p class="admonition-title">Runtime, not converter</p>
-<p>This page describes the native <code>containerlab --runtime c9s</code> workflow.
-The <a href="../quickstart/">Quickstart</a> still shows the manifest-driven <code>clabverter</code>
-workflow, which remains useful when you want to generate and apply kubernetes
-manifests yourself.</p>
+<p class="admonition-title">Runtime and c9s documentation</p>
+<p>This page documents the native <code>containerlab --runtime c9s</code> workflow. For c9s
+installation, concepts, guides, and CRD reference, see the
+<a href="https://c9s.run/docs">c9s documentation</a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">c9s version compatibility</p>
+<p>This guide describes containerlab 0.80+ with the direct-runtime API introduced
+in c9s 0.9. It does not apply to launcher-based c9s 0.8 and older releases.
+c9s 0.9 cannot upgrade an older installation in place; follow the
+<a href="https://c9s.run/docs/release-notes/0.9">c9s 0.9 release notes</a> to uninstall
+the old release and recreate its labs.</p>
+<p>Older instructions that mention launcher Pods, nested Docker, <code>LauncherProfile</code>,
+<code>clabverter</code>, <code>disableExpose</code>, or configurable resource naming describe an
+incompatible API. In c9s 0.9, devices are direct Pod containers,
+<code>NodeProfile</code> replaces <code>LauncherProfile</code>, <code>exposeType: None</code> replaces
+<code>disableExpose</code>, and the launcher and naming fields have been removed.</p>
 </div>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h2>
 <p>When the c9s runtime is selected, containerlab does not create local Docker or
@@ -3461,9 +3402,11 @@ not the source of truth for c9s labs.</p>
 <ul>
 <li>a reachable kubernetes cluster</li>
 <li>kubernetes 1.31 or newer</li>
-<li>Clabernetes CRDs installed in the cluster</li>
+<li>c9s 0.9 direct-runtime CRDs installed in the cluster</li>
 <li>the Clabernetes manager running and watching all lab namespaces</li>
 <li>kubernetes RBAC allowing containerlab to manage the required resources</li>
+<li>permission for lab namespaces to run the privileged c9s connectivity
+  init-sidecar</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -3471,6 +3414,10 @@ not the source of truth for c9s labs.</p>
 therefore needs cluster-scoped permission to get, create, and delete namespaces
 unless you select an existing namespace with <code>CLAB_KUBE_NAMESPACE</code>.</p>
 </div>
+<p>See the
+<a href="https://c9s.run/docs/installation#cluster-requirements">c9s cluster requirements</a>
+for Pod Security Admission, worker kernel, network policy, registry, and KVM
+requirements.</p>
 <h2 id="selecting-the-cluster">Selecting the cluster<a class="headerlink" href="#selecting-the-cluster" title="Permanent link">#</a></h2>
 <p>The runtime uses the kubernetes client-go configuration loader. It selects the
 kubeconfig in this order:</p>
@@ -3508,7 +3455,7 @@ exec, start, stop, restart, save, and destroy derive the same namespace from the
 lab name.</p>
 <p>The namespace is also the topology boundary: links can only connect Nodes in
 one namespace, wire identities are namespace-unique, and the lab's management
-subnet forms one L2 domain across the namespace.</p>
+subnet spans the namespace through the c9s routed management mesh.</p>
 <p>Containerlab labels namespaces it creates with the runtime and lab owner. A
 normal destroy removes such a managed namespace after its lab resources are
 gone. If <code>c9s-&lt;lab-name&gt;</code> existed before deploy and does not carry those
@@ -3554,14 +3501,34 @@ actions can still target the right lab:</p>
 <p>For example:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>c9s-clos/clos/srl1
 </span></code></pre></div>
-<p>Primitive-only labs created outside containerlab (for example with
-<code>clabverter --emit-crs</code>) are also manageable when their Nodes, Links, and
-NodeProfiles carry the common <code>c9s.run/topologyOwner=&lt;lab-name&gt;</code> label.
-Containerlab uses that label as the lab boundary for list, inspect, lifecycle,
-events, and destroy operations.</p>
+<h3 id="labs-managed-as-direct-c9s-resources">Labs managed as direct c9s resources<a class="headerlink" href="#labs-managed-as-direct-c9s-resources" title="Permanent link">#</a></h3>
+<p>This is an advanced workflow for users who manage Kubernetes resources through
+GitOps or <code>kubectl</code> instead of letting containerlab create a <code>Topology</code>.
+For example, a deployment pipeline can generate a bundle without contacting a
+cluster:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--no-topology-cr<span class="w"> </span>--emit-crs<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>-t<span class="w"> </span>edge-lab.clab.yml<span class="w"> </span>&gt;<span class="w"> </span>edge-lab.c9s.yaml
+</span></code></pre></div>
+<p>The bundle contains the lab's <code>NodeProfile</code>, <code>Node</code>, and <code>Link</code> resources, each
+with this ownership label:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nt">c9s.run/topologyOwner</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge-lab</span>
+</span></code></pre></div>
+<p>After a GitOps controller or <code>kubectl apply</code> installs that bundle, containerlab
+can discover the lab without a <code>Topology</code> resource:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--namespace<span class="w"> </span>c9s-edge-lab<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>inspect<span class="w"> </span>--name<span class="w"> </span>edge-lab
+</span></code></pre></div>
+<p>Containerlab discovers a primitive-only lab from its labeled Nodes. It uses the
+same label to associate the lab's Links, NodeProfiles, ConfigMaps, and
+c9s-generated workloads for lifecycle, events, and destroy operations. All
+resources must be in the selected namespace and use the same label value.
+Manually authored resources can use the same contract, but an incorrect or
+reused label can cause containerlab to operate on unrelated resources.</p>
 <h2 id="deploy">Deploy<a class="headerlink" href="#deploy" title="Permanent link">#</a></h2>
 <p>Deploying with the c9s runtime looks like a regular containerlab deployment:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <p>The deploy flow is:</p>
 <ol>
@@ -3596,7 +3563,7 @@ requires application-level readiness.</p>
 <p>The c9s runtime uses a ten-minute timeout by default because large NOS images
 can take several minutes to load and boot. Override it when a lab needs a
 different startup window, for example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--timeout<span class="w"> </span>10m<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--timeout<span class="w"> </span>10m<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <p>Deterministic planning failures (an unsupported construct that only the device
 planner can detect, a registry that keeps refusing image metadata) abort the
@@ -3616,8 +3583,8 @@ topology, then use node filtering with commands such as <code>start</code>, <cod
 <code>restart</code>, <code>exec</code>, or <code>save</code> after the lab exists.</p>
 </div>
 <p>Deploy reconciles an existing lab in place. A Topology-owned lab — deployed by
-containerlab, <code>kubectl</code>, or <code>clabverter</code> — has its <code>Topology</code> definition
-updated in place and the controller converges the compiled resources on it.
+containerlab or <code>kubectl</code> — has its <code>Topology</code> definition updated in place and
+the controller converges the compiled resources on it.
 For a lab deployed with <code>--no-topology-cr</code>, containerlab creates, updates, or
 removes the corresponding c9s <code>Node</code>, <code>Link</code>, <code>NodeProfile</code>, and staged
 <code>ConfigMap</code> resources directly. Deploying such a lab again without the flag
@@ -3628,7 +3595,7 @@ direct write — destroy the lab first when you want to switch it to direct
 management.</p>
 <p>Use <code>deploy --reconfigure</code> when you explicitly want to delete and recreate every resource. Use a
 different lab name or namespace when you want a separate lab:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--name<span class="w"> </span>&lt;new-lab-name&gt;<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--name<span class="w"> </span>&lt;new-lab-name&gt;<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <p>A failure while waiting for a newly created lab to become ready rolls back the
 resources and managed namespace created by that deployment. A timeout while
@@ -3637,10 +3604,10 @@ later corrective reconciliation.</p>
 <h3 id="validation-dry-run-and-emitting-manifests">Validation, dry-run, and emitting manifests<a class="headerlink" href="#validation-dry-run-and-emitting-manifests" title="Permanent link">#</a></h3>
 <p>All three modes use the same c9s preparation path as deploy, including extended-link
 normalization, compatibility checks, and local-file staging checks:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>validate<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--dry-run<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--dry-run<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--emit-crs<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>&gt;<span class="w"> </span>topo-crs.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>validate<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--dry-run<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--dry-run<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>deploy<span class="w"> </span>--emit-crs<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>&gt;<span class="w"> </span>topo-crs.yaml
 </span></code></pre></div>
 <p><code>validate</code> reports whether the topology can be represented by the c9s runtime without reading
 or changing lab resources. Compilation is fail-closed: every source construct c9s cannot
@@ -3663,9 +3630,9 @@ is discovered and managed like any other c9s lab. <code>--format json</code> pri
 file and discards manual edits made to the applied manifests.</p>
 <h2 id="inspect">Inspect<a class="headerlink" href="#inspect" title="Permanent link">#</a></h2>
 <p>Inspect works with a topology file, a lab name, or all known c9s labs:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--name<span class="w"> </span>clos
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--all
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--name<span class="w"> </span>clos
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--all
 </span></code></pre></div>
 <p>For c9s labs, inspect reads kubernetes resources instead of local container
 runtime state. It collects the lab name, namespace, aggregate state, node
@@ -3678,12 +3645,12 @@ allocated management address.</p>
 namespaces. A single-lab inspect uses its canonical <code>c9s-&lt;lab-name&gt;</code> namespace.</p>
 </div>
 <p>Useful kubernetes checks for the same state are:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run,deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run,deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 <h2 id="exec">Exec<a class="headerlink" href="#exec" title="Permanent link">#</a></h2>
 <p><code>exec</code> runs the user command in the node's device container:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>--cmd<span class="w"> </span><span class="s1">&#39;ip addr&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>--cmd<span class="w"> </span><span class="s1">&#39;ip addr&#39;</span>
 </span></code></pre></div>
 <p>Under the hood, containerlab:</p>
 <ol>
@@ -3705,13 +3672,13 @@ process exit status.</p>
 <h2 id="start-stop-and-restart">Start, stop, and restart<a class="headerlink" href="#start-stop-and-restart" title="Permanent link">#</a></h2>
 <p>Node lifecycle commands operate on the kubernetes Deployments created by
 Clabernetes.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>stop<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>start<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>restart<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>stop<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>start<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>restart<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <p><code>stop</code> sets the Clabernetes ignore-reconcile label on the selected <code>Node</code>
 resources, then scales their Deployments to <code>0</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>c9s.run/ignoreReconcile=true
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>c9s.run/ignoreReconcile=true
 </span></code></pre></div>
 <p>The label prevents the Clabernetes manager from immediately reconciling the
 nodes back to the running state. A stopped node's links go carrier-down on
@@ -3721,11 +3688,11 @@ corresponding Node labels. A grouped secondary shares lifecycle with its
 primary node's Deployment.</p>
 <p><code>restart</code> patches each selected Deployment with a restart annotation and waits
 for it to become ready:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl.kubernetes.io/restartedAt=&lt;utc timestamp&gt;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>kubectl.kubernetes.io/restartedAt=&lt;utc timestamp&gt;
 </span></code></pre></div>
 <h2 id="save">Save<a class="headerlink" href="#save" title="Permanent link">#</a></h2>
 <p>Saving a c9s lab runs each node's save lifecycle inside its device container:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>save<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>save<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <p>For each selected node, containerlab derives the node's typed lifecycle
 command from its device container and runs it with the <code>Save</code> phase. That
@@ -3734,13 +3701,13 @@ runtimes, against the live device. Nodes without a save-capable container
 (for example plain linux nodes) are skipped.</p>
 <p><code>save --copy</code> streams the files the save produced back to the machine where
 the outer containerlab command runs:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>save<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>--copy<span class="w"> </span>./startup-configs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>save<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml<span class="w"> </span>--copy<span class="w"> </span>./startup-configs
 </span></code></pre></div>
 <p>The copied files follow the normal containerlab copy layout:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>&lt;copy-destination&gt;/&lt;lab-dir&gt;/&lt;node&gt;/&lt;saved-files&gt;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>&lt;copy-destination&gt;/&lt;lab-dir&gt;/&lt;node&gt;/&lt;saved-files&gt;
 </span></code></pre></div>
 <p>For example:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>./startup-configs/clab-clos/srl1/config/config.json
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>./startup-configs/clab-clos/srl1/config/config.json
 </span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -3749,9 +3716,9 @@ files, the c9s runtime has nothing to copy for that node.</p>
 </div>
 <h2 id="events">Events<a class="headerlink" href="#events" title="Permanent link">#</a></h2>
 <p>The c9s runtime can stream Node, Topology, pod, and interface-stat events:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--format<span class="w"> </span>json
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--initial-state
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--interface-stats<span class="w"> </span>--format<span class="w"> </span>json
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--format<span class="w"> </span>json
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--initial-state
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>events<span class="w"> </span>--interface-stats<span class="w"> </span>--format<span class="w"> </span>json
 </span></code></pre></div>
 <p>For c9s, events do not come from Docker events on the outer host. Containerlab
 watches:</p>
@@ -3775,22 +3742,24 @@ samples can be missed.</p>
 <p>With c9s, the primary artifacts are kubernetes resources and the per-node plan
 artifacts inside the device pods.</p>
 <p>The primary kubernetes resources are:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 <p>Related resources are selected with Clabernetes labels:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 <p>To find one node's device pod:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>c9s.run/direct-workload<span class="o">=</span>&lt;node&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>c9s.run/direct-workload<span class="o">=</span>&lt;node&gt;
 </span></code></pre></div>
 <p><code>kubectl logs</code> and <code>kubectl exec</code> on that pod default to the node's primary
 application container. Add <code>-c</code> to reach a specific chassis component, the
 <code>clabwire</code> connectivity sidecar, or the <code>planner</code> preparation container.</p>
-<p>Local startup configurations, licenses, bind sources, <code>env-files</code>,
-<code>extras.srl-agents</code>, and <code>extras.ceos-copy-to-flash</code> paths are copied into
-per-node ConfigMaps and staged at the paths the node expects. An inline
+<p>Local startup configurations, licenses, bind sources, <code>env-files</code>, the
+<code>copy-to-flash</code> <a href="../../nodes/#kind-specific-config">kind-specific config
+key</a>, and other path-bearing node fields
+are copied into per-node ConfigMaps and staged at the paths the node expects.
+An inline
 <code>startup-config</code> is staged as a partial configuration and merged over the
 kind's default config, exactly like the local runtimes. Each staged file is
 currently limited to 950 KB. These projections are snapshots taken at deploy
@@ -3802,7 +3771,7 @@ creating cluster resources and includes their contents in the staged ConfigMaps;
 the cluster does not need access to those URLs. Remote startup-config filenames
 retain their <code>.partial</code> marker. Licenses can also be embedded as multiline strings.</p>
 <h3 id="device-state-persistence">Device state persistence<a class="headerlink" href="#device-state-persistence" title="Permanent link">#</a></h3>
-<p>By default, deploy enables <a href="https://github.com/clabernetes/clabernetes/blob/main/docs/guides/persistence.md">Clabernetes persistence</a>
+<p>By default, deploy enables <a href="https://c9s.run/docs/guides/persistence">Clabernetes persistence</a>
 on the lab: every node's artifact volume is backed by a per-node
 PersistentVolumeClaim, and the in-cluster claim plays the role the
 <a href="../../conf-artifacts/">lab directory</a> plays with local runtimes. The startup
@@ -3822,8 +3791,8 @@ the claims and all saved device state -- it behaves like a local
 <code>destroy --cleanup</code>. To re-seed a single node from its declared configuration
 without redeploying the lab, annotate its Node with a device-state reset
 token:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>annotate<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">  </span>c9s.run/device-state-reset<span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%s<span class="k">)</span><span class="w"> </span>--overwrite
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>annotate<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="w">  </span>c9s.run/device-state-reset<span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%s<span class="k">)</span><span class="w"> </span>--overwrite
 </span></code></pre></div>
 <h2 id="rbac-requirements">RBAC requirements<a class="headerlink" href="#rbac-requirements" title="Permanent link">#</a></h2>
 <p>The kube identity used by the outer containerlab process must be able to:</p>
@@ -3839,76 +3808,76 @@ token:</p>
 <li>exec into device Pods with <code>pods/exec</code></li>
 </ul>
 <p>Useful checks:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>get<span class="w"> </span>namespaces
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>namespaces
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>namespaces
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>list<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>update<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>links.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>links.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>nodeprofiles.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>nodeprofiles.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>list<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>watch<span class="w"> </span>pods<span class="w"> </span>-A
-</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>pods/exec<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>update<span class="w"> </span>deployments<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>get<span class="w"> </span>namespaces
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>namespaces
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>namespaces
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>list<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>update<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-8"><a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>links.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-9"><a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>links.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-10"><a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>nodeprofiles.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-11"><a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>delete<span class="w"> </span>nodeprofiles.c9s.run<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-12"><a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>list<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-13"><a id="__codelineno-32-13" name="__codelineno-32-13" href="#__codelineno-32-13"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>watch<span class="w"> </span>pods<span class="w"> </span>-A
+</span><span id="__span-32-14"><a id="__codelineno-32-14" name="__codelineno-32-14" href="#__codelineno-32-14"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>pods/exec<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-32-15"><a id="__codelineno-32-15" name="__codelineno-32-15" href="#__codelineno-32-15"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>update<span class="w"> </span>deployments<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h2>
 <h3 id="no-kubeconfig-or-wrong-context">No kubeconfig or wrong context<a class="headerlink" href="#no-kubeconfig-or-wrong-context" title="Permanent link">#</a></h3>
 <p>Typical symptoms:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>failed to init the lab runtime: failed to load Kubernetes client config: ...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>failed to init the lab runtime: failed to load Kubernetes client config: ...
 </span></code></pre></div>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>kubectl<span class="w"> </span>config<span class="w"> </span>current-context
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>kubectl<span class="w"> </span>cluster-info
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CLAB_KUBECONFIG</span><span class="s2">&quot;</span>
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CLAB_KUBE_CONTEXT</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>kubectl<span class="w"> </span>config<span class="w"> </span>current-context
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>kubectl<span class="w"> </span>cluster-info
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CLAB_KUBECONFIG</span><span class="s2">&quot;</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CLAB_KUBE_CONTEXT</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <p>Fix the kubeconfig, context, or cluster access, then run the containerlab command
 again.</p>
 <h3 id="namespace-creation-fails">Namespace creation fails<a class="headerlink" href="#namespace-creation-fails" title="Permanent link">#</a></h3>
 <p>Typical symptoms:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>failed to create c9s namespace &quot;c9s-&lt;lab&gt;&quot;: ...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>failed to create c9s namespace &quot;c9s-&lt;lab&gt;&quot;: ...
 </span></code></pre></div>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>get<span class="w"> </span>namespaces
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>namespaces
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>kubectl<span class="w"> </span>get<span class="w"> </span>namespace<span class="w"> </span>c9s-&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>get<span class="w"> </span>namespaces
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>namespaces
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>kubectl<span class="w"> </span>get<span class="w"> </span>namespace<span class="w"> </span>c9s-&lt;lab&gt;
 </span></code></pre></div>
 <p>Grant the selected kube identity permission to manage namespaces. You may also
 pre-create the canonical namespace; containerlab will use it and will not
 delete it unless it carries containerlab's runtime and lab-owner labels:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>c9s-&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>c9s-&lt;lab&gt;
 </span></code></pre></div>
 <p>With <code>--namespace</code> or <code>CLAB_KUBE_NAMESPACE</code> set, containerlab requires that
 namespace to exist and never creates or deletes it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>namespace<span class="w"> </span>default
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--namespace<span class="w"> </span>default<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>namespace<span class="w"> </span>default
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>--namespace<span class="w"> </span>default<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>topo.clab.yml
 </span></code></pre></div>
 <h3 id="crds-are-missing">CRDs are missing<a class="headerlink" href="#crds-are-missing" title="Permanent link">#</a></h3>
 <p>The c9s runtime talks to:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>nodes.c9s.run
-</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>links.c9s.run
-</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>nodeprofiles.c9s.run
+<div class="language-text highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>nodes.c9s.run
+</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>links.c9s.run
+</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>nodeprofiles.c9s.run
 </span></code></pre></div>
 <p>Typical symptoms:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>the server could not find the requested resource
+<div class="language-text highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>the server could not find the requested resource
 </span></code></pre></div>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>kubectl<span class="w"> </span>api-resources<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>c9s
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crd<span class="w"> </span>nodes.c9s.run<span class="w"> </span>links.c9s.run<span class="w"> </span>nodeprofiles.c9s.run
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>kubectl<span class="w"> </span>api-resources<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>c9s
+</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crd<span class="w"> </span>nodes.c9s.run<span class="w"> </span>links.c9s.run<span class="w"> </span>nodeprofiles.c9s.run
 </span></code></pre></div>
 <p>Install Clabernetes and its CRDs before using <code>--runtime c9s</code>.</p>
 <h3 id="manager-is-not-reconciling">Manager is not reconciling<a class="headerlink" href="#manager-is-not-reconciling" title="Permanent link">#</a></h3>
 <p>The primitive resources may exist, but no node Deployments or Pods appear.</p>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-A<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>clabernetes
-</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
-</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-A<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>clabernetes
+</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run,link.c9s.run,nodeprofile.c9s.run<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+</span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-42-5"><a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 <p>If deploy waits until timeout, check the Clabernetes manager logs and verify
 that it watches the namespace where the primitive resources were created.</p>
@@ -3916,10 +3885,10 @@ that it watches the namespace where the primitive resources were created.</p>
 <p>Deploy waits for every Node to report <code>status.readiness=ready</code> and streams the
 per-node lifecycle phase while waiting. The Node conditions name the phase a
 node is stuck in:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;<span class="w"> </span>-o<span class="w"> </span>wide
-</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>describe<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;
-</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;<span class="w"> </span>-o<span class="w"> </span>wide
+</span><span id="__span-43-2"><a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>describe<span class="w"> </span>node.c9s.run<span class="w"> </span>&lt;node&gt;
+</span><span id="__span-43-3"><a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-43-4"><a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 <p><code>PlanApplied</code> covers device planning and image metadata resolution,
 <code>Prepared</code> the file staging init container, <code>ConnectivityReady</code> the
@@ -3930,8 +3899,8 @@ secrets, or unsupported node settings.</p>
 <p>For c9s, <code>inspect</code> looks for c9s Nodes grouped by
 <code>c9s.run/topologyOwner</code> (and Topologies), not local Docker containers.</p>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--all
-</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-A<span class="w"> </span>-l<span class="w"> </span>c9s.run/topologyOwner
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>containerlab<span class="w"> </span>--runtime<span class="w"> </span>c9s<span class="w"> </span>inspect<span class="w"> </span>--all
+</span><span id="__span-44-2"><a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-A<span class="w"> </span>-l<span class="w"> </span>c9s.run/topologyOwner
 </span></code></pre></div>
 <p>If <code>docker ps</code> on the outer host is empty, that is perfectly normal for c9s.
 The node containers live in the cluster.</p>
@@ -3939,9 +3908,9 @@ The node containers live in the cluster.</p>
 <p><code>exec</code>, <code>save</code>, <code>save --copy</code>, and <code>events --interface-stats</code> need pod exec
 into the device pod.</p>
 <p>Check:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>c9s.run/direct-workload<span class="o">=</span>&lt;node&gt;<span class="w"> </span>-o<span class="w"> </span>wide
-</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>pods/exec<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
-</span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>deploy/&lt;node&gt;<span class="w"> </span>--<span class="w"> </span>sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>c9s.run/direct-workload<span class="o">=</span>&lt;node&gt;<span class="w"> </span>-o<span class="w"> </span>wide
+</span><span id="__span-45-2"><a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a>kubectl<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span>create<span class="w"> </span>pods/exec<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span><span id="__span-45-3"><a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>deploy/&lt;node&gt;<span class="w"> </span>--<span class="w"> </span>sh
 </span></code></pre></div>
 <h2 id="current-limitations">Current limitations<a class="headerlink" href="#current-limitations" title="Permanent link">#</a></h2>
 <p>The c9s runtime is not a complete drop-in replacement for the local Docker or
@@ -3963,15 +3932,16 @@ network namespaces, or direct access to the host container runtime.</p>
 <li>Rejected with a named error before anything is created: every other field
   c9s cannot preserve (for example <code>cpu-set</code>, <code>stages</code>, link <code>labels</code>/<code>vars</code>,
   <code>mgmt-net:</code> and <code>macvlan</code> endpoints), bridge/ovs-bridge/host/ext-container
-  pseudo-nodes, node names that are not valid Kubernetes names, and commands
-  or flags with no c9s implementation.</li>
+  pseudo-nodes, node-name collisions after Kubernetes sanitization, and
+  commands or flags with no c9s implementation.</li>
 </ul>
 <p>Management access behaves like containerlab: every node gets an allocated
 management address (honoring the topology <code>mgmt</code> subnet and static
-<code>mgmt-ipv4</code>/<code>mgmt-ipv6</code> addresses), and the management subnet is one L2 domain
-across the lab namespace, so devices reach each other's management addresses
-directly. From outside the cluster, Kubernetes Services (LoadBalancer by
-default), pod IPs, and DNS are the access paths. The <code>--network</code>,
+<code>mgmt-ipv4</code>/<code>mgmt-ipv6</code> addresses). c9s 0.9 carries the shared management
+subnet over a routed cross-Pod mesh with proxy ARP and IPv6 neighbor discovery;
+it is not a bridged L2 segment between Pods. Devices can still reach each
+other's management addresses directly. From outside the cluster, Kubernetes
+Services (LoadBalancer by default), pod IPs, and DNS are the access paths. The <code>--network</code>,
 <code>--ipv4-subnet</code>, and <code>--ipv6-subnet</code> flags remain rejected because they imply
 native Docker-network semantics.</p>
 <p>Known command differences:</p>
@@ -3991,13 +3961,17 @@ native Docker-network semantics.</p>
   the global <code>c9s</code> lab runtime.</li>
 <li>A lab name maps to one canonical <code>c9s-&lt;lab-name&gt;</code> namespace in the selected
   cluster.</li>
+<li>c9s 0.9 removed <code>Topology.spec.naming</code>. A topology with an explicit
+  <code>prefix: ""</code> currently emits that legacy field in the default Topology mode
+  and is rejected by the c9s 0.9 schema. Use <code>--no-topology-cr</code> for such a
+  topology.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Use kubernetes state as the source of truth for c9s labs:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-A<span class="w"> </span>-l<span class="w"> </span>c9s.run/topologyOwner
-</span><span id="__span-43-2"><a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-43-3"><a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>nodes.c9s.run<span class="w"> </span>-A<span class="w"> </span>-l<span class="w"> </span>c9s.run/topologyOwner
+</span><span id="__span-46-2"><a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy,pod,svc,cm,pvc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-46-3"><a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a><span class="w">  </span>-l<span class="w"> </span>c9s.run/topologyOwner<span class="o">=</span>&lt;lab&gt;
 </span></code></pre></div>
 </div>
   
@@ -4053,7 +4027,7 @@ native Docker-network semantics.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../quickstart/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quickstart">
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Clabernetes (c9s)">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -4063,20 +4037,20 @@ native Docker-network semantics.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Quickstart
+                Clabernetes (c9s)
               </div>
             </div>
           </a>
         
         
           
-          <a href="../configuration/" class="md-footer__link md-footer__link--next" aria-label="Next: Configuration">
+          <a href="../../node-filtering/" class="md-footer__link md-footer__link--next" aria-label="Next: Node filtering">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Configuration
+                Node filtering
               </div>
             </div>
             <div class="md-footer__button md-icon">
