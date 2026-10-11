@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -3158,6 +3159,253 @@ func TestTopologyChangedSinceCreate(t *testing.T) {
 	}
 	if got := r.topologyChangedSinceCreate(context.Background(), "lab-ns", "mv", created); got {
 		t.Fatal("a missing Topology must not count as changed")
+	}
+}
+
+// TestPlanReportsNodeLinkEffects reproduces issue 3469: the c9s dry-run preview must
+// surface the nodes whose Pod a link change replaces, not only the resource-level
+// Topology update. Nodes in the live link apply mode keep their Pod and get no entry.
+func TestPlanReportsNodeLinkEffects(t *testing.T) {
+	const initial = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth1", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth2"]
+`
+	const rewired = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth3", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth4"]
+`
+	const imageOnly = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:other
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth1", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth2"]
+`
+
+	r := newTestRuntime()
+	r.kindLinkApplyMode = func(kind string) string {
+		switch kind {
+		case "nokia_sros":
+			return "recreate"
+		case "linux":
+			return "live"
+		default:
+			return "recreate"
+		}
+	}
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The controller compiled the deployed definition into its primitive resources; the
+	// fake cluster holds them with ready nodes. The fixtures compile through the same
+	// preparation the deploy used, so they carry the rendered link definitions.
+	prepared, err := prepareDesiredDeployment(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}, "lab-ns")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range prepared.primitives.links {
+		if _, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+			Create(context.Background(), link.DeepCopy(), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, node := range prepared.primitives.nodes {
+		running := node.DeepCopy()
+		if err := unstructured.SetNestedField(
+			running.Object, "ready", "status", "readiness",
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+			Create(context.Background(), running, metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	rewiredPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(rewired),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]clablabruntime.ChangeAction{
+		"Topology/lab": clablabruntime.ChangeUpdate,
+		"Pod/sros":     clablabruntime.ChangeRecreate,
+	}
+	got := map[string]clablabruntime.ChangeAction{}
+	for _, change := range rewiredPlan.Changes {
+		got[change.Kind+"/"+change.Name] = change.Action
+	}
+	if len(got) != len(want) {
+		t.Fatalf("plan for rewired links = %+v, want %+v", rewiredPlan.Changes, want)
+	}
+	for resource, action := range want {
+		if got[resource] != action {
+			t.Fatalf("plan for rewired links = %+v, want %s on %s",
+				rewiredPlan.Changes, action, resource)
+		}
+	}
+
+	// Deploying the same definition again reports no changes at all.
+	noOpPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noOpPlan.Changes) != 0 {
+		t.Fatalf("no-op plan = %+v, want no changes", noOpPlan.Changes)
+	}
+
+	// An image change alone does not go through the link lifecycle; the plan carries
+	// only the Topology update.
+	imageOnlyPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(imageOnly),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(imageOnlyPlan.Changes) != 1 ||
+		imageOnlyPlan.Changes[0].Action != clablabruntime.ChangeUpdate ||
+		imageOnlyPlan.Changes[0].Kind != "Topology" {
+		t.Fatalf("image-only plan = %+v, want one Topology update", imageOnlyPlan.Changes)
+	}
+}
+
+// TestPlanReportsNodeLinkEffectsWithoutKindResolver checks that the plan degrades to the
+// conservative recreate default for every affected node when the runtime carries no kind
+// resolver, instead of silently hiding pod replacements.
+func TestPlanReportsNodeLinkEffectsWithoutKindResolver(t *testing.T) {
+	const initial = `topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+    n2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["n1:eth1", "n2:eth1"]
+`
+	const rewired = `topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+    n2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["n1:eth1", "n2:eth2"]
+`
+
+	r := newTestRuntime()
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	prepared, err := prepareDesiredDeployment(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}, "lab-ns")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range prepared.primitives.links {
+		if _, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+			Create(context.Background(), link.DeepCopy(), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, node := range prepared.primitives.nodes {
+		running := node.DeepCopy()
+		if err := unstructured.SetNestedField(
+			running.Object, "ready", "status", "readiness",
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+			Create(context.Background(), running, metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	plan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(rewired),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var podChanges []string
+	for _, change := range plan.Changes {
+		if change.Kind == "Pod" {
+			podChanges = append(podChanges, change.Namespace+"/"+change.Name)
+		}
+	}
+	sort.Strings(podChanges)
+	if len(podChanges) != 2 ||
+		podChanges[0] != "lab-ns/n1" || podChanges[1] != "lab-ns/n2" {
+		t.Fatalf("plan without a kind resolver = %+v, want pods of n1 and n2 recreated",
+			plan.Changes)
 	}
 }
 
