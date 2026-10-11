@@ -539,3 +539,35 @@ func TestNetworkAddressesFiltersPoolsBeforeInspect(t *testing.T) {
 		)
 	}
 }
+
+func TestMgmtNetworkExists(t *testing.T) {
+	t.Parallel()
+
+	rt, fake, teardown := newFakeDockerRuntime(t, "clab-exists")
+	defer teardown()
+
+	exists, err := rt.MgmtNetworkExists(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("MgmtNetworkExists() = true for a network the fake daemon does not know")
+	}
+
+	fake.mu.Lock()
+	fake.created = true
+	fake.info = networkapi.Inspect{
+		ID:     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+		Name:   "clab-exists",
+		Driver: "bridge",
+	}
+	fake.mu.Unlock()
+
+	exists, err = rt.MgmtNetworkExists(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("MgmtNetworkExists() = false for a network the fake daemon knows")
+	}
+}

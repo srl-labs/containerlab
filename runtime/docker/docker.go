@@ -208,6 +208,24 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	}
 }
 
+// MgmtNetworkExists reports whether the management network bound to the runtime exists.
+var _ clabruntime.MgmtNetworkChecker = (*DockerRuntime)(nil)
+
+func (d *DockerRuntime) MgmtNetworkExists(ctx context.Context) (bool, error) {
+	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancel()
+
+	_, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	switch {
+	case err == nil:
+		return true, nil
+	case cerrdefs.IsNotFound(err):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
 func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix,
@@ -766,6 +784,16 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 			return d.syncMacvlanHostRoutes(&nres)
 		}
 		return nil
+	}
+
+	// Networks recorded in the lab state but no longer defined by the topology reach
+	// this call without a bridge name. Derive it from the inspect result so the
+	// forwarding rules installed for the network are removed together with it.
+	if d.mgmt.Bridge == "" {
+		if bridge, bridgeErr := bridgeNameFromInspect(&nres, network); bridgeErr == nil &&
+			bridge != "" {
+			d.mgmt.Bridge = bridge
+		}
 	}
 
 	numEndpoints := len(nres.Containers)

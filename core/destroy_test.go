@@ -441,3 +441,215 @@ func TestDestroyLabDirsKeepsFailedLabDirs(t *testing.T) {
 		t.Fatalf("lab directory of the failed destroy was removed: %v", statErr)
 	}
 }
+
+// mgmtResolveBehavior configures the fake runtime the management network resolution
+// tests register under the "mgmtresolvetest" name.
+type mgmtResolveBehavior struct {
+	// checkable lets the fake implement the MgmtNetworkChecker interface.
+	checkable bool
+	// networkExists is what MgmtNetworkExists reports when checkable is set.
+	networkExists bool
+	// failCreateNet makes CreateNet return an error, so a call to it is observable
+	// through the test failing instead of silently creating a network.
+	failCreateNet bool
+}
+
+var mgmtResolveRuntimeBehavior atomic.Pointer[mgmtResolveBehavior]
+
+// mgmtResolveRuntimeStats aggregates the calls every fake instance of one test makes.
+type mgmtResolveRuntimeStats struct {
+	createNetCalls atomic.Int32
+	existsCalls    atomic.Int32
+}
+
+var mgmtResolveRuntimeStatsPtr atomic.Pointer[mgmtResolveRuntimeStats]
+
+var registerMgmtResolveRuntimeOnce sync.Once
+
+func registerMgmtResolveRuntime() {
+	registerMgmtResolveRuntimeOnce.Do(func() {
+		clabruntime.Register("mgmtresolvetest", func() clabruntime.ContainerRuntime {
+			behavior := mgmtResolveRuntimeBehavior.Load()
+			if behavior != nil && behavior.checkable {
+				return &fakeMgmtResolveCheckableRuntime{}
+			}
+
+			return &fakeMgmtResolveRuntime{}
+		})
+	})
+}
+
+// setMgmtResolveBehavior installs the behavior for one test and resets the call
+// bookkeeping the previous test left behind.
+func setMgmtResolveBehavior(t *testing.T, behavior *mgmtResolveBehavior) {
+	t.Helper()
+
+	mgmtResolveRuntimeStatsPtr.Store(&mgmtResolveRuntimeStats{})
+	mgmtResolveRuntimeBehavior.Store(behavior)
+
+	t.Cleanup(func() {
+		mgmtResolveRuntimeBehavior.Store(nil)
+	})
+}
+
+type fakeMgmtResolveRuntime struct {
+	clabruntime.ContainerRuntime
+	mgmt   *clabtypes.MgmtNet
+	config *clabruntime.RuntimeConfig
+}
+
+func (f *fakeMgmtResolveRuntime) Init(opts ...clabruntime.RuntimeOption) error {
+	for _, opt := range opts {
+		opt(f)
+	}
+
+	return nil
+}
+
+func (f *fakeMgmtResolveRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) { f.config = cfg }
+
+func (f *fakeMgmtResolveRuntime) WithMgmtNet(mgmt *clabtypes.MgmtNet) { f.mgmt = mgmt }
+
+func (f *fakeMgmtResolveRuntime) Mgmt() *clabtypes.MgmtNet { return f.mgmt }
+
+func (*fakeMgmtResolveRuntime) GetName() string { return "mgmtresolvetest" }
+
+func (f *fakeMgmtResolveRuntime) Config() clabruntime.RuntimeConfig {
+	if f.config == nil {
+		return clabruntime.RuntimeConfig{}
+	}
+
+	return *f.config
+}
+
+func (*fakeMgmtResolveRuntime) GetRuntimeSocket() (string, error) { return "", nil }
+
+func (f *fakeMgmtResolveRuntime) CreateNet(
+	context.Context,
+	...clabruntime.NetworkCreateOptions,
+) error {
+	stats := mgmtResolveRuntimeStatsPtr.Load()
+	if stats != nil {
+		stats.createNetCalls.Add(1)
+	}
+
+	behavior := mgmtResolveRuntimeBehavior.Load()
+	if behavior != nil && behavior.failCreateNet {
+		return errors.New("synthetic network creation failure")
+	}
+
+	// the real runtimes resolve the bridge of an existing network; mimic it so the
+	// test can observe that destroy kept the resolution step
+	if f.mgmt != nil && f.mgmt.Bridge == "" {
+		f.mgmt.Bridge = "br-fake"
+	}
+
+	return nil
+}
+
+// fakeMgmtResolveCheckableRuntime is the variant of the fake runtime that implements
+// the MgmtNetworkChecker interface.
+type fakeMgmtResolveCheckableRuntime struct {
+	fakeMgmtResolveRuntime
+}
+
+func (*fakeMgmtResolveCheckableRuntime) MgmtNetworkExists(context.Context) (bool, error) {
+	stats := mgmtResolveRuntimeStatsPtr.Load()
+	if stats != nil {
+		stats.existsCalls.Add(1)
+	}
+
+	behavior := mgmtResolveRuntimeBehavior.Load()
+	if behavior == nil {
+		return false, nil
+	}
+
+	return behavior.networkExists, nil
+}
+
+// TestMakeCopyForDestroySkipsMissingMgmtNetworks reproduces issue 3466: destroying a
+// lab that was deployed with a management network override must not fail because the
+// topology's default network does not exist and its default subnets are taken by the
+// overridden network.
+func TestMakeCopyForDestroySkipsMissingMgmtNetworks(t *testing.T) {
+	registerMgmtResolveRuntime()
+
+	topo := writeDestroyTestTopology(t, "ovr")
+
+	for _, tc := range []struct {
+		name          string
+		checkable     bool
+		networkExists bool
+		failCreateNet bool
+		wantExists    bool
+		wantCreateNet bool
+	}{
+		{
+			name:          "missing network is skipped",
+			checkable:     true,
+			networkExists: false,
+			failCreateNet: true,
+			wantExists:    true,
+			wantCreateNet: false,
+		},
+		{
+			name:          "existing network is resolved",
+			checkable:     true,
+			networkExists: true,
+			failCreateNet: false,
+			wantExists:    true,
+			wantCreateNet: true,
+		},
+		{
+			name:          "runtime without an existence check keeps creating",
+			checkable:     false,
+			failCreateNet: false,
+			wantExists:    false,
+			wantCreateNet: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setMgmtResolveBehavior(t, &mgmtResolveBehavior{
+				checkable:     tc.checkable,
+				networkExists: tc.networkExists,
+				failCreateNet: tc.failCreateNet,
+			})
+
+			c, err := NewContainerLab(
+				WithTimeout(time.Minute),
+				WithTopoPath(topo, nil),
+				WithRuntime("mgmtresolvetest", &clabruntime.RuntimeConfig{}),
+				WithSkippedBindsPathsCheck(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cc, err := c.makeCopyForDestroy(
+				context.Background(), topo, "", *NewDestroyOptions())
+			if err != nil {
+				t.Fatalf("makeCopyForDestroy failed: %v", err)
+			}
+
+			stats := mgmtResolveRuntimeStatsPtr.Load()
+			if got := stats.existsCalls.Load(); got != int32(boolToInt(tc.wantExists)) {
+				t.Fatalf("MgmtNetworkExists calls = %d, want %t", got, tc.wantExists)
+			}
+			if got := stats.createNetCalls.Load(); got != int32(boolToInt(tc.wantCreateNet)) {
+				t.Fatalf("CreateNet calls = %d, want %t", got, tc.wantCreateNet)
+			}
+
+			if tc.checkable && tc.networkExists && cc.Config.Mgmt.Bridge == "" {
+				t.Fatal("existing network did not populate the management bridge name")
+			}
+		})
+	}
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+
+	return 0
+}
