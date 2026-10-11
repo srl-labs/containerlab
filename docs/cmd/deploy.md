@@ -374,6 +374,23 @@ When the flag is not set, no pull secret is referenced at all: public images and
 containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret
 ```
 
+#### expose-type
+
+The `--expose-type` flag applies to the
+[clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets
+`spec.expose.exposeType` on the generated `Topology`, or on the generated
+`NodeProfile` with `--no-topology-cr`. Accepted values are `LoadBalancer`,
+`ClusterIP`, `Headless`, and `None`.
+
+Use `None` to disable node exposure Services:
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --expose-type None
+```
+
+c9s 0.9 removed the older `disableExpose` field. Existing manifests must use
+`exposeType: None` instead.
+
 #### no-persistence
 
 The `--no-persistence` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. By default, deploy enables persistence on the c9s `Topology` CR (`spec.deployment.persistence.enabled`), backing every node's artifact volume with a PersistentVolumeClaim so saved device configuration survives pod replacement -- the same contract the lab directory provides with local runtimes. This requires a dynamically provisionable (default) storage class in the cluster.

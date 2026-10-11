@@ -82,13 +82,9 @@ nav:
       - Network: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
-      - Clabernetes:
+      - C9s (Clabernetes):
           - manual/clabernetes/index.md
-          - Install: manual/clabernetes/install.md
-          - Quickstart: manual/clabernetes/quickstart.md
-          - Containerlab runtime: manual/clabernetes/runtime.md
-          - Configuration: manual/clabernetes/configuration.md
-          - Packet capture in c9s: manual/clabernetes/pcap.md
+          - manual/clabernetes/runtime.md
       - Node filtering: manual/node-filtering.md
       - Multi-node labs: manual/multi-node.md
       - Certificate management: manual/cert.md
