@@ -2917,6 +2917,250 @@ topology:
 	}
 }
 
+// createFakeControllerNode creates the Node primitive a c9s controller would own for a
+// topology node and marks it ready, so the fake cluster reports the lab as ready.
+func createFakeControllerNode(
+	t *testing.T,
+	r *Runtime,
+	namespace,
+	topologyName,
+	nodeName string,
+) {
+	t.Helper()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      nodeName,
+			"namespace": namespace,
+			"labels": map[string]any{
+				labelTopologyOwner: topologyName,
+			},
+		},
+		"spec":   map[string]any{"kind": "linux", "image": "alpine:3"},
+		"status": map[string]any{"readiness": "ready"},
+	}}
+	if _, err := r.client.Resource(nodeGVR).Namespace(namespace).
+		Create(context.Background(), node, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestFreshTopologyDeployKeepsTopologyChangedConcurrently reproduces issue 3468: a fresh
+// deploy that fails after the lab became ready must not delete the Topology when a
+// concurrent deploy reconciled it in place in the meantime. The rollback belongs to the
+// newer deploy, and deleting the shared Topology would cascade to its lab.
+func TestFreshTopologyDeployKeepsTopologyChangedConcurrently(t *testing.T) {
+	topologyDir := t.TempDir()
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "vjunos", "startup.sh"),
+		"#!/bin/sh\n",
+		0o755,
+	)
+
+	const initial = `topology:
+  nodes:
+    vjunos:
+      kind: linux
+      image: alpine:3
+      binds:
+        - configs/vjunos:/config
+    sros:
+      kind: linux
+      image: alpine:3
+`
+	const changed = `topology:
+  nodes:
+    vsrx:
+      kind: linux
+      image: alpine:3
+    sros:
+      kind: linux
+      image: alpine:3
+`
+
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, initial, 0o644)
+
+	r := newTestRuntime()
+	client := r.client.(*dynamicfake.FakeDynamicClient) //nolint:forcetypeassert // the test harness owns the client type
+	tracker := client.Tracker()
+
+	// Signal the concurrent deploy once the first deploy has created its Topology: the
+	// reactor only consults the tracker (a fake client call from inside a reactor would
+	// deadlock on the fake's own lock).
+	concurrent := make(chan struct{}, 1)
+	concurrentRan := false
+	client.PrependReactor("get", "topologies",
+		func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+			if concurrentRan {
+				return false, nil, nil
+			}
+			if _, err := tracker.Get(
+				topologyGVR, action.GetNamespace(), "mv", metav1.GetOptions{},
+			); err != nil {
+				// The Topology of this deploy does not exist yet.
+				return false, nil, nil
+			}
+			concurrentRan = true
+			concurrent <- struct{}{}
+
+			return false, nil, nil
+		})
+
+	concurrentDone := make(chan error, 1)
+	go func() {
+		defer close(concurrentDone)
+
+		<-concurrent
+
+		if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+			Name:               "mv",
+			Namespace:          "lab-ns",
+			TopologyDefinition: []byte(changed),
+		}); err != nil {
+			concurrentDone <- err
+
+			return
+		}
+
+		// The concurrent deploy reconciled the lab in place; the c9s controller then
+		// compiled its nodes and reported them ready.
+		for _, nodeName := range []string{"vsrx", "sros"} {
+			createFakeControllerNode(t, r, "lab-ns", "mv", nodeName)
+		}
+	}()
+
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "mv",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyDefinition: []byte(initial),
+		Wait:               true,
+		Timeout:            30 * time.Second,
+	})
+	if err == nil {
+		t.Fatal("expected the first deploy to fail on the concurrently changed lab")
+	}
+
+	select {
+	case goroutineErr := <-concurrentDone:
+		if goroutineErr != nil {
+			t.Fatalf("concurrent deploy failed: %v", goroutineErr)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("concurrent deploy did not run")
+	}
+
+	// The concurrent deploy reconciled the lab in place; the rollback must leave it alone.
+	topology := getTestTopology(t, r, "lab-ns", "mv")
+	if got := topologyDefinition(t, topology); got != changed {
+		t.Fatalf("topology definition = %q, want the concurrently deployed definition", got)
+	}
+
+	// The staged ConfigMap of the superseded deploy is kept: a concurrent deploy can
+	// still rely on the same content-hashed name.
+	configMapName := stagedFileConfigMapName("mv", "configs/vjunos/startup.sh")
+	_ = getTestConfigMap(t, r, "lab-ns", configMapName)
+}
+
+// TestTopologyChangedSinceCreate covers the identity check the fresh-deployment rollback
+// relies on: UID, generation, and spec comparisons each detect a change, and a missing
+// Topology is treated as unchanged so the remaining rollback can still run.
+func TestTopologyChangedSinceCreate(t *testing.T) {
+	r := newTestRuntime()
+	client := r.client.(*dynamicfake.FakeDynamicClient) //nolint:forcetypeassert // the test harness owns the client type
+	tracker := client.Tracker()
+
+	created := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Topology",
+		"metadata": map[string]any{
+			"name":       "mv",
+			"namespace":  "lab-ns",
+			"uid":        "uid-1",
+			"generation": int64(1),
+		},
+		"spec": map[string]any{"definition": map[string]any{"containerlab": "a"}},
+	}}
+
+	changed := func(mutate func(*unstructured.Unstructured)) *unstructured.Unstructured {
+		obj := created.DeepCopy()
+		mutate(obj)
+
+		return obj
+	}
+
+	tests := []struct {
+		name    string
+		stored  *unstructured.Unstructured
+		changed bool
+	}{
+		{
+			name:    "identical topology",
+			stored:  created.DeepCopy(),
+			changed: false,
+		},
+		{
+			name: "changed spec",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.Object["spec"] = map[string]any{
+					"definition": map[string]any{"containerlab": "b"},
+				}
+			}),
+			changed: true,
+		},
+		{
+			name: "different uid",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.SetUID("uid-2")
+			}),
+			changed: true,
+		},
+		{
+			name: "different generation",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.SetGeneration(2)
+			}),
+			changed: true,
+		},
+		{
+			name: "api-defaulted empty values",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.Object["spec"] = map[string]any{
+					"definition": map[string]any{"containerlab": "a"},
+					"expose":     map[string]any{},
+				}
+			}),
+			changed: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_ = tracker.Delete(topologyGVR, "lab-ns", "mv")
+			if err := tracker.Create(topologyGVR, tc.stored, "lab-ns"); err != nil {
+				t.Fatal(err)
+			}
+
+			got := r.topologyChangedSinceCreate(context.Background(), "lab-ns", "mv", created)
+			if got != tc.changed {
+				t.Fatalf("topologyChangedSinceCreate() = %t, want %t", got, tc.changed)
+			}
+		})
+	}
+
+	// A Topology that is gone cannot cascade to anyone; the rollback proceeds.
+	if err := tracker.Delete(topologyGVR, "lab-ns", "mv"); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.topologyChangedSinceCreate(context.Background(), "lab-ns", "mv", created); got {
+		t.Fatal("a missing Topology must not count as changed")
+	}
+}
+
 func TestDeployReconcilesExistingTopology(t *testing.T) {
 	t.Parallel()
 

@@ -352,8 +352,24 @@ func (r *Runtime) deployTopology(
 	// A fresh deployment is transactional: a failure removes only what this operation created.
 	// Once the controller has adopted pre-existing primitive resources, deleting the Topology
 	// would cascade to them, so an existing lab is always retained for diagnosis and recovery.
+	//
+	// The rollback only deletes the Topology while it is still the one this operation created:
+	// a concurrent deploy reconciles the same Topology in place, and deleting it there would
+	// cascade to the lab the newer deploy put in place.
+	var createdTopology *unstructured.Unstructured
+
 	cleanupFresh := func(topologyCreated bool) {
 		if primitiveExists {
+			return
+		}
+		if topologyCreated &&
+			r.topologyChangedSinceCreate(ctx, namespace, req.Name, createdTopology) {
+			log.Info(
+				"leaving the C9s lab in place: its Topology changed since this deploy started",
+				"name", req.Name,
+				"namespace", namespace,
+			)
+
 			return
 		}
 		if topologyCreated {
@@ -391,7 +407,7 @@ func (r *Runtime) deployTopology(
 		"nodes", len(prepared.primitives.nodes),
 		"links", len(prepared.primitives.links),
 	)
-	_, err = r.client.Resource(topologyGVR).Namespace(namespace).
+	created, err := r.client.Resource(topologyGVR).Namespace(namespace).
 		Create(ctx, prepared.topology.DeepCopy(), metav1.CreateOptions{})
 	if err != nil {
 		cleanupFresh(false)
@@ -399,6 +415,7 @@ func (r *Runtime) deployTopology(
 		return nil, fmt.Errorf("failed to create clabernetes topology %s/%s: %w",
 			namespace, req.Name, err)
 	}
+	createdTopology = created
 
 	if !req.Wait {
 		return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
@@ -411,6 +428,39 @@ func (r *Runtime) deployTopology(
 	}
 
 	return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+}
+
+// topologyChangedSinceCreate reports whether the stored Topology no longer matches the one
+// this deploy created. A mismatch means another writer changed the lab definition while this
+// deploy was waiting; the rollback then belongs to the newer deploy and must not cascade to it.
+func (r *Runtime) topologyChangedSinceCreate(
+	ctx context.Context,
+	namespace,
+	name string,
+	created *unstructured.Unstructured,
+) bool {
+	topology, err := r.client.Resource(topologyGVR).Namespace(namespace).
+		Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		// The Topology is gone or unreadable, so deleting it cannot cascade to anyone;
+		// the staged artifacts and the managed namespace can still be cleaned up.
+		return false
+	}
+
+	// The UID guards against a delete-and-recreate reusing the name for a different lab,
+	// and the generation against an in-place reconcile that did not change the spec.
+	if topology.GetUID() != created.GetUID() ||
+		topology.GetGeneration() != created.GetGeneration() {
+		return true
+	}
+
+	// The spec comparison detects a concurrent deploy whose update replaced the definition.
+	// It reuses the same equivalence the reconcile path relies on to treat API defaulting
+	// as a no-op.
+	return !apiequality.Semantic.DeepEqual(
+		normalizeAPIDefaultedJSON(topology.Object["spec"]),
+		normalizeAPIDefaultedJSON(created.Object["spec"]),
+	)
 }
 
 // reconcileTopology updates the definition of an existing Topology-owned lab in place and waits
