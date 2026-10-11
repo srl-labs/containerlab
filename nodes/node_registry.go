@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -74,6 +75,20 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	sort.Strings(result)
 
 	return result
+}
+
+// LinkApplyModeForKind returns the default link apply mode the named kind declares,
+// resolved from a fresh node instance of that kind. Kinds that derive the mode from their
+// configuration answer with their generic default, so consumers without a configured node
+// (e.g. a c9s plan) get the same mode the kind would use in a plain deploy. An unknown
+// kind resolves to the conservative recreate default.
+func (r *NodeRegistry) LinkApplyModeForKind(kind string) LinkApplyMode {
+	node, err := r.NewNodeOfKind(kind)
+	if err != nil || node == nil {
+		return LinkApplyModeRecreate
+	}
+
+	return LinkApplyModeForNode(context.Background(), node)
 }
 
 func (r *NodeRegistry) GetGenerateNodeAttributes() map[string]*GenerateNodeAttributes {

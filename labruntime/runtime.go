@@ -46,6 +46,12 @@ func NormalizeExposeType(value string) (string, error) {
 type Config struct {
 	Timeout   time.Duration
 	Namespace string
+
+	// KindLinkApplyMode resolves the default link apply mode ("live", "restart" or
+	// "recreate") a node kind declares, as containerlab's node registry reports it. An
+	// empty result means the kind is unknown and the conservative recreate default
+	// applies. Lab runtimes use it to predict the node lifecycle impact of link changes.
+	KindLinkApplyMode func(kind string) string
 }
 
 type DeployRequest struct {
@@ -165,6 +171,10 @@ const (
 	ChangeCreate ChangeAction = "create"
 	ChangeUpdate ChangeAction = "update"
 	ChangeDelete ChangeAction = "delete"
+	// ChangeRecreate marks a resource that is deleted and created again, such as the Pod
+	// of a node whose links change. It is not a Kubernetes action; it communicates the
+	// lifecycle impact of an apply.
+	ChangeRecreate ChangeAction = "recreate"
 )
 
 type ResourceChange struct {

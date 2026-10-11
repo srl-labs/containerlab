@@ -161,6 +161,11 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 			lr, err := clablabruntime.Init(name, clablabruntime.Config{
 				Timeout:   runtimeTimeout(rtconfig),
 				Namespace: labRuntimeNamespace(rtconfig),
+				// The kind registry is populated before options run; lab runtimes use it to
+				// predict the lifecycle impact of link changes in their plan.
+				KindLinkApplyMode: func(kind string) string {
+					return string(c.Reg.LinkApplyModeForKind(kind))
+				},
 			})
 			if err != nil {
 				return fmt.Errorf("failed to init the lab runtime: %w", err)

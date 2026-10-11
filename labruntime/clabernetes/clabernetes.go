@@ -67,6 +67,9 @@ type Runtime struct {
 	// empty, lab-scoped operations derive their namespace from the lab name.
 	labNamespaceOverride string
 	timeout              time.Duration
+	// kindLinkApplyMode resolves the default link apply mode a node kind declares.
+	// The plan uses it to predict the pod lifecycle impact of link changes.
+	kindLinkApplyMode func(kind string) string
 }
 
 func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
@@ -112,5 +115,6 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		namespace:            namespace,
 		labNamespaceOverride: configuredLabNamespace(cfg.Namespace),
 		timeout:              cfg.Timeout,
+		kindLinkApplyMode:    cfg.KindLinkApplyMode,
 	}, nil
 }

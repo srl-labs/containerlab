@@ -239,6 +239,8 @@ them by destroying and redeploying the lab.
 
 The local `--dry-run` flag prints the planned changes without applying them. For an already deployed lab this shows the [reconciliation plan](#reconciliation-behavior)—the nodes and links to add, delete, recreate, or restart. For a lab that is not deployed yet it reports that the lab would be deployed.
 
+With the `c9s` runtime the plan also lists the Pods that a link change replaces, so a `recreate` on a VM-backed node is visible before it reboots. Nodes whose kind declares `live` link handling do not appear.
+
 `--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys and redeploys the full lab.
 
 #### max-workers
