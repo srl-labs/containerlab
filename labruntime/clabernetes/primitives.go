@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabernetescompiler "github.com/clabernetes/clabernetes/compiler"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -171,7 +171,7 @@ type c9sTopologySpec struct {
 		FilesFromConfigMap map[string][]clabernetescompiler.FileFromConfigMap `json:"filesFromConfigMap"`
 		FilesFromSecret    map[string][]clabernetescompiler.FileFromSecret    `json:"filesFromSecret"`
 		FilesFromURL       map[string][]clabernetescompiler.FileFromURL       `json:"filesFromURL"`
-		Resources          map[string]*corev1.ResourceRequirements    `json:"resources"`
+		Resources          map[string]*corev1.ResourceRequirements            `json:"resources"`
 		Scheduling         *clabernetescompiler.Scheduling                    `json:"scheduling"`
 		Persistence        *clabernetescompiler.Persistence                   `json:"persistence"`
 	} `json:"deployment"`
@@ -187,8 +187,8 @@ type c9sTopologySpec struct {
 		PullSecrets []string `json:"pullSecrets"`
 	} `json:"imagePull"`
 	StatusProbes struct {
-		Enabled                 bool                                      `json:"enabled"`
-		ExcludedNodes           []string                                  `json:"excludedNodes"`
+		Enabled                 bool                                              `json:"enabled"`
+		ExcludedNodes           []string                                          `json:"excludedNodes"`
 		NodeProbeConfigurations map[string]clabernetescompiler.ProbeConfiguration `json:"nodeProbeConfigurations"`
 		ProbeConfiguration      clabernetescompiler.ProbeConfiguration            `json:"probeConfiguration"`
 	} `json:"statusProbes"`
