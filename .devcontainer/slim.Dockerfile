@@ -40,7 +40,7 @@ RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /et
 
 # Add vscode user to clab_admins group so that it can run sudo-less clab commands
 # the group is created when clab is installed via the installation script
-RUN usermod -aG clab_admins vscode
+RUN if getent group clab_admins >/dev/null; then usermod -aG clab_admins vscode; fi
 
 # Switch to the vscode user provided by the base image
 USER vscode

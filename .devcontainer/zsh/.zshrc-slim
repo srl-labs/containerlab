@@ -94,8 +94,14 @@ zstyle ':bracketed-paste-magic' active-widgets '.self-*'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(brew git pip python F-Sy-H zsh-autocomplete zsh-autosuggestions colored-man-pages kubectl)
+plugins=(brew git pip python zsh-autosuggestions colored-man-pages kubectl)
 
+# F-Sy-H must load before zsh-autocomplete, otherwise it warns about
+# zsh-autocomplete's lazily defined widgets (menu-search, recent-paths).
+source $ZSH/custom/plugins/F-Sy-H/F-Sy-H.plugin.zsh
+
+# zsh-autocomplete must load before using compdef.
+source $ZSH/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
