@@ -28,9 +28,6 @@ setopt extended_history
 setopt hist_ignore_all_dups
 setopt hist_ignore_space
 
-# auto complete configs -- menu-select+unambiguous to have tab menu auto complete setup
-zstyle ':autocomplete:tab:*' insert-unambiguous no
-zstyle ':autocomplete:*' widget-style menu-select
 # dont auto show next completions -- its very annoying
 zstyle ':autocomplete:*' min-input 1
 
@@ -105,6 +102,8 @@ source $ZSH/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
+bindkey              '^I' menu-select
+bindkey "$terminfo[kcbt]" menu-select
 
 # export MANPATH="/usr/local/man:$MANPATH"
 
@@ -131,6 +130,7 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+. "$HOME/.atuin/bin/env"
 eval "$(atuin init zsh)"
 
 # go path
