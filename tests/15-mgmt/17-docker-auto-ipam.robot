@@ -11,7 +11,7 @@ Test Teardown       Destroy Lab
 
 *** Variables ***
 ${runtime}          docker
-${topo}             ${CURDIR}/15-docker-auto-ipam.clab.yml
+${topo}             ${CURDIR}/17-docker-auto-ipam.clab.yml
 ${vars-dir}         ${CURDIR}/clab-auto-ipam-vars
 ${name}             ${EMPTY}
 ${network}          ${EMPTY}
