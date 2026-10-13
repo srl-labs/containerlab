@@ -276,11 +276,14 @@ type NodeConfig struct {
 	MgmtIPv6PrefixLength int    `json:"mgmt-ipv6-prefix-length,omitempty"`
 	MgmtIPv4Gateway      string `json:"mgmt-ipv4-gateway,omitempty"`
 	MgmtIPv6Gateway      string `json:"mgmt-ipv6-gateway,omitempty"`
-	MacAddress           string `json:"mac-address,omitempty"`
-	ContainerID          string `json:"containerid,omitempty"`
-	TLSCert              string `json:"tls-cert,omitempty"`
-	TLSKey               string `json:"-"` // Do not marshal into JSON - highly sensitive data
-	TLSAnchor            string `json:"tls-anchor,omitempty"`
+	// Auto flags distinguish IPAM allocations from addresses explicitly requested in the topology.
+	MgmtIPv4AddressAuto bool   `json:"-" yaml:"-"`
+	MgmtIPv6AddressAuto bool   `json:"-" yaml:"-"`
+	MacAddress          string `json:"mac-address,omitempty"`
+	ContainerID         string `json:"containerid,omitempty"`
+	TLSCert             string `json:"tls-cert,omitempty"`
+	TLSKey              string `json:"-"` // Do not marshal into JSON - highly sensitive data
+	TLSAnchor           string `json:"tls-anchor,omitempty"`
 	// TLS Certificate configuration
 	Certificate *CertificateConfig
 	// Healthcheck configuration parameters
