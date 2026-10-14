@@ -31,6 +31,11 @@ type srosTemplateData struct {
 
 	// Node identification
 	Name string
+	// AdminUser and AdminPassword are CLI-quoted (including the surrounding quotes).
+	AdminUser     string
+	AdminPassword string
+	// PromptPassword adds new-password-at-login for the admin user.
+	PromptPassword bool
 
 	// Certificate data
 	TLSKey    string

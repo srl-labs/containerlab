@@ -115,9 +115,12 @@ echo "System Security Configuration"
             exit
             password
                 attempts 64 time 5 lockout 10
+{{ if .PromptPassword }}
+                minimum-age sec 0
+{{ end }}
             exit
-            user "admin"
-                password "NokiaSros1!"
+            user {{ .AdminUser }}
+                password {{ .AdminPassword }}
                 access console netconf grpc
                 no restricted-to-home
                 public-keys
@@ -147,6 +150,9 @@ echo "System Security Configuration"
                 exit
                 console
                     member "administrative"
+{{ if .PromptPassword }}
+                    new-password-at-login
+{{ end }}
                 exit
             exit
             snmp
