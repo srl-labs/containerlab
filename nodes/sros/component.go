@@ -2,7 +2,12 @@ package sros
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 // Component is an SR-SIM card: a CPM (slot A or B) or a line card.
@@ -157,8 +162,148 @@ func (n *sros) checkComponentSlotsConfig() error {
 			)
 		}
 		// add to component names map
-		componentNames[component.Slot] = struct{}{}
+		componentNames[slot] = struct{}{}
 
 	}
 	return nil
+}
+
+// componentDerivedEnv is the environment a component would set from its type, XIOM, MDA,
+// and per-component env. Per-component env overrides the typed fields.
+func componentDerivedEnv(c *Component) map[string]string {
+	derived := map[string]string{}
+	if c == nil {
+		return derived
+	}
+	setComponentEnvVars(derived, c)
+	maps.Copy(derived, c.Env)
+	return derived
+}
+
+// warnUserEnvOverrides logs when a node env var replaces a component-derived value.
+func warnUserEnvOverrides(node string, derived, userEnv map[string]string) {
+	for key, componentValue := range derived {
+		envValue, userSet := userEnv[key]
+		if !userSet || componentValue == envValue {
+			continue
+		}
+		log.Warn(
+			fmt.Sprintf(
+				"component value %q will not be used because environment variable %s is set",
+				componentValue,
+				key,
+			),
+			"node", node,
+			"env", key,
+			"component-value", componentValue,
+			"env-value", envValue,
+		)
+	}
+}
+
+// keepUserEnv copies component-derived keys into dst unless the user already set that key.
+// A user value wins, and a differing component value is logged.
+func keepUserEnv(node string, dst, derived, userEnv map[string]string) {
+	warnUserEnvOverrides(node, derived, userEnv)
+	for key, componentValue := range derived {
+		if envValue, userSet := userEnv[key]; userSet {
+			dst[key] = envValue
+			continue
+		}
+		dst[key] = componentValue
+	}
+}
+
+// cloneComponent returns a deep copy of c suitable for env overrides during config generation.
+func cloneComponent(c *Component) *Component {
+	if c == nil {
+		return &Component{}
+	}
+	out := *c
+	out.Env = maps.Clone(c.Env)
+	out.MDA = slices.Clone(c.MDA)
+	if len(c.XIOM) > 0 {
+		out.XIOM = make(XIOMS, len(c.XIOM))
+		for i, xiom := range c.XIOM {
+			xiom.MDA = slices.Clone(xiom.MDA)
+			out.XIOM[i] = xiom
+		}
+	}
+	return &out
+}
+
+// applyHardwareEnv overlays SR-SIM card, XIOM, and MDA environment variables onto c.
+// NOKIA_SROS_SLOT is left unchanged; it identifies the container rather than provisioned hardware.
+func applyHardwareEnv(c *Component, env map[string]string) {
+	if c == nil || len(env) == 0 {
+		return
+	}
+	if card := env[envNokiaSrosCard]; card != "" {
+		c.Type = card
+	}
+	for key, val := range env {
+		if val == "" {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(key, envNokiaSrosMDA+"_X"):
+			rest := strings.TrimPrefix(key, envNokiaSrosMDA+"_X")
+			xiomStr, mdaStr, ok := strings.Cut(rest, "_")
+			if !ok {
+				continue
+			}
+			xiomSlot, errX := strconv.Atoi(xiomStr)
+			mdaSlot, errM := strconv.Atoi(mdaStr)
+			if errX != nil || errM != nil || xiomSlot <= 0 || mdaSlot <= 0 {
+				continue
+			}
+			upsertXiomMDA(c, xiomSlot, mdaSlot, val)
+		case strings.HasPrefix(key, envNokiaSrosMDA+"_"):
+			slot, err := strconv.Atoi(strings.TrimPrefix(key, envNokiaSrosMDA+"_"))
+			if err != nil || slot <= 0 {
+				continue
+			}
+			c.MDA = upsertMDA(c.MDA, slot, val)
+		case strings.HasPrefix(key, envNokiaSrosXIOM+"_X"):
+			slot, err := strconv.Atoi(strings.TrimPrefix(key, envNokiaSrosXIOM+"_X"))
+			if err != nil || slot <= 0 {
+				continue
+			}
+			upsertXiomType(c, slot, val)
+		}
+	}
+}
+
+func upsertMDA(mdas MDAS, slot int, typ string) MDAS {
+	for i := range mdas {
+		if mdas[i].Slot == slot {
+			mdas[i].Type = typ
+			return mdas
+		}
+	}
+	return append(mdas, MDA{Slot: slot, Type: typ})
+}
+
+func upsertXiomType(c *Component, slot int, typ string) {
+	for i := range c.XIOM {
+		if c.XIOM[i].Slot == slot {
+			c.XIOM[i].Type = typ
+			return
+		}
+	}
+	c.XIOM = append(c.XIOM, XIOM{Slot: slot, Type: typ})
+}
+
+func upsertXiomMDA(c *Component, xiomSlot, mdaSlot int, typ string) {
+	for i := range c.XIOM {
+		if c.XIOM[i].Slot != xiomSlot {
+			continue
+		}
+		c.XIOM[i].MDA = upsertMDA(c.XIOM[i].MDA, mdaSlot, typ)
+		return
+	}
+	c.XIOM = append(c.XIOM, XIOM{
+		Slot: xiomSlot,
+		MDA:  MDAS{{Slot: mdaSlot, Type: typ}},
+	})
 }

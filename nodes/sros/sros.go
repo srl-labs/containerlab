@@ -218,6 +218,10 @@ type sros struct {
 	//  - for network mode based: parsed from network-mode.
 	rootCtrName string
 
+	// userEnv is the env map from the topology, before component fields are merged in.
+	// Node env overrides component type, XIOM, MDA, SFM, and per-component env.
+	userEnv map[string]string
+
 	preDeployParams *clabnodes.PreDeployParams
 
 	netnsNode clabnodes.Node
@@ -256,12 +260,40 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.User = "0:0"
 	}
 
-	if sfm := n.kindSpecificCfg().SFM; sfm != "" {
+	// Snapshot topology env before component and SFM flags are applied.
+	// Component nodes set userEnv from the base node before Init.
+	envAlreadyResolved := n.userEnv != nil
+	if !envAlreadyResolved {
 		if n.Cfg.Env == nil {
-			n.Cfg.Env = map[string]string{}
+			n.userEnv = map[string]string{}
+		} else {
+			n.userEnv = maps.Clone(n.Cfg.Env)
 		}
+	}
+	if n.Cfg.Env == nil {
+		n.Cfg.Env = map[string]string{}
+	}
 
-		n.Cfg.Env[envNokiaSrosSFM] = sfm
+	// Distributed cards inherit SFM from the base node env. Applying it again
+	// would warn once per card when the user also set NOKIA_SROS_SFM.
+	if sfm := n.kindSpecificCfg().SFM; sfm != "" && !envAlreadyResolved {
+		if envSFM, ok := n.userEnv[envNokiaSrosSFM]; ok {
+			if envSFM != sfm {
+				log.Warn(
+					fmt.Sprintf(
+						"component value %q will not be used because environment variable %s is set",
+						sfm,
+						envNokiaSrosSFM,
+					),
+					"node", n.Cfg.ShortName,
+					"env", envNokiaSrosSFM,
+					"component-value", sfm,
+					"env-value", envSFM,
+				)
+			}
+		} else {
+			n.Cfg.Env[envNokiaSrosSFM] = sfm
+		}
 	}
 
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
@@ -293,6 +325,7 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		if err != nil {
 			return err
 		}
+		warnUserEnvOverrides(n.Cfg.ShortName, vars, n.userEnv)
 
 		// n.Cfg.Env overrides component vars, overrides default srosEnv
 		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
@@ -628,13 +661,12 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.PortBindings = nil
 		componentConfig.PortSet = nil
 
-		// add the component env to the componentConfig env
-		for k, v := range c.Env {
-			componentConfig.Env[k] = v
+		// Component fields fill env keys the user did not set. Node env wins.
+		if componentConfig.Env == nil {
+			componentConfig.Env = map[string]string{}
 		}
-
-		// set component environment variables
-		setComponentEnvVars(componentConfig.Env, c)
+		keepUserEnv(n.Cfg.ShortName, componentConfig.Env, componentDerivedEnv(c), n.userEnv)
+		// Slot identifies this container. A node-level NOKIA_SROS_SLOT cannot apply to every card.
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
@@ -650,6 +682,10 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Labels[clabconstants.LongName] = componentConfig.LongName
 		componentConfig.Labels[clabconstants.RootNodeName] = n.Cfg.ShortName
 		componentConfig.Labels[clabconstants.RootNodeLongName] = n.Cfg.LongName
+
+		// Preserve the topology env. Init must not snapshot the merged component env,
+		// or config generation would treat component flags as user overrides.
+		srosNode.userEnv = maps.Clone(n.userEnv)
 
 		// init the component
 		err = componentNode.Init(componentConfig)
@@ -990,6 +1026,10 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
+		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
+			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -1004,6 +1044,66 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
+// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
+// with the same filename (chassis_info.json).
+func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return fmt.Errorf("inspect image: %w", err)
+	}
+	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
+	if err != nil {
+		return err
+	}
+	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
+	licensed := append([]byte(chassisInfoFileLicense), content...)
+	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
+	n.warnUnsupportedComponents(content)
+	return nil
+}
+
+// warnUnsupportedComponents validates the effective component configuration against the
+// chassis_info.json extracted from this exact image. Validation is advisory and never blocks deploy.
+func (n *sros) warnUnsupportedComponents(content []byte) {
+	// A distributed node validates once, from CPM A, to avoid duplicate warnings from CPM B.
+	if !n.isStandaloneNode() && !n.isCPM(slotAName) {
+		return
+	}
+
+	info, err := parseChassisInfo(content)
+	if err != nil {
+		log.Warn("Could not validate SR-SIM components against chassis_info.json",
+			"node", n.Cfg.ShortName, "error", err)
+		return
+	}
+
+	components := n.rootComponents
+	if len(components) == 0 {
+		components = n.kindSpecificCfg().Components
+	}
+
+	effective := n.componentsForConfig(components)
+	if len(effective) == 0 {
+		// Environment variables can configure integrated hardware without a components entry.
+		effective = []*Component{n.componentForConfig(nil)}
+	}
+
+	nodeType := n.Cfg.NodeType
+	if chassis := strings.TrimSpace(n.Cfg.Env[envNokiaSrosChassis]); chassis != "" {
+		nodeType = chassis
+	}
+	for _, warning := range info.componentWarnings(nodeType, n.componentSFM(), effective) {
+		log.Warn("SR-SIM component configuration may not be supported",
+			"node", n.Cfg.ShortName,
+			"chassis", nodeType,
+			"warning", warning)
+	}
 }
 
 // Func that Places the Certificates in the right place and format.

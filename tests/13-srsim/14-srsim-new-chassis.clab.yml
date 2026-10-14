@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: srsim-new-chassis
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+
+  nodes:
+    ixr-e2sc:
+      kind: nokia_srsim
+      type: ixr-e2sc
+
+    ixr-e3:
+      kind: nokia_srsim
+      type: ixr-e3
+
+    sar-10x:
+      kind: nokia_srsim
+      type: sar-10x
+      components:
+        - slot: A
+          type: cpiom-sar-x

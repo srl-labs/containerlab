@@ -299,8 +299,41 @@ func (n *sros) generateComponentConfig() string {
 		}
 	}
 
-	lines := buildComponentCfgLines(components, n.kindSpecificCfg().SFM)
+	lines := buildComponentCfgLines(n.componentsForConfig(components), n.componentSFM())
 	return n.componentConfigFromLines(lines)
+}
+
+// hardwareEnv is the topology env, which overrides component type, XIOM, and MDA.
+// Nodes that have not been through Init expose that env on Cfg.Env.
+func (n *sros) hardwareEnv() map[string]string {
+	if n.userEnv != nil {
+		return n.userEnv
+	}
+	return n.Cfg.Env
+}
+
+// componentSFM is the SFM used in generated config. NOKIA_SROS_SFM overrides the sfm key.
+func (n *sros) componentSFM() string {
+	if sfm := n.hardwareEnv()[envNokiaSrosSFM]; sfm != "" {
+		return sfm
+	}
+	return n.kindSpecificCfg().SFM
+}
+
+// componentForConfig clones c and applies per-component env, then node env.
+func (n *sros) componentForConfig(c *Component) *Component {
+	out := cloneComponent(c)
+	applyHardwareEnv(out, out.Env)
+	applyHardwareEnv(out, n.hardwareEnv())
+	return out
+}
+
+func (n *sros) componentsForConfig(components []*Component) []*Component {
+	out := make([]*Component, len(components))
+	for i, c := range components {
+		out[i] = n.componentForConfig(c)
+	}
+	return out
 }
 
 func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
@@ -332,7 +365,10 @@ func (n *sros) generateIntegratedComponentConfig() string {
 		return ""
 	}
 
-	lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.integratedComponentOverride())
+	lines := buildIntegratedComponentCfgLines(
+		n.Cfg.NodeType,
+		n.componentForConfig(n.integratedComponentOverride()),
+	)
 	return n.componentConfigFromLines(lines)
 }
 

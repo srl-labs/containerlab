@@ -241,15 +241,15 @@ topology:
 
 ///
 
-For known SR & IXR integrated types, containerlab's default model-driven configuration also will provision the default card and MDA(s). 
+For known SR and IXR integrated types, containerlab generates model-driven configuration for the default card and MDA(s).
 
 The built-in defaults cover `sr-1`, `sr-1s`, `ixr-r6`, `ixr-e2`, `ixr-e2c`, `ixr-e2n`, `ixr-e2n-s`, `ixr-e2sc`, `ixr-e3c`, `ixr-e3x` and `ixr-ec`.
 
-Integrated nodes accept one `components` entry because they run as a single container.
+An integrated node other than `ixr-r6` runs as one container and accepts one `components` entry. The slot can be omitted or set to `A`. `ixr-r6` accepts slots `A` and `B`. Two `ixr-r6` entries, one for `A` and one for `B`, run as a dual-CPIOM node with one container per CPM. Integrated nodes do not accept numeric line-card slots.
 
-/// info
-The only exception is the IXR-R6 which supports slots `A` & `B` for a dual CPIOM setup, it does NOT numerical slots for LCs.
-///
+A `components` entry with `type` sets `NOKIA_SROS_CARD`. Containerlab then skips generated card and MDA configuration, because those defaults belong to the built-in card. Set `type` when the integrated card itself must change, for example `cpm-ixr-e2n/imm4-sfp+4-sfp+`.
+
+Node `env` overrides `components`: `type`, `xiom`, `mda`, per-component `env`, and the `sfm` key. When both set the same variable to different values, the environment variable wins and containerlab logs a warning naming that variable. `NOKIA_SROS_MDA_*` and `NOKIA_SROS_XIOM_*` are written into the generated configuration. `NOKIA_SROS_CARD` skips that generation, the same as a component `type`. On a distributed node, `NOKIA_SROS_SLOT` does not replace each component's slot.
 
 ### Distributed
 
@@ -393,11 +393,13 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 1. Component containers are attached to an internal namespace pause container.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
-4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom` and `mda` fields.
+4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom` and `mda` fields. Node-level `env` wins over both. When the values differ, containerlab logs a warning naming the environment variable that was kept.
 
 ##### Configuration for components
 
 When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration. The same generated configuration mechanism is used for the built-in SR/IXR integrated defaults.
+
+At deploy time, containerlab reads `chassis_info.json` from the selected SR-SIM image and compares the effective `components` configuration with the hardware types listed for that chassis. Unsupported card slots and card, SFM, XIOM, or MDA types produce warnings but do not stop deployment. This is a best-effort check: compatibility that is not represented in `chassis_info.json`, such as the MDA types supported by a specific XIOM, is not validated.
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip

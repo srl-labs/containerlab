@@ -368,7 +368,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		assert.NotContains(t, cfg, "s36-100gb-qsfp28")
 	})
 
-	t.Run("integrated_env_mda_does_not_change_component_config", func(t *testing.T) {
+	t.Run("integrated_env_mda_overrides_default_component_config", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode(
 			"sr-1",
 			map[string]string{envNokiaSrosMDA + "_1": "env-mda"},
@@ -380,9 +380,31 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		assert.Contains(
 			t,
 			cfg,
-			"/configure card 1 mda 1 mda-type me6-100gb-qsfp28 admin-state enable",
+			"/configure card 1 mda 1 mda-type env-mda admin-state enable",
 		)
-		assert.NotContains(t, cfg, "env-mda")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
+		)
+		assert.NotContains(t, cfg, "me6-100gb-qsfp28")
+	})
+
+	t.Run("integrated_env_mda_overrides_component_mda", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{envNokiaSrosMDA + "_1": "from-env"},
+			[]*Component{{MDA: MDAS{{Slot: 1, Type: "from-component"}}}},
+		)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 1 mda-type from-env admin-state enable",
+		)
+		assert.NotContains(t, cfg, "from-component")
 	})
 
 	t.Run("integrated_card_override_skips_component_config", func(t *testing.T) {
@@ -554,6 +576,63 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		cfgB := cpmB.generateComponentConfig()
 		assert.Contains(t, cfgB, "/configure card 1 card-type iom-ixr-r6 admin-state enable")
 		assert.NotContains(t, cfgB, "m20-1g-csfp")
+	})
+
+	t.Run("node_env_overrides_component_mda", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1", []*Component{
+			{MDA: MDAS{{Slot: 1, Type: "from-component"}}},
+		})
+		n.Cfg.Env = map[string]string{envNokiaSrosMDA + "_1": "from-env"}
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "from-env", n.Cfg.Env[envNokiaSrosMDA+"_1"])
+
+		cfg := n.generateComponentConfig()
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type from-env admin-state enable")
+		assert.NotContains(t, cfg, "from-component")
+	})
+
+	t.Run("node_env_overrides_sfm", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-1", nil)
+		kindSpecificConfig.Of(n.Cfg).SFM = "from-sfm"
+		n.Cfg.Env = map[string]string{envNokiaSrosSFM: "from-env"}
+
+		require.NoError(t, n.Init(n.Cfg))
+		assert.Equal(t, "from-env", n.Cfg.Env[envNokiaSrosSFM])
+	})
+
+	t.Run("distributed_node_env_overrides_component_mda", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-2s", []*Component{
+			{Slot: slotAName, Type: "cpm-2s"},
+			{
+				Slot: "1",
+				Type: "xcm-2s",
+				MDA:  MDAS{{Slot: 1, Type: "from-component"}},
+			},
+		})
+		n.Cfg.Env = map[string]string{envNokiaSrosMDA + "_1": "from-env"}
+
+		require.NoError(t, n.Init(n.Cfg))
+		require.Len(t, n.componentNodes, 2)
+
+		linecard := n.componentNodes[1].(*sros)
+		assert.Equal(t, "from-env", linecard.Config().Env[envNokiaSrosMDA+"_1"])
+
+		cfg := n.componentNodes[0].(*sros).generateComponentConfig()
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type from-env admin-state enable")
+		assert.NotContains(t, cfg, "from-component")
+	})
+
+	t.Run("duplicate_component_slots_are_rejected_regardless_of_case", func(t *testing.T) {
+		n := newSrosInitTestNode("sr-2s", []*Component{
+			{Slot: "a"},
+			{Slot: "A"},
+		})
+
+		err := n.checkComponentSlotsConfig()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate")
 	})
 
 	t.Run("sfm_sets_container_env", func(t *testing.T) {
