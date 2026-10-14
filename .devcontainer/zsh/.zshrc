@@ -18,11 +18,8 @@ setopt extended_history
 setopt hist_ignore_all_dups
 setopt hist_ignore_space
 
-# dont auto show next completions -- its very annoying
-zstyle ':autocomplete:*' min-input 1
-
-# limit history backward search (up arrow)
-zstyle ':autocomplete:history-search-backward:*' list-lines 20
+# tab shows the completion menu and cycles through the candidates
+zstyle ':completion:*' menu select
 
 # auto completion list "bright white" - https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 zstyle ':completion:*'  list-colors '=*=97'
@@ -81,20 +78,13 @@ zstyle ':bracketed-paste-magic' active-widgets '.self-*'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(brew git pip python zsh-autosuggestions colored-man-pages kubectl)
+plugins=(brew git pip python zsh-autosuggestions colored-man-pages kubectl F-Sy-H)
 
-# F-Sy-H must load before zsh-autocomplete, which lazily defines widgets
-# (menu-search, recent-paths) that the highlighter wraps, and zsh-autocomplete
-# must load before any compdef calls, so it is sourced before oh-my-zsh (#3478).
-# https://github.com/marlonrichert/zsh-autocomplete#installation--setup
-source "$ZSH/custom/plugins/F-Sy-H/F-Sy-H.plugin.zsh"
-source "$ZSH/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
-source "$ZSH/oh-my-zsh.sh"
+# make the generated tool completions available to compinit
+# https://containerlab.dev/cmd/completion/#zsh-completions
+fpath=("$HOME/.oh-my-zsh/custom/completions" $fpath)
 
-# Tab and Shift+Tab enter the completion menu
-# https://github.com/marlonrichert/zsh-autocomplete/blob/main/CONFIGURATION.md#make-tab-and-shifttab-go-to-the-menu
-bindkey '^I' menu-select
-[[ -z "$terminfo[kcbt]" ]] || bindkey "$terminfo[kcbt]" menu-select
+source $ZSH/oh-my-zsh.sh
 
 # User configuration
 

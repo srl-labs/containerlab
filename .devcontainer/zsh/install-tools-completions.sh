@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-completion_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autocomplete/Completions"
+completion_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/completions"
+mkdir -p "$completion_dir"
 
 # generate gnmic completions
 gnmic completion zsh > "$completion_dir/_gnmic"

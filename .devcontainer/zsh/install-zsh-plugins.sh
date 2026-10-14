@@ -7,9 +7,8 @@ curl -LsSf https://github.com/atuinsh/atuin/releases/download/v18.3.0/atuin-inst
 
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-# zsh-autosuggestions and autocompletions
+# zsh-autosuggestions
 git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-git clone --depth 1 https://github.com/marlonrichert/zsh-autocomplete.git "$ZSH_CUSTOM/plugins/zsh-autocomplete"
 
 # syntax highlighting
 git clone --depth 1 https://github.com/z-shell/F-Sy-H.git "$ZSH_CUSTOM/plugins/F-Sy-H"
@@ -17,11 +16,14 @@ git clone --depth 1 https://github.com/z-shell/F-Sy-H.git "$ZSH_CUSTOM/plugins/F
 ###
 ### Shell completions
 ###
-# generate containerlab completions
-completion_dir="$ZSH_CUSTOM/plugins/zsh-autocomplete/Completions"
-/usr/bin/containerlab completion zsh > "$completion_dir/_containerlab"
-# add clab alias to the completions
-sed -i 's/compdef _containerlab containerlab/compdef _containerlab containerlab clab/g' "$completion_dir/_containerlab"
+completion_dir="$ZSH_CUSTOM/completions"
+mkdir -p "$completion_dir"
+
+# generate containerlab completions that work for both the
+# `containerlab` command and its `clab` alias
+# https://containerlab.dev/cmd/completion/#zsh-completions
+/usr/bin/containerlab completion zsh |
+  sed '1,2c\#compdef containerlab clab\ncompdef _containerlab containerlab clab' > "$completion_dir/_containerlab"
 
 # uv manages Python versions and virtual environments in all variants.
 uv generate-shell-completion zsh > "$completion_dir/_uv"
