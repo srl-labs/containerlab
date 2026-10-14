@@ -873,15 +873,14 @@ func (n *sros) cpmNode() (clabnodes.Node, error) {
 // cpmSlot returns the Slot of the preferred CPM Node (used when Distributed mode).
 // It prefers slot A if present, otherwise returns slot B.
 func (n *sros) cpmSlot() (string, error) {
-	// Prefer slot A, fall back to slot B
+	// Prefer slot A, fall back to slot B. Slots are accepted in either case.
 	for _, comp := range n.kindSpecificCfg().Components {
-		if comp.Slot == slotAName {
+		if strings.EqualFold(comp.Slot, slotAName) {
 			return slotAName, nil
 		}
 	}
-	// Check for slot B as fallback
 	for _, comp := range n.kindSpecificCfg().Components {
-		if comp.Slot == slotBName {
+		if strings.EqualFold(comp.Slot, slotBName) {
 			return slotBName, nil
 		}
 	}

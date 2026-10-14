@@ -578,6 +578,18 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.NotContains(t, cfgB, "m20-1g-csfp")
 	})
 
+	t.Run("lowercase_integrated_slots_resolve_to_cpm_a", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-r6", []*Component{
+			{Slot: "a"},
+			{Slot: "b"},
+		})
+
+		require.NoError(t, n.Init(n.Cfg))
+		slot, err := n.cpmSlot()
+		require.NoError(t, err)
+		assert.Equal(t, slotAName, slot)
+	})
+
 	t.Run("node_env_overrides_component_mda", func(t *testing.T) {
 		n := newSrosInitTestNode("sr-1", []*Component{
 			{MDA: MDAS{{Slot: 1, Type: "from-component"}}},

@@ -69,6 +69,16 @@ func TestChassisInfoComponentWarnings(t *testing.T) {
 		assert.Contains(t, warnings[0], "does not match fixed MDA")
 	})
 
+	t.Run("distributed CPM slot does not validate direct MDAs", func(t *testing.T) {
+		warnings := info.componentWarnings("IXR-x", "", []*Component{{
+			Slot: slotAName,
+			Type: "cpm-ixr-x",
+			MDA:  MDAS{{Slot: 1, Type: "not-a-cpm-mda"}},
+		}})
+
+		assert.Empty(t, warnings)
+	})
+
 	t.Run("nested XIOM MDA is not guessed", func(t *testing.T) {
 		warnings := info.componentWarnings("SAR-Hx", "", []*Component{{
 			Slot: slotAName,
