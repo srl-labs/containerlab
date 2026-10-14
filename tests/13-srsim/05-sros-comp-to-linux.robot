@@ -2,6 +2,7 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
 Suite Teardown      Run Keyword    Cleanup
 
@@ -23,11 +24,7 @@ Create SSH keypair - RSA
     ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
 
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
@@ -138,5 +135,5 @@ Ensure XIOM MDA x/1 is equipped and up on sr2s-01
 
 *** Keywords ***
 Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
     Run    rm -f ${key-path}*

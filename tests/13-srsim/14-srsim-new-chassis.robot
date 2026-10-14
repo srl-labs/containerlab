@@ -3,23 +3,23 @@ Library             OperatingSystem
 Library             String
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Setup         Skip If    '${26_10_TESTS}'.lower() != 'true'
+...                 SR-SIM 26.10 is required; enable with --variable 26_10_TESTS:true
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
 ${lab-name}         srsim-new-chassis
 ${lab-file-name}    14-srsim-new-chassis.clab.yml
 ${runtime}          docker
+${26_10_TESTS}    false
 
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Check ixr-e2sc chassis and card
     Check chassis and card    ixr-e2sc    ixr-e2sc    cpm-ixr-e2sc/imm16-sfp++4-sfp28
@@ -37,9 +37,6 @@ Ensure new chassis containers stay running
     Check container is running    sar-10x
 
 *** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-
 Check chassis and card
     [Arguments]    ${node}    ${chassis}    ${card}
     ${rc}    ${output} =    Run And Return Rc And Output
