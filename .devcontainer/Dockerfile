@@ -18,6 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     telnet \
     curl
 
+# Install Starship
+RUN bash -o pipefail -c 'curl -fsSL https://starship.rs/install.sh | sh -s -- --yes'
+
+# Install uv (keep in sync with UV_VERSION in Makefile)
+COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /uvx /bin/
+ENV PATH="/home/vscode/.local/bin:/home/vscode/.atuin/bin:${PATH}"
+
 # Install Containerlab
 RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${CLAB_VERSION}
 
@@ -43,8 +50,8 @@ RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh_auth_sock
 
 # Add vscode user to clab_admins group so that it can run sudo-less clab commands
-# the group is created when clab is installed via the installation script
-RUN usermod -aG clab_admins vscode
+# Older Containerlab installers may not create the group.
+RUN groupadd -f clab_admins && usermod -aG clab_admins vscode
 
 # Switch to the vscode user provided by the base image
 USER vscode
@@ -55,15 +62,12 @@ COPY ./.devcontainer/dclab /usr/local/bin/dclab
 # Create SSH key for vscode user to enable passwordless SSH to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.6.2 /uv /uvx /bin/
-
 # Add empty docker config files to avoid clab warnings for vscode user
-RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
+RUN mkdir -p /home/vscode/.docker /home/vscode/.config && echo "{}" > /home/vscode/.docker/config.json
 
 # Setup Zsh and plugins
-COPY --chown=vscode:vscode ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
-COPY --chown=vscode:vscode ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
 COPY ./.devcontainer/zsh/install-tools-completions.sh /tmp/install-tools-completions.sh
 RUN bash -c "/tmp/install-zsh-plugins.sh && /tmp/install-tools-completions.sh"
+COPY --chown=vscode:vscode ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
+COPY --chown=vscode:vscode ./.devcontainer/starship.toml /home/vscode/.config/starship.toml

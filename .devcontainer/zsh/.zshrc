@@ -1,21 +1,11 @@
 # init direnv
-# https://github.com/romkatv/powerlevel10k/blob/master/README.md#how-do-i-initialize-direnv-when-using-instant-prompt
-(( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
-
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
-ZSH_THEME="powerlevel10k/powerlevel10k"
+ZSH_THEME=""
 
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=40
 ZSH_AUTOSUGGEST_HISTORY_IGNORE="?(#c50,)"
@@ -28,9 +18,6 @@ setopt extended_history
 setopt hist_ignore_all_dups
 setopt hist_ignore_space
 
-# auto complete configs -- menu-select+unambiguous to have tab menu auto complete setup
-zstyle ':autocomplete:tab:*' insert-unambiguous no
-zstyle ':autocomplete:*' widget-style menu-select
 # dont auto show next completions -- its very annoying
 zstyle ':autocomplete:*' min-input 1
 
@@ -94,9 +81,20 @@ zstyle ':bracketed-paste-magic' active-widgets '.self-*'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(brew git pip python F-Sy-H zsh-autocomplete zsh-autosuggestions colored-man-pages kubectl)
+plugins=(brew git pip python zsh-autosuggestions colored-man-pages kubectl)
 
-source $ZSH/oh-my-zsh.sh
+# F-Sy-H must load before zsh-autocomplete, which lazily defines widgets
+# (menu-search, recent-paths) that the highlighter wraps, and zsh-autocomplete
+# must load before any compdef calls, so it is sourced before oh-my-zsh (#3478).
+# https://github.com/marlonrichert/zsh-autocomplete#installation--setup
+source "$ZSH/custom/plugins/F-Sy-H/F-Sy-H.plugin.zsh"
+source "$ZSH/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+source "$ZSH/oh-my-zsh.sh"
+
+# Tab and Shift+Tab enter the completion menu
+# https://github.com/marlonrichert/zsh-autocomplete/blob/main/CONFIGURATION.md#make-tab-and-shifttab-go-to-the-menu
+bindkey '^I' menu-select
+[[ -z "$terminfo[kcbt]" ]] || bindkey "$terminfo[kcbt]" menu-select
 
 # User configuration
 
@@ -124,13 +122,10 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+source "$HOME/.atuin/bin/env"
 eval "$(atuin init zsh)"
-
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
 
 # go path
 export PATH=$PATH:/usr/local/go/bin:~/go/bin
+
+eval "$(starship init zsh)"

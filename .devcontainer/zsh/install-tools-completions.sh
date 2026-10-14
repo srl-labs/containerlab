@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-gnmic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gnmic"
+set -euo pipefail
+
+completion_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autocomplete/Completions"
+
+# generate gnmic completions
+gnmic completion zsh > "$completion_dir/_gnmic"
 # generate gnoic completions
-gnoic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gnoic"
-# generate gh
-gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
+gnoic completion zsh > "$completion_dir/_gnoic"
+# generate gh completions
+gh completion -s zsh > "$completion_dir/_gh"
