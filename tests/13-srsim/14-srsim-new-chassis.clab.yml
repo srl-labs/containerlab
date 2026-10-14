@@ -11,18 +11,11 @@ topology:
     ixr-e2sc:
       kind: nokia_srsim
       type: ixr-e2sc
-      components:
-        - type: cpm-ixr-e2sc/imm16-sfp++4-sfp28
 
     ixr-e3:
       kind: nokia_srsim
       type: ixr-e3
-      components:
-        - type: cpm-ixr-e3/imm8-sfp112+18-sfp28+2-qsfpdd
 
     sar-10x:
       kind: nokia_srsim
       type: sar-10x
-      components:
-        - slot: A
-          type: cpiom-sar-x
