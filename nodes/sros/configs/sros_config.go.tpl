@@ -1,17 +1,8 @@
 {{ .SNMPConfig }}
 {{ .LoggingConfig }}
 {{ .GRPCConfig }}
-{{- if and .IsSecureGrpc .Tls13CipherCcm8Pre26_7 }}
-/configure system security tls server-cipher-list "clab-all" tls13-cipher 5 name tls-aes128-ccm8-sha256
-{{- end }}
-{{- if .GrpcPre26_3 }}
-/configure system grpc md-cli admin-state enable
-{{- end }}
 {{ .NetconfConfig }}
 {{ .SystemConfig }}
-{{- if .GrpcPre26_3 }}
-/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization md-cli-session permit
-{{- end }}
 /configure system security user-params local-user user {{ .AdminUser }} restricted-to-home false
 /configure system security user-params local-user user {{ .AdminUser }} password {{ .AdminPassword }}
 /configure system security user-params local-user user {{ .AdminUser }} access console true
