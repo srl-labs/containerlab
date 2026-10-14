@@ -1,8 +1,9 @@
 *** Settings ***
 Library             OperatingSystem
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
@@ -13,11 +14,7 @@ ${runtime}          docker
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure client can ping integrated SR OS node
     Sleep    20s    give time for SR OS nodes to boot
@@ -87,8 +84,3 @@ Verify ping to distributed SR OS recovers after start
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Match Regexp    ${output}    2 packets transmitted, 2 (packets )?received, 0% packet loss
-
-
-*** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

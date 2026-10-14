@@ -84,10 +84,12 @@ func (i chassisInfo) entry(nodeType string) (chassisInfoEntry, bool) {
 func (i chassisInfo) componentWarnings(nodeType, sfm string, components []*Component) []string {
 	entry, ok := i.entry(nodeType)
 	if !ok {
-		return []string{fmt.Sprintf(
-			"chassis type %q is not present in chassis_info.json; component compatibility was not checked",
-			nodeType,
-		)}
+		return []string{
+			fmt.Sprintf(
+				"chassis type %q is not present in chassis_info.json; component compatibility was not checked",
+				nodeType,
+			),
+		}
 	}
 
 	var warnings []string

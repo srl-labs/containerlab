@@ -1069,7 +1069,8 @@ func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
 }
 
 // warnUnsupportedComponents validates the effective component configuration against the
-// chassis_info.json extracted from this exact image. Validation is advisory and never blocks deploy.
+// chassis_info.json extracted from this exact image. Validation is advisory and never blocks
+// deploy.
 func (n *sros) warnUnsupportedComponents(content []byte) {
 	// A distributed node validates once, from CPM A, to avoid duplicate warnings from CPM B.
 	if !n.isStandaloneNode() && !n.isCPM(slotAName) {
