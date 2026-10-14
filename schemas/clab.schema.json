@@ -547,8 +547,8 @@
                 },
                 "prompt-password": {
                     "type": "boolean",
-                    "description": "Set new-password-at-login on the admin user and skip authenticated postdeploy actions (nokia_srsim kind).",
-                    "markdownDescription": "Set `new-password-at-login` on the admin user and skip authenticated postdeploy actions (config save and TLS bootstrap). A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` kind"
+                    "description": "Set new-password-at-login on the admin user and password minimum-age to 0 (nokia_srsim kind).",
+                    "markdownDescription": "Set `new-password-at-login` on the admin user and password `minimum-age` to 0. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` kind"
                 },
                 "sfm": {
                     "$ref": "#/definitions/sros-sfm-types",

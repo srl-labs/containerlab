@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	//go:embed configs/sros_config_sros25.go.tpl
-	cfgTplSROS25 string
+	//go:embed configs/sros_config.go.tpl
+	cfgTplSROS string
 
 	//go:embed configs/sros_config_classic.go.tpl
 	cfgTplClassic string
@@ -28,6 +28,8 @@ type srosTemplateData struct {
 	ConfigurationMode string
 	SwVersion         *SrosVersion
 	IsSecureGrpc      bool
+	// GrpcPre26_3 enables the gRPC MD-CLI service removed in SR OS 26.3.
+	GrpcPre26_3 bool
 
 	// Node identification
 	Name string
@@ -73,13 +75,10 @@ type tplIFace struct {
 }
 
 // getTemplateForVariant returns the template string and name for the given config variant.
-// swVersion is for future SR OS 26+ template selection (e.g. cfgTplSROS26 when Major >= "26").
-func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string, tplName string) {
+func getTemplateForVariant(v ConfigVariant) (tmpl string, tplName string) {
 	// Model-driven (or mixed treated as classic below when family is classic)
 	if v.Mode == ConfigModeModelDriven {
-		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26"
-		// { return cfgTplSROS26, "clab-sros-config-sros26" }
-		return cfgTplSROS25, "clab-sros-config-sros25"
+		return cfgTplSROS, "clab-sros-config"
 	}
 	// Classic (or mixed)
 	tmpl = cfgTplClassic
@@ -97,7 +96,7 @@ func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string
 // selectConfigTemplate chooses the config template from the config variant (mode + family).
 func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
 	v := n.resolveConfigVariant()
-	tmpl, tplName := getTemplateForVariant(v, tplData.SwVersion)
+	tmpl, tplName := getTemplateForVariant(v)
 	return template.New(tplName).
 		Funcs(clabutils.CreateFuncs()).
 		Parse(tmpl)
