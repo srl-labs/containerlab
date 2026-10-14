@@ -177,9 +177,7 @@ func (i chassisInfo) componentWarnings(nodeType, sfm string, components []*Compo
 			}
 		}
 
-		if !entry.Integrated && slot != slotAName && slot != slotBName {
-			warnings = append(warnings, validateMDAs(nodeType, entry, component.MDA)...)
-		} else if entry.Integrated {
+		if entry.Integrated || (slot != slotAName && slot != slotBName) {
 			warnings = append(warnings, validateMDAs(nodeType, entry, component.MDA)...)
 		}
 	}
