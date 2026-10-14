@@ -16,29 +16,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const (
-	grpcMDCLIConfig    = `/configure system grpc md-cli admin-state enable`
-	profileMDCLIConfig = `/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization md-cli-session permit`
-	tls13CipherCCM8    = `/configure system security tls server-cipher-list "clab-all" tls13-cipher 5 name tls-aes128-ccm8-sha256`
-
-	// Placeholders in the embedded MD-CLI system snippets. Replaced with the node credentials.
-	adminUserPlaceholder     = "__CLAB_ADMIN_USER__"
-	adminPasswordPlaceholder = "__CLAB_ADMIN_PASSWORD__"
-)
-
-func (n *sros) setVersionSpecificParams(tplData *srosTemplateData) {
-	currVersion := tplData.SwVersion.MajorMinorSemverString()
-
-	if semver.Compare(currVersion, "v26.0") < 0 {
-		tplData.GRPCConfig += "\n" + grpcMDCLIConfig
-		tplData.SystemConfig += "\n" + profileMDCLIConfig
-
-		if tplData.IsSecureGrpc {
-			tplData.GRPCConfig += "\n" + tls13CipherCCM8
-		}
-	}
-}
-
 // buildPKIImportXML builds the NETCONF action XML that imports a PEM file into the PKI store.
 func buildPKIImportXML(inputURL, outputFile, importType string) string {
 	action := etree.NewElement("action")
@@ -209,6 +186,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		ConfigurationMode: configMode,
 		SwVersion:         n.swVersion,
 		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
+		GrpcPre26_3:       grpcPre26_3(n.swVersion),
 
 		// Node data
 		Name:            n.Cfg.ShortName,
@@ -236,21 +214,21 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 	n.prepareSSHPubKeys(tplData)
 
-	n.setVersionSpecificParams(tplData)
-
 	user, password := n.adminCredentials()
 	tplData.AdminUser = cliQuoted(user)
 	tplData.AdminPassword = cliQuoted(password)
 	tplData.PromptPassword = n.kindSpecificCfg().PromptPassword
-	systemConfig, err := applyAdminCredentials(
-		tplData.SystemConfig, user, password, tplData.PromptPassword,
-	)
-	if err != nil {
-		return nil, err
-	}
-	tplData.SystemConfig = systemConfig
 
 	return tplData, nil
+}
+
+// grpcPre26_3 reports whether the image has a known SR OS release before 26.3. Development
+// versions reported as 0.0.0 are treated as the latest release.
+func grpcPre26_3(version *SrosVersion) bool {
+	if version == nil || version.MajorMinorSemverString() == "v0.0" {
+		return false
+	}
+	return semver.Compare(version.MajorMinorSemverString(), "v26.3") < 0
 }
 
 // adminCredentials returns the username and password written into the startup config and used for
@@ -270,30 +248,6 @@ func (n *sros) adminCredentials() (string, string) {
 // cliQuoted returns s as a double-quoted CLI string.
 func cliQuoted(s string) string {
 	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
-}
-
-// applyAdminCredentials substitutes the admin user and password into an MD-CLI system snippet.
-// When promptPassword is set, the user must change that password at the next login. The password
-// leaf stays in the config: it is mandatory, and the factory value "admin" is shorter than the
-// minimum-length floor of 6. minimum-age is set to 0 so that login change is not blocked by the
-// default 10-minute timer started when this password is loaded.
-func applyAdminCredentials(systemConfig, user, password string, promptPassword bool) (string, error) {
-	if !strings.Contains(systemConfig, adminUserPlaceholder) ||
-		!strings.Contains(systemConfig, adminPasswordPlaceholder) {
-		return "", fmt.Errorf("system config is missing admin credential placeholders")
-	}
-
-	quotedUser := cliQuoted(user)
-	out := strings.ReplaceAll(systemConfig, adminUserPlaceholder, quotedUser)
-	out = strings.ReplaceAll(out, adminPasswordPlaceholder, cliQuoted(password))
-	if promptPassword {
-		out += "\n" + fmt.Sprintf(
-			"/configure system security user-params local-user password minimum-age 0\n"+
-				"/configure system security user-params local-user user %s console new-password-at-login true\n",
-			quotedUser,
-		)
-	}
-	return out, nil
 }
 
 // addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
