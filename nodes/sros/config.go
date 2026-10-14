@@ -182,12 +182,11 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 	tplData := &srosTemplateData{
 		// Selection criteria
-		NodeType:               strings.ToLower(n.Cfg.NodeType),
-		ConfigurationMode:      configMode,
-		SwVersion:              n.swVersion,
-		IsSecureGrpc:           *n.Cfg.Certificate.Issue,
-		GrpcPre26_3:            grpcPre26_3(n.swVersion),
-		Tls13CipherCcm8Pre26_7: tls13CipherCcm8Pre26_7(n.swVersion),
+		NodeType:          strings.ToLower(n.Cfg.NodeType),
+		ConfigurationMode: configMode,
+		SwVersion:         n.swVersion,
+		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
+		SrosLe25_10:       srosLe25_10(n.swVersion),
 
 		// Node data
 		Name:            n.Cfg.ShortName,
@@ -223,22 +222,22 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	return tplData, nil
 }
 
-// grpcPre26_3 reports whether the image has a known SR OS release before 26.3. Development
+// srosLe25_10 reports whether the image has a known SR OS release <= 25.10. Development
 // versions reported as 0.0.0 are treated as the latest release.
-func grpcPre26_3(version *SrosVersion) bool {
+func srosLe25_10(version *SrosVersion) bool {
 	if version == nil || version.MajorMinorSemverString() == "v0.0" {
 		return false
 	}
-	return semver.Compare(version.MajorMinorSemverString(), "v26.3") < 0
+	return semver.Compare(version.MajorMinorSemverString(), "v25.10") <= 0
 }
 
-// tls13CipherCcm8Pre26_7 reports whether the image has a known SR OS release before 26.7.
+// srosLe26_3 reports whether the image has a known SR OS release <= 26.3.
 // Development versions reported as 0.0.0 are treated as the latest release.
-func tls13CipherCcm8Pre26_7(version *SrosVersion) bool {
+func srosLe26_3(version *SrosVersion) bool {
 	if version == nil || version.MajorMinorSemverString() == "v0.0" {
 		return false
 	}
-	return semver.Compare(version.MajorMinorSemverString(), "v26.7") < 0
+	return semver.Compare(version.MajorMinorSemverString(), "v26.3") <= 0
 }
 
 // adminCredentials returns the username and password written into the startup config and used for

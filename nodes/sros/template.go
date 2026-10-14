@@ -11,6 +11,9 @@ var (
 	//go:embed configs/sros_config.go.tpl
 	cfgTplSROS string
 
+	//go:embed configs/sros_config_le_26_3.go.tpl
+	cfgTplSROSLe26_3 string
+
 	//go:embed configs/sros_config_classic.go.tpl
 	cfgTplClassic string
 
@@ -28,10 +31,8 @@ type srosTemplateData struct {
 	ConfigurationMode string
 	SwVersion         *SrosVersion
 	IsSecureGrpc      bool
-	// GrpcPre26_3 enables the gRPC MD-CLI service removed in SR OS 26.3.
-	GrpcPre26_3 bool
-	// Tls13CipherCcm8Pre26_7 enables the TLS 1.3 CCM8 cipher removed in SR OS 26.7.
-	Tls13CipherCcm8Pre26_7 bool
+	// SrosLe25_10 enables the gRPC MD-CLI service (SR OS <= 25.10); it is obsolete in 26.3.
+	SrosLe25_10 bool
 
 	// Node identification
 	Name string
@@ -77,9 +78,14 @@ type tplIFace struct {
 }
 
 // getTemplateForVariant returns the template string and name for the given config variant.
-func getTemplateForVariant(v ConfigVariant) (tmpl string, tplName string) {
+// Model-driven SR OS <= 26.3 uses the le-26.3 template, which includes the CCM8 cipher.
+// SR OS 26.7, later releases, and development versions reported as 0.0.0 use the current template.
+func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string, tplName string) {
 	// Model-driven (or mixed treated as classic below when family is classic)
 	if v.Mode == ConfigModeModelDriven {
+		if srosLe26_3(swVersion) {
+			return cfgTplSROSLe26_3, "clab-sros-config-le-26.3"
+		}
 		return cfgTplSROS, "clab-sros-config"
 	}
 	// Classic (or mixed)
@@ -95,11 +101,17 @@ func getTemplateForVariant(v ConfigVariant) (tmpl string, tplName string) {
 	}
 }
 
+func srosTemplateFuncs(version *SrosVersion) template.FuncMap {
+	funcs := clabutils.CreateFuncs()
+	funcs["srosLe26_3"] = func() bool { return srosLe26_3(version) }
+	return funcs
+}
+
 // selectConfigTemplate chooses the config template from the config variant (mode + family).
 func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
 	v := n.resolveConfigVariant()
-	tmpl, tplName := getTemplateForVariant(v)
+	tmpl, tplName := getTemplateForVariant(v, tplData.SwVersion)
 	return template.New(tplName).
-		Funcs(clabutils.CreateFuncs()).
+		Funcs(srosTemplateFuncs(tplData.SwVersion)).
 		Parse(tmpl)
 }
