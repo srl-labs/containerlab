@@ -19,6 +19,7 @@ type managementPool struct {
 type managementAssignment struct {
 	node       *clabtypes.NodeConfig
 	address    *string
+	automatic  *bool
 	preference string
 }
 
@@ -103,6 +104,7 @@ func AllocateManagementIPs(
 				assignments = append(assignments, managementAssignment{
 					node:       node,
 					address:    &node.MgmtIPv4Address,
+					automatic:  &node.MgmtIPv4AddressAuto,
 					preference: options.Preferred[node.ShortName].IPv4,
 				})
 			}
@@ -112,6 +114,7 @@ func AllocateManagementIPs(
 				assignments = append(assignments, managementAssignment{
 					node:       node,
 					address:    &node.MgmtIPv6Address,
+					automatic:  &node.MgmtIPv6AddressAuto,
 					preference: options.Preferred[node.ShortName].IPv6,
 				})
 			}
@@ -160,6 +163,7 @@ func AllocateManagementIPs(
 			}
 			if *assignment.address == "" {
 				*assignment.address = current.Address.String()
+				*assignment.automatic = true
 			}
 		}
 		explicitAssignments := make([]managementAssignment, 0, len(assignments))
@@ -226,6 +230,7 @@ func AllocateManagementIPs(
 		}
 		for i := range pending {
 			*pending[i].address = addresses[i].String()
+			*pending[i].automatic = true
 		}
 	}
 	return ctx.Err()

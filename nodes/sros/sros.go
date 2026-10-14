@@ -766,9 +766,11 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	netnsConfig := n.netnsNode.Config()
 
 	netnsConfig.MgmtIPv4Address = n.Cfg.MgmtIPv4Address
+	netnsConfig.MgmtIPv4AddressAuto = n.Cfg.MgmtIPv4AddressAuto
 	netnsConfig.MgmtIPv4PrefixLength = n.Cfg.MgmtIPv4PrefixLength
 	netnsConfig.MgmtIPv4Gateway = n.Cfg.MgmtIPv4Gateway
 	netnsConfig.MgmtIPv6Address = n.Cfg.MgmtIPv6Address
+	netnsConfig.MgmtIPv6AddressAuto = n.Cfg.MgmtIPv6AddressAuto
 	netnsConfig.MgmtIPv6PrefixLength = n.Cfg.MgmtIPv6PrefixLength
 	netnsConfig.MgmtIPv6Gateway = n.Cfg.MgmtIPv6Gateway
 

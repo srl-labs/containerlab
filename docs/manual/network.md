@@ -304,6 +304,11 @@ With this setting in place, the container runtime selects management subnets tha
 
 Both the default `containerlab` provider and the `runtime` provider are supported.
 
+Docker rejects static endpoint addresses on subnets selected from its default address pools,
+including when reusing an existing network. If Docker rejects an address allocated by containerlab,
+containerlab retries with Docker assigning the address. Explicit `mgmt-ipv4` and `mgmt-ipv6` settings
+are preserved; they require a user-configured subnet in the Docker network.
+
 ##### MTU
 
 The MTU of the management network defaults to an MTU value of `docker0` interface, but it can be set to a user defined value:

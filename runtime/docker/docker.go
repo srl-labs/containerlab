@@ -1016,6 +1016,34 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		nil,
 		node.LongName,
 	)
+	// Docker inspect exposes resolved pools, but not whether their subnets were user-configured.
+	// Docker rejects static endpoint addresses on automatically selected subnets. Retry only
+	// containerlab's automatic allocations using runtime IPAM, preserving explicit addresses.
+	if errdefs.IsInvalidParameter(err) && strings.Contains(
+		err.Error(),
+		"user specified IP address is supported only when connecting to networks with user configured subnets",
+	) {
+		endpoint := containerNetworkingConfig.EndpointsConfig[d.mgmt.Network]
+		if endpoint != nil && endpoint.IPAMConfig != nil &&
+			(node.MgmtIPv4AddressAuto || node.MgmtIPv6AddressAuto) {
+			if node.MgmtIPv4AddressAuto {
+				endpoint.IPAMConfig.IPv4Address = ""
+			}
+			if node.MgmtIPv6AddressAuto {
+				endpoint.IPAMConfig.IPv6Address = ""
+			}
+			log.Info("Using runtime IPAM for Docker-selected management subnet",
+				"network", d.mgmt.Network, "node", node.ShortName)
+			cont, err = d.Client.ContainerCreate(
+				nctx,
+				containerConfig,
+				containerHostConfig,
+				containerNetworkingConfig,
+				nil,
+				node.LongName,
+			)
+		}
+	}
 	log.Debugf("Container %q create response: %+v", node.ShortName, cont)
 	if err != nil {
 		return "", err
