@@ -17,7 +17,7 @@ ${runtime}          docker
 ${26_10_TESTS}      false
 ${address}          clab-${lab-name}-srsim
 ${current-password}    NokiaSros1!
-${new-password}        NokiaSros2!
+${new-password}        Zebra-Falcon42!
 
 
 *** Test Cases ***
@@ -25,9 +25,9 @@ Deploy ${lab-name} lab
     Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Change admin password at login
-    Open Connection And Login    ${address}    admin    ${current-password}
-    ${output} =    SSHLibrary.Read Until    Enter current password:
+    ${output} =    Open Connection And Login    ${address}    admin    ${current-password}
     Should Contain    ${output}    You need to change your password
+    Should Contain    ${output}    Enter current password:
     SSHLibrary.Write    ${current-password}
     SSHLibrary.Read Until    Enter new password:
     SSHLibrary.Write    ${new-password}
@@ -51,8 +51,9 @@ Open Connection And Login
     [Arguments]    ${address}    ${username}    ${password}
     FOR    ${i}    IN RANGE    10
         SSHLibrary.Open Connection    ${address}    timeout=30
-        ${status} =    Run Keyword And Return Status    SSHLibrary.Login    ${username}    ${password}
-        IF    ${status}    RETURN
+        ${status}    ${output} =    Run Keyword And Ignore Error
+        ...    SSHLibrary.Login    ${username}    ${password}
+        IF    '${status}' == 'PASS'    RETURN    ${output}
         SSHLibrary.Close All Connections
         Sleep    2s
     END

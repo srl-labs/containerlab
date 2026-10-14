@@ -1,7 +1,7 @@
 {{ .SNMPConfig }}
 {{ .LoggingConfig }}
 {{ .GRPCConfig }}
-{{- if .IsSecureGrpc }}
+{{- if and .IsSecureGrpc .Tls13CipherCcm8Pre26_7 }}
 /configure system security tls server-cipher-list "clab-all" tls13-cipher 5 name tls-aes128-ccm8-sha256
 {{- end }}
 {{- if .GrpcPre26_3 }}

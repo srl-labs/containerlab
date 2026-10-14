@@ -30,6 +30,8 @@ type srosTemplateData struct {
 	IsSecureGrpc      bool
 	// GrpcPre26_3 enables the gRPC MD-CLI service removed in SR OS 26.3.
 	GrpcPre26_3 bool
+	// Tls13CipherCcm8Pre26_7 enables the TLS 1.3 CCM8 cipher removed in SR OS 26.7.
+	Tls13CipherCcm8Pre26_7 bool
 
 	// Node identification
 	Name string
