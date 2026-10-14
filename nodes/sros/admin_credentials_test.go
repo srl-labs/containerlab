@@ -24,7 +24,7 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 	require.Contains(t, out, "password minimum-age 0")
 	require.Contains(t, out, `user "admin" console new-password-at-login true`)
 	require.NotContains(t, out, "md-cli admin-state enable")
-	require.Contains(t, out, "tls-aes128-ccm8-sha256")
+	require.NotContains(t, out, "tls-aes128-ccm8-sha256")
 
 	data.PromptPassword = false
 	data.IsSecureGrpc = false
@@ -36,6 +36,7 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 	data.PromptPassword = true
 	data.IsSecureGrpc = true
 	data.GrpcPre26_3 = true
+	data.Tls13CipherCcm8Pre26_7 = true
 	out = executeVariantTemplate(t, modelDriven, data)
 	require.Contains(t, out, "md-cli admin-state enable")
 	require.Contains(t, out, "md-cli-session permit")
@@ -59,6 +60,26 @@ func TestGrpcPre26_3(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, grpcPre26_3(tt.version))
+		})
+	}
+}
+
+func TestTls13CipherCcm8Pre26_7(t *testing.T) {
+	tests := []struct {
+		name    string
+		version *SrosVersion
+		want    bool
+	}{
+		{name: "nil_is_latest", version: nil, want: false},
+		{name: "development_is_latest", version: &SrosVersion{"0", "0", "0"}, want: false},
+		{name: "25_10", version: &SrosVersion{"25", "10", "R1"}, want: true},
+		{name: "26_6", version: &SrosVersion{"26", "6", "R1"}, want: true},
+		{name: "26_7", version: &SrosVersion{"26", "7", "R1"}, want: false},
+		{name: "26_10", version: &SrosVersion{"26", "10", "R1"}, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tls13CipherCcm8Pre26_7(tt.version))
 		})
 	}
 }
