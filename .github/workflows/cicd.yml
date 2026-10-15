@@ -154,19 +154,6 @@ jobs:
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
 
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - run: make test
 
       # upload coverage report from unit tests, as they are then
@@ -674,19 +661,6 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
-
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
