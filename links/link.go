@@ -732,6 +732,9 @@ func retryTransientNetlink(ctx context.Context, operationDesc string, fn func() 
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// DefaultMgmtNetwork is the name of the default management network.
+	// mgmt-net links referencing it by name attach to the default mgmt-net link node.
+	DefaultMgmtNetwork string
 	// LabName is the name of the lab, used to scope generated host-global
 	// resources such as veth-stitch network namespaces.
 	LabName string

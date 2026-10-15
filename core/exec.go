@@ -7,7 +7,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablinks "github.com/srl-labs/containerlab/links"
 )
 
 // Exec execute commands on running topology nodes.
@@ -20,7 +19,7 @@ func (c *CLab) Exec(
 		return c.execWithLabRuntime(ctx, cmds, listOptions...)
 	}
 
-	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	err := c.setMgmtNetLinkBridges()
 	if err != nil {
 		return nil, err
 	}

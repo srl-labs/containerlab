@@ -11,7 +11,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -29,7 +28,7 @@ func (c *CLab) Save(
 		return c.saveWithLabRuntime(ctx, opts)
 	}
 
-	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	err := c.setMgmtNetLinkBridges()
 	if err != nil {
 		return err
 	}

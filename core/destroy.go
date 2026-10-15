@@ -197,11 +197,6 @@ func (c *CLab) makeCopyForDestroy(
 		}
 	}
 
-	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
 	// populate the management network state (bridge names) destroy needs for the
 	// removal of the iptables rules, without creating networks that are missing:
 	// a lab deployed with a management network override leaves the topology's
@@ -217,6 +212,11 @@ func (c *CLab) makeCopyForDestroy(
 		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
 			return nil, err
 		}
+	}
+
+	err = cc.setMgmtNetLinkBridges()
+	if err != nil {
+		return nil, err
 	}
 
 	err = cc.ResolveLinks()
@@ -643,7 +643,11 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	close(concurrentChan)
 
 	// also call delete on the special nodes
-	for _, n := range c.getSpecialLinkNodes() {
+	specialNodes := append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	)
+	for _, n := range specialNodes {
 		err := n.Delete(ctx)
 		if err != nil {
 			log.Warn(err)

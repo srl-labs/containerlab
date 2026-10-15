@@ -131,7 +131,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
+	if err := c.setMgmtNetLinkBridges(); err != nil {
 		return nil, err
 	}
 
