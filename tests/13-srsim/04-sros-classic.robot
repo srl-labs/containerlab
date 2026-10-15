@@ -12,7 +12,7 @@ ${lab-name}         sr04
 ${lab-file-name}    04-srsim-classic.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
-${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.49.0
 ${gnmic_flags}      --username admin --password NokiaSros1! --values-only
 
 

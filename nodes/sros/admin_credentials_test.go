@@ -20,6 +20,8 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 	data.SwVersion = &SrosVersion{"26", "10", "R1"}
 	out := executeVariantTemplate(t, modelDriven, data)
 	require.Contains(t, out, `user "admin" password "Secret\"1!"`)
+	require.Contains(t, out, `user "admin" access grpc true`)
+	require.Contains(t, out, `user "admin" access netconf true`)
 	require.NotContains(t, out, "md-cli admin-state enable")
 	require.NotContains(t, out, "tls-aes128-ccm8-sha256")
 
@@ -36,11 +38,15 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 
 	data.IsSecureGrpc = true
 	data.SrosLe25_10 = true
+	data.AdminUser = `"operator"`
 	data.SwVersion = &SrosVersion{"25", "10", "R1"}
 	out = executeVariantTemplate(t, modelDriven, data)
 	require.Contains(t, out, "md-cli admin-state enable")
 	require.Contains(t, out, "md-cli-session permit")
 	require.Contains(t, out, "tls-aes128-ccm8-sha256")
+	require.Contains(t, out, `user "operator" access grpc true`)
+	require.Contains(t, out, `user "operator" access netconf true`)
+	require.NotContains(t, out, `user "admin" access`)
 }
 
 func TestSrosLe25_10(t *testing.T) {
