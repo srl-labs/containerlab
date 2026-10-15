@@ -10,19 +10,16 @@ import (
 
 func TestModelDrivenAdminPassword(t *testing.T) {
 	data := &srosTemplateData{
-		Name:           "sr1",
-		AdminUser:      `"admin"`,
-		AdminPassword:  `"Secret\"1!"`,
-		PromptPassword: true,
-		IsSecureGrpc:   true,
+		Name:          "sr1",
+		AdminUser:     `"admin"`,
+		AdminPassword: `"Secret\"1!"`,
+		IsSecureGrpc:  true,
 	}
 
 	modelDriven := ConfigVariant{Mode: ConfigModeModelDriven, Family: ConfigFamilySR}
 	data.SwVersion = &SrosVersion{"26", "10", "R1"}
 	out := executeVariantTemplate(t, modelDriven, data)
 	require.Contains(t, out, `user "admin" password "Secret\"1!"`)
-	require.Contains(t, out, "password minimum-age 0")
-	require.Contains(t, out, `user "admin" console new-password-at-login true`)
 	require.NotContains(t, out, "md-cli admin-state enable")
 	require.NotContains(t, out, "tls-aes128-ccm8-sha256")
 
@@ -31,15 +28,12 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 	require.Contains(t, out, "tls-aes128-ccm8-sha256")
 	require.NotContains(t, out, "md-cli admin-state enable")
 
-	data.PromptPassword = false
 	data.IsSecureGrpc = false
 	data.SwVersion = &SrosVersion{"0", "0", "0"}
 	out = executeVariantTemplate(t, modelDriven, data)
 	require.Contains(t, out, `password "Secret\"1!"`)
-	require.NotContains(t, out, "new-password-at-login")
 	require.NotContains(t, out, "tls-aes128-ccm8-sha256")
 
-	data.PromptPassword = true
 	data.IsSecureGrpc = true
 	data.SrosLe25_10 = true
 	data.SwVersion = &SrosVersion{"25", "10", "R1"}
@@ -47,7 +41,6 @@ func TestModelDrivenAdminPassword(t *testing.T) {
 	require.Contains(t, out, "md-cli admin-state enable")
 	require.Contains(t, out, "md-cli-session permit")
 	require.Contains(t, out, "tls-aes128-ccm8-sha256")
-	require.Contains(t, out, "new-password-at-login true")
 }
 
 func TestSrosLe25_10(t *testing.T) {
@@ -97,7 +90,6 @@ func TestClassicTemplateAdminPassword(t *testing.T) {
 		Name:              "sr1",
 		AdminUser:         `"admin"`,
 		AdminPassword:     `"Secret1!"`,
-		PromptPassword:    true,
 		ConfigurationMode: string(ConfigModeClassic),
 		IFaces:            map[string]tplIFace{},
 	}
@@ -107,15 +99,7 @@ func TestClassicTemplateAdminPassword(t *testing.T) {
 	out := buf.String()
 	require.Contains(t, out, `user "admin"`)
 	require.Contains(t, out, `password "Secret1!"`)
-	require.Contains(t, out, "minimum-age sec 0")
-	require.Contains(t, out, "new-password-at-login")
 	require.NotContains(t, out, "NokiaSros1!")
-
-	data.PromptPassword = false
-	buf.Reset()
-	require.NoError(t, tpl.Execute(&buf, data))
-	require.Contains(t, buf.String(), `password "Secret1!"`)
-	require.NotContains(t, buf.String(), "new-password-at-login")
 }
 
 func TestClassicTemplateCcm8(t *testing.T) {

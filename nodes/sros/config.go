@@ -217,7 +217,6 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	user, password := n.adminCredentials()
 	tplData.AdminUser = cliQuoted(user)
 	tplData.AdminPassword = cliQuoted(password)
-	tplData.PromptPassword = n.kindSpecificCfg().PromptPassword
 
 	return tplData, nil
 }

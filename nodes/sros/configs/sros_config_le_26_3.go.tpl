@@ -16,10 +16,6 @@
 /configure system security user-params local-user user {{ .AdminUser }} password {{ .AdminPassword }}
 /configure system security user-params local-user user {{ .AdminUser }} access console true
 /configure system security user-params local-user user {{ .AdminUser }} console member ["administrative"]
-{{- if .PromptPassword }}
-/configure system security user-params local-user password minimum-age 0
-/configure system security user-params local-user user {{ .AdminUser }} console new-password-at-login true
-{{- end }}
 {{- if .Name }}
 /configure system name {{ .Name }}
 /configure system login-control login-banner pre-login-message message "{{ .Banner }}"
