@@ -1829,6 +1829,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#patches" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Patches
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Patches">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0811" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.81.1
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3950,6 +3978,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#patches" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Patches
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Patches">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0811" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        0.81.1
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4286,6 +4342,13 @@ rather than hidden. See the <a href="../../cmd/deploy/#dry-run">dry-run</a> docu
   the meantime: the rollback only deletes the topology this deploy created, so a running lab is
   not lost without warning.
   <a href="https://github.com/srl-labs/containerlab/pull/3472">#3472</a></li>
+</ul>
+<h2 id="patches">Patches<a class="headerlink" href="#patches" title="Permanent link">#</a></h2>
+<h3 id="0811">0.81.1<a class="headerlink" href="#0811" title="Permanent link">#</a></h3>
+<ul>
+<li>Fixed management network deployments on Docker-selected subnets (<code>ipv4-subnet: auto</code> or a reused network with Docker-selected addressing): the generated addresses that containerlab sends as static endpoint requests are rejected by Docker, so the container creation is now retried once with Docker assigning the automatically allocated addresses, while explicit <code>mgmt-ipv4</code> and <code>mgmt-ipv6</code> requests are preserved. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3481" title="GitHub Issue: srl-labs/containerlab #3481">#3481</a></li>
+<li>The c9s topology compiler is now consumed from the <a href="https://c9s.run">c9s</a> project as a Go dependency instead of being maintained in the containerlab codebase, so both projects share a single implementation. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3477" title="GitHub Issue: srl-labs/containerlab #3477">#3477</a></li>
+<li>Devcontainer fixes: powerlevel10k was replaced with starship, removing the console output warning during zsh initialization, <code>zsh-autocomplete</code> is sourced before oh-my-zsh restoring working tab-completion, and pyenv was replaced with <code>uv</code>. <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/srl-labs/containerlab/issues/3482" title="GitHub Issue: srl-labs/containerlab #3482">#3482</a></li>
 </ul>
   
 

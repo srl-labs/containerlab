@@ -3738,6 +3738,10 @@
 </span></code></pre></div>
 <p>With this setting in place, the container runtime selects management subnets that do not conflict with the existing addressing scheme on the lab host. The configured IPAM provider then assigns node addresses from the resolved subnets.</p>
 <p>Both the default <code>containerlab</code> provider and the <code>runtime</code> provider are supported.</p>
+<p>Docker rejects static endpoint addresses on subnets selected from its default address pools,
+including when reusing an existing network. If Docker rejects an address allocated by containerlab,
+containerlab retries with Docker assigning the address. Explicit <code>mgmt-ipv4</code> and <code>mgmt-ipv6</code> settings
+are preserved; they require a user-configured subnet in the Docker network.</p>
 <h5 id="mtu">MTU<a class="headerlink" href="#mtu" title="Permanent link">#</a></h5>
 <p>The MTU of the management network defaults to an MTU value of <code>docker0</code> interface, but it can be set to a user defined value:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">mgmt</span><span class="p">:</span>
