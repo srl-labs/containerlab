@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
@@ -997,6 +998,8 @@ func TestMgmtNetLinkSelectsNetwork(t *testing.T) {
 	if err := c.setMgmtNetLinkBridges(); err != nil {
 		t.Fatal(err)
 	}
+	// the mgmt-net link nodes are shared by the package, release their endpoints
+	t.Cleanup(c.resetResolvedLinks)
 	if err := c.ResolveLinks(); err != nil {
 		t.Fatal(err)
 	}
@@ -1127,5 +1130,87 @@ topology:
 	}
 	if !c.skipMgmtNetwork(c.mgmtNetByNetwork("mgmtnet-skip-unused")) {
 		t.Error("unused network was not skipped")
+	}
+}
+
+const mgmtNetLinkAutoBridgeTopo = `
+name: mgmtnet-autobr
+mgmt:
+  - network: mgmtnet-autobr-oob
+    ipv4-subnet: 172.31.30.0/24
+  - network: mgmtnet-autobr-lab
+    ipv4-subnet: 172.31.40.0/24
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine
+      mgmt-net: mgmtnet-autobr-oob
+  links:
+    - type: mgmt-net
+      network: mgmtnet-autobr-lab
+      endpoint:
+        node: r1
+        interface: eth1
+      host-interface: r1-eth1
+`
+
+// apply against a deployed lab learns the bridge of a non-default management network
+// that a mgmt-net link selects from the runtime, as the topology does not name it.
+func TestResolveMgmtNetLinkNetworksAutoBridge(t *testing.T) {
+	registerMgmtResolveRuntime()
+
+	for _, tc := range []struct {
+		name          string
+		networkExists bool
+		wantBridge    string
+	}{
+		{name: "existing network is resolved", networkExists: true, wantBridge: "br-fake"},
+		{name: "missing network is not created", networkExists: false, wantBridge: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setMgmtResolveBehavior(t, &mgmtResolveBehavior{
+				checkable:     true,
+				networkExists: tc.networkExists,
+				failCreateNet: !tc.networkExists,
+			})
+
+			c, err := NewContainerLab(
+				WithTimeout(time.Minute),
+				WithTopoPath(writeTopo(t, mgmtNetLinkAutoBridgeTopo), nil),
+				WithRuntime("mgmtresolvetest", &clabruntime.RuntimeConfig{}),
+				WithSkippedBindsPathsCheck(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := c.resolveMgmtNetLinkNetworks(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if err := c.setMgmtNetLinkBridges(); err != nil {
+				t.Fatal(err)
+			}
+			// the mgmt-net link nodes are shared by the package, release their endpoints
+			t.Cleanup(c.resetResolvedLinks)
+			if err := c.ResolveLinks(); err != nil {
+				t.Fatal(err)
+			}
+
+			stats := mgmtResolveRuntimeStatsPtr.Load()
+			if got := stats.existsCalls.Load(); got != 1 {
+				t.Fatalf("MgmtNetworkExists calls = %d, want 1", got)
+			}
+
+			var got string
+			for _, ep := range c.Endpoints {
+				if ep.GetIfaceName() == "r1-eth1" {
+					got = ep.GetNode().GetShortName()
+				}
+			}
+			if got != tc.wantBridge {
+				t.Fatalf("mgmt-net link attached to %q; want %q", got, tc.wantBridge)
+			}
+		})
 	}
 }

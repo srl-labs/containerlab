@@ -28,11 +28,6 @@ func (c *CLab) Save(
 		return c.saveWithLabRuntime(ctx, opts)
 	}
 
-	err := c.setMgmtNetLinkBridges()
-	if err != nil {
-		return err
-	}
-
 	if opts.copyDst != "" {
 		resolvedDst, err := c.resolveCopyOutDst(opts.copyDst)
 		if err != nil {

@@ -209,7 +209,7 @@ func (c *CLab) makeCopyForDestroy(
 				bridged = append(bridged, m)
 			}
 		}
-		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
+		if err = cc.resolveExistingMgmtNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}
@@ -227,12 +227,12 @@ func (c *CLab) makeCopyForDestroy(
 	return cc, nil
 }
 
-// resolveMgmtNetworksForDestroy inspects the management networks that already exist
-// so their bridge names are populated for the iptables cleanup. Networks that do not
-// exist are skipped: they hold no bridge to clean up, and destroy must not create
-// management networks. Runtimes that cannot check network existence keep the
-// create-or-inspect behavior.
-func (c *CLab) resolveMgmtNetworksForDestroy(
+// resolveExistingMgmtNetworks inspects the management networks that already exist
+// so their bridge names are populated, e.g. for the iptables cleanup on destroy.
+// Networks that do not exist are skipped: they hold no bridge yet, and the callers
+// must not create management networks. Runtimes that cannot check network existence
+// keep the create-or-inspect behavior.
+func (c *CLab) resolveExistingMgmtNetworks(
 	ctx context.Context,
 	networks clabtypes.MgmtNetworks,
 ) error {

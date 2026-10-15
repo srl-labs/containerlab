@@ -172,6 +172,24 @@ func (c *CLab) mgmtNetLinkNetworks() []*clabtypes.MgmtNet {
 	return networks
 }
 
+// resolveMgmtNetLinkNetworks populates the bridge names of the non-default management
+// networks that mgmt-net links reference without an explicit bridge. The runtime names
+// such a bridge when it creates the network, so the bridge of an existing network is
+// inspected from the runtime. Networks that do not exist yet are left unresolved.
+func (c *CLab) resolveMgmtNetLinkNetworks(ctx context.Context) error {
+	var networks clabtypes.MgmtNetworks
+	for _, m := range c.mgmtNetLinkNetworks() {
+		if m == c.Config.Mgmt || m.Bridge != "" || slices.Contains(networks, m) {
+			continue
+		}
+		networks = append(networks, m)
+	}
+	if len(networks) == 0 {
+		return nil
+	}
+	return c.resolveExistingMgmtNetworks(ctx, networks)
+}
+
 // setMgmtNetLinkBridges points the mgmt-net link nodes of every management network
 // at the bridge of that network.
 func (c *CLab) setMgmtNetLinkBridges() error {

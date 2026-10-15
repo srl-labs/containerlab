@@ -900,7 +900,6 @@ func (c *CLab) ResolveLinks() error {
 
 	resolveParams := &clablinks.ResolveParams{
 		Nodes:              c.getLinkNodes(),
-		MgmtBridgeName:     c.Config.Mgmt.Bridge,
 		DefaultMgmtNetwork: c.Config.Mgmt.Network,
 		NodesFilter:        c.nodeFilter,
 		LabName:            c.Config.Name,

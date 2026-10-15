@@ -19,11 +19,6 @@ func (c *CLab) Exec(
 		return c.execWithLabRuntime(ctx, cmds, listOptions...)
 	}
 
-	err := c.setMgmtNetLinkBridges()
-	if err != nil {
-		return nil, err
-	}
-
 	containers, err := c.ListContainers(ctx, listOptions...)
 	if err != nil {
 		return nil, err
