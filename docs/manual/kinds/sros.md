@@ -99,21 +99,6 @@ The generated startup configuration uses the node `credentials` (these defaults 
 
 > Note: the admin password is changed by Containerlab from the default `admin:admin` combination.
 
-To force a password change at the next login, set the `prompt-password` [kind-specific config key](../nodes.md#kind-specific-config):
-
-```yaml
-topology:
-  nodes:
-    sr-sim:
-      kind: nokia_srsim
-      prompt-password: true
-      credentials:
-        username: admin
-        password: NokiaSros1!
-```
-
-`prompt-password` sets `new-password-at-login` and `minimum-age 0`. The startup password is `credentials.password`.
-
 ### Logs
 
 Logs can be retrieved with standard log commands for the given container runtime:

@@ -49,7 +49,7 @@ jobs:
           - shard: lifecycle
             test_suites: "04-sros-classic.robot 06-srsim-sar.robot 10-srsim-lifecycle.robot"
           - shard: components
-            test_suites: "05-sros-comp-to-linux.robot 09-srsim-pause-container.robot 14-srsim-new-chassis.robot 15-srsim-prompt-password.robot"
+            test_suites: "05-sros-comp-to-linux.robot 09-srsim-pause-container.robot 14-srsim-new-chassis.robot"
           - shard: provisioning
             test_suites: "03-sros-dist-to-linux.robot 08-srsim-comp-cfg-test.robot 13-srsim-integrated.robot"
           - shard: apply

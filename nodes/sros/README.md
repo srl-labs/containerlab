@@ -115,8 +115,6 @@ Model-driven templates include flat MD-CLI snippets from `configs/`, chosen by `
 
 The admin user and password come from `credentials` (default `admin` / `NokiaSros1!`), are CLI-quoted by `cliQuoted`, and are rendered by every template. PostDeploy SSH and NETCONF use the same credentials.
 
-`prompt-password: true` adds `new-password-at-login` for the admin user and sets password `minimum-age` to 0, so the user can change the password at first login.
-
 ### Component configuration
 
 `generateComponentConfig` runs for integrated nodes and for the CPM of a distributed node, unless the user supplied a full startup config, selected classic mode, or set `gen-component-config: false`.
@@ -146,7 +144,7 @@ If the boot log reports `Configuration load failed - using default configuration
 go test ./nodes/sros/ -count=1
 ```
 
-`admin_credentials_test.go` renders the templates and checks credentials, `prompt-password`, and the version-dependent lines. Integration suites live in `tests/13-srsim/`.
+`admin_credentials_test.go` renders the templates and checks credentials and the version-dependent lines. Integration suites live in `tests/13-srsim/`.
 
 ## Troubleshooting
 

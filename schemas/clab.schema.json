@@ -545,11 +545,6 @@
                     "description": "Generate the configuration of the node's components, defaults to true (nokia_srsim kind).",
                     "markdownDescription": "Generate the configuration of the node's components, defaults to `true`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` kind"
                 },
-                "prompt-password": {
-                    "type": "boolean",
-                    "description": "Set new-password-at-login on the admin user and password minimum-age to 0 (nokia_srsim kind).",
-                    "markdownDescription": "Set `new-password-at-login` on the admin user and password `minimum-age` to 0. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `nokia_srsim` kind"
-                },
                 "sfm": {
                     "$ref": "#/definitions/sros-sfm-types",
                     "description": "SFM type of the chassis (nokia_srsim and nokia_sros kinds).",
@@ -2571,11 +2566,6 @@
                 "anyOf": [
                     {
                         "required": [
-                            "prompt-password"
-                        ]
-                    },
-                    {
-                        "required": [
                             "gen-component-config"
                         ]
                     },
@@ -2661,11 +2651,6 @@
                 "anyOf": [
                     {
                         "required": [
-                            "prompt-password"
-                        ]
-                    },
-                    {
-                        "required": [
                             "config-mode"
                         ]
                     },
@@ -2745,11 +2730,6 @@
                 "anyOf": [
                     {
                         "required": [
-                            "prompt-password"
-                        ]
-                    },
-                    {
-                        "required": [
                             "components"
                         ]
                     },
@@ -2820,11 +2800,6 @@
         "kind-specific-config-nvidia_cumulusvx": {
             "not": {
                 "anyOf": [
-                    {
-                        "required": [
-                            "prompt-password"
-                        ]
-                    },
                     {
                         "required": [
                             "components"
@@ -2902,11 +2877,6 @@
         "kind-specific-config-arista_ceos": {
             "not": {
                 "anyOf": [
-                    {
-                        "required": [
-                            "prompt-password"
-                        ]
-                    },
                     {
                         "required": [
                             "components"
@@ -2991,11 +2961,6 @@
                 "anyOf": [
                     {
                         "required": [
-                            "prompt-password"
-                        ]
-                    },
-                    {
-                        "required": [
                             "components"
                         ]
                     },
@@ -3078,11 +3043,6 @@
                 "anyOf": [
                     {
                         "required": [
-                            "prompt-password"
-                        ]
-                    },
-                    {
-                        "required": [
                             "components"
                         ]
                     },
@@ -3158,11 +3118,6 @@
         "kind-specific-config-other": {
             "not": {
                 "anyOf": [
-                    {
-                        "required": [
-                            "prompt-password"
-                        ]
-                    },
                     {
                         "required": [
                             "components"
