@@ -135,5 +135,8 @@ Ensure XIOM MDA x/1 is equipped and up on sr2s-01
 
 *** Keywords ***
 Cleanup
-    Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
-    Run    rm -f ${key-path}*
+    TRY
+        Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
+    FINALLY
+        Run    rm -f ${key-path}*
+    END
