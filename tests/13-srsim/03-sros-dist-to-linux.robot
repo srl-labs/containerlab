@@ -11,6 +11,8 @@ Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtim
 ${lab-name}         sr03
 ${lab-file-name}    03-srsim-dist.clab.yml
 ${runtime}          docker
+${sros-user}        superuser
+${sros-password}    NotAdmin42!
 
 
 *** Test Cases ***
@@ -20,8 +22,8 @@ Deploy ${lab-name} lab
 Ensure sros is reachable over ssh
     Login via SSH with username and password
     ...    address=clab-${lab-name}-sros-a
-    ...    username=admin
-    ...    password=NokiaSros1!
+    ...    username=${sros-user}
+    ...    password=${sros-password}
     ...    try_for=10
 
 Verify links in node l1
@@ -42,6 +44,6 @@ Ensure l1 can ping sros over 1/1/1 interface
 Do a gNOI cert get-certs
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.0 cert get-certs --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.1 cert get-certs --username ${sros-user} --password '${sros-password}' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
     Log    ${output}
     Should Contain    ${output}    sros-a.${lab-name}.io

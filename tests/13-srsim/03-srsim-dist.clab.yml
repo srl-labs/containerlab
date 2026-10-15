@@ -5,6 +5,9 @@ topology:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
       image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+      credentials:
+        username: superuser
+        password: "NotAdmin42!"
   nodes:
     l1:
       kind: linux

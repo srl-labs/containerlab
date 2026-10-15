@@ -96,6 +96,8 @@ A startup config is "full" when it is set and its name does not contain `.partia
 | Classic / mixed | IXR | any | `configs/ixr/ixr_config_classic.go.tpl` |
 | Classic / mixed | SAR | any | `configs/sar/sar_config_classic.go.tpl` |
 
+The two model-driven files share the same body. The <= 26.3 file adds the CCM8 cipher and the obsolete gRPC MD-CLI lines. A change to the shared user, banner, or SSH block has to be made in both files.
+
 Version-dependent content:
 
 - **`tls-aes128-ccm8-sha256`**: rendered only for SR OS <= 26.3 when `certificate.issue` is true. SR OS 26.7 rejects it as obsolete, which fails the whole startup config. Model-driven gets it from the le-26.3 template; classic templates use the `srosLe26_3` template function.
@@ -113,7 +115,7 @@ Model-driven templates include flat MD-CLI snippets from `configs/`, chosen by `
 
 ### Admin Credentials
 
-The admin user and password come from `credentials` (default `admin` / `NokiaSros1!`), are CLI-quoted by `cliQuoted`, and are rendered by every template. PostDeploy SSH and NETCONF use the same credentials.
+The admin user and password come from `credentials` (default `admin` / `NokiaSros1!`), already filled by topology loading. They are CLI-quoted by `cliQuoted` and rendered by every template, including model-driven console, gRPC, and NETCONF access. PostDeploy SSH and NETCONF use the same credentials.
 
 ### Component configuration
 

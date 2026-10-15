@@ -214,9 +214,8 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 	n.prepareSSHPubKeys(tplData)
 
-	user, password := n.adminCredentials()
-	tplData.AdminUser = cliQuoted(user)
-	tplData.AdminPassword = cliQuoted(password)
+	tplData.AdminUser = cliQuoted(n.Cfg.Credentials.Username)
+	tplData.AdminPassword = cliQuoted(n.Cfg.Credentials.Password)
 
 	return tplData, nil
 }
@@ -237,20 +236,6 @@ func srosLe26_3(version *SrosVersion) bool {
 		return false
 	}
 	return semver.Compare(version.MajorMinorSemverString(), "v26.3") <= 0
-}
-
-// adminCredentials returns the username and password written into the startup config and used for
-// later SSH and NETCONF. Empty topology credentials fall back to the kind default.
-func (n *sros) adminCredentials() (string, string) {
-	user := n.Cfg.Credentials.Username
-	password := n.Cfg.Credentials.Password
-	if user == "" {
-		user = defaultCredentials.GetUsername()
-	}
-	if password == "" {
-		password = defaultCredentials.GetPassword()
-	}
-	return user, password
 }
 
 // cliQuoted returns s as a double-quoted CLI string.

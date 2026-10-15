@@ -15,6 +15,8 @@
 /configure system security user-params local-user user {{ .AdminUser }} restricted-to-home false
 /configure system security user-params local-user user {{ .AdminUser }} password {{ .AdminPassword }}
 /configure system security user-params local-user user {{ .AdminUser }} access console true
+/configure system security user-params local-user user {{ .AdminUser }} access grpc true
+/configure system security user-params local-user user {{ .AdminUser }} access netconf true
 /configure system security user-params local-user user {{ .AdminUser }} console member ["administrative"]
 {{- if .Name }}
 /configure system name {{ .Name }}
