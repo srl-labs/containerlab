@@ -57,5 +57,8 @@ Check Mixed Config Mode on srsim
 
 *** Keywords ***
 Cleanup
-    Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
-    Run    rm -f ${key-path}*
+    TRY
+        Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
+    FINALLY
+        Run    rm -f ${key-path}*
+    END
