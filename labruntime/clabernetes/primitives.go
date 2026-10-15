@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	clabernetescompiler "github.com/clabernetes/clabernetes/compiler"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabcompile "github.com/srl-labs/containerlab/labruntime/clabernetes/compile"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -56,18 +56,18 @@ func compilePrimitiveResources(
 		return nil, fmt.Errorf("failed to prepare c9s primitive resources: %w", err)
 	}
 
-	compiled, err := clabcompile.CompileWithOptions(
+	compiled, err := clabernetescompiler.CompileWithOptions(
 		clabCompileLogger{},
 		input,
-		clabcompile.Options{
-			UnsupportedFieldPolicy: clabcompile.UnsupportedFieldPolicyError,
+		clabernetescompiler.Options{
+			UnsupportedFieldPolicy: clabernetescompiler.UnsupportedFieldPolicyError,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile containerlab topology for c9s: %w", err)
 	}
 
-	nodes, links, profiles, err := clabcompile.CompileTopology(input, compiled)
+	nodes, links, profiles, err := clabernetescompiler.RenderTopology(input, compiled)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render c9s resources: %w", err)
 	}
@@ -105,7 +105,7 @@ func compilePrimitiveResources(
 // consumes.
 func compileInputFromUnstructured(
 	desiredTopology *unstructured.Unstructured,
-) (*clabcompile.Input, error) {
+) (*clabernetescompiler.Input, error) {
 	var envelope c9sTopologyEnvelope
 	if err := k8sruntime.DefaultUnstructuredConverter.FromUnstructured(
 		desiredTopology.Object,
@@ -119,11 +119,11 @@ func compileInputFromUnstructured(
 		return nil, fmt.Errorf("clabernetes topology %s carries no spec", desiredTopology.GetName())
 	}
 
-	input := &clabcompile.Input{
+	input := &clabernetescompiler.Input{
 		Name:       desiredTopology.GetName(),
 		Namespace:  desiredTopology.GetNamespace(),
 		Definition: spec.Definition.Containerlab,
-		Deployment: clabcompile.Deployment{
+		Deployment: clabernetescompiler.Deployment{
 			FilesFromConfigMap: spec.Deployment.FilesFromConfigMap,
 			FilesFromSecret:    spec.Deployment.FilesFromSecret,
 			FilesFromURL:       spec.Deployment.FilesFromURL,
@@ -132,17 +132,17 @@ func compileInputFromUnstructured(
 			Persistence:        spec.Deployment.Persistence,
 		},
 		DisableManagement: spec.DisableManagement,
-		Expose: clabcompile.Expose{
+		Expose: clabernetescompiler.Expose{
 			DisableAutoExpose:      spec.Expose.DisableAutoExpose,
 			ExposeType:             spec.Expose.ExposeType,
 			UseNodeMgmtIpv4Address: spec.Expose.UseNodeMgmtIpv4Address,
 			UseNodeMgmtIpv6Address: spec.Expose.UseNodeMgmtIpv6Address,
 		},
-		ImagePull: clabcompile.ImagePull{
+		ImagePull: clabernetescompiler.ImagePull{
 			Policy:      spec.ImagePull.Policy,
 			PullSecrets: spec.ImagePull.PullSecrets,
 		},
-		StatusProbes: clabcompile.StatusProbes{
+		StatusProbes: clabernetescompiler.StatusProbes{
 			Enabled:                 spec.StatusProbes.Enabled,
 			ExcludedNodes:           spec.StatusProbes.ExcludedNodes,
 			NodeProbeConfigurations: spec.StatusProbes.NodeProbeConfigurations,
@@ -168,12 +168,12 @@ type c9sTopologySpec struct {
 		Containerlab string `json:"containerlab"`
 	} `json:"definition"`
 	Deployment struct {
-		FilesFromConfigMap map[string][]clabcompile.FileFromConfigMap `json:"filesFromConfigMap"`
-		FilesFromSecret    map[string][]clabcompile.FileFromSecret    `json:"filesFromSecret"`
-		FilesFromURL       map[string][]clabcompile.FileFromURL       `json:"filesFromURL"`
-		Resources          map[string]*corev1.ResourceRequirements    `json:"resources"`
-		Scheduling         *clabcompile.Scheduling                    `json:"scheduling"`
-		Persistence        *clabcompile.Persistence                   `json:"persistence"`
+		FilesFromConfigMap map[string][]clabernetescompiler.FileFromConfigMap `json:"filesFromConfigMap"`
+		FilesFromSecret    map[string][]clabernetescompiler.FileFromSecret    `json:"filesFromSecret"`
+		FilesFromURL       map[string][]clabernetescompiler.FileFromURL       `json:"filesFromURL"`
+		Resources          map[string]*corev1.ResourceRequirements            `json:"resources"`
+		Scheduling         *clabernetescompiler.Scheduling                    `json:"scheduling"`
+		Persistence        *clabernetescompiler.Persistence                   `json:"persistence"`
 	} `json:"deployment"`
 	DisableManagement bool `json:"disableManagement"`
 	Expose            struct {
@@ -187,10 +187,10 @@ type c9sTopologySpec struct {
 		PullSecrets []string `json:"pullSecrets"`
 	} `json:"imagePull"`
 	StatusProbes struct {
-		Enabled                 bool                                      `json:"enabled"`
-		ExcludedNodes           []string                                  `json:"excludedNodes"`
-		NodeProbeConfigurations map[string]clabcompile.ProbeConfiguration `json:"nodeProbeConfigurations"`
-		ProbeConfiguration      clabcompile.ProbeConfiguration            `json:"probeConfiguration"`
+		Enabled                 bool                                              `json:"enabled"`
+		ExcludedNodes           []string                                          `json:"excludedNodes"`
+		NodeProbeConfigurations map[string]clabernetescompiler.ProbeConfiguration `json:"nodeProbeConfigurations"`
+		ProbeConfiguration      clabernetescompiler.ProbeConfiguration            `json:"probeConfiguration"`
 	} `json:"statusProbes"`
 }
 
