@@ -52,8 +52,8 @@ const (
 	// startup config, and removed at every container start.
 	readyFile = "/.chr-launch-ready"
 
-	// mgmtTable is the routing table the launcher keeps the management return path in.
-	mgmtTable = "mgmt"
+	// mgmtComment tags every management object the launcher creates in RouterOS.
+	mgmtComment = "clab-mgmt"
 
 	scrapliPlatformName = "mikrotik_routeros" //nolint: misspell
 )
@@ -188,9 +188,10 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 }
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
-// the ether1 DHCP client and addresses, and the management routing table, its default route
-// and its routing rule. Imported again as a startup config, these lines duplicate objects
-// the launcher already created and RouterOS stops the import at the first one.
+// every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
+// its routes and rules) and CHR's ether1 DHCP client. Imported again as a startup config,
+// these lines duplicate objects the launcher already created and RouterOS stops the import
+// at the first one; the management addressing also belongs to the deployment, not the lab.
 // Continuation lines (a trailing backslash) are joined before matching.
 func filterLauncherConfig(config string) string {
 	var out []string
@@ -231,15 +232,13 @@ func launcherOwned(section, line string) bool {
 	fields := strings.Fields(strings.ReplaceAll(line, `\`, " "))
 	has := func(kv string) bool { return slices.Contains(fields, kv) }
 
+	if has("comment=" + mgmtComment) {
+		return true
+	}
+
 	switch section {
-	case "/ip address", "/ip dhcp-client":
+	case "/ip address", "/ipv6 address", "/ip dhcp-client":
 		return has("interface=ether1")
-	case "/routing table":
-		return has("name=" + mgmtTable)
-	case "/ip route":
-		return has("routing-table=" + mgmtTable)
-	case "/routing rule":
-		return has("table=" + mgmtTable)
 	}
 
 	return false

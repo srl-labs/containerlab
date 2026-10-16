@@ -198,58 +198,78 @@ func TestInterfaceParsing(t *testing.T) {
 	}
 }
 
-// exportedConfig is a verbatim RouterOS 7.24.5 /export of a node this kind deployed.
-const exportedConfig = `# 2026-10-16 14:46:03 by RouterOS 7.24.5
-# system id = yZOQkFbZ1QM
+// exportedConfig is a verbatim RouterOS 7.24.5 /export of a node this kind deployed
+// (transparent management, IPv4 + IPv6, a lab default route in main).
+const exportedConfig = `# 2026-10-16 19:37:35 by RouterOS 7.24.5
+# system id = wVXnve5gmAJ
 #
+/interface bridge
+add name=lo0
 /interface ethernet
 set [ find default-name=ether1 ] disable-running-check=no
 set [ find default-name=ether2 ] disable-running-check=no
 /routing table
-add fib name=mgmt
+add comment=clab-mgmt fib name=mgmt
 /ip address
-add address=10.0.0.1/30 interface=ether2 network=10.0.0.0
-add address=192.168.10.1/24 interface=ether4 network=192.168.10.0
+add address=172.20.20.4/24 comment=clab-mgmt interface=ether1 network=\
+    172.20.20.0
+add address=10.0.0.2/30 interface=ether2 network=10.0.0.0
+add address=2.2.2.2 interface=lo0 network=2.2.2.2
 /ip dhcp-client
-add add-default-route=no interface=ether1 name=client1
+add disabled=yes interface=ether1 name=client1
 /ip route
-add dst-address=0.0.0.0/0 gateway=198.18.255.2 routing-table=mgmt
-add dst-address=0.0.0.0/0 gateway=10.0.0.2
+add comment=clab-mgmt dst-address=172.20.20.0/24 gateway=ether1 \
+    routing-table=mgmt
+add comment=clab-mgmt dst-address=0.0.0.0/0 gateway=172.20.20.1 \
+    routing-table=mgmt
+add dst-address=0.0.0.0/0 gateway=10.0.0.1
+/ipv6 route
+add comment=clab-mgmt dst-address=::/0 gateway=3fff:172:20:20::1%ether1 \
+    routing-table=mgmt
+/ipv6 address
+add address=3fff:172:20:20::4 advertise=no comment=clab-mgmt interface=ether1
 /routing rule
-add action=lookup-only-in-table src-address=198.18.255.15/32 table=mgmt
+add action=lookup-only-in-table comment=clab-mgmt src-address=172.20.20.4/32 \
+    table=mgmt
+add action=lookup comment=clab-mgmt src-address=3fff:172:20:20::4/128 table=\
+    mgmt
 /system identity
-set name=r1`
+set name=r2`
 
 func TestFilterLauncherConfig(t *testing.T) {
 	got := filterLauncherConfig(exportedConfig)
 
+	if strings.Contains(got, "clab-mgmt") {
+		t.Errorf("filtered config still contains a clab-mgmt object:\n%s", got)
+	}
 	for _, gone := range []string{
-		"add fib name=mgmt",
-		"add add-default-route=no interface=ether1 name=client1",
-		"add dst-address=0.0.0.0/0 gateway=198.18.255.2 routing-table=mgmt",
-		"add action=lookup-only-in-table src-address=198.18.255.15/32 table=mgmt",
+		"add disabled=yes interface=ether1 name=client1",
+		"172.20.20.4",
+		"3fff:172:20:20::4",
+		"198.18",
 	} {
 		if strings.Contains(got, gone) {
-			t.Errorf("filtered config still contains launcher line %q", gone)
+			t.Errorf("filtered config still contains launcher line %q:\n%s", gone, got)
 		}
 	}
 
 	for _, kept := range []string{
-		"add address=10.0.0.1/30 interface=ether2 network=10.0.0.0",
-		"add address=192.168.10.1/24 interface=ether4 network=192.168.10.0",
-		"add dst-address=0.0.0.0/0 gateway=10.0.0.2",
-		"set name=r1",
+		"add address=10.0.0.2/30 interface=ether2 network=10.0.0.0",
+		"add address=2.2.2.2 interface=lo0 network=2.2.2.2",
+		"add dst-address=0.0.0.0/0 gateway=10.0.0.1",
+		"add name=lo0",
+		"set name=r2",
 		"/routing table",
 	} {
 		if !strings.Contains(got, kept) {
-			t.Errorf("filtered config lost user line %q", kept)
+			t.Errorf("filtered config lost user line %q:\n%s", kept, got)
 		}
 	}
 }
 
 func TestFilterLauncherConfigContinuationLines(t *testing.T) {
 	in := "/ip route\n" +
-		"add comment=\"a long comment that RouterOS wraps\" dst-address=0.0.0.0/0 \\\n" +
+		"add comment=clab-mgmt dst-address=0.0.0.0/0 \\\n" +
 		"    gateway=198.18.255.2 routing-table=mgmt\n" +
 		"add dst-address=10.9.0.0/16 gateway=10.0.0.2 \\\n" +
 		"    routing-table=main\n"

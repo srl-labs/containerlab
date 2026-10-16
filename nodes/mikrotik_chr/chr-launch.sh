@@ -11,20 +11,22 @@
 # startup config.
 #
 # What it does (vrnetlab's mikrotik/routeros launch.py is the model, re-done
-# with the image's own busybox + qemu: no python, no ftp client):
+# with the image's own busybox + qemu: no python, no ftp client, no tc):
 #   1. waits for the CLAB_INTFS data interfaces containerlab attaches (eth1..N)
-#   2. management: a qemu user-mode NIC (slirp). CHR's default config runs a
-#      DHCP client on ether1, slirp hands it 198.18.255.15 and forwards the
-#      service ports from the container's mgmt IP (22 ssh, 23 telnet, 21 ftp,
-#      80/443 www, 8291 winbox, 8728/8729 api, 161/udp snmp) to the router
+#   2. management, transparent: the container's eth0 is bridged with the VM's
+#      ether1 tap, and eth0's addresses and default gateways move into RouterOS
+#      ether1. The router IS the node's management address: every service and
+#      LLDP reach it directly, nothing is port-forwarded. The image ships only
+#      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
 #      LLDP forwarded). NIC order in the VM follows the eth index, so container
 #      ethN is always RouterOS ether(N+1), even with gaps
-#   4. after boot (REST answers on 127.0.0.1:80 through the forward): sets the
-#      credentials and the identity, isolates the management return path in
-#      its own routing table (`mgmt`, below), then fetches
+#   4. after boot, over IPv6 link-local on the management bridge (no address is
+#      added to the management network): sets the credentials and the identity,
+#      configures ether1 with the management addresses and keeps their return
+#      path in its own routing table (`mgmt`, below), then fetches
 #      /ftpboot/config.auto.rsc (the containerlab startup-config, when present)
-#      into the router over the slirp host alias and `/import`s it
+#      from the launcher and `/import`s it
 #   5. prints the ready marker on the container log and waits on qemu
 #
 # Restart (docker restart, containerlab restart --node): RouterOS keys an
@@ -34,8 +36,8 @@
 # recreated, so the node id that seeds every NIC MAC and the data NIC count are
 # persisted in the container on the first boot and reused: the restarted qemu
 # carries the same NICs in the same order and RouterOS keeps ether1..N and
-# their config. The REST bootstrap is skipped on a restart, only the
-# idempotent management-table step re-runs.
+# their config. The REST bootstrap is skipped on a restart; the management
+# step re-runs and re-applies the container's current addressing.
 #
 # Architectures: the image's own qemu (qemu-system-x86_64 on amd64,
 #   qemu-system-aarch64 + edk2 on arm64), KVM when /dev/kvm exists, else TCG.
@@ -45,7 +47,9 @@
 #   official image's own variables:
 #   MEM (qemu -m value, default 256 + 8 MiB per data NIC), CPUS (default 1),
 #   DISK (default 128M), CHR_INTF_WAIT (s, 60), CHR_BOOT_WAIT (s, 300)
-# Serial console: telnet to port 5000 of the container.
+# Serial console: port 5000 inside the container
+#   (docker exec -it <node> nc 127.0.0.1 5000); the container itself has no
+#   address on the management network.
 # Ready: /.chr-launch-ready exists once RouterOS is ready (the kind's default
 #   healthcheck); it is removed at every start.
 # Log lines (docker logs clab-<lab>-<node>), all prefixed "chr-launch:":
@@ -53,7 +57,7 @@
 #   "startup config import FAILED: …"  the router rejected the .rsc (RouterOS's
 #                                      own reason, with the line number)
 #   "credential bootstrap FAILED: …"   the user/password step failed
-#   "management route setup FAILED: …" the mgmt table step failed
+#   "management setup FAILED: …"       the ether1 address / mgmt table step failed
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -91,18 +95,18 @@ READY_FILE=/.chr-launch-ready
 ID_FILE=/.chr-launch-node-id
 NICS_FILE=/.chr-launch-nics
 MGMT_TABLE=mgmt
+# every management object the launcher creates carries this comment, so each
+# boot can find and re-apply them, and SaveConfig can leave them out
+MGMT_COMMENT=clab-mgmt
+MGMT_BR=br0
+# eth0's addressing as last seen: a launcher re-run in the same network
+# namespace finds eth0 already bridged and bare
+MGMT_FILE=/.chr-launch-mgmt
 SYSNET=/sys/class/net
 
 log() { echo "chr-launch: $*"; }
 rm -f "$READY_FILE"
 
-# The slirp management subnet sits in the RFC 2544 benchmarking range, never in
-# an address a lab is likely to use on a link: a connected 10.0.0.0/30 on
-# ether2 (vrnetlab's 10.0.0.0/24 slirp) captured the slirp host 10.0.0.2, the
-# source of EVERY forwarded REST/SSH/API connection, and cut management.
-SLIRP_NET=198.18.255.0/24
-ROS_IP=198.18.255.15
-SLIRP_HOST=198.18.255.2
 FETCH_PORT=8080
 
 # ---- disk -----------------------------------------------------------------
@@ -154,12 +158,6 @@ else
     log "no /dev/kvm: running under TCG emulation (slow boot)"
 fi
 
-MGMT="user,id=mgmt,net=$SLIRP_NET,host=$SLIRP_HOST,dhcpstart=$ROS_IP"
-for p in 21 22 23 80 443 8291 8728 8729; do
-    MGMT="$MGMT,hostfwd=tcp::$p-$ROS_IP:$p"
-done
-MGMT="$MGMT,hostfwd=udp::161-$ROS_IP:161"
-
 # MACs: unique per node AND per NIC. The container's eth0 MAC is unique per
 # node, so its LAST TWO octets identify the node; the NIC's last byte is the
 # interface index (00 = mgmt, 01 = ether2, …). Two nodes sharing a NIC MAC on
@@ -180,7 +178,58 @@ case "$node_id" in
             || log "node id $node_id not persisted: a restart will renumber the NICs"
         ;;
 esac
-NET="-netdev $MGMT -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
+NET="-netdev tap,id=mgmt,ifname=tap0,script=no,downscript=no -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
+
+# ---- management: eth0 + tap0 on one bridge, eth0's addressing to the VM ----
+ip_global() { # ip_global <4|6> <dev>: the first global address/prefix
+    ip -"$1" addr show dev "$2" 2>/dev/null \
+        | sed -n '/scope global/s/^ *inet6\{0,1\} \([^ ]*\) .*/\1/p' | head -n1
+}
+ip_gw() { # ip_gw <4|6>: the default gateway
+    ip -"$1" route show default 2>/dev/null | sed -n 's/^default via \([^ ]*\) .*/\1/p' | head -n1
+}
+M4="$(ip_global 4 eth0)"; M6="$(ip_global 6 eth0)"
+G4="$(ip_gw 4)"; G6="$(ip_gw 6)"
+if [ -n "$M4$M6" ]; then
+    printf 'M4=%s\nM6=%s\nG4=%s\nG6=%s\n' "$M4" "$M6" "$G4" "$G6" > "$MGMT_FILE" 2>/dev/null || true
+elif [ -f "$MGMT_FILE" ]; then
+    # shellcheck disable=SC1090  # written by this script, four plain assignments
+    . "$MGMT_FILE"
+fi
+log "management: ${M4:-no IPv4}${M6:+, $M6} via ${G4:-no gateway}${G6:+, $G6}"
+
+tunctl -t tap0 >/dev/null 2>&1 || ip tuntap add dev tap0 mode tap
+if [ ! -e "$SYSNET/$MGMT_BR" ]; then
+    _mtu="$(cat "$SYSNET/eth0/mtu" 2>/dev/null || echo 1500)"
+    ip addr flush dev eth0
+    # The launcher's side of the bootstrap channel: IPv6 link-local on the
+    # bridge only. eth0 and tap0 are plain bridge ports.
+    sysctl -qw net.ipv6.conf.default.disable_ipv6=0 net.ipv6.conf.default.accept_ra=0 2>/dev/null
+    brctl addbr "$MGMT_BR"
+    brctl setfd "$MGMT_BR" 0 2>/dev/null
+    echo 16384 > "$SYSNET/$MGMT_BR/bridge/group_fwd_mask" 2>/dev/null
+    ip link set "$MGMT_BR" address "52:54:01:$node_id:00"
+    ip link set tap0 mtu "$_mtu"
+    ip link set "$MGMT_BR" mtu "$_mtu"
+    brctl addif "$MGMT_BR" eth0
+    brctl addif "$MGMT_BR" tap0
+    sysctl -qw net.ipv6.conf.eth0.disable_ipv6=1 net.ipv6.conf.tap0.disable_ipv6=1 \
+        "net.ipv6.conf.$MGMT_BR.disable_ipv6=0" "net.ipv6.conf.$MGMT_BR.accept_ra=0" \
+        "net.ipv6.conf.$MGMT_BR.router_solicitations=0" 2>/dev/null
+fi
+ip link set eth0 up
+ip link set tap0 up
+ip link set "$MGMT_BR" up
+# RouterOS's ether1 link-local address, from the MAC this script gives it
+VM_LL="fe80::5054:ff:fe${node_id%%:*}:${node_id##*:}00"
+VM_EP="$VM_LL%$MGMT_BR"
+LL=""; waited=0
+while [ -z "$LL" ] && [ "$waited" -lt 20 ]; do
+    LL="$(ip -6 addr show dev "$MGMT_BR" 2>/dev/null | grep -v tentative \
+        | sed -n 's/^ *inet6 \(fe80::[^/]*\)\/64 .*/\1/p' | head -n1)"
+    [ -n "$LL" ] || { sleep 1; waited=$((waited + 1)); }
+done
+[ -n "$LL" ] || log "no IPv6 link-local on $MGMT_BR: the bootstrap channel is down"
 
 # NIC order = PCI order = the order of the -device args below. Walk
 # eth1..ethMAX so a gap (links on ether2 and ether5 only) keeps RouterOS
@@ -283,9 +332,9 @@ rest() { # rest <user:pass> <path> [json]
     _auth="Authorization: Basic $(printf '%s' "$1" | base64 | tr -d '\n')"
     if [ $# -ge 3 ]; then
         wget -q -O- -T "${REST_T:-20}" --header "Content-Type: application/json" \
-            --header "$_auth" --post-data "$3" "http://127.0.0.1:80/rest/$2" 2>/dev/null
+            --header "$_auth" --post-data "$3" "http://[$VM_EP]/rest/$2" 2>/dev/null
     else
-        wget -q -O- -T "${REST_T:-20}" --header "$_auth" "http://127.0.0.1:80/rest/$2" 2>/dev/null
+        wget -q -O- -T "${REST_T:-20}" --header "$_auth" "http://[$VM_EP]/rest/$2" 2>/dev/null
     fi
 }
 # busybox wget discards the body of an HTTP error response, and RouterOS puts
@@ -303,11 +352,11 @@ resp_complete() { # resp_complete <file>: headers + Content-Length bytes of body
 }
 rest_raw() { # rest_raw <user:pass> <path> <json> <timeout-s>  -> "<status> <body>"
     _f="/tmp/chr-rest.$$"; rm -f "$_f" "$_f.out"; mkfifo "$_f" || return 1
-    timeout "$(( $4 + 5 ))" nc 127.0.0.1 80 <"$_f" >"$_f.out" 2>/dev/null &
+    timeout "$(( $4 + 5 ))" nc "$VM_EP" 80 <"$_f" >"$_f.out" 2>/dev/null &
     _pid=$!
     exec 7>"$_f"
-    printf 'POST /rest/%s HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Basic %s\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-        "$2" "$(printf '%s' "$1" | base64 | tr -d '\n')" \
+    printf 'POST /rest/%s HTTP/1.1\r\nHost: [%s]\r\nAuthorization: Basic %s\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+        "$2" "$VM_LL" "$(printf '%s' "$1" | base64 | tr -d '\n')" \
         "$(printf '%s' "$3" | wc -c | tr -d ' ')" "$3" >&7
     _left=$4
     while kill -0 "$_pid" 2>/dev/null && ! resp_complete "$_f.out" && [ "$_left" -gt 0 ]; do
@@ -353,10 +402,10 @@ log "RouterOS answered after ${waited}s"
 
 # Ready means a user can log in: RouterOS starts its SSH server well after REST
 # answers on a slow boot (about 40 s later under TCG on arm64), so when the
-# configuration keeps SSH enabled, the forwarded port must send its banner first.
+# configuration keeps SSH enabled, its port must send the banner first.
 # A config that disables SSH is not waited for; a banner that never comes is
 # logged and the node is still declared ready (REST works).
-ssh_banner() { (sleep 3) | nc 127.0.0.1 22 2>/dev/null | head -c 7; }
+ssh_banner() { (sleep 3) | nc "$VM_EP" 22 2>/dev/null | head -c 7; }
 ready() {
     case "$(rest "$AUTH" "ip/service?name=ssh")" in
         *'"disabled":"false"'*)
@@ -376,28 +425,25 @@ ready() {
 }
 
 # A failed step WITHHOLDS the ready marker (qemu keeps running, so the node can
-# still be inspected over the serial console, telnet port 5000).
+# still be inspected over the serial console, port 5000 in the container).
 bootstrap_fail() {
     log "credential bootstrap FAILED: $1"
     wait "$QEMU_PID"
     exit 0
 }
 
-# ---- management return path: its own routing table ------------------------
-# CHR's DHCP client on ether1 installs the management default route
-# (0.0.0.0/0 via the slirp host) in `main`. Every forwarded SSH/REST/API
-# connection reaches the router from a source OUTSIDE the slirp subnet (the
-# docker bridge address), so each reply needs a default route, and a lab
-# default route the startup config adds to `main` (a static 0.0.0.0/0, a PPPoE
-# client's add-default-route, a dual-WAN pair) competes with it and cuts
-# management while the container runs and the data plane works. So, before the
-# startup config can add any route: a `mgmt` table with its own default via the
-# slirp host, a rule sending everything sourced from ether1's address to that
-# table only, and the DHCP default withdrawn. `main` carries nothing but what
-# the lab configures. Each object is looked up first, so a re-run adds nothing
-# twice, which is why the restart path re-runs it.
+# ---- management: ether1 addressing and its own routing table ----------------
+# ether1 gets the container's management addresses, and their return path lives
+# in a `mgmt` routing table selected by a rule on those source addresses: a
+# default route the lab adds to `main` (a static 0.0.0.0/0, a PPPoE client's
+# default route, a dual-WAN pair) would otherwise take SSH/REST replies away
+# from the management network while the data plane works. CHR's default ether1
+# DHCP client is disabled: the address is static. Everything is tagged
+# clab-mgmt and re-applied on every boot from the container's CURRENT addressing
+# (a restart can bring a new IP), while the bootstrap channel itself
+# (link-local) never depends on it.
 mgmt_fail() {
-    log "management route setup FAILED: $1 (redeploy the node: containerlab deploy --reconfigure)"
+    log "management setup FAILED: $1 (redeploy the node: containerlab deploy --reconfigure)"
     wait "$QEMU_PID"
     exit 0
 }
@@ -411,28 +457,49 @@ rest_add() { # rest_add <what> <path> <json>: a 2xx with no error object, else m
         *) mgmt_fail "$1: ${_r:-no response}" ;;
     esac
 }
-mgmt_route_setup() {
+rest_clear() { # rest_clear <menu>: remove its clab-mgmt objects
+    _ids="$(rest "$AUTH" "$1?comment=$MGMT_COMMENT" | tr '{' '\n' \
+        | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | paste -sd, -)"
+    [ -z "$_ids" ] || rest_add "remove old $1" "$1/remove" "{\".id\":\"$_ids\"}"
+}
+mgmt_setup() {
+    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
     rest_has "routing/table?name=$MGMT_TABLE" \
-        || rest_add "routing table $MGMT_TABLE" routing/table/add "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\"}"
-    rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0" \
-        || rest_add "default route in table $MGMT_TABLE" ip/route/add \
-            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$SLIRP_HOST\",\"routing-table\":\"$MGMT_TABLE\"}"
-    rest_has "routing/rule?src-address=$ROS_IP/32&table=$MGMT_TABLE" \
-        || rest_add "routing rule for $ROS_IP" routing/rule/add \
-            "{\"src-address\":\"$ROS_IP/32\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\"}"
+        || rest_add "routing table $MGMT_TABLE" routing/table/add \
+            "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\",\"comment\":\"$MGMT_COMMENT\"}"
+    _c="\"comment\":\"$MGMT_COMMENT\""
+    if [ -n "$M4" ]; then
+        _net4="$(ipcalc -n "$M4" | sed -n 's/^NETWORK=//p')/${M4#*/}"
+        rest_add "ether1 address $M4" ip/address/add "{\"address\":\"$M4\",\"interface\":\"ether1\",$_c}"
+        rest_add "route $_net4 in table $MGMT_TABLE" ip/route/add \
+            "{\"dst-address\":\"$_net4\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G4" ] || rest_add "default via $G4 in table $MGMT_TABLE" ip/route/add \
+            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$G4\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
+        rest_add "routing rule for ${M4%/*}" routing/rule/add \
+            "{\"src-address\":\"${M4%/*}/32\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+    fi
+    if [ -n "$M6" ]; then
+        rest_add "ether1 address $M6" ipv6/address/add \
+            "{\"address\":\"$M6\",\"interface\":\"ether1\",\"advertise\":\"no\",$_c}"
+        # RouterOS normalizes the host bits of dst-address (::3/64 -> ::/64)
+        rest_add "IPv6 route $M6 in table $MGMT_TABLE" ipv6/route/add \
+            "{\"dst-address\":\"$M6\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G6" ] || rest_add "IPv6 default via $G6 in table $MGMT_TABLE" ipv6/route/add \
+            "{\"dst-address\":\"::/0\",\"gateway\":\"$G6%ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
+        rest_add "routing rule for ${M6%/*}" routing/rule/add \
+            "{\"src-address\":\"${M6%/*}/128\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+    fi
     _id="$(rest "$AUTH" "ip/dhcp-client?interface=ether1" | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | head -n1)"
-    [ -n "$_id" ] || mgmt_fail "no DHCP client on ether1"
-    rest_add "dhcp-client add-default-route=no" ip/dhcp-client/set \
-        "{\"numbers\":\"$_id\",\"add-default-route\":\"no\"}"
-    # Prove the three took (a transport flake answers an empty body, which is
-    # not an error by the set-contract).
-    rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0" \
-        || mgmt_fail "default route not in table $MGMT_TABLE"
-    rest_has "routing/rule?src-address=$ROS_IP/32&table=$MGMT_TABLE" \
-        || mgmt_fail "routing rule for $ROS_IP not applied"
-    rest_has "ip/dhcp-client?interface=ether1&add-default-route=no" \
-        || mgmt_fail "dhcp-client still adds the default route"
-    log "management return path isolated in routing table $MGMT_TABLE"
+    [ -z "$_id" ] || rest_add "disable the ether1 DHCP client" ip/dhcp-client/set \
+        "{\"numbers\":\"$_id\",\"disabled\":\"yes\"}"
+    # Prove they took (a transport flake answers an empty body, which is not
+    # an error by the set-contract).
+    if [ -n "$M4" ]; then
+        rest_has "ip/address?interface=ether1&address=$M4" || mgmt_fail "$M4 not on ether1"
+        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" \
+            || mgmt_fail "routing rule for ${M4%/*} not applied"
+    fi
+    log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in routing table $MGMT_TABLE"
 }
 
 # Bootstrap + startup-config import happen ONCE per container lifetime. On a
@@ -443,7 +510,7 @@ mgmt_route_setup() {
 # and the config are both gone and the bootstrap runs.
 if [ -f "$DONE_MARKER" ]; then
     log "already bootstrapped (restart): skipping config"
-    mgmt_route_setup
+    mgmt_setup
     ready
     wait "$QEMU_PID"
     exit 0
@@ -485,19 +552,21 @@ case "$got" in
     *) bootstrap_fail "identity not applied: ${got:-no response}" ;;
 esac
 
-mgmt_route_setup
+mgmt_setup
 
 # ---- startup config -------------------------------------------------------
 if [ -s "$STARTUP_CFG" ]; then
-    # one-shot HTTP server the router fetches from through the slirp host alias
+    # one-shot HTTP server on the bridge's link-local address; the router
+    # fetches from it through ether1 (fetch takes a zoned link-local address
+    # only as `address=`, not inside a URL)
     {
         printf 'HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %s\r\n\r\n' \
             "$(wc -c < "$STARTUP_CFG")"
         cat "$STARTUP_CFG"
-    } | timeout 90 nc -l -s 127.0.0.1 -p "$FETCH_PORT" >/dev/null 2>&1 &
+    } | timeout 90 nc -l -s "$LL%$MGMT_BR" -p "$FETCH_PORT" >/dev/null 2>&1 &
     sleep 1
     fetch="$(rest "$AUTH" tool/fetch \
-        "{\"url\":\"http://$SLIRP_HOST:$FETCH_PORT/config.auto.rsc\",\"dst-path\":\"config.auto.rsc\",\"mode\":\"http\"}")"
+        "{\"address\":\"$LL%ether1\",\"port\":\"$FETCH_PORT\",\"src-path\":\"/config.auto.rsc\",\"mode\":\"http\",\"dst-path\":\"config.auto.rsc\"}")"
     case "$fetch" in
         *'"status":"finished"'*)
             # /import answers only when it finishes: a large config gets

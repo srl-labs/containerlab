@@ -35,16 +35,16 @@ Tags follow RouterOS versions, plus `stable`, `long-term`, `testing` and `develo
 === "Winbox / API"
     Winbox (TCP 8291) and the RouterOS API (TCP 8728, 8729 for TLS) are reachable on the node's management address.
 === "Console"
-    The serial console is exposed on TCP port 5000:
+    The serial console is on port 5000 inside the container:
     ```bash
-    telnet <node-name> 5000
+    docker exec -it <node-name> nc 127.0.0.1 5000
     ```
 === "bash"
     ```bash
     docker exec -it <node-name> sh
     ```
 
-SSH (22), Telnet (23), FTP (21), HTTP/HTTPS (80/443), Winbox (8291), API (8728/8729) and SNMP (UDP 161) on the node's management address are forwarded to RouterOS.
+The node's management address is RouterOS's own `ether1` address ([transparent management](#management-connectivity)), so every service RouterOS runs answers on it directly, with nothing forwarded.
 
 /// note
 Default credentials are `admin:admin`. With custom [`credentials`](../nodes.md#credentials) the kind creates that user in the `full` group and disables the factory `admin` account, which has a blank password on a fresh CHR disk.
@@ -92,7 +92,7 @@ and the node does not become ready.
 
 ### Saving configuration
 
-[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The objects the launcher creates at every boot (the `ether1` DHCP client and the `mgmt` routing table, route and rule) are left out, so the saved file can be used as the startup config of the next deployment.
+[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses.
 
 ### Node readiness
 
@@ -128,12 +128,14 @@ KVM is used when `/dev/kvm` is available. Without it the image's QEMU runs under
 
 ## Management connectivity
 
-The VM's `ether1` is a QEMU user-mode (slirp) interface: CHR's default DHCP client gets `198.18.255.15/24` (from the RFC 2544 benchmarking range, so it does not collide with lab addressing), and the service ports listed above are forwarded from the container's management address.
+Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab gives the node's `eth0` are configured on RouterOS `ether1`, and the container's `eth0` is bridged to the VM's `ether1`. The router is the node's management address: SSH, the REST API, Winbox, SNMP and every other service answer on it, LLDP/MNDP work on the management network, and the address in the topology table is the one in the RouterOS configuration.
 
-The management return path lives in its own routing table, `mgmt`, selected by a routing rule for `198.18.255.15`, and the DHCP client adds no default route to `main`. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in `main` therefore does not cut SSH or REST access to the node.
+The image ships busybox only (no `tc`), so where vrnetlab's [transparent management](../vrnetlab.md#management-interface) redirects with tc-mirred, this kind uses a Linux bridge. The container itself has no address on the management network; it reaches RouterOS for bootstrap over IPv6 link-local on that bridge.
+
+The management return path lives in its own routing table, `mgmt`, selected by routing rules for the management addresses, and CHR's `ether1` DHCP client is disabled. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in `main` therefore does not cut SSH or REST access to the node. The objects carry the comment `clab-mgmt` and are re-applied at every boot from the container's current addressing.
 
 /// warning
-Do not configure `198.18.255.0/24` on data interfaces, or change the `ether1` DHCP client or the `mgmt` table: management of the node depends on them.
+Do not remove or change the `clab-mgmt` objects or the `mgmt` routing table: management of the node depends on them.
 ///
 
 ## Restarts

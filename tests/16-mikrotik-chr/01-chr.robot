@@ -40,6 +40,20 @@ Ensure r1 is reachable over ssh with the default credentials and a lab default r
     Should Contain    ${output}    received=3
     SSHLibrary.Close Connection
 
+Ensure r1 carries the containerlab management address on ether1
+    ${rc}    ${mgmt-ip} =    Run And Return Rc And Output
+    ...    sudo -E ${runtime} inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clab-${lab-name}-r1
+    Should Be Equal As Integers    ${rc}    0
+    Login via SSH with username and password
+    ...    address=${mgmt-ip}
+    ...    username=admin
+    ...    password=admin
+    ...    try_for=30
+    ${output} =    SSHLibrary.Execute Command    /ip address print terse where interface=ether1
+    Log    ${output}
+    Should Contain    ${output}    address=${mgmt-ip}/
+    SSHLibrary.Close Connection
+
 Ensure r2 is reachable over ssh with custom credentials
     Login via SSH with username and password
     ...    address=clab-${lab-name}-r2
