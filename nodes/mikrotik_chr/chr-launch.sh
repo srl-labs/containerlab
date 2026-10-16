@@ -211,13 +211,14 @@ if [ ! -e "$SYSNET/$MGMT_BR" ]; then
     ip link set "$MGMT_BR" address "52:54:01:$node_id:00"
     ip link set tap0 mtu "$_mtu"
     ip link set "$MGMT_BR" mtu "$_mtu"
-    brctl addif "$MGMT_BR" eth0
+    # eth0 joins the bridge only once ether1 is configured (mgmt_attach): until
+    # then nothing the router sends (its boot-time router advertisements, CHR's
+    # DHCP discovers) reaches the management network.
     brctl addif "$MGMT_BR" tap0
     sysctl -qw net.ipv6.conf.eth0.disable_ipv6=1 net.ipv6.conf.tap0.disable_ipv6=1 \
         "net.ipv6.conf.$MGMT_BR.disable_ipv6=0" "net.ipv6.conf.$MGMT_BR.accept_ra=0" \
         "net.ipv6.conf.$MGMT_BR.router_solicitations=0" 2>/dev/null
 fi
-ip link set eth0 up
 ip link set tap0 up
 ip link set "$MGMT_BR" up
 # RouterOS's ether1 link-local address, from the MAC this script gives it
@@ -457,13 +458,39 @@ rest_add() { # rest_add <what> <path> <json>: a 2xx with no error object, else m
         *) mgmt_fail "$1: ${_r:-no response}" ;;
     esac
 }
+rest_count() { # rest_count <path?query>: number of objects the GET answered
+    rest "$AUTH" "$1" | tr '{' '\n' | grep -c '"\.id"'
+}
 rest_clear() { # rest_clear <menu>: remove its clab-mgmt objects
     _ids="$(rest "$AUTH" "$1?comment=$MGMT_COMMENT" | tr '{' '\n' \
         | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | paste -sd, -)"
     [ -z "$_ids" ] || rest_add "remove old $1" "$1/remove" "{\".id\":\"$_ids\"}"
 }
+# The tagged objects already match the container's addressing (a restart with
+# the same IP): leave them alone, re-applying would only drop live sessions.
+mgmt_in_place() {
+    _want=0
+    if [ -n "$M4" ]; then
+        rest_has "ip/address?interface=ether1&address=$M4&comment=$MGMT_COMMENT" || return 1
+        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" || return 1
+        [ -z "$G4" ] || rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0&gateway=$G4" || return 1
+        _want=$((_want + 1))
+    fi
+    if [ -n "$M6" ]; then
+        rest_has "ipv6/address?interface=ether1&address=$M6&comment=$MGMT_COMMENT" || return 1
+        _want=$((_want + 1))
+    fi
+    [ "$(rest_count "ip/address?comment=$MGMT_COMMENT")$(rest_count "ipv6/address?comment=$MGMT_COMMENT")" \
+        = "$([ -n "$M4" ] && echo 1 || echo 0)$([ -n "$M6" ] && echo 1 || echo 0)" ] || return 1
+    rest_has "ipv6/nd?interface=ether1&comment=$MGMT_COMMENT" || return 1
+    [ "$_want" -gt 0 ]
+}
 mgmt_setup() {
-    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
+    if mgmt_in_place; then
+        log "management on ether1 unchanged: ${M4:-no IPv4}${M6:+, $M6}"
+        return 0
+    fi
+    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address ipv6/nd; do rest_clear "$_m"; done
     rest_has "routing/table?name=$MGMT_TABLE" \
         || rest_add "routing table $MGMT_TABLE" routing/table/add \
             "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\",\"comment\":\"$MGMT_COMMENT\"}"
@@ -492,6 +519,13 @@ mgmt_setup() {
     _id="$(rest "$AUTH" "ip/dhcp-client?interface=ether1" | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | head -n1)"
     [ -z "$_id" ] || rest_add "disable the ether1 DHCP client" ip/dhcp-client/set \
         "{\"numbers\":\"$_id\",\"disabled\":\"yes\"}"
+    # RouterOS's default ND entry (interface=all, ra-lifetime=30m) sends router
+    # advertisements on ether1 too, and every host on the management network
+    # with accept_ra would install the router as its IPv6 default route. An
+    # ether1 entry with ra-lifetime=none keeps the RAs harmless and withdraws a
+    # route a host already learned (a disabled entry does not override "all").
+    rest_add "ether1 router advertisements off" ipv6/nd/add \
+        "{\"interface\":\"ether1\",\"ra-lifetime\":\"none\",$_c}"
     # Prove they took (a transport flake answers an empty body, which is not
     # an error by the set-contract).
     if [ -n "$M4" ]; then
@@ -500,6 +534,29 @@ mgmt_setup() {
             || mgmt_fail "routing rule for ${M4%/*} not applied"
     fi
     log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in routing table $MGMT_TABLE"
+}
+# Join the management network, then have the router reach its gateway from the
+# management address: proves the return path both ways, and the ARP/ND request
+# refreshes the gateway's neighbor entry when the IP was used by another MAC
+# before (a redeployed lab hands out the same addresses).
+mgmt_attach() {
+    [ -e "$SYSNET/$MGMT_BR/brif/eth0" ] || brctl addif "$MGMT_BR" eth0
+    ip link set eth0 up
+    for _pair in "$G4 ${M4%/*}" "$G6 ${M6%/*}"; do
+        # shellcheck disable=SC2086  # split "gateway source"; an empty half skips the pair
+        set -- $_pair
+        [ $# -eq 2 ] || continue
+        _w=0
+        until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\"}")" in
+                *'"received":"'[1-9]*) true ;; *) false ;; esac; do
+            if [ "$_w" -ge 30 ]; then
+                log "gateway $1 does not answer from $2 (continuing)"
+                break
+            fi
+            sleep 1
+            _w=$((_w + 3))
+        done
+    done
 }
 
 # Bootstrap + startup-config import happen ONCE per container lifetime. On a
@@ -511,6 +568,7 @@ mgmt_setup() {
 if [ -f "$DONE_MARKER" ]; then
     log "already bootstrapped (restart): skipping config"
     mgmt_setup
+    mgmt_attach
     ready
     wait "$QEMU_PID"
     exit 0
@@ -553,6 +611,7 @@ case "$got" in
 esac
 
 mgmt_setup
+mgmt_attach
 
 # ---- startup config -------------------------------------------------------
 if [ -s "$STARTUP_CFG" ]; then

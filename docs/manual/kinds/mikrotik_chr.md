@@ -132,7 +132,7 @@ Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab
 
 The image ships busybox only (no `tc`), so where vrnetlab's [transparent management](../vrnetlab.md#management-interface) redirects with tc-mirred, this kind uses a Linux bridge. The container itself has no address on the management network; it reaches RouterOS for bootstrap over IPv6 link-local on that bridge.
 
-The management return path lives in its own routing table, `mgmt`, selected by routing rules for the management addresses, and CHR's `ether1` DHCP client is disabled. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in `main` therefore does not cut SSH or REST access to the node. The objects carry the comment `clab-mgmt` and are re-applied at every boot from the container's current addressing.
+The management return path lives in its own routing table, `mgmt`, selected by routing rules for the management addresses, and CHR's `ether1` DHCP client is disabled. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in `main` therefore does not cut SSH or REST access to the node. RouterOS's router advertisements on `ether1` carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway; the container joins the management network only once this is in place. The objects carry the comment `clab-mgmt` and are re-applied at boot when the container's addressing changed.
 
 /// warning
 Do not remove or change the `clab-mgmt` objects or the `mgmt` routing table: management of the node depends on them.
