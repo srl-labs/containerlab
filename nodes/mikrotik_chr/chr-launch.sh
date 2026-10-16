@@ -224,13 +224,19 @@ ip link set "$MGMT_BR" up
 # RouterOS's ether1 link-local address, from the MAC this script gives it
 VM_LL="fe80::5054:ff:fe${node_id%%:*}:${node_id##*:}00"
 VM_EP="$VM_LL%$MGMT_BR"
-LL=""; waited=0
-while [ -z "$LL" ] && [ "$waited" -lt 20 ]; do
-    LL="$(ip -6 addr show dev "$MGMT_BR" 2>/dev/null | grep -v tentative \
-        | sed -n 's/^ *inet6 \(fe80::[^/]*\)\/64 .*/\1/p' | head -n1)"
-    [ -n "$LL" ] || { sleep 1; waited=$((waited + 1)); }
-done
-[ -n "$LL" ] || log "no IPv6 link-local on $MGMT_BR: the bootstrap channel is down"
+# The bridge's own link-local address (the startup-config fetch source). Read
+# once qemu runs: until then tap0, the bridge's only port, has no carrier and
+# the address stays tentative.
+LL=""
+bridge_ll() {
+    _w=0
+    while [ -z "$LL" ] && [ "$_w" -lt 20 ]; do
+        LL="$(ip -6 addr show dev "$MGMT_BR" 2>/dev/null | grep -v tentative \
+            | sed -n 's/^ *inet6 \(fe80::[^/]*\)\/64 .*/\1/p' | head -n1)"
+        [ -n "$LL" ] || { sleep 1; _w=$((_w + 1)); }
+    done
+    [ -n "$LL" ] || log "no IPv6 link-local on $MGMT_BR"
+}
 
 # NIC order = PCI order = the order of the -device args below. Walk
 # eth1..ethMAX so a gap (links on ether2 and ether5 only) keeps RouterOS
@@ -615,6 +621,7 @@ mgmt_attach
 
 # ---- startup config -------------------------------------------------------
 if [ -s "$STARTUP_CFG" ]; then
+    bridge_ll
     # one-shot HTTP server on the bridge's link-local address; the router
     # fetches from it through ether1 (fetch takes a zoned link-local address
     # only as `address=`, not inside a URL)
