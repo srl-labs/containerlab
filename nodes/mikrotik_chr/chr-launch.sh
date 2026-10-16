@@ -488,7 +488,7 @@ mgmt_in_place() {
     fi
     [ "$(rest_count "ip/address?comment=$MGMT_COMMENT")$(rest_count "ipv6/address?comment=$MGMT_COMMENT")" \
         = "$([ -n "$M4" ] && echo 1 || echo 0)$([ -n "$M6" ] && echo 1 || echo 0)" ] || return 1
-    rest_has "ipv6/nd?interface=ether1&comment=$MGMT_COMMENT" || return 1
+    rest_has "ipv6/nd?interface=ether1&ra-lifetime=none" || return 1
     [ "$_want" -gt 0 ]
 }
 mgmt_setup() {
@@ -496,7 +496,7 @@ mgmt_setup() {
         log "management on ether1 unchanged: ${M4:-no IPv4}${M6:+, $M6}"
         return 0
     fi
-    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address ipv6/nd; do rest_clear "$_m"; done
+    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
     rest_has "routing/table?name=$MGMT_TABLE" \
         || rest_add "routing table $MGMT_TABLE" routing/table/add \
             "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\",\"comment\":\"$MGMT_COMMENT\"}"
@@ -530,8 +530,15 @@ mgmt_setup() {
     # with accept_ra would install the router as its IPv6 default route. An
     # ether1 entry with ra-lifetime=none keeps the RAs harmless and withdraws a
     # route a host already learned (a disabled entry does not override "all").
-    rest_add "ether1 router advertisements off" ipv6/nd/add \
-        "{\"interface\":\"ether1\",\"ra-lifetime\":\"none\",$_c}"
+    # /ipv6/nd keeps no comment, so its entry is found by interface.
+    _nd="$(rest "$AUTH" "ipv6/nd?interface=ether1" | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | head -n1)"
+    if [ -n "$_nd" ]; then
+        rest_add "ether1 router advertisements off" ipv6/nd/set \
+            "{\"numbers\":\"$_nd\",\"ra-lifetime\":\"none\",\"disabled\":\"no\"}"
+    else
+        rest_add "ether1 router advertisements off" ipv6/nd/add \
+            "{\"interface\":\"ether1\",\"ra-lifetime\":\"none\"}"
+    fi
     # Prove they took (a transport flake answers an empty body, which is not
     # an error by the set-contract).
     if [ -n "$M4" ]; then

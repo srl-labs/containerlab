@@ -189,7 +189,7 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
 // every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
-// its routes and rules) and CHR's ether1 DHCP client. Imported again as a startup config,
+// its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again as a startup config,
 // these lines duplicate objects the launcher already created and RouterOS stops the import
 // at the first one; the management addressing also belongs to the deployment, not the lab.
 // Continuation lines (a trailing backslash) are joined before matching.
@@ -236,8 +236,9 @@ func launcherOwned(section, line string) bool {
 		return true
 	}
 
+	// /ipv6 nd keeps no comment: the launcher's ether1 entry is matched by interface.
 	switch section {
-	case "/ip address", "/ipv6 address", "/ip dhcp-client":
+	case "/ip address", "/ipv6 address", "/ip dhcp-client", "/ipv6 nd":
 		return has("interface=ether1")
 	}
 
