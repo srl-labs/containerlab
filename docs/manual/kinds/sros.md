@@ -95,6 +95,8 @@ Admin user credentials for the Nokia SR OS launched by Containerlab are:
 * username: `admin`
 * password: `NokiaSros1!`
 
+The generated startup configuration uses the node `credentials` (these defaults when unset). Postdeploy SSH and NETCONF use the same username and password.
+
 > Note: the admin password is changed by Containerlab from the default `admin:admin` combination.
 
 ### Logs

@@ -12,7 +12,7 @@ Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtim
 ${lab-name}         srsim-pause-ctr
 ${lab-file-name}    09-srsim-pause-container.clab.yml
 ${runtime}          docker
-${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.49.0
 ${gnmic_flags}      --username admin --password NokiaSros1! --values-only --insecure
 
 
