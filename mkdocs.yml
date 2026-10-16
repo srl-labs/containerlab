@@ -48,6 +48,7 @@ nav:
       - PLVision:
           - Enterprise SONiC: manual/kinds/plvision_sonic.md
       - MikroTik RouterOS: manual/kinds/vr-ros.md
+      - MikroTik RouterOS CHR (official image): manual/kinds/mikrotik_chr.md
       - Huawei VRP: manual/kinds/huawei_vrp.md
       - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
       - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
