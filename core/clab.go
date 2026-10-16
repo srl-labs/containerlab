@@ -899,10 +899,10 @@ func (c *CLab) ResolveLinks() error {
 	c.resetResolvedLinks()
 
 	resolveParams := &clablinks.ResolveParams{
-		Nodes:          c.getLinkNodes(),
-		MgmtBridgeName: c.Config.Mgmt.Bridge,
-		NodesFilter:    c.nodeFilter,
-		LabName:        c.Config.Name,
+		Nodes:              c.getLinkNodes(),
+		DefaultMgmtNetwork: c.Config.Mgmt.Network,
+		NodesFilter:        c.nodeFilter,
+		LabName:            c.Config.Name,
 	}
 
 	for i, l := range c.Config.Topology.Links {

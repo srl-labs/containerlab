@@ -1306,6 +1306,11 @@
                     "type": "string",
                     "const": "mgmt-net"
                 },
+                "network": {
+                    "type": "string",
+                    "description": "Name of the management network from the mgmt list the link attaches to. Defaults to the first management network.",
+                    "markdownDescription": "Name of the [management network](https://containerlab.dev/manual/network/#multiple-management-networks) from the `mgmt` list the link attaches to. Defaults to the first management network."
+                },
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },

@@ -197,11 +197,6 @@ func (c *CLab) makeCopyForDestroy(
 		}
 	}
 
-	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
 	// populate the management network state (bridge names) destroy needs for the
 	// removal of the iptables rules, without creating networks that are missing:
 	// a lab deployed with a management network override leaves the topology's
@@ -214,9 +209,14 @@ func (c *CLab) makeCopyForDestroy(
 				bridged = append(bridged, m)
 			}
 		}
-		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
+		if err = cc.resolveExistingMgmtNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
+	}
+
+	err = cc.setMgmtNetLinkBridges()
+	if err != nil {
+		return nil, err
 	}
 
 	err = cc.ResolveLinks()
@@ -227,12 +227,12 @@ func (c *CLab) makeCopyForDestroy(
 	return cc, nil
 }
 
-// resolveMgmtNetworksForDestroy inspects the management networks that already exist
-// so their bridge names are populated for the iptables cleanup. Networks that do not
-// exist are skipped: they hold no bridge to clean up, and destroy must not create
-// management networks. Runtimes that cannot check network existence keep the
-// create-or-inspect behavior.
-func (c *CLab) resolveMgmtNetworksForDestroy(
+// resolveExistingMgmtNetworks inspects the management networks that already exist
+// so their bridge names are populated, e.g. for the iptables cleanup on destroy.
+// Networks that do not exist are skipped: they hold no bridge yet, and the callers
+// must not create management networks. Runtimes that cannot check network existence
+// keep the create-or-inspect behavior.
+func (c *CLab) resolveExistingMgmtNetworks(
 	ctx context.Context,
 	networks clabtypes.MgmtNetworks,
 ) error {
@@ -643,7 +643,11 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	close(concurrentChan)
 
 	// also call delete on the special nodes
-	for _, n := range c.getSpecialLinkNodes() {
+	specialNodes := append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	)
+	for _, n := range specialNodes {
 		err := n.Delete(ctx)
 		if err != nil {
 			log.Warn(err)
