@@ -243,6 +243,7 @@
                         "cisco_csr1000v",
                         "paloalto_panos",
                         "mikrotik_ros",
+                        "mikrotik_chr",
                         "6wind_vsr",
                         "cisco_n9kv",
                         "cisco_ftdv",
@@ -3825,6 +3826,16 @@
                             ]
                         },
                         "mikrotik_ros": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-other"
+                                }
+                            ]
+                        },
+                        "mikrotik_chr": {
                             "allOf": [
                                 {
                                     "$ref": "#/definitions/node-config"
