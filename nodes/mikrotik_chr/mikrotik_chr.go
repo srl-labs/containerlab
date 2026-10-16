@@ -189,10 +189,11 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
 // every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
-// its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again as a startup config,
-// these lines duplicate objects the launcher already created and RouterOS stops the import
-// at the first one; the management addressing also belongs to the deployment, not the lab.
-// Continuation lines (a trailing backslash) are joined before matching.
+// its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again
+// as a startup config, these lines duplicate objects the launcher already created and
+// RouterOS stops the import at the first one; the management addressing also belongs to
+// the deployment, not the lab. Continuation lines (a trailing backslash) are joined before
+// matching.
 func filterLauncherConfig(config string) string {
 	var out []string
 
