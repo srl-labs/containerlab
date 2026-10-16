@@ -94,7 +94,6 @@ MGMT_TABLE=mgmt
 SYSNET=/sys/class/net
 
 log() { echo "chr-launch: $*"; }
-ready() { touch "$READY_FILE" 2>/dev/null || true; log "RouterOS ready"; }
 rm -f "$READY_FILE"
 
 # The slirp management subnet sits in the RFC 2544 benchmarking range, never in
@@ -351,6 +350,30 @@ while [ -z "$AUTH" ]; do
     fi
 done
 log "RouterOS answered after ${waited}s"
+
+# Ready means a user can log in: RouterOS starts its SSH server well after REST
+# answers on a slow boot (about 40 s later under TCG on arm64), so when the
+# configuration keeps SSH enabled, the forwarded port must send its banner first.
+# A config that disables SSH is not waited for; a banner that never comes is
+# logged and the node is still declared ready (REST works).
+ssh_banner() { (sleep 3) | nc 127.0.0.1 22 2>/dev/null | head -c 7; }
+ready() {
+    case "$(rest "$AUTH" "ip/service?name=ssh")" in
+        *'"disabled":"false"'*)
+            _w=0
+            until [ "$(ssh_banner)" = "SSH-2.0" ]; do
+                if [ "$_w" -ge "$BOOT_WAIT" ]; then
+                    log "SSH did not answer within ${BOOT_WAIT}s (REST works)"
+                    break
+                fi
+                sleep 2
+                _w=$((_w + 5))
+            done
+            ;;
+    esac
+    touch "$READY_FILE" 2>/dev/null || true
+    log "RouterOS ready"
+}
 
 # A failed step WITHHOLDS the ready marker (qemu keeps running, so the node can
 # still be inspected over the serial console, telnet port 5000).

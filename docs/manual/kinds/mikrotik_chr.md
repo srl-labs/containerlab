@@ -96,7 +96,7 @@ and the node does not become ready.
 
 ### Node readiness
 
-The node is ready once RouterOS accepted the credentials and the startup config. The container log then shows
+The node is ready once RouterOS accepted the credentials and the startup config and, unless the configuration disables SSH, its SSH server answers. The container log then shows
 
 ```
 chr-launch: RouterOS ready
