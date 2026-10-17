@@ -45,7 +45,7 @@
 #   (unknown flags are ignored); credentials default to the USERNAME/PASSWORD env
 # Env (all optional, set under the node's `env:`); MEM, CPUS and DISK are the
 #   official image's own variables:
-#   MEM (qemu -m value, default 256 + 8 MiB per data NIC), CPUS (default 1),
+#   MEM (qemu -m value, default 256 MiB + 8 MiB per data NIC and vCPU), CPUS (default 1),
 #   DISK (default 128M), CHR_INTF_WAIT (s, 60), CHR_BOOT_WAIT (s, 300)
 # Serial console: port 5000 inside the container
 #   (docker exec -it <node> nc 127.0.0.1 5000); the container itself has no
@@ -416,14 +416,13 @@ ssh_banner() { (sleep 3) | nc "$VM_EP" 22 2>/dev/null | head -c 7; }
 ready() {
     case "$(rest "$AUTH" "ip/service?name=ssh")" in
         *'"disabled":"false"'*)
-            _w=0
+            _t0=$(date +%s)
             until [ "$(ssh_banner)" = "SSH-2.0" ]; do
-                if [ "$_w" -ge "$BOOT_WAIT" ]; then
-                    log "SSH did not answer within ${BOOT_WAIT}s (REST works)"
+                if [ $(( $(date +%s) - _t0 )) -ge "$BOOT_WAIT" ]; then
+                    log "SSH did not answer within $(( $(date +%s) - _t0 ))s (REST works)"
                     break
                 fi
                 sleep 2
-                _w=$((_w + 5))
             done
             ;;
     esac
@@ -559,15 +558,14 @@ mgmt_attach() {
         # shellcheck disable=SC2086  # split "gateway source"; an empty half skips the pair
         set -- $_pair
         [ $# -eq 2 ] || continue
-        _w=0
+        _t0=$(date +%s)
         until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\"}")" in
                 *'"received":"'[1-9]*) true ;; *) false ;; esac; do
-            if [ "$_w" -ge 30 ]; then
-                log "gateway $1 does not answer from $2 (continuing)"
+            if [ $(( $(date +%s) - _t0 )) -ge 30 ]; then
+                log "gateway $1 does not answer from $2 after $(( $(date +%s) - _t0 ))s (continuing)"
                 break
             fi
             sleep 1
-            _w=$((_w + 3))
         done
     done
 }

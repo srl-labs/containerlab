@@ -192,7 +192,8 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 // its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again
 // as a startup config, these lines duplicate objects the launcher already created and
 // RouterOS stops the import at the first one; the management addressing also belongs to
-// the deployment, not the lab. Continuation lines (a trailing backslash) are joined before
+// the deployment, not the lab. Continuation lines (an unescaped trailing backslash) are joined
+// before
 // matching.
 func filterLauncherConfig(config string) string {
 	var out []string
@@ -204,7 +205,7 @@ func filterLauncherConfig(config string) string {
 			line = pending + "\n" + line
 			pending = ""
 		}
-		if strings.HasSuffix(line, `\`) {
+		if continues(line) {
 			pending = line
 			continue
 		}
@@ -223,6 +224,15 @@ func filterLauncherConfig(config string) string {
 	}
 
 	return strings.Join(out, "\n")
+}
+
+// continues reports whether an /export line continues on the next one: it ends in an
+// unescaped backslash. RouterOS writes a literal backslash in a value as `\\`, so an even
+// run of trailing backslashes ends the line.
+func continues(line string) bool {
+	trailing := len(line) - len(strings.TrimRight(line, `\`))
+
+	return trailing%2 == 1
 }
 
 func launcherOwned(section, line string) bool {

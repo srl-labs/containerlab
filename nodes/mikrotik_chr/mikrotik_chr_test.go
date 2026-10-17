@@ -291,3 +291,39 @@ func TestFilterLauncherConfigContinuationLines(t *testing.T) {
 		t.Errorf("wrapped user route lost or reflowed:\n%s", got)
 	}
 }
+
+func TestFilterLauncherConfigEscapedBackslash(t *testing.T) {
+	// A value ending in a literal backslash is exported as `\\`: that line is complete and
+	// must not swallow the launcher line after it.
+	in := "/ip address\n" +
+		"add address=10.9.9.1/24 interface=ether2 network=10.9.9.0 comment=path\\\\\n" +
+		"add address=172.20.20.3/24 comment=clab-mgmt interface=ether1 network=\\\n" +
+		"    172.20.20.0\n"
+
+	got := filterLauncherConfig(in)
+
+	if !strings.Contains(
+		got,
+		"add address=10.9.9.1/24 interface=ether2 network=10.9.9.0 comment=path",
+	) {
+		t.Errorf("user address ending in an escaped backslash was dropped:\n%s", got)
+	}
+	if strings.Contains(got, "clab-mgmt") {
+		t.Errorf("launcher address kept:\n%s", got)
+	}
+}
+
+func TestContinues(t *testing.T) {
+	for line, want := range map[string]bool{
+		`add a=b`:     false,
+		`add a=b \`:   true,
+		`add a=b\\`:   false,
+		`add a=b\\ \`: true,
+		`add a=b\\\`:  true,
+		`add a=b\\\\`: false,
+	} {
+		if got := continues(line); got != want {
+			t.Errorf("continues(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
