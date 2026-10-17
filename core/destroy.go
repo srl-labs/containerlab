@@ -291,11 +291,17 @@ func (c *CLab) destroyLabDirs(
 					if base := os.Getenv("CLAB_LABDIR_BASE"); base != "" {
 						candidates = append(candidates, filepath.Join(base, "clab-"+c.Config.Name))
 					}
-					if c.TopoPaths != nil && c.TopoPaths.TopologyFileIsSet() {
-						candidates = append(candidates, filepath.Join(c.TopoPaths.TopologyFileDir(), "clab-"+c.Config.Name))
+					if c.TopoPaths.TopologyFileIsSet() {
+						candidates = append(
+							candidates,
+							filepath.Join(c.TopoPaths.TopologyFileDir(), "clab-"+c.Config.Name),
+						)
 					} else {
 						if wd, err := os.Getwd(); err == nil && wd != "" {
-							candidates = append(candidates, filepath.Join(wd, "clab-"+c.Config.Name))
+							candidates = append(
+								candidates,
+								filepath.Join(wd, "clab-"+c.Config.Name),
+							)
 						}
 					}
 					for _, cand := range candidates {
@@ -305,7 +311,11 @@ func (c *CLab) destroyLabDirs(
 						}
 					}
 					if labDir == "" {
-						log.Debug("lab directory not found for cleanup, skipping", "candidates", candidates)
+						log.Debug(
+							"lab directory not found for cleanup, skipping",
+							"candidates",
+							candidates,
+						)
 						return nil
 					}
 				} else {
@@ -323,7 +333,11 @@ func (c *CLab) destroyLabDirs(
 			if c.Config != nil && c.Config.Name != "" {
 				expected := "clab-" + c.Config.Name
 				if base != expected {
-					log.Warnf("refusing to remove lab directory %q: does not match expected %q", labDir, expected)
+					log.Warnf(
+						"refusing to remove lab directory %q: does not match expected %q",
+						labDir,
+						expected,
+					)
 					return nil
 				}
 			}

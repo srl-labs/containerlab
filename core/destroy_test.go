@@ -471,7 +471,11 @@ topology:
 	}
 	// Sentinel files to prove which dirs survived.
 	for _, dir := range []string{"clab-clos01", "clab-docs", "clab-mikrotik-vyos", "clab-vyos-clos"} {
-		if err := os.WriteFile(filepath.Join(topoDir, dir, "sentinel"), []byte(dir), 0o644); err != nil {
+		if err := os.WriteFile(
+			filepath.Join(topoDir, dir, "sentinel"),
+			[]byte(dir),
+			0o644,
+		); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -564,9 +568,7 @@ func TestDestroyWithNoContainersRefusesMismatchedDir(t *testing.T) {
 	}
 	// Create TopoPaths manually with mismatched labDir.
 	paths := &clabtypes.TopoPaths{}
-	// We need a valid topology file for SetLabDir to succeed via SetLabDir call.
-	// Instead we bypass validation by setting private field via reflection-like hack:
-	// Use the exported SetLabDir on the directory itself.
+	// SetLabDir sets the lab dir directly, so the basename can disagree with Config.Name.
 	if err := paths.SetLabDir(mismatched); err != nil {
 		t.Fatal(err)
 	}
@@ -611,7 +613,7 @@ topology:
 	}
 
 	// Lab dir does not exist on disk; cleanup should be a no-op, not error, and
-	//must not delete other clab-* dirs.
+	// must not delete other clab-* dirs.
 	unrelated := filepath.Join(topoDir, "clab-clos01")
 	if err := os.MkdirAll(unrelated, 0o755); err != nil {
 		t.Fatal(err)
@@ -621,6 +623,46 @@ topology:
 	}
 	if _, err := os.Stat(unrelated); err != nil {
 		t.Fatalf("unrelated dir %q should be preserved: %v", unrelated, err)
+	}
+}
+
+func TestDestroyWithNoContainersByNameWithEnvBaseRemovesLabDir(t *testing.T) {
+	baseDir := t.TempDir()
+	expected := filepath.Join(baseDir, "clab-my-lab")
+	if err := os.MkdirAll(expected, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(expected, "sentinel"), []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	unrelated := filepath.Join(baseDir, "clab-other")
+	if err := os.MkdirAll(unrelated, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("CLAB_LABDIR_BASE", baseDir)
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithLabNameOnly("my-lab"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The destroy path for --name without topology file populates Config.Name
+	// and leaves TopologyLabDir empty, exercising the inference branch.
+	if got := c.TopoPaths.TopologyLabDir(); got != "" {
+		t.Fatalf("TopologyLabDir = %q, want empty for lab-name-only init", got)
+	}
+
+	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+		t.Fatalf("destroyLabDirs failed: %v", err)
+	}
+	if _, err := os.Stat(expected); !os.IsNotExist(err) {
+		t.Fatalf("expected env-based lab dir %q to be removed, stat: %v", expected, err)
+	}
+	if _, err := os.Stat(unrelated); err != nil {
+		t.Fatalf("unrelated dir %q must not be removed: %v", unrelated, err)
 	}
 }
 

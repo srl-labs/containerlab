@@ -92,7 +92,7 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 
 	// save the rendered topology to disk if requested
 	if ExportRenderedTopology != "" {
-		if err := os.WriteFile(ExportRenderedTopology, yamlFile, 0644); err != nil {
+		if err := os.WriteFile(ExportRenderedTopology, yamlFile, 0o644); err != nil {
 			return fmt.Errorf(
 				"failed to save rendered topology to %s: %w",
 				ExportRenderedTopology,
