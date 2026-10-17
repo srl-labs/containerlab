@@ -24,25 +24,30 @@ Tags follow RouterOS versions, plus `stable`, `long-term`, `testing` and `develo
 
 ## Managing -{{ kind_display_name }}- nodes
 
-=== "CLI"
-    ```bash
-    ssh admin@<node-name>
-    ```
-=== "REST API"
-    ```bash
-    curl -u admin:admin http://<node-name>/rest/system/resource
-    ```
-=== "Winbox / API"
-    Winbox (TCP 8291) and the RouterOS API (TCP 8728, 8729 for TLS) are reachable on the node's management address.
-=== "Console"
-    The serial console is on port 5000 inside the container:
-    ```bash
-    docker exec -it <node-name> nc 127.0.0.1 5000
-    ```
-=== "bash"
-    ```bash
-    docker exec -it <node-name> sh
-    ```
+/// tab | CLI
+```bash
+ssh admin@<node-name>
+```
+///
+/// tab | REST API
+```bash
+curl -u admin:admin http://<node-name>/rest/system/resource
+```
+///
+/// tab | Winbox / API
+Winbox (TCP 8291) and the RouterOS API (TCP 8728, 8729 for TLS) are reachable on the node's management address.
+///
+/// tab | Console
+The serial console is on port 5000 inside the container:
+```bash
+docker exec -it <node-name> nc 127.0.0.1 5000
+```
+///
+/// tab | bash
+```bash
+docker exec -it <node-name> sh
+```
+///
 
 The node's management address is RouterOS's own `ether1` address ([transparent management](#management-connectivity)), so every service RouterOS runs answers on it directly, with nothing forwarded.
 
@@ -96,7 +101,7 @@ and the node does not become ready.
 
 ### Node readiness
 
-The node is ready once RouterOS accepted the credentials and the startup config and, unless the configuration disables SSH, its SSH server answers. The container log then shows
+The node is ready once RouterOS accepted the credentials and the startup config, reaches its gateway from the management address and, unless the configuration disables SSH, its SSH server answers. An SSH server that does not answer within `CHR_BOOT_WAIT` is logged, and the node is still declared ready, since REST and the console work. The container log then shows
 
 ```
 chr-launch: RouterOS ready
@@ -110,10 +115,11 @@ The kind reads the official image's own environment variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `MEM` | 256 MiB + 8 MiB per data interface | VM memory (a QEMU `-m` value, e.g. `1024` or `1G`) |
+| `MEM` | 256 MiB + 8 MiB per data interface and vCPU | VM memory (a QEMU `-m` value, e.g. `1024` or `1G`) |
 | `CPUS` | `1` | VM vCPUs |
 | `DISK` | `128M` | minimum disk size (the disk only grows) |
-| `CHR_BOOT_WAIT` | `300` | seconds to wait for RouterOS to answer, and for the startup config import |
+| `CHR_INTF_WAIT` | `60` | seconds to wait for the data interfaces containerlab attaches before the VM starts |
+| `CHR_BOOT_WAIT` | `300` | seconds to wait for RouterOS to answer, for the startup config import, and for SSH before the node is declared ready |
 
 ```yaml
 r1:
