@@ -281,29 +281,65 @@ func (c *CLab) destroyLabDirs(
 		log.Info("no containerlab containers found")
 
 		if !all {
-			var labDirs []string
-
-			topoPath := c.TopoPaths.TopologyFilenameAbsPath()
-
-			if topoPath != "" {
-				topoDir := filepath.Dir(topoPath)
-				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
-				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
-			} else {
-				log.Debug("Looking for lab directory in current directory")
-
-				labDirs, _ = filepath.Glob("clab-*")
+			labDir := c.TopoPaths.TopologyLabDir()
+			if labDir == "" {
+				// Try to infer the precise lab directory when TopologyLabDir is not set,
+				// e.g. destroy --name without topology file. Only look for an exact
+				// clab-<name> match, never a wildcard.
+				if c.Config != nil && c.Config.Name != "" {
+					candidates := []string{}
+					if base := os.Getenv("CLAB_LABDIR_BASE"); base != "" {
+						candidates = append(candidates, filepath.Join(base, "clab-"+c.Config.Name))
+					}
+					if c.TopoPaths != nil && c.TopoPaths.TopologyFileIsSet() {
+						candidates = append(candidates, filepath.Join(c.TopoPaths.TopologyFileDir(), "clab-"+c.Config.Name))
+					} else {
+						if wd, err := os.Getwd(); err == nil && wd != "" {
+							candidates = append(candidates, filepath.Join(wd, "clab-"+c.Config.Name))
+						}
+					}
+					for _, cand := range candidates {
+						if _, err := os.Stat(cand); err == nil {
+							labDir = cand
+							break
+						}
+					}
+					if labDir == "" {
+						log.Debug("lab directory not found for cleanup, skipping", "candidates", candidates)
+						return nil
+					}
+				} else {
+					log.Debug("lab directory is not known, skipping cleanup")
+					return nil
+				}
 			}
 
-			if len(labDirs) != 0 {
-				log.Info("Removing lab directory", "path", labDirs[0])
-
-				err := os.RemoveAll(labDirs[0])
-				if err != nil {
-					log.Errorf("error deleting lab directory: %v", err)
-
-					return err
+			// Safety: only remove directories that look like a lab directory.
+			base := filepath.Base(labDir)
+			if !strings.HasPrefix(base, "clab-") {
+				log.Warnf("refusing to remove lab directory %q: unexpected name", labDir)
+				return nil
+			}
+			if c.Config != nil && c.Config.Name != "" {
+				expected := "clab-" + c.Config.Name
+				if base != expected {
+					log.Warnf("refusing to remove lab directory %q: does not match expected %q", labDir, expected)
+					return nil
 				}
+			}
+
+			if _, err := os.Stat(labDir); os.IsNotExist(err) {
+				log.Debug("lab directory not found, skipping cleanup", "path", labDir)
+				return nil
+			} else if err != nil {
+				log.Debug("failed to stat lab directory, skipping", "path", labDir, "error", err)
+				return nil
+			}
+
+			log.Info("Removing lab directory", "path", labDir)
+			if err := os.RemoveAll(labDir); err != nil {
+				log.Errorf("error deleting lab directory: %v", err)
+				return err
 			}
 		}
 

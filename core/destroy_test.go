@@ -442,6 +442,188 @@ func TestDestroyLabDirsKeepsFailedLabDirs(t *testing.T) {
 	}
 }
 
+// TestDestroyWithNoContainersRemovesOnlyOwnLabDir reproduces GitHub issue #3499:
+// `clab destroy --cleanup` with no running containers deleted an arbitrary clab-*
+// directory (the first glob match) instead of the lab's own directory.
+func TestDestroyWithNoContainersRemovesOnlyOwnLabDir(t *testing.T) {
+	t.Parallel()
+
+	topoDir := t.TempDir()
+	topoName := "vyos-clos"
+	topoPath := filepath.Join(topoDir, topoName+".clab.yml")
+	const definition = `name: %s
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+`
+	if err := os.WriteFile(topoPath, []byte(fmt.Sprintf(definition, topoName)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate the situation from the bug report: several clab-* directories exist
+	// next to the topology file, including unrelated ones.
+	for _, dir := range []string{"clab-clos01", "clab-docs", "clab-vyos-clos", "clab-mikrotik-vyos"} {
+		if err := os.MkdirAll(filepath.Join(topoDir, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Sentinel files to prove which dirs survived.
+	for _, dir := range []string{"clab-clos01", "clab-docs", "clab-mikrotik-vyos", "clab-vyos-clos"} {
+		if err := os.WriteFile(filepath.Join(topoDir, dir, "sentinel"), []byte(dir), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithTopoPath(topoPath, nil),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Config.Name != topoName {
+		t.Fatalf("Config.Name = %q, want %q", c.Config.Name, topoName)
+	}
+	expectedLabDir := filepath.Join(topoDir, "clab-"+topoName)
+	if got := c.TopoPaths.TopologyLabDir(); got != expectedLabDir {
+		t.Fatalf("TopologyLabDir = %q, want %q", got, expectedLabDir)
+	}
+
+	// No containers -> empty topos map triggers the fallback branch.
+	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+		t.Fatalf("destroyLabDirs failed: %v", err)
+	}
+
+	// Only the expected lab directory should be removed.
+	if _, err := os.Stat(expectedLabDir); !os.IsNotExist(err) {
+		t.Fatalf("expected lab dir %q to be removed, stat: %v", expectedLabDir, err)
+	}
+	for _, dir := range []string{"clab-clos01", "clab-docs", "clab-mikrotik-vyos"} {
+		p := filepath.Join(topoDir, dir)
+		if _, err := os.Stat(p); err != nil {
+			t.Fatalf("unrelated dir %q should not have been removed: %v", p, err)
+		}
+	}
+}
+
+func TestDestroyWithNoContainersAndAllPreservesDirs(t *testing.T) {
+	t.Parallel()
+
+	topoDir := t.TempDir()
+	topoName := "vyos-clos"
+	topoPath := filepath.Join(topoDir, topoName+".clab.yml")
+	const definition = `name: %s
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+`
+	if err := os.WriteFile(topoPath, []byte(fmt.Sprintf(definition, topoName)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{"clab-clos01", "clab-vyos-clos"} {
+		if err := os.MkdirAll(filepath.Join(topoDir, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithTopoPath(topoPath, nil),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// all=true must not delete anything when no containers are found.
+	if err := c.destroyLabDirs(map[string]string{}, true, map[string]bool{}); err != nil {
+		t.Fatalf("destroyLabDirs failed: %v", err)
+	}
+	for _, dir := range []string{"clab-clos01", "clab-vyos-clos"} {
+		p := filepath.Join(topoDir, dir)
+		if _, err := os.Stat(p); err != nil {
+			t.Fatalf("dir %q should have been preserved when all=true: %v", p, err)
+		}
+	}
+}
+
+func TestDestroyWithNoContainersRefusesMismatchedDir(t *testing.T) {
+	t.Parallel()
+
+	// Build a CLab where TopologyLabDir basename does not match Config.Name.
+	// The safety check must refuse deletion.
+	tmp := t.TempDir()
+	mismatched := filepath.Join(tmp, "clab-docs")
+	if err := os.MkdirAll(mismatched, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Create TopoPaths manually with mismatched labDir.
+	paths := &clabtypes.TopoPaths{}
+	// We need a valid topology file for SetLabDir to succeed via SetLabDir call.
+	// Instead we bypass validation by setting private field via reflection-like hack:
+	// Use the exported SetLabDir on the directory itself.
+	if err := paths.SetLabDir(mismatched); err != nil {
+		t.Fatal(err)
+	}
+
+	c := &CLab{
+		Config:    &Config{Name: "vyos-clos"},
+		TopoPaths: paths,
+	}
+
+	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+		t.Fatalf("destroyLabDirs failed: %v", err)
+	}
+	if _, err := os.Stat(mismatched); err != nil {
+		t.Fatalf("mismatched dir %q must not be deleted: %v", mismatched, err)
+	}
+}
+
+func TestDestroyWithNoContainersMissingDirIsNoop(t *testing.T) {
+	t.Parallel()
+
+	topoDir := t.TempDir()
+	topoName := "vyos-clos"
+	topoPath := filepath.Join(topoDir, topoName+".clab.yml")
+	const definition = `name: %s
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+`
+	if err := os.WriteFile(topoPath, []byte(fmt.Sprintf(definition, topoName)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithTopoPath(topoPath, nil),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Lab dir does not exist on disk; cleanup should be a no-op, not error, and
+	//must not delete other clab-* dirs.
+	unrelated := filepath.Join(topoDir, "clab-clos01")
+	if err := os.MkdirAll(unrelated, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+		t.Fatalf("destroyLabDirs failed: %v", err)
+	}
+	if _, err := os.Stat(unrelated); err != nil {
+		t.Fatalf("unrelated dir %q should be preserved: %v", unrelated, err)
+	}
+}
+
 // mgmtResolveBehavior configures the fake runtime the management network resolution
 // tests register under the "mgmtresolvetest" name.
 type mgmtResolveBehavior struct {
