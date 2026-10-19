@@ -454,6 +454,18 @@ func TestDefaultNodeRestoreEndpointsOwnership(t *testing.T) {
 					}
 					failRestore = false
 					if tt.repark {
+						// A failed repark must keep the earlier parked interfaces.
+						failRestore = true
+						if err := d.ParkEndpoints(ctx); !errors.Is(err, restoreErr) {
+							t.Fatalf("repark error = %v, want %v", err, restoreErr)
+						}
+						failRestore = false
+						if _, err := d.parkingNetNSPath(); err != nil {
+							t.Fatalf("failed repark removed the parking namespace: %v", err)
+						}
+						if ep.GetNode() == d {
+							t.Fatal("failed repark released the parked topology endpoint")
+						}
 						// A retried stop parks again before the endpoints are restored.
 						if err := d.ParkEndpoints(ctx); err != nil {
 							t.Fatalf("cycle %d repark: %v", cycle, err)

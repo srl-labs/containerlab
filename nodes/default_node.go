@@ -1186,16 +1186,17 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 	}
 
 	if err := parkingNode.RepointSymlink(); err != nil {
-		_, restoreErr := parkingNode.RestoreTo(ctx, d)
-		cleanupErr := d.cleanupParkingNetNS()
-		if restoreErr != nil || cleanupErr != nil {
-			return errors.Join(
-				fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err),
-				restoreErr,
-				cleanupErr,
-			)
+		repointErr := fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+		if _, restoreErr := parkingNode.RestoreTo(ctx, d); restoreErr != nil {
+			// Keep the parking netns and its endpoints so a later restore can recover them.
+			d.parkingNode = parkingNode
+			return errors.Join(repointErr, restoreErr)
 		}
-		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+		d.parkingNode = nil
+		if cleanupErr := d.cleanupParkingNetNS(); cleanupErr != nil {
+			return errors.Join(repointErr, cleanupErr)
+		}
+		return repointErr
 	}
 	d.parkingNode = parkingNode
 
