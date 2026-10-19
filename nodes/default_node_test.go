@@ -4,16 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	clablinks "github.com/srl-labs/containerlab/links"
 	mockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 	"go.uber.org/mock/gomock"
 )
 
@@ -370,6 +375,122 @@ func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
 	// parking netns; restoring should be a no-op rather than an error.
 	if err := d.RestoreEndpoints(context.Background()); err != nil {
 		t.Fatalf("expected no error when parking netns is missing, got %v", err)
+	}
+}
+
+func TestDefaultNodeRestoreEndpointsOwnership(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires root to create network namespaces")
+	}
+
+	for index, tt := range []struct {
+		name         string
+		freshNode    bool
+		retryRestore bool
+		repark       bool
+	}{
+		{name: "same node"},
+		{name: "fresh node", freshNode: true},
+		{name: "retry restore", retryRestore: true},
+		{name: "repark after failed restore", retryRestore: true, repark: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			longName := fmt.Sprintf("clab-parking-test-%d-%d", os.Getpid(), index)
+			nsName := longName + "-live"
+			nsPath, err := clabutils.CreateNamedNetNS(nsName)
+			if err != nil {
+				t.Fatalf("create live namespace: %v", err)
+			}
+			t.Cleanup(func() {
+				_ = netns.DeleteNamed(clabutils.ParkingNetnsName(longName))
+				_ = os.Remove(filepath.Join("/run/netns", longName))
+				_ = netns.DeleteNamed(nsName)
+			})
+
+			restoreErr := errors.New("live namespace temporarily unavailable")
+			failRestore := false
+			rt := mockruntime.NewMockContainerRuntime(gomock.NewController(t))
+			rt.EXPECT().GetContainerStatus(gomock.Any(), longName).
+				Return(clabruntime.Running).AnyTimes()
+			rt.EXPECT().GetNSPath(gomock.Any(), longName).
+				DoAndReturn(func(context.Context, string) (string, error) {
+					if failRestore {
+						return "", restoreErr
+					}
+					return nsPath, nil
+				}).AnyTimes()
+			newNode := func() (*DefaultNode, clablinks.Endpoint) {
+				d := &DefaultNode{
+					Cfg:     &clabtypes.NodeConfig{ShortName: "node1", LongName: longName},
+					Runtime: rt,
+				}
+				d.OverwriteNode = d
+				ep := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(d, "eth1", nil))
+				if err := d.AdoptEndpoint(ep); err != nil {
+					t.Fatalf("adopt topology endpoint: %v", err)
+				}
+				return d, ep
+			}
+			d, ep := newNode()
+			if err := d.ExecFunction(ctx, func(ns.NetNS) error {
+				return netlink.LinkAdd(&netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "eth1"}})
+			}); err != nil {
+				t.Fatalf("create interface: %v", err)
+			}
+
+			for cycle := range 2 {
+				if err := d.ParkEndpoints(ctx); err != nil {
+					t.Fatalf("cycle %d park: %v", cycle, err)
+				}
+				if tt.freshNode {
+					// A separate CLI invocation rebuilds the topology endpoint objects.
+					d, ep = newNode()
+				}
+				if tt.retryRestore {
+					failRestore = true
+					if err := d.RestoreEndpoints(ctx); !errors.Is(err, restoreErr) {
+						t.Fatalf("restore error = %v, want %v", err, restoreErr)
+					}
+					failRestore = false
+					if tt.repark {
+						// A retried stop parks again before the endpoints are restored.
+						if err := d.ParkEndpoints(ctx); err != nil {
+							t.Fatalf("cycle %d repark: %v", cycle, err)
+						}
+					}
+				}
+				if err := d.RestoreEndpoints(ctx); err != nil {
+					t.Fatalf("cycle %d restore: %v", cycle, err)
+				}
+				if ep.GetNode() != d {
+					t.Fatalf("topology endpoint still belongs to %T after restore", ep.GetNode())
+				}
+				if got := d.GetEndpoints(); len(got) != 1 || got[0] != ep {
+					t.Fatalf("restored endpoint replaced the topology endpoint: %v", got)
+				}
+				if _, err := d.parkingNetNSPath(); err == nil {
+					t.Fatal("parking namespace still exists after restore")
+				}
+			}
+
+			if err := d.ExecFunction(ctx, func(ns.NetNS) error {
+				link, err := netlink.LinkByName("eth1")
+				if err != nil {
+					return err
+				}
+				if link.Attrs().Flags&net.FlagUp == 0 {
+					return errors.New("restored interface is down")
+				}
+				return nil
+			}); err != nil {
+				t.Fatalf("restored interface: %v", err)
+			}
+			// Link reconciliation must use the live namespace, not the deleted parking one.
+			if err := ep.Remove(ctx); err != nil {
+				t.Fatalf("remove restored topology endpoint: %v", err)
+			}
+		})
 	}
 }
 
