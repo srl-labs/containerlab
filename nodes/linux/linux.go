@@ -104,6 +104,12 @@ func (n *linux) Start(ctx context.Context) error {
 		return err
 	}
 
+	// DefaultNode.Start no-ops for root-ns and auto-remove nodes; skip the offload fix
+	// for them as well, as there is no container netns to adjust.
+	if n.ShouldSkipLifecycle() {
+		return nil
+	}
+
 	n.disableEth0TxOffload(ctx)
 
 	return nil

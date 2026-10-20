@@ -136,6 +136,25 @@ Verify connectivity via new management addresses on switch
     Wait Until Keyword Succeeds    3 min    15 sec
     ...    Verify IOL SSH Mgmt Addrs    clab-${lab-name}-switch    ${ipv4_addr}    ${ipv6_addr}
 
+Stop router1 via lifecycle stop
+    [Documentation]    Guards the TX offload fix regression: after a stop the runtime
+    ...    recreates the management veth on start, resetting the offload settings.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} stop -t ${CURDIR}/${lab-file-name} --node router1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+Start router1 via lifecycle start and verify SSH connectivity
+    [Documentation]    The TX offload fix must be re-applied on start, otherwise SSH
+    ...    to the node stays broken until the next deploy.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} start -t ${CURDIR}/${lab-file-name} --node router1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    Wait Until Keyword Succeeds    5 min    15 sec
+    ...    Verify IOL SSH Login    clab-${lab-name}-router1
+
 
 *** Keywords ***
 Cleanup
@@ -149,3 +168,11 @@ Verify IOL SSH Mgmt Addrs
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ${ipv4_addr.upper()}
     Should Contain    ${output}    ${ipv6_addr.upper()}
+
+Verify IOL SSH Login
+    [Arguments]    ${host}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" -o ConnectTimeout=15 admin@${host} sh ip int br | head -5
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    up
