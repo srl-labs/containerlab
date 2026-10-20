@@ -264,20 +264,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	if n.Runtime.Mgmt().Driver != clabtypes.MgmtDriverMacvlan {
-		// Disable TX checksum offload on the host NS veth for the mgmt interface.
-		var peerIfIndex int
-		err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
-		if err != nil {
-			log.Warn("Failed to get veth peer index for IOL mgmt interface",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		} else if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-			log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		}
-	}
+	n.disableMgmtTxOffload(ctx)
 
 	if err := n.GenBootConfig(ctx); err != nil {
 		return fmt.Errorf("failed to generate boot config: %w", err)
@@ -289,6 +276,44 @@ func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 	}
 
 	return nil
+}
+
+// Start re-applies the mgmt veth TX offload fix after a stop/start cycle. The runtime
+// recreates the mgmt veth (it is never parked), so its offload settings reset to defaults.
+// See disableMgmtTxOffload for why IOL cannot function with it enabled.
+func (n *iol) Start(ctx context.Context) error {
+	if err := n.DefaultNode.Start(ctx); err != nil {
+		return err
+	}
+
+	n.disableMgmtTxOffload(ctx)
+
+	return nil
+}
+
+// disableMgmtTxOffload disables TX checksum offload on the host NS veth for the mgmt interface.
+// iouyap bridges IOL interfaces over packet sockets; frames carrying an offloaded
+// (CHECKSUM_PARTIAL) checksum reach the IOL process with an incomplete checksum, which its
+// TCP/IP stack drops, breaking TCP/UDP connectivity.
+func (n *iol) disableMgmtTxOffload(ctx context.Context) {
+	if n.Runtime.Mgmt().Driver == clabtypes.MgmtDriverMacvlan {
+		return
+	}
+
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for IOL mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+		return
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
