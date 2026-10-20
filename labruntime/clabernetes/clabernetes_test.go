@@ -1269,6 +1269,16 @@ func TestDeployCreatesTopologyResource(t *testing.T) {
       kind: linux
       image: alpine:latest
 `
+	// Every node definition is stamped with the name the clab file used, so tooling holding only
+	// the clab file can select the c9s Nodes by those names.
+	const storedDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+      labels:
+        c9s.run/originalNodeName: node1
+`
 
 	r := newTestRuntime()
 	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
@@ -1286,8 +1296,8 @@ func TestDeployCreatesTopologyResource(t *testing.T) {
 	}
 
 	obj := getTestTopology(t, r, "lab-ns", "lab1")
-	if got := topologyDefinition(t, obj); got != definition {
-		t.Fatalf("topology definition = %q, want %q", got, definition)
+	if got := topologyDefinition(t, obj); got != storedDefinition {
+		t.Fatalf("topology definition = %q, want %q", got, storedDefinition)
 	}
 	if obj.GetLabels()[clabconstants.Owner] != "alice" {
 		t.Fatalf("unexpected topology labels: %v", obj.GetLabels())
@@ -2340,6 +2350,24 @@ topology:
 		assertNoTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName)
 	}
 
+	// Every Node records the name the topology file used -- renamed or not -- so tooling
+	// holding only the clab file can select the c9s Nodes by the names they use there.
+	for nodeName, originalName := range map[string]string{
+		"r1":         "R1",
+		"client-2":   "Client_2",
+		"r1-console": "r1-console",
+	} {
+		labels := getTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName).GetLabels()
+		if got := labels[labelOriginalNodeName]; got != originalName {
+			t.Fatalf(
+				"node %s label %s = %q, want the name the topology file used",
+				nodeName,
+				labelOriginalNodeName,
+				got,
+			)
+		}
+	}
+
 	if got, _, _ := unstructured.NestedString(
 		getTestPrimitive(t, r, nodeGVR, "lab-ns", "r1-console").Object,
 		"spec",
@@ -2981,6 +3009,19 @@ func TestFreshTopologyDeployKeepsTopologyChangedConcurrently(t *testing.T) {
       kind: linux
       image: alpine:3
 `
+	const storedChanged = `topology:
+  nodes:
+    sros:
+      kind: linux
+      image: alpine:3
+      labels:
+        c9s.run/originalNodeName: sros
+    vsrx:
+      kind: linux
+      image: alpine:3
+      labels:
+        c9s.run/originalNodeName: vsrx
+`
 
 	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
 	writeFile(t, topologyFile, initial, 0o644)
@@ -3057,7 +3098,7 @@ func TestFreshTopologyDeployKeepsTopologyChangedConcurrently(t *testing.T) {
 
 	// The concurrent deploy reconciled the lab in place; the rollback must leave it alone.
 	topology := getTestTopology(t, r, "lab-ns", "mv")
-	if got := topologyDefinition(t, topology); got != changed {
+	if got := topologyDefinition(t, topology); got != storedChanged {
 		t.Fatalf("topology definition = %q, want the concurrently deployed definition", got)
 	}
 
@@ -3424,6 +3465,14 @@ func TestDeployReconcilesExistingTopology(t *testing.T) {
       kind: linux
       image: alpine:3.21
 `
+	const storedDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3.21
+      labels:
+        c9s.run/originalNodeName: node1
+`
 
 	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", existingDefinition))
 	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
@@ -3440,8 +3489,8 @@ func TestDeployReconcilesExistingTopology(t *testing.T) {
 	}
 
 	obj := getTestTopology(t, r, "lab-ns", "lab1")
-	if got := topologyDefinition(t, obj); got != newDefinition {
-		t.Fatalf("topology definition was updated to %q, want %q", got, newDefinition)
+	if got := topologyDefinition(t, obj); got != storedDefinition {
+		t.Fatalf("topology definition was updated to %q, want %q", got, storedDefinition)
 	}
 }
 

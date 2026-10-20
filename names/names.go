@@ -25,6 +25,14 @@ const (
 // has been lower-cased.
 var nonKubernetesNameChars = regexp.MustCompile(`[^a-z0-9-]+`)
 
+// nonKubernetesLabelValueChars matches every run of characters a Kubernetes label value cannot
+// carry. Label values keep the case the name was written with.
+var nonKubernetesLabelValueChars = regexp.MustCompile(`[^a-zA-Z0-9_.-]+`)
+
+// kubernetesLabelValue matches the label values the Kubernetes API server accepts. It mirrors
+// apimachinery's IsValidLabelValue so the names package stays free of Kubernetes dependencies.
+var kubernetesLabelValue = regexp.MustCompile(`^[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$`)
+
 // SanitizeName maps a containerlab name onto the DNS-1035 label a lab runtime can name the objects
 // it creates with: lower case, made up of a-z, 0-9 and '-', starting with a letter and at most 63
 // characters long. A large share of public labs name their nodes R1/PE_1 or capitalize the lab
@@ -96,4 +104,36 @@ func SanitizeNodeNames(nodeNames []string) (map[string]string, error) {
 	}
 
 	return renames, nil
+}
+
+// SanitizeLabelValue maps a containerlab name onto the value of a Kubernetes label: at most 63
+// characters, made up of a-z, A-Z, 0-9, '-', '_' and '.', starting and ending with an alphanumeric
+// character. Unlike SanitizeName it keeps the case the topology used, so a label selector matches
+// the name the clab file spells out verbatim.
+//
+// The mapping is deterministic and idempotent: a name Kubernetes already accepts as a label value
+// maps onto itself. The result is empty only for a name holding no character a label value can be
+// built from.
+func SanitizeLabelValue(name string) string {
+	if len(name) <= kubernetesNameMaxLen && kubernetesLabelValue.MatchString(name) {
+		return name
+	}
+
+	sanitized := strings.Trim(
+		nonKubernetesLabelValueChars.ReplaceAllString(name, "-"),
+		"-_.",
+	)
+	if sanitized == "" {
+		return ""
+	}
+
+	if len(sanitized) > kubernetesNameMaxLen {
+		digest := sha256.Sum256([]byte(name))
+		sanitized = strings.TrimRight(
+			sanitized[:kubernetesNameMaxLen-nameDigestLen-1],
+			"-_.",
+		) + "-" + hex.EncodeToString(digest[:])[:nameDigestLen]
+	}
+
+	return sanitized
 }

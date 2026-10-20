@@ -13,32 +13,56 @@ import (
 // to them the c9s subset understands, and reports what was renamed. c9s uses containerlab node
 // names verbatim as Node, Deployment and Service names, so a node named R1 has to become r1 before
 // anything is created; the alternative is rejecting a large share of public labs outright.
+//
+// Every node definition also carries c9s.run/originalNodeName naming the node as the topology file
+// spells it, so tooling holding only the clab file can select the c9s Nodes by the names they use
+// there. The label rides in the definition, which is what makes it survive both the Topology
+// resource path (the controller compiles it in-cluster) and the primitives path (compiled here);
+// the compiler stamps the same label on Nodes it renames itself, for topologies authored outside
+// containerlab.
+//
+// The boolean reports whether the topology definition was modified, so the caller only re-renders
+// the definition when it really changed.
 func sanitizeNodeNames(
 	config *clabRuntimeConfig,
 	nodeNames []string,
-) (map[string]string, error) {
+) (map[string]string, bool, error) {
 	renames, err := clabnames.SanitizeNodeNames(nodeNames)
-	if err != nil || len(renames) == 0 {
-		return nil, err
+	if err != nil {
+		return nil, false, err
 	}
 
+	changed := len(renames) != 0
+
 	nodes := make(map[string]*clabtypes.NodeDefinition, len(config.Topology.Nodes))
-	for nodeName, nodeDefinition := range config.Topology.Nodes {
-		if sanitized, renamed := renames[nodeName]; renamed {
+	for originalName, nodeDefinition := range config.Topology.Nodes {
+		nodeName := originalName
+		if sanitized, renamed := renames[originalName]; renamed {
 			nodeName = sanitized
+		}
+
+		originalLabel := clabnames.SanitizeLabelValue(originalName)
+		if nodeDefinition.Labels[labelOriginalNodeName] != originalLabel {
+			if nodeDefinition.Labels == nil {
+				nodeDefinition.Labels = map[string]string{}
+			}
+			nodeDefinition.Labels[labelOriginalNodeName] = originalLabel
+			changed = true
 		}
 
 		nodes[nodeName] = nodeDefinition
 	}
 	config.Topology.Nodes = nodes
 
-	// A node can share the network namespace of another node by name, and the compiler resolves
-	// that setting through the kind, group and defaults sections as well.
-	for _, nodeDefinition := range referencingNodeDefinitions(config.Topology) {
-		clabernetescompiler.RenameNetworkModePrimary(nodeDefinition, renames)
+	if len(renames) != 0 {
+		// A node can share the network namespace of another node by name, and the compiler resolves
+		// that setting through the kind, group and defaults sections as well.
+		for _, nodeDefinition := range referencingNodeDefinitions(config.Topology) {
+			clabernetescompiler.RenameNetworkModePrimary(nodeDefinition, renames)
+		}
 	}
 
-	return renames, nil
+	return renames, changed, nil
 }
 
 // referencingNodeDefinitions returns every node definition of a topology that can hold a reference

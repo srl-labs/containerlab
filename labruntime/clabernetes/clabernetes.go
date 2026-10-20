@@ -29,6 +29,7 @@ const (
 	labelApp              = "c9s.run/app"
 	labelTopologyOwner    = "c9s.run/topologyOwner"
 	labelTopologyNode     = "c9s.run/topologyNode"
+	labelOriginalNodeName = "c9s.run/originalNodeName"
 	labelIgnoreReconcile  = "c9s.run/ignoreReconcile"
 	clabernetesAppValue   = "clabernetes"
 	restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
