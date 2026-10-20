@@ -21,9 +21,14 @@ Deploy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
 
 Pause to let OSPF converge
-    Sleep    40s
+    Sleep    60s
 
 Ensure client1 can ping client2
+    Wait Until Keyword Succeeds    3x    15s    Ping From client1 To client2
+
+
+*** Keywords ***
+Ping From client1 To client2
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=client1 --cmd "ping -c 5 10.82.98.82"
     Log    ${output}    console=True
