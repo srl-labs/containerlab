@@ -3,7 +3,7 @@ name: e2e-vpp
 topology:
   kinds:
     fdio_vpp:
-      image: git.ipng.ch/ipng/vpp-containerlab:stable
+      image: git.ipng.ch/ipng/vpp-containerlab:v25.10.0
       startup-config: config/__clabNodeName__/vppcfg.yaml
       binds:
         - config/__clabNodeName__/bird-local.conf:/config/bird/bird-local.conf:ro
