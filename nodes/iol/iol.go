@@ -301,7 +301,14 @@ func (n *iol) Start(ctx context.Context) error {
 // iouyap bridges IOL interfaces over packet sockets; frames carrying an offloaded
 // (CHECKSUM_PARTIAL) checksum reach the IOL process with an incomplete checksum, which its
 // TCP/IP stack drops, breaking TCP/UDP connectivity.
+//
+// Nodes running with host network mode are skipped: their eth0 is the host's interface,
+// and there is no clab-created mgmt veth to adjust.
 func (n *iol) disableMgmtTxOffload(ctx context.Context) {
+	if n.Cfg.NetworkMode == "host" {
+		return
+	}
+
 	if n.Runtime.Mgmt().Driver == clabtypes.MgmtDriverMacvlan {
 		return
 	}

@@ -119,7 +119,14 @@ func (n *linux) Start(ctx context.Context) error {
 // Frames crossing the veth with an offloaded (CHECKSUM_PARTIAL) checksum break consumers
 // that bridge or capture traffic on that interface, so the setting is (re-)applied on
 // deploy and after every stop/start cycle, when the runtime recreates the mgmt veth.
+//
+// Nodes running with host network mode are skipped: their eth0 is the host's interface,
+// and toggling its offload settings would alter the host networking state.
 func (n *linux) disableEth0TxOffload(ctx context.Context) {
+	if n.Cfg.NetworkMode == "host" {
+		return
+	}
+
 	err := n.ExecFunction(ctx, clabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
 	if err != nil {
 		log.Error(err)
