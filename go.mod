@@ -50,13 +50,13 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tklauser/numcpus v0.12.0
 	github.com/vishvananda/netlink v1.3.1
-	go.podman.io/common v0.69.1
-	go.podman.io/image/v5 v5.41.1
-	go.podman.io/podman/v6 v6.1.0
+	go.podman.io/common v0.69.2
+	go.podman.io/image/v5 v5.41.2
+	go.podman.io/podman/v6 v6.1.4
 	go.uber.org/mock v0.6.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.57.0
 	golang.org/x/sys v0.48.0
-	golang.org/x/term v0.45.0
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.4
 	k8s.io/client-go v0.36.4
@@ -128,7 +128,7 @@ require (
 	github.com/mistifyio/go-zfs/v4 v4.0.0 // indirect
 	github.com/moby/buildkit v0.31.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/go-archive v0.2.0 // indirect
+	github.com/moby/go-archive v0.3.0 // indirect
 	github.com/moby/moby/api v1.55.0 // indirect
 	github.com/moby/moby/client v0.5.1 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
@@ -162,7 +162,7 @@ require (
 	github.com/sigstore/fulcio v1.8.7 // indirect
 	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/sigstore/sigstore v1.10.8 // indirect
-	github.com/sirupsen/logrus v1.9.4 // indirect
+	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/smallstep/pkcs7 v0.2.1 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
@@ -180,8 +180,8 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
-	go.podman.io/buildah v1.45.0 // indirect
-	go.podman.io/storage v1.64.0 // indirect
+	go.podman.io/buildah v1.45.2 // indirect
+	go.podman.io/storage v1.64.2 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
@@ -267,9 +267,9 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/mod v0.42.0
-	golang.org/x/net v0.58.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/net v0.59.0
+	golang.org/x/sync v0.23.0
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
