@@ -41,6 +41,12 @@ func sanitizeNodeNames(
 			nodeName = sanitized
 		}
 
+		// A node entry with an empty body unmarshals into a nil definition. It is materialized
+		// with the same stamp, or the compiler would stamp the label with the sanitized name it
+		// sees, since the original name no longer exists anywhere it can read.
+		if nodeDefinition == nil {
+			nodeDefinition = &clabtypes.NodeDefinition{}
+		}
 		originalLabel := clabnames.SanitizeLabelValue(originalName)
 		if nodeDefinition.Labels[labelOriginalNodeName] != originalLabel {
 			if nodeDefinition.Labels == nil {

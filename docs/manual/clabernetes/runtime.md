@@ -221,6 +221,13 @@ containerlab reports back — `inspect`, container names, the `clab-node-name`
 label — uses the sanitized name, because that is the name the objects carry in
 the cluster.
 
+To keep the original names reachable, containerlab injects a
+`c9s.run/originalNodeName` label into the stored topology definition and onto
+every c9s Node object. The label holds the node name exactly as the clab file
+spells it, so tooling that only sees the clab file can select the c9s Nodes by
+those names. The label key is reserved by containerlab: a value set for it in
+the topology file is overwritten on every deploy.
+
 Two node names that differ only in a character Kubernetes cannot carry (`R1`
 and `r1`) would end up as one object; that is an error, not a merge.
 
