@@ -2425,6 +2425,54 @@ topology:
 	}
 }
 
+func TestDeployAcceptsNodeWithEmptyBody(t *testing.T) {
+	t.Parallel()
+
+	// R1 unmarshals into a nil node definition; the name it keeps in Kubernetes is renamed, so
+	// the empty body meets both the label stamping and the rename in sanitizeNodeNames.
+	const definition = `name: lab1
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+  nodes:
+    R1:
+    node2:
+      kind: linux
+      image: alpine:3
+`
+
+	topologyFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	writeFile(t, topologyFile, definition, 0o644)
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+		NoTopologyCR:       true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	for nodeName, originalName := range map[string]string{
+		"r1":    "R1",
+		"node2": "node2",
+	} {
+		node := getTestPrimitive(t, r, nodeGVR, "lab-ns", nodeName)
+		if got := node.GetLabels()[labelOriginalNodeName]; got != originalName {
+			t.Fatalf(
+				"node %s label %s = %q, want the name the topology file used",
+				nodeName,
+				labelOriginalNodeName,
+				got,
+			)
+		}
+	}
+}
+
 func TestTargetNodesResolvesNodeNamesFromTheTopologyFile(t *testing.T) {
 	t.Parallel()
 
