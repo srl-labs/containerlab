@@ -2,8 +2,9 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
@@ -16,11 +17,7 @@ ${peer-ip}          10.0.0.2
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure distributed sros can ping sros2 over the veth-stitch link
     Wait Until Keyword Succeeds    3 minutes    10 seconds    Ping succeeds    sros    ${peer-ip}
@@ -89,9 +86,6 @@ Verify the stitch interfaces are removed on destroy
 
 
 *** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-
 Ping over SSH
     [Arguments]    ${node}    ${dst}
     Login via SSH with username and password

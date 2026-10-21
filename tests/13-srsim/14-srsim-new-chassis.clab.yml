@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: srsim-new-chassis
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+
+  nodes:
+    ixr-e2sc:
+      kind: nokia_srsim
+      type: ixr-e2sc
+
+    ixr-e3:
+      kind: nokia_srsim
+      type: ixr-e3
+
+    sar-10x:
+      kind: nokia_srsim
+      type: sar-10x
+      components:
+        - slot: A
+          type: cpiom-sar-x
+          mda: &mdas
+            - slot: 1
+              type: m2-1g-sfp+2-10g-sfp+
+            - slot: 2
+              type: m8-t1e1-rj48
+            - slot: 3
+              type: m2-1g-sfp+2-10g-sfp+
+            - slot: 4
+              type: m4-rs232-rj45+4-c3794-sfp
+            - slot: 5
+              type: m8-t1e1-rj48
+            - slot: 6
+              type: m4-rs232-rj45+4-c3794-sfp
+            - slot: 7
+              type: m8-t1e1-rj48
+            - slot: 8
+              type: m4-rs232-rj45+4-c3794-sfp
+        - slot: B
+          type: cpiom-sar-x
+          mda: *mdas
+      startup-config: |
+        /configure card 1 mda 1 mda-type m2-1g-sfp+2-10g-sfp+ admin-state enable
+        /configure card 1 mda 2 mda-type m8-t1e1-rj48 admin-state enable
+        /configure card 1 mda 3 mda-type m2-1g-sfp+2-10g-sfp+ admin-state enable
+        /configure card 1 mda 4 mda-type m4-rs232-rj45+4-c3794-sfp admin-state enable
+        /configure card 1 mda 5 mda-type m8-t1e1-rj48 admin-state enable
+        /configure card 1 mda 6 mda-type m4-rs232-rj45+4-c3794-sfp admin-state enable
+        /configure card 1 mda 7 mda-type m8-t1e1-rj48 admin-state enable
+        /configure card 1 mda 8 mda-type m4-rs232-rj45+4-c3794-sfp admin-state enable

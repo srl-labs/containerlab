@@ -43,18 +43,17 @@ jobs:
       SRSIM_IMAGE_TAG: 26.7.R1
     strategy:
       matrix:
-        test-suite:
-          - "01*.robot"
-          - "03*.robot"
-          - "04*.robot"
-          - "05*.robot"
-          - "06*.robot"
-          - "07*.robot"
-          - "08*.robot"
-          - "09*.robot"
-          - "10*.robot"
-          - "11*.robot"
-          - "12*.robot"
+        include:
+          - shard: basic
+            test_suites: "01-sros-to-linux.robot 07-srsim-with-mgmt-network.robot 12-srsim-veth-stitch.robot"
+          - shard: lifecycle
+            test_suites: "04-sros-classic.robot 06-srsim-sar.robot 10-srsim-lifecycle.robot"
+          - shard: components
+            test_suites: "05-sros-comp-to-linux.robot 09-srsim-pause-container.robot 14-srsim-new-chassis.robot"
+          - shard: provisioning
+            test_suites: "03-sros-dist-to-linux.robot 08-srsim-comp-cfg-test.robot 13-srsim-integrated.robot"
+          - shard: apply
+            test_suites: "11-srsim-apply.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -94,10 +93,10 @@ jobs:
       - name: Activate virtualenv
         run: |
           . .venv/bin/activate
-          echo PATH=$PATH >> $GITHUB_ENV
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
 
-      - name: Sanitize test-suite name
-        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+      - name: Set shard name
+        run: echo "TEST_SUITE=${{ matrix.shard }}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -107,7 +106,10 @@ jobs:
           password: ${{ github.token }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
+        run: |
+          image="ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG}"
+          docker pull "$image"
+          docker tag "$image" "registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}"
 
       - name: Logout from GitHub Container Registry
         run: docker logout ghcr.io
@@ -117,7 +119,9 @@ jobs:
 
       - name: Run sros-srsim tests
         run: |
-          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
+          for test_suite in ${{ matrix.test_suites }}; do
+            ./tests/rf-run.sh ${{ inputs.runtime }} "./tests/13-srsim/${test_suite}"
+          done
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v7

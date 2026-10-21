@@ -3,8 +3,9 @@ Library             OperatingSystem
 Library             Process
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
@@ -17,11 +18,7 @@ ${gnmic_flags}      --username admin --password NokiaSros1! --values-only --inse
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Wait for 45s
     Sleep    45s    Let everything fully provision & come up
@@ -167,9 +164,3 @@ Check CPM SSH
     FINALLY
         SSHLibrary.Close All Connections
     END
-
-Cleanup
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0

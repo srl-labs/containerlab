@@ -2,28 +2,20 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
 ${lab-name}         sr07
 ${lab-file-name}    07-srsim-mix.clab.yml
 ${runtime}          docker
-${key-name}         clab-test-key
 
 
 *** Test Cases ***
-Set key-path Variable
-    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
-    Set Suite Variable    ${key-path}
-
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
@@ -59,11 +51,6 @@ Do a gNMI GET using TLS
     Should Contain    ${output}    srsim10-a
 
 *** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    rm -f ${key-path}*
-
-
 Do a gNOI ping to other node
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output

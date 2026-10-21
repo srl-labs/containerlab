@@ -39,7 +39,19 @@ The SR OS node kind supports deploying Nokia's SR OS network operating system in
   - Edge case validation
   - Version parsing tests
 
-- During PreDeploy, `chassis_info.json` is read from the node image (`/opt/nokia/chassis_info.json`) and written under the node's lab directory (`n.Cfg.LabDir`) with the same filename.
+- **`component.go`**: Component model, slot checks, and environment precedence
+- **`component_config.go`**: Generated card, SFM, XIOM, and MDA configuration, including integrated defaults
+- **`chassis_info.go`**: Parses `chassis_info.json` and returns advisory compatibility warnings
+
+### Chassis info and component checks
+
+During PreDeploy, `createSROSFiles` reads `/opt/nokia/chassis_info.json` from the node image and writes it to `n.Cfg.LabDir/chassis_info.json`, prefixed with the license header. Failure to read the file is logged and does not stop deployment.
+
+The same file is then compared with the effective component configuration. Aliases such as `SAR-Mx` to `SAR-Hx` are followed. Unsupported slots, CPM/IOM types, SFM, XIOM, direct MDAs, and fixed-hardware mismatches produce warnings only. MDAs nested under an XIOM are not checked, because the file does not say which MDA types a given XIOM accepts.
+
+### Environment precedence
+
+Node `env` overrides per-component `env`, which overrides `type`, `xiom`, `mda`, and `sfm`. When a node environment variable replaces a different component value, containerlab logs that the component value will not be used and names the variable. `NOKIA_SROS_SLOT` still comes from each component in a distributed node, because one node-level slot cannot identify every card.
 
 ## Architecture
 
@@ -348,25 +360,12 @@ if !isFullConfigFile(n.Cfg.StartupConfig) {
 }
 ```
 
-For distributed SR OS deployments with multiple CPMs and linecards, this generates:
-- Slot-specific configuration
-- Card type definitions
-- MDA (Media Dependent Adapter) configurations
-- Fabric connectivity
+For integrated nodes and distributed line cards, this appends flat MD-CLI lines. CPM slots `A` and `B` are not provisioned as cards. `NOKIA_SROS_CARD`, or a component `type` on an integrated node, skips this generation because the built-in MDA defaults belong to the default card.
 
-Example generated component config:
 ```
-/configure {
-    card 1 {
-        card-type iom-e
-        mda 1 {
-            mda-type me12-100gb-qsfp28
-        }
-    }
-    card A {
-        card-type cpm-ixr
-    }
-}
+/configure card 1 card-type iom-1 admin-state enable
+/configure card 1 mda 1 mda-type me6-100gb-qsfp28 admin-state enable
+/configure sfm 1 sfm-type sfm-2s admin-state enable
 ```
 
 #### Phase 3: Node-Type Specific Configuration (`applyNodeTypeSpecificConfig`)
@@ -1049,79 +1048,18 @@ Each platform type has tailored configurations embedded in the `configs/` direct
 - SAR in classic mode doesn't support gRPC
 - Uses only CLI/NETCONF for management
 
-### Distributed SR OS Configuration
+### Component configuration
 
-For distributed deployments with multiple components (CPMs and line cards), additional configuration is generated.
+`generateComponentConfig` runs for integrated nodes and for the CPM of a distributed node, unless the user supplied a full startup config, selected classic mode, or set `gen-component-config: false`.
 
-#### Component Configuration Generation
+Known integrated types (`sr-1`, `sr-1s`, `ixr-r6`, and the `ixr-e*` pizza boxes) get built-in card and MDA lines. One `components` entry is accepted, with the slot omitted or set to `A`. `ixr-r6` also accepts `B`, and two entries (`A` and `B`) deploy a dual-CPIOM node. A component `type` sets `NOKIA_SROS_CARD` and skips generated card and MDA lines.
 
-```go
-func (n *sros) generateComponentConfig() string
-```
-
-**Generated Configuration Structure:**
+Distributed line cards produce one line per card, SFM, XIOM, and direct MDA. The values are the effective ones after environment precedence, so `NOKIA_SROS_MDA_*` and `NOKIA_SROS_XIOM_*` change the generated lines.
 
 ```
-/configure {
-    {{- range .Components }}
-    card {{ .Slot }} {
-        card-type {{ .Type }}
-        {{- if .MDAs }}
-        {{- range .MDAs }}
-        mda {{ .Slot }} {
-            mda-type {{ .Type }}
-        }
-        {{- end }}
-        {{- end }}
-    }
-    {{- end }}
-    
-    {{- if .FabricConfig }}
-    fabric {
-        {{ .FabricConfig }}
-    }
-    {{- end }}
-}
-```
-
-**Example Distributed Topology:**
-
-```yaml
-nodes:
-  chassis1:
-    kind: nokia_srsim
-    components:
-      - slot: A
-        type: cpm-ixr
-      - slot: B
-        type: cpm-ixr
-      - slot: 1
-        type: iom-ixr
-        mda:
-          - slot: 1
-            type: m20-1gb-sfp-b
-```
-
-**Generated Component Config:**
-
-```
-/configure {
-    card A {
-        card-type cpm-ixr
-    }
-    card B {
-        card-type cpm-ixr
-    }
-    card 1 {
-        card-type iom-ixr
-        mda 1 {
-            mda-type m20-1gb-sfp-b
-        }
-    }
-    fabric {
-        multiplane-mode enabled
-    }
-}
+/configure card 1 card-type xcm-2s admin-state enable
+/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable
+/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable
 ```
 
 ### Security and Certificate Management
@@ -1540,10 +1478,10 @@ ssh admin@clab-mylab-chassis1-cpm-a "show card state"
 ```
 
 **Common Causes:**
-- Component slots not properly defined
-- CPM slot names must be "A" or "B" (uppercase)
+- Component slots are duplicated, including slots that differ only by case
 - Line card slots must be numeric
-- Environment variables not set on components
+- The component type or MDA is not listed for that chassis in the image's `chassis_info.json` (this is logged as a warning and does not stop deployment)
+- A node-level environment variable overrides the component value; the log names the variable that was kept
 
 ## Performance Considerations
 
@@ -1640,5 +1578,5 @@ BSD 3-Clause License - See LICENSE file for details
 - Nokia Containerlab Team
 - Community Contributors
 
-**Last Updated:** 2025-11-15
-**SR OS Versions Supported:**  25.7+, 26.x (planned)
+**Last Updated:** 2026-10-14
+**SR OS Versions Supported:**  25.7+, 26.x
