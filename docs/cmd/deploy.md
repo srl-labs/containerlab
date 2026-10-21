@@ -239,6 +239,8 @@ them by destroying and redeploying the lab.
 
 The local `--dry-run` flag prints the planned changes without applying them. For an already deployed lab this shows the [reconciliation plan](#reconciliation-behavior)—the nodes and links to add, delete, recreate, or restart. For a lab that is not deployed yet it reports that the lab would be deployed.
 
+With the `c9s` runtime the plan also lists the Pods that a link change replaces, so a `recreate` on a VM-backed node is visible before it reboots. Nodes whose kind declares `live` link handling do not appear.
+
 `--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys and redeploys the full lab.
 
 #### max-workers
@@ -373,6 +375,23 @@ When the flag is not set, no pull secret is referenced at all: public images and
 ```bash
 containerlab --runtime c9s deploy -t mylab.clab.yml --image-pull-secret my-registry-secret
 ```
+
+#### expose-type
+
+The `--expose-type` flag applies to the
+[clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets
+`spec.expose.exposeType` on the generated `Topology`, or on the generated
+`NodeProfile` with `--no-topology-cr`. Accepted values are `LoadBalancer`,
+`ClusterIP`, `Headless`, and `None`.
+
+Use `None` to disable node exposure Services:
+
+```bash
+containerlab --runtime c9s deploy -t mylab.clab.yml --expose-type None
+```
+
+c9s 0.9 removed the older `disableExpose` field. Existing manifests must use
+`exposeType: None` instead.
 
 #### no-persistence
 

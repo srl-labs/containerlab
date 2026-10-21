@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -123,8 +124,8 @@ type NodeDefinition struct {
 	Memory string `yaml:"memory,omitempty"`
 	// Set the nodes Sysctl
 	Sysctls map[string]string `yaml:"sysctls,omitempty"`
-	// Extra options, may be kind specific
-	Extras *Extras `yaml:"extras,omitempty"`
+	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
+	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Deployment stages
 	Stages *Stages `yaml:"stages,omitempty"`
 	// DNS configuration
@@ -133,11 +134,9 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
-	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
-	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Network aliases
 	Aliases []string `yaml:"aliases,omitempty"`
-	// how `containerlab apply` handles dataplane link changes for this node:
+	// LinkApplyMode is how `containerlab apply` handles dataplane link changes for this node:
 	// live, restart or recreate. Overrides the kind's own declaration.
 	LinkApplyMode LinkApplyMode `yaml:"link-apply-mode,omitempty"`
 	// KindSpecificConfig holds the keys not known to the generic node definition. They are the
@@ -176,6 +175,14 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 
 	*n = NodeDefinition(nd.NodeDefinitionAlias)
 	n.KindSpecificConfig = nd.KindSpecificConfig
+
+	if _, ok := n.KindSpecificConfig["extras"]; ok {
+		return fmt.Errorf(
+			`the "extras" node field is removed; ` +
+				"set its kind-specific config keys directly on the node definition instead - " +
+				"see https://containerlab.dev/manual/nodes/#kind-specific-config",
+		)
+	}
 
 	if nd.LegacyUsername != "" && n.Credentials.Username == "" {
 		n.Credentials.Username = nd.LegacyUsername

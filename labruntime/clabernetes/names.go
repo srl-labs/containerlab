@@ -3,9 +3,9 @@ package clabernetes
 import (
 	"strings"
 
-	clabernetesutilcontainerlab "github.com/clabernetes/clabernetes/util/containerlab"
-	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabernetescompiler "github.com/clabernetes/clabernetes/compiler"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -17,7 +17,7 @@ func sanitizeNodeNames(
 	config *clabRuntimeConfig,
 	nodeNames []string,
 ) (map[string]string, error) {
-	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	renames, err := clabnames.SanitizeNodeNames(nodeNames)
 	if err != nil || len(renames) == 0 {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func sanitizeNodeNames(
 	// A node can share the network namespace of another node by name, and the compiler resolves
 	// that setting through the kind, group and defaults sections as well.
 	for _, nodeDefinition := range referencingNodeDefinitions(config.Topology) {
-		renameNetworkModePrimary(nodeDefinition, renames)
+		clabernetescompiler.RenameNetworkModePrimary(nodeDefinition, renames)
 	}
 
 	return renames, nil
@@ -62,21 +62,6 @@ func referencingNodeDefinitions(topology *clabtypes.Topology) []*clabtypes.NodeD
 	}
 
 	return definitions
-}
-
-func renameNetworkModePrimary(
-	nodeDefinition *clabtypes.NodeDefinition,
-	renames map[string]string,
-) {
-	if nodeDefinition == nil {
-		return
-	}
-
-	primary := clabernetesutilcontainerlab.ParseNetworkModeContainer(nodeDefinition.NetworkMode)
-	if sanitized, renamed := renames[primary]; renamed {
-		nodeDefinition.NetworkMode = clabernetesutilcontainerlab.NetworkModeContainerPrefix +
-			sanitized
-	}
 }
 
 // renameBriefLinkEndpoints points the wiring at the sanitized node names. Endpoints that do not
@@ -136,7 +121,7 @@ func resolveKnownNodeName[V any](known map[string]V, nodeName string) (string, b
 		return nodeName, true
 	}
 
-	sanitized := clablabruntime.SanitizeName(nodeName)
+	sanitized := clabnames.SanitizeName(nodeName)
 	if _, ok := known[sanitized]; ok {
 		return sanitized, true
 	}

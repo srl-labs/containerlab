@@ -5,9 +5,7 @@ topology:
     frr:
       enforce-startup-config: ${FRR_ENFORCE_STARTUP_CONFIG:=false}
       image: quay.io/frrouting/frr:containerlab-10.7.1
-      extras:
-        frr:
-          daemons: [ospfd]
+      daemons: [ospfd]
   nodes:
     r1:
       kind: frr

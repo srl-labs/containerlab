@@ -77,9 +77,17 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		topos[topoFile] = filepath.Dir(containers[idx].Labels[clabconstants.NodeLabDir])
 	}
 
+	// failedLabDirs records the lab directories whose destroy failed or was never
+	// attempted. --cleanup keeps those directories: deleting the lab directory of
+	// a lab that is still running would discard the state file destroy needs for
+	// its management network cleanup on the next attempt.
+	failedLabDirs := map[string]bool{}
+
 	defer func() {
 		if opts.cleanup {
-			err = c.destroyLabDirs(topos, opts.all)
+			if cleanupErr := c.destroyLabDirs(topos, opts.all, failedLabDirs); cleanupErr != nil {
+				err = errors.Join(err, cleanupErr)
+			}
 		}
 	}()
 
@@ -104,13 +112,18 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		if err != nil {
 			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
 
-			return err
+			errs = append(errs, fmt.Errorf(
+				"error creating clab instance for topo %q: %w", topo, err))
+			failedLabDirs[labDir] = true
+
+			continue
 		}
 
 		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
 		if err != nil {
 			log.Errorf("Error occurred during the %s lab deletion: %v", cc.Config.Name, err)
 			errs = append(errs, err)
+			failedLabDirs[labDir] = true
 		}
 	}
 
@@ -118,7 +131,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
 	}
 
-	return err
+	return nil
 }
 
 // creates a mostly cloned version of the current c but set to the new topology, and with the
@@ -189,9 +202,11 @@ func (c *CLab) makeCopyForDestroy(
 		return nil, err
 	}
 
-	// create management networks or use existing ones
-	// we call this to populate the bridge names
-	// which are needed for the removal of the iptables rules.
+	// populate the management network state (bridge names) destroy needs for the
+	// removal of the iptables rules, without creating networks that are missing:
+	// a lab deployed with a management network override leaves the topology's
+	// default network uncreated, and creating it here would collide with the
+	// subnets the override is using.
 	if !cc.mgmtNetworksSkipped() {
 		var bridged clabtypes.MgmtNetworks
 		for _, m := range cc.allMgmtNetworks() {
@@ -199,7 +214,7 @@ func (c *CLab) makeCopyForDestroy(
 				bridged = append(bridged, m)
 			}
 		}
-		if err = cc.createNetworks(ctx, bridged); err != nil {
+		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
 			return nil, err
 		}
 	}
@@ -212,7 +227,56 @@ func (c *CLab) makeCopyForDestroy(
 	return cc, nil
 }
 
-func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
+// resolveMgmtNetworksForDestroy inspects the management networks that already exist
+// so their bridge names are populated for the iptables cleanup. Networks that do not
+// exist are skipped: they hold no bridge to clean up, and destroy must not create
+// management networks. Runtimes that cannot check network existence keep the
+// create-or-inspect behavior.
+func (c *CLab) resolveMgmtNetworksForDestroy(
+	ctx context.Context,
+	networks clabtypes.MgmtNetworks,
+) error {
+	var existing clabtypes.MgmtNetworks
+
+	for _, m := range networks {
+		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
+		if rtErr != nil {
+			// runtimes without multiple network support never created extra networks
+			log.Debug(
+				"Skipping management network resolution", "network", m.Network, "error", rtErr,
+			)
+			continue
+		}
+
+		checker, ok := rt.(clabruntime.MgmtNetworkChecker)
+		if !ok {
+			existing = append(existing, m)
+			continue
+		}
+
+		exists, err := checker.MgmtNetworkExists(ctx)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			log.Debug("Skipping management network that does not exist", "network", m.Network)
+			continue
+		}
+
+		existing = append(existing, m)
+	}
+
+	return c.createNetworks(ctx, existing)
+}
+
+// destroyLabDirs removes the lab directories of the destroyed labs. Directories
+// recorded in failedLabDirs are kept: their labs are still running, and the
+// directory holds the lab state a later destroy attempt relies on.
+func (c *CLab) destroyLabDirs(
+	topos map[string]string,
+	all bool,
+	failedLabDirs map[string]bool,
+) error {
 	if len(topos) == 0 {
 		log.Info("no containerlab containers found")
 
@@ -247,6 +311,15 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 	}
 
 	for _, labdir := range topos {
+		if failedLabDirs[labdir] {
+			log.Warnf(
+				"keeping lab directory %s: the lab was not destroyed, so its state is kept for a later attempt",
+				labdir,
+			)
+
+			continue
+		}
+
 		err := os.RemoveAll(labdir)
 		if err != nil {
 			log.Errorf("error deleting lab directory: %v", err)

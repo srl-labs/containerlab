@@ -1,5 +1,13 @@
 # Agents
 
+## Git workflow
+
+- Never force-push. Commits always go on top of the remote branch history with `git push`.
+- Amending, rebasing, or rewriting already-pushed commits is a force push and requires the user's explicit request. Without it, add a follow-up commit instead.
+- `--force-with-lease` (and any other flag that rewrites remote history) counts as a force push and is subject to the same rule.
+
+This rule applies to every agent working in this repository, in every session, unless the user explicitly asks for a force push for a specific push.
+
 Containerlab is a CLI tool for building and managing labs with containerized network devices. It provides a simple and efficient way to create both small and large network topologies using Docker containers.
 
 ## Repository structure

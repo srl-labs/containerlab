@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -80,7 +79,8 @@ type createdPrimitiveResource struct {
 
 func (r *Runtime) waitPrimitiveLinksResolved(
 	ctx context.Context,
-	namespace string,
+	namespace,
+	topologyName string,
 	desiredLinks []*unstructured.Unstructured,
 	timeout time.Duration,
 ) error {
@@ -89,6 +89,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	}
 	log.Info(
 		"Waiting for C9s links to resolve",
+		"lab", topologyName,
 		"namespace", namespace,
 		"links", len(desiredLinks),
 	)
@@ -105,8 +106,13 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	var pending []string
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
 		func(ctx context.Context) (bool, error) {
+			// List only this lab's links, exactly like every other primitive list: in a shared
+			// namespace a server-side selector keeps the poll proportional to the lab instead
+			// of the namespace, and foreign links are not interesting to wait on.
 			links, err := r.client.Resource(linkGVR).Namespace(namespace).
-				List(ctx, metav1.ListOptions{})
+				List(ctx, metav1.ListOptions{
+					LabelSelector: labels.Set{labelTopologyOwner: topologyName}.String(),
+				})
 			if err != nil {
 				if ctx.Err() != nil || contextDeadlineIsImminent(ctx) {
 					return false, nil
@@ -151,9 +157,10 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	}
 
 	return fmt.Errorf(
-		"timed out after %s waiting for c9s links in namespace %s to resolve; pending links: %s",
+		"timed out after %s waiting for c9s links of lab %s/%s to resolve; pending links: %s",
 		effectiveTimeout,
 		namespace,
+		topologyName,
 		strings.Join(pending, ", "),
 	)
 }
@@ -178,7 +185,7 @@ func primitiveLinkPendingReason(link *unstructured.Unstructured) string {
 		if nodeName == "" {
 			return "waiting for endpoint binding"
 		}
-		if nodeName == clabernetesapisv1alpha1.LinkHostNodeName {
+		if nodeName == linkHostNodeName {
 			continue
 		}
 
@@ -344,3 +351,6 @@ func uniquePrimaryNodes(nodeNames []string, primaries map[string]string) []strin
 
 	return unique
 }
+
+// linkHostNodeName is the reserved endpoint node name for a node-local host link.
+const linkHostNodeName = "host"

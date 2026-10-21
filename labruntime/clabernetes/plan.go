@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -200,6 +202,15 @@ func (r *Runtime) Plan(
 		updated := reconciledPrimitiveObject(existingTopology, prepared.topology)
 		if !primitiveObjectsConform(existingTopology, updated) {
 			appendPlanChange(plan, clablabruntime.ChangeUpdate, "Topology", namespace, req.Name)
+			if err := r.planNodeLinkEffects(
+				ctx,
+				namespace,
+				req.Name,
+				prepared.primitives,
+				plan,
+			); err != nil {
+				return nil, err
+			}
 		}
 		if err := r.planConfigMaps(
 			ctx,
@@ -366,6 +377,10 @@ func (r *Runtime) planPrimitiveResources(
 		}
 	}
 
+	if err := r.planNodeLinkEffects(ctx, namespace, topologyName, desired, plan); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -444,4 +459,162 @@ func sortDeployPlan(plan *clablabruntime.DeployPlan) {
 
 		return left.Name < right.Name
 	})
+}
+
+// planNodeLinkEffects reports the pod-level impact of the link changes a deploy brings:
+// a node whose links change has its Pod replaced unless its link apply mode is live. The
+// plan carries the resource-level changes of the links themselves, so this only adds the
+// lifecycle entries the resource view hides, most notably the reboot of VM-backed nodes.
+func (r *Runtime) planNodeLinkEffects(
+	ctx context.Context,
+	namespace,
+	topologyName string,
+	desired *primitiveResourceSet,
+	plan *clablabruntime.DeployPlan,
+) error {
+	desiredLinks := make(map[string]*unstructured.Unstructured, len(desired.links))
+	for _, link := range desired.links {
+		desiredLinks[link.GetName()] = link
+	}
+
+	existingLinks, err := r.client.Resource(linkGVR).Namespace(namespace).
+		List(ctx, metav1.ListOptions{
+			LabelSelector: labels.Set{labelTopologyOwner: topologyName}.String(),
+		})
+	if err != nil {
+		return fmt.Errorf("failed to list c9s links in namespace %s: %w", namespace, err)
+	}
+
+	existingLinkByName := make(map[string]*unstructured.Unstructured, len(existingLinks.Items))
+	for idx := range existingLinks.Items {
+		existingLinkByName[existingLinks.Items[idx].GetName()] = &existingLinks.Items[idx]
+	}
+
+	affected := map[string]struct{}{}
+	for _, desiredLink := range desired.links {
+		existing := existingLinkByName[desiredLink.GetName()]
+		if existing == nil {
+			collectAffectedLinkNodes(desiredLink, affected)
+
+			continue
+		}
+		if linkSpecsConform(existing, desiredLink) {
+			continue
+		}
+
+		// A rewired link tears down both sides: the previous endpoint loses its
+		// interface, the new one gains it.
+		collectAffectedLinkNodes(desiredLink, affected)
+		collectAffectedLinkNodes(existing, affected)
+	}
+	for name, existingLink := range existingLinkByName {
+		if _, keep := desiredLinks[name]; keep {
+			continue
+		}
+		collectAffectedLinkNodes(existingLink, affected)
+	}
+
+	if len(affected) == 0 {
+		return nil
+	}
+
+	// A Pod replacement only concerns nodes that exist and are still desired: brand new
+	// nodes come up with the new wiring already in place, and removed nodes lose their
+	// Pod entirely.
+	existingNodes, err := r.client.Resource(nodeGVR).Namespace(namespace).
+		List(ctx, metav1.ListOptions{
+			LabelSelector: labels.Set{labelTopologyOwner: topologyName}.String(),
+		})
+	if err != nil {
+		return fmt.Errorf("failed to list c9s nodes in namespace %s: %w", namespace, err)
+	}
+
+	existingNodeByName := make(map[string]struct{}, len(existingNodes.Items))
+	for idx := range existingNodes.Items {
+		existingNodeByName[existingNodes.Items[idx].GetName()] = struct{}{}
+	}
+
+	for _, node := range desired.nodes {
+		name := node.GetName()
+		if _, ok := affected[name]; !ok {
+			continue
+		}
+		if _, running := existingNodeByName[name]; !running {
+			continue
+		}
+
+		mode, err := r.nodeLinkApplyMode(node)
+		if err != nil {
+			return err
+		}
+		if mode == clabtypes.LinkApplyModeLive {
+			continue
+		}
+
+		// c9s replaces the Pod for both the restart and the recreate mode; only live
+		// changes keep the Pod in place.
+		appendPlanChange(plan, clablabruntime.ChangeRecreate, "Pod", namespace, name)
+	}
+
+	return nil
+}
+
+// collectAffectedLinkNodes adds both sides of a Link to the set of nodes whose Pod the
+// link change replaces.
+func collectAffectedLinkNodes(link *unstructured.Unstructured, affected map[string]struct{}) {
+	for _, side := range []string{"endpointA", "endpointB"} {
+		nodeName, _, _ := unstructured.NestedString(link.Object, "spec", side, "nodeName")
+		if nodeName == "" || nodeName == "host" {
+			continue
+		}
+		affected[nodeName] = struct{}{}
+	}
+}
+
+// linkSpecsConform reports whether the stored Link spec matches the desired one, modulo
+// API-defaulted empty values. Labels and annotations do not carry a wire, so only the
+// spec decides whether a link changed.
+func linkSpecsConform(existing, desired *unstructured.Unstructured) bool {
+	return apiequality.Semantic.DeepEqual(
+		normalizeAPIDefaultedJSON(existing.Object["spec"]),
+		normalizeAPIDefaultedJSON(desired.Object["spec"]),
+	)
+}
+
+// nodeLinkApplyMode resolves the link apply mode a c9s node uses when its links change:
+// the topology's link-apply-mode override when set, otherwise the kind's default. Without
+// a kind resolver the conservative recreate default applies to every affected node.
+func (r *Runtime) nodeLinkApplyMode(
+	node *unstructured.Unstructured,
+) (clabtypes.LinkApplyMode, error) {
+	if override, _, _ := unstructured.NestedString(
+		node.Object, "spec", "link-apply-mode",
+	); override != "" {
+		mode := clabtypes.LinkApplyMode(override)
+		switch mode {
+		case clabtypes.LinkApplyModeLive, clabtypes.LinkApplyModeRestart,
+			clabtypes.LinkApplyModeRecreate:
+			return mode, nil
+		default:
+			return "", fmt.Errorf("node %q: invalid link-apply-mode %q", node.GetName(), override)
+		}
+	}
+
+	if r.kindLinkApplyMode == nil {
+		return clabtypes.LinkApplyModeRecreate, nil
+	}
+
+	mode := r.kindLinkApplyMode(nodeSpecKind(node))
+	if mode == "" {
+		return clabtypes.LinkApplyModeRecreate, nil
+	}
+
+	return clabtypes.LinkApplyMode(mode), nil
+}
+
+// nodeSpecKind returns the kind the compiled Node spec carries.
+func nodeSpecKind(node *unstructured.Unstructured) string {
+	kind, _, _ := unstructured.NestedString(node.Object, "spec", "kind")
+
+	return kind
 }

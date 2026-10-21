@@ -76,7 +76,9 @@ Currently supported runtimes:
 - `docker`
 - `c9s`
 
-With `--runtime c9s`, events are backed by kubernetes watches for Clabernetes `Topology` resources and labeled Pods. Interface statistics are sampled through the launcher pods, not through local host netlink.
+With `--runtime c9s`, events are backed by kubernetes watches for Clabernetes
+`Topology` resources and labeled Pods. Interface statistics are sampled inside
+the device containers, not through local host netlink.
 
 Runtimes that do not implement the `events` API, or are not yet supported by Containerlab, will exit with an explanatory error.
 

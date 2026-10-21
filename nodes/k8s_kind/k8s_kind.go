@@ -33,11 +33,28 @@ var kindnames = []string{"k8s-kind"}
 // deployment time, as the KinD library does perform retries in that case.
 var serializeDelete = semaphore.NewWeighted(1)
 
+// KindSpecificConfig is the k8s-kind kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// KubeconfigPath is the path where kind writes the cluster's kubeconfig
+	// file. It can be absolute or relative to the topology file location.
+	KubeconfigPath *string `yaml:"kubeconfig,omitempty" json:"kubeconfig,omitempty"`
+	// Wait overrides the duration to wait for the cluster to become ready.
+	// Given as a Go duration string, e.g. `0s` or `2m`.
+	Wait *string `yaml:"wait,omitempty" json:"wait,omitempty"`
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
+
+func (n *k8s_kind) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
+
 // Register registers the node in the global Node map.
 func Register(r *clabnodes.NodeRegistry) {
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).
+		WithKindSpecificConfig(kindSpecificConfig)
+
 	r.Register(kindnames, func() clabnodes.Node {
 		return new(k8s_kind)
-	}, nil)
+	}, nrea)
 }
 
 type k8s_kind struct {
@@ -91,28 +108,25 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
 		cluster.CreateWithWaitForReady(time.Duration(15)*time.Minute),
 	)
 
-	// Handle extra deploy options
-	if n.Cfg.Extras != nil && n.Cfg.Extras.K8sKind != nil &&
-		n.Cfg.Extras.K8sKind.Deploy != nil {
-		opts := n.Cfg.Extras.K8sKind.Deploy
+	// Handle kind-specific config options
+	opts := n.kindSpecificCfg()
 
-		// Sets the explicit --kubeconfig path
-		if opts.KubeconfigPath != nil {
-			// Resolve the kubeconfig path relative to the clab file location.
-			resolvedPath := clabutils.ResolvePath(*opts.KubeconfigPath, n.Cfg.LabDir)
-			clusterCreateOptions = append(clusterCreateOptions,
-				cluster.CreateWithKubeconfigPath(resolvedPath))
-		}
+	// Sets the explicit --kubeconfig path
+	if opts.KubeconfigPath != nil {
+		// Resolve the kubeconfig path relative to the clab file location.
+		resolvedPath := clabutils.ResolvePath(*opts.KubeconfigPath, n.Cfg.LabDir)
+		clusterCreateOptions = append(clusterCreateOptions,
+			cluster.CreateWithKubeconfigPath(resolvedPath))
+	}
 
-		// Override the default wait duration
-		if opts.Wait != nil {
-			duration, err := time.ParseDuration(*opts.Wait)
-			if err != nil {
-				return fmt.Errorf("failed to parse wait duration: %w", err)
-			}
-			clusterCreateOptions = append(clusterCreateOptions,
-				cluster.CreateWithWaitForReady(duration))
+	// Override the default wait duration
+	if opts.Wait != nil {
+		duration, err := time.ParseDuration(*opts.Wait)
+		if err != nil {
+			return fmt.Errorf("failed to parse wait duration: %w", err)
 		}
+		clusterCreateOptions = append(clusterCreateOptions,
+			cluster.CreateWithWaitForReady(duration))
 	}
 
 	// create the kind cluster

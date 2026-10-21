@@ -24,6 +24,7 @@ import (
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	_ "github.com/srl-labs/containerlab/labruntime/all"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -184,7 +185,7 @@ func (c *CLab) prepareLabRuntimeTopology() error {
 // addressing the lab by the same name; node names are renamed by the runtime itself, where the
 // topology it hands over is rewritten, and are only reported here.
 func (c *CLab) sanitizeLabRuntimeNames() error {
-	if sanitized := clablabruntime.SanitizeName(c.Config.Name); sanitized != c.Config.Name {
+	if sanitized := clabnames.SanitizeName(c.Config.Name); sanitized != c.Config.Name {
 		if sanitized == "" {
 			return fmt.Errorf(
 				"lab name %q holds no character a lab runtime object name can be built from",
@@ -210,7 +211,7 @@ func (c *CLab) sanitizeLabRuntimeNames() error {
 		nodeNames = append(nodeNames, nodeName)
 	}
 
-	renames, err := clablabruntime.SanitizeNodeNames(nodeNames)
+	renames, err := clabnames.SanitizeNodeNames(nodeNames)
 	if err != nil {
 		return err
 	}

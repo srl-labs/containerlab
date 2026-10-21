@@ -513,9 +513,28 @@ func stageAdditionalNodeFiles(
 		"env-files": config.Topology.GetNodeEnvFiles(nodeName),
 	}
 
-	if extras := config.Topology.GetNodeExtras(nodeName); extras != nil {
-		pathsByField["extras.srl-agents"] = extras.SRLAgents
-		pathsByField["extras.ceos-copy-to-flash"] = extras.CeosCopyToFlash
+	// kind-specific config key whose values are paths that a device pod cannot
+	// see unless they are staged into the node's ConfigMaps first.
+	pathFields := map[string]bool{
+		"copy-to-flash": true,
+	}
+
+	for _, entry := range config.Topology.GetNodeKindSpecificConfig(nodeName) {
+		if !pathFields[entry.Key] {
+			continue
+		}
+
+		paths, ok := entry.Value.([]any)
+		if !ok {
+			continue
+		}
+
+		pathsByField[entry.Key] = make([]string, 0, len(paths))
+		for _, p := range paths {
+			if s, ok := p.(string); ok {
+				pathsByField[entry.Key] = append(pathsByField[entry.Key], s)
+			}
+		}
 	}
 
 	fieldNames := make([]string, 0, len(pathsByField))

@@ -45,6 +45,7 @@ tests/out
 .python-version
 
 .devcontainer/private-*
+.devcontainer/*/devcontainer-lock.json
 
 
 # readd test labDir files

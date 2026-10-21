@@ -28,10 +28,8 @@ groups:
   routers:
     kind: frr
     image: quay.io/frrouting/frr:containerlab-10.7.1
-    extras:
-      frr:
-        daemons:
-          - ospfd
+    daemons:
+      - ospfd
 ```
 
 Setting this on the group rather than on each node means all three routers share the list. See [Daemons](../manual/kinds/frr.md#daemons) for the full set of names.

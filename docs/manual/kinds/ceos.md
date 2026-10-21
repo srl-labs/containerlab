@@ -446,7 +446,7 @@ clab-srlceos01/ceos
 
 ## Copy to `flash`
 
-If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use `.extras.ceos-copy-to-flash` config option. These files will be copied to the node's flash directory and evaluated on startup.
+If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use the `copy-to-flash` [kind-specific config key](../nodes.md#kind-specific-config). These files will be copied to the node's flash directory and evaluated on startup.
 
 ```yaml
 name: ceos
@@ -455,10 +455,9 @@ topology:
     ceos1:
       kind: -{{ kind_code_name }}-
       ...
-      extras:
-        ceos-copy-to-flash:
-        - ceos-config # (1)!
-        - toggle_override
+      copy-to-flash:
+      - ceos-config # (1)!
+      - toggle_override
 ```
 
 1. Paths are relative to the topology file. Absolute paths like `~/some/path` or `/some/path` are also possible.

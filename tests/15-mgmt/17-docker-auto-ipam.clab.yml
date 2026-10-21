@@ -1,0 +1,23 @@
+name: {{ .Name }}
+
+{{ if .Mgmt }}
+mgmt: {{ .Mgmt }}
+{{ end }}
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+    cmd: sleep 9999
+{{ if .Mgmt }}
+    mgmt-net: {{ .Network }}
+{{ end }}
+  nodes:
+    r1:
+{{ if .StaticIPv4 }}
+      mgmt-ipv4: {{ .StaticIPv4 }}
+{{ end }}
+{{ if .StaticIPv6 }}
+      mgmt-ipv6: {{ .StaticIPv6 }}
+{{ end }}
+    r2:

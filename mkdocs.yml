@@ -82,13 +82,9 @@ nav:
       - Network: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
-      - Clabernetes:
+      - C9s (Clabernetes):
           - manual/clabernetes/index.md
-          - Install: manual/clabernetes/install.md
-          - Quickstart: manual/clabernetes/quickstart.md
-          - Containerlab runtime: manual/clabernetes/runtime.md
-          - Configuration: manual/clabernetes/configuration.md
-          - Packet capture in c9s: manual/clabernetes/pcap.md
+          - manual/clabernetes/runtime.md
       - Node filtering: manual/node-filtering.md
       - Multi-node labs: manual/multi-node.md
       - Certificate management: manual/cert.md
@@ -201,6 +197,7 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.81": rn/0.81.md
       - "0.80": rn/0.80.md
       - "0.79": rn/0.79.md
       - "0.78": rn/0.78.md

@@ -83,7 +83,14 @@ jobs:
               - 'cert/**'
               - 'virt/**'
               - 'git/**'
-              - 'border0_api/**'
+              - 'constants/**'
+              - 'exec/**'
+              - 'labruntime/**'
+              - 'mgmt/**'
+              - 'mocks/**'
+              - 'names/**'
+              - 'netem/**'
+              - 'schemas/**'
               - '.github/workflows/**'
               - 'go.mod'
               - 'Makefile'
@@ -146,19 +153,6 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
-
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - run: make test
 
@@ -667,19 +661,6 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
-
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4

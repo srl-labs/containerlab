@@ -33,7 +33,7 @@ The script has been tested on the following OSes:
 * Red Hat Enterprise Linux 9
 * CentOS Stream 9
 * Fedora Server 40 (should work on other variants of Fedora)
-* Rocky Linux 9.3, 8.8 (should work on any 9.x and 8.x release)
+* Rocky Linux 10.2, 9.3, 8.8 (should work on any 10.x, 9.x and 8.x release)
 
 To install all components at once, run the following command on any of the supported OSes:
 <!-- --8<-- [start:quick-setup-script-cmd] -->

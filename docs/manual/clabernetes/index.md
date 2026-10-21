@@ -4,39 +4,15 @@ tags:
   - Clabernetes
 ---
 
-# Clabernetes
+# Clabernetes (c9s)
 
-<small>pronunciation: *Kla-ber-net-ees*</small>
+[Clabernetes](https://c9s.run), or c9s, schedules containerlab topologies across the nodes of a
+Kubernetes cluster. It allows users to run massive labs with hundreds of nodes across the horizontally scalable infrastructure or using familiar Kubernetes interface for lab purposes of any size.
 
-Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/clabernetes/clabernetes/) or simply **c9s**.
+The c9s project maintains [its own documentation site](https://c9s.run/docs) covering installation,
+architecture, API, configuration, and operations:
 
-![Clabernetes](https://gitlab.com/rdodin/pics/-/wikis/uploads/9d8c5abcb8db2c80811635d928aa98df/c9s_logo1_border_2.webp){ align=left width="300" }
+Understanding that Kubernetes workflows may be challenging to grasp from the get-go, Containerlab strives to provide a seamless experience for its user by offering adding C9s as a lab runtime. The same containerlab commands - deploy, destroy, inspect, and others - can be used to manage labs on Kubernetes clusters.  
+See the [C9s runtime](runtime.md) for details.
 
-<figure markdown>
-![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/4fdd35b5f4553d766216a4bda2b9a20c/geogebra-export.svg#only-light)
-![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/a139e454c70614298f5bf5b86fe1eeb0/geogebra-export-darkbg.svg#only-dark)
-</figure>
-
-Clabernetes deploys containerlab topologies into a kubernetes cluster. The goal of Clabernetes is to scale Containerlab beyond a single node while keeping the user experience you love.
-
-You can use clabernetes in two ways:
-
-- with the native [`containerlab --runtime c9s`](runtime.md) workflow
-- with [`clabverter`](install.md#clabverter), which converts topology files into kubernetes manifests
-
-If all goes to plan, Clabernetes is going to be one of the solutions to enable [multi-node labs](../multi-node.md) and allow its users to create large topologies powered by a k8s cluster.
-
-Eager to try it out? Check out the [Quickstart](quickstart.md)! Have questions, join our [Discord](https://discord.gg/2A8ZxM7hD9).
-
-/// warning
-We are sharing Clabernetes β version to allow people to see what we're working on and potentially attract contributors and early adopters. You may not need any k8s knowledge to use it, but if something goes wrong, you might need to dig into k8s logs and resources to figure out what's happening.
-
-In the beta release we focus on the core topology constructs working our way towards full feature parity with Containerlab (and even more).
-///
-
-## Quick Links
-
-* [Helm chart on ArtifactHub](https://artifacthub.io/packages/helm/clabernetes/clabernetes)
-* [CRD reference](https://c9s.run/docs/crd)
-* [Native containerlab runtime](runtime.md)
-* Source code on [GitHub](https://github.com/clabernetes/clabernetes)
+> The former `clabverter` workflow was removed in c9s 0.9. Use the native containerlab runtime for new deployments.

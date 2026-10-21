@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
@@ -337,7 +336,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		RestartPolicy:   c.Config.Topology.GetRestartPolicy(nodeName),
 		LinkApplyMode:   c.Config.Topology.GetNodeLinkApplyMode(nodeName),
-		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
@@ -468,8 +466,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
 	c.processNodeExecs(nodeCfg)
-
-	c.processNodeExtras(nodeCfg)
 
 	return nodeCfg, nil
 }
@@ -992,28 +988,6 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 			stage.Execs[i] = &execCopy
 		}
 	}
-}
-
-// processNodeExtras replaces magic variables in node extras.
-func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
-	if nodeCfg.Extras == nil {
-		return
-	}
-
-	r := c.magicVarReplacer(nodeCfg.ShortName)
-	extras := *nodeCfg.Extras
-
-	extras.CeosCopyToFlash = slices.Clone(nodeCfg.Extras.CeosCopyToFlash)
-	for i, e := range extras.CeosCopyToFlash {
-		extras.CeosCopyToFlash[i] = r.Replace(e)
-	}
-
-	extras.SRLAgents = slices.Clone(nodeCfg.Extras.SRLAgents)
-	for i, e := range extras.SRLAgents {
-		extras.SRLAgents[i] = r.Replace(e)
-	}
-
-	nodeCfg.Extras = &extras
 }
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.

@@ -72,12 +72,23 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformAttrs,
-	)
+	).WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(KindNames, func() clabnodes.Node {
 		return new(ceos)
 	}, nrea)
 }
+
+// KindSpecificConfig is the arista_ceos kind-specific config, set as keys on the node definition.
+type KindSpecificConfig struct {
+	// CopyToFlash holds the paths of files which are to be copied to the
+	// ceos flash directory.
+	CopyToFlash []string `yaml:"copy-to-flash,omitempty" json:"copy-to-flash,omitempty"`
+}
+
+var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
+
+func (n *ceos) kindSpecificCfg() *KindSpecificConfig { return kindSpecificConfig.Of(n.Cfg) }
 
 type ceos struct {
 	clabnodes.DefaultNode
@@ -233,12 +244,12 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		return err
 	}
 
-	// if extras have been provided copy these into the flash directory
-	if nodeCfg.Extras != nil && len(nodeCfg.Extras.CeosCopyToFlash) != 0 {
-		extras := nodeCfg.Extras.CeosCopyToFlash
+	// copy the files listed under the copy-to-flash kind-specific key
+	// into the flash directory
+	if copyToFlash := n.kindSpecificCfg().CopyToFlash; len(copyToFlash) != 0 {
 		flash := filepath.Join(nodeCfg.LabDir, "flash")
 
-		for _, extrapath := range extras {
+		for _, extrapath := range copyToFlash {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
 
@@ -248,7 +259,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 			if err := clabutils.CopyFile(ctx,
 				clabutils.ResolvePath(extrapath, topoDir), dest,
 				clabconstants.PermissionsFileDefault); err != nil {
-				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
+				return fmt.Errorf("copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}
 	}

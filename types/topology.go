@@ -805,19 +805,6 @@ func (t *Topology) GetSysCtl(nodeName string) map[string]string {
 	)
 }
 
-// GetNodeExtras returns the 'extras' section for the given node.
-func (t *Topology) GetNodeExtras(nodeName string) *Extras {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) *Extras { return node.Extras },
-		func(group *NodeDefinition) *Extras { return group.Extras },
-		func(kind *NodeDefinition) *Extras { return kind.Extras },
-		func(defaults *NodeDefinition) *Extras { return defaults.Extras },
-		func(v *Extras) bool { return v != nil },
-	)
-}
-
 func (t *Topology) GetNodeDns(nodeName string) *DNSConfig {
 	return getField(
 		t,

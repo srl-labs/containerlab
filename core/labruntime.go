@@ -14,6 +14,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabnames "github.com/srl-labs/containerlab/names"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"golang.org/x/term"
@@ -496,7 +497,7 @@ func (c *CLab) topologyNodeName(name string) string {
 	}
 
 	for nodeName := range c.Config.Topology.Nodes {
-		if clablabruntime.SanitizeName(nodeName) == name {
+		if clabnames.SanitizeName(nodeName) == name {
 			return nodeName
 		}
 	}

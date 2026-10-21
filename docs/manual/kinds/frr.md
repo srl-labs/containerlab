@@ -12,7 +12,7 @@ kind_display_name: FRRouting
 
 Earlier containerlab labs ran FRR containers with the [`linux`](linux.md) kind, supplying `frr.conf` and `daemons` through explicit bind mounts. The native `frr` kind builds on that work and makes FRR a first-class citizen in containerlab: it manages configuration files, daemon selection, forwarding, SSH public keys, and saving the running configuration.
 
-To adapt an existing lab, change `kind: linux` to `kind: frr`, replace the bind mount for `/etc/frr/frr.conf` with `startup-config`, and replace the `/etc/frr/daemons` bind mount with `extras.frr.daemons`. Remove any bind for `/etc/frr/vtysh.conf`, since the kind generates it. Use the containerlab image below if you need SSH access. Existing labs can continue using the `linux` kind.
+To adapt an existing lab, change `kind: linux` to `kind: frr`, replace the bind mount for `/etc/frr/frr.conf` with `startup-config`, and replace the `/etc/frr/daemons` bind mount with the `daemons` [kind-specific config key](../nodes.md#kind-specific-config). Remove any bind for `/etc/frr/vtysh.conf`, since the kind generates it. Use the containerlab image below if you need SSH access. Existing labs can continue using the `linux` kind.
 
 ## Getting -{{ kind_display_name }}- image
 
@@ -108,7 +108,7 @@ The hostname is not set in the generated config on purpose. FRR picks up the con
 
 ### Daemons
 
-By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under `extras`:
+By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under the `daemons` [kind-specific config key](../nodes.md#kind-specific-config):
 
 ```yaml
 topology:
@@ -116,23 +116,21 @@ topology:
     router1:
       kind: -{{ kind_code_name }}-
       image: quay.io/frrouting/frr:containerlab-10.7.1
-      extras:
-        frr:
-          daemons:
-            - ospfd
-            - bfdd
+      daemons:
+        - ospfd
+        - bfdd
 ```
 
 Naming any daemon switches off all the ones you did not name. `zebra`, `staticd`, `mgmtd` and `watchfrr` are always started by FRR and may be listed or left out; either way they run.
 
 The list accepts `bgpd`, `ospfd`, `ospf6d`, `ripd`, `ripngd`, `isisd`, `pimd`, `pim6d`, `ldpd`, `nhrpd`, `eigrpd`, `babeld`, `sharpd`, `pbrd`, `bfdd`, `fabricd`, `vrrpd` and `pathd`. Any other name is an error naming the offending entry.
 
+`daemons` can be set on a group or a kind as well as on a single node, so a whole class of routers can share one daemon list. See the [frr01 lab](../../lab-examples/frr01.md) for that.
+
 /// admonition | Daemons and topology size
     type: subtle-note
 Starting all daemons increases the number of processes and memory usage per node. For larger topologies, list only the daemons the lab needs.
 ///
-
-`extras` can be set on a group or a kind as well as on a single node, so a whole class of routers can share one daemon list. See the [frr01 lab](../../lab-examples/frr01.md) for that.
 
 ### Saving configuration
 

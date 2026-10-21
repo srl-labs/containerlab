@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -2156,8 +2157,6 @@ func TestDeployStagesLocalFilesFromTopology(t *testing.T) {
 		0o644,
 	)
 	writeFile(t, filepath.Join(topologyDir, "configs", "client2.env"), "MODE=test\n", 0o644)
-	writeFile(t, filepath.Join(topologyDir, "configs", "agent.yml"), "name: agent\n", 0o644)
-	writeFile(t, filepath.Join(topologyDir, "configs", "flash.cfg"), "hostname ceos\n", 0o644)
 
 	const definition = `name: lab1
 topology:
@@ -2170,11 +2169,6 @@ topology:
       kind: linux
       env-files:
         - configs/client2.env
-      extras:
-        srl-agents:
-          - configs/agent.yml
-        ceos-copy-to-flash:
-          - configs/flash.cfg
       binds:
         - configs/client2:/config
     prometheus:
@@ -2210,8 +2204,6 @@ topology:
 	}{
 		"configs/client2/iperf.sh":          {"client2", "#!/bin/sh\n", "execute"},
 		"configs/client2.env":               {"client2", "MODE=test\n", "read"},
-		"configs/agent.yml":                 {"client2", "name: agent\n", "read"},
-		"configs/flash.cfg":                 {"client2", "hostname ceos\n", "read"},
 		"configs/prometheus/prometheus.yml": {"prometheus", "global: {}\n", "read"},
 		"configs/fabric/leaf1.cfg":          {"leaf1", "set / system name leaf1\n", "read"},
 	}
@@ -2923,6 +2915,497 @@ topology:
 	}
 	if len(links.Items) != 1 {
 		t.Fatalf("len(links) = %d, want 1", len(links.Items))
+	}
+}
+
+// createFakeControllerNode creates the Node primitive a c9s controller would own for a
+// topology node and marks it ready, so the fake cluster reports the lab as ready.
+func createFakeControllerNode(
+	t *testing.T,
+	r *Runtime,
+	namespace,
+	topologyName,
+	nodeName string,
+) {
+	t.Helper()
+
+	node := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name":      nodeName,
+			"namespace": namespace,
+			"labels": map[string]any{
+				labelTopologyOwner: topologyName,
+			},
+		},
+		"spec":   map[string]any{"kind": "linux", "image": "alpine:3"},
+		"status": map[string]any{"readiness": "ready"},
+	}}
+	if _, err := r.client.Resource(nodeGVR).Namespace(namespace).
+		Create(context.Background(), node, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestFreshTopologyDeployKeepsTopologyChangedConcurrently reproduces issue 3468: a fresh
+// deploy that fails after the lab became ready must not delete the Topology when a
+// concurrent deploy reconciled it in place in the meantime. The rollback belongs to the
+// newer deploy, and deleting the shared Topology would cascade to its lab.
+func TestFreshTopologyDeployKeepsTopologyChangedConcurrently(t *testing.T) {
+	topologyDir := t.TempDir()
+	writeFile(
+		t,
+		filepath.Join(topologyDir, "configs", "vjunos", "startup.sh"),
+		"#!/bin/sh\n",
+		0o755,
+	)
+
+	const initial = `topology:
+  nodes:
+    vjunos:
+      kind: linux
+      image: alpine:3
+      binds:
+        - configs/vjunos:/config
+    sros:
+      kind: linux
+      image: alpine:3
+`
+	const changed = `topology:
+  nodes:
+    vsrx:
+      kind: linux
+      image: alpine:3
+    sros:
+      kind: linux
+      image: alpine:3
+`
+
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, initial, 0o644)
+
+	r := newTestRuntime()
+	client := r.client.(*dynamicfake.FakeDynamicClient) //nolint:forcetypeassert // the test harness owns the client type
+	tracker := client.Tracker()
+
+	// Signal the concurrent deploy once the first deploy has created its Topology: the
+	// reactor only consults the tracker (a fake client call from inside a reactor would
+	// deadlock on the fake's own lock).
+	concurrent := make(chan struct{}, 1)
+	concurrentRan := false
+	client.PrependReactor("get", "topologies",
+		func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+			if concurrentRan {
+				return false, nil, nil
+			}
+			if _, err := tracker.Get(
+				topologyGVR, action.GetNamespace(), "mv", metav1.GetOptions{},
+			); err != nil {
+				// The Topology of this deploy does not exist yet.
+				return false, nil, nil
+			}
+			concurrentRan = true
+			concurrent <- struct{}{}
+
+			return false, nil, nil
+		})
+
+	concurrentDone := make(chan error, 1)
+	go func() {
+		defer close(concurrentDone)
+
+		<-concurrent
+
+		if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+			Name:               "mv",
+			Namespace:          "lab-ns",
+			TopologyDefinition: []byte(changed),
+		}); err != nil {
+			concurrentDone <- err
+
+			return
+		}
+
+		// The concurrent deploy reconciled the lab in place; the c9s controller then
+		// compiled its nodes and reported them ready.
+		for _, nodeName := range []string{"vsrx", "sros"} {
+			createFakeControllerNode(t, r, "lab-ns", "mv", nodeName)
+		}
+	}()
+
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "mv",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyDefinition: []byte(initial),
+		Wait:               true,
+		Timeout:            30 * time.Second,
+	})
+	if err == nil {
+		t.Fatal("expected the first deploy to fail on the concurrently changed lab")
+	}
+
+	select {
+	case goroutineErr := <-concurrentDone:
+		if goroutineErr != nil {
+			t.Fatalf("concurrent deploy failed: %v", goroutineErr)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("concurrent deploy did not run")
+	}
+
+	// The concurrent deploy reconciled the lab in place; the rollback must leave it alone.
+	topology := getTestTopology(t, r, "lab-ns", "mv")
+	if got := topologyDefinition(t, topology); got != changed {
+		t.Fatalf("topology definition = %q, want the concurrently deployed definition", got)
+	}
+
+	// The staged ConfigMap of the superseded deploy is kept: a concurrent deploy can
+	// still rely on the same content-hashed name.
+	configMapName := stagedFileConfigMapName("mv", "configs/vjunos/startup.sh")
+	_ = getTestConfigMap(t, r, "lab-ns", configMapName)
+}
+
+// TestTopologyChangedSinceCreate covers the identity check the fresh-deployment rollback
+// relies on: UID, generation, and spec comparisons each detect a change, and a missing
+// Topology is treated as unchanged so the remaining rollback can still run.
+func TestTopologyChangedSinceCreate(t *testing.T) {
+	r := newTestRuntime()
+	client := r.client.(*dynamicfake.FakeDynamicClient) //nolint:forcetypeassert // the test harness owns the client type
+	tracker := client.Tracker()
+
+	created := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": c9sAPIVersion,
+		"kind":       "Topology",
+		"metadata": map[string]any{
+			"name":       "mv",
+			"namespace":  "lab-ns",
+			"uid":        "uid-1",
+			"generation": int64(1),
+		},
+		"spec": map[string]any{"definition": map[string]any{"containerlab": "a"}},
+	}}
+
+	changed := func(mutate func(*unstructured.Unstructured)) *unstructured.Unstructured {
+		obj := created.DeepCopy()
+		mutate(obj)
+
+		return obj
+	}
+
+	tests := []struct {
+		name    string
+		stored  *unstructured.Unstructured
+		changed bool
+	}{
+		{
+			name:    "identical topology",
+			stored:  created.DeepCopy(),
+			changed: false,
+		},
+		{
+			name: "changed spec",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.Object["spec"] = map[string]any{
+					"definition": map[string]any{"containerlab": "b"},
+				}
+			}),
+			changed: true,
+		},
+		{
+			name: "different uid",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.SetUID("uid-2")
+			}),
+			changed: true,
+		},
+		{
+			name: "different generation",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.SetGeneration(2)
+			}),
+			changed: true,
+		},
+		{
+			name: "api-defaulted empty values",
+			stored: changed(func(obj *unstructured.Unstructured) {
+				obj.Object["spec"] = map[string]any{
+					"definition": map[string]any{"containerlab": "a"},
+					"expose":     map[string]any{},
+				}
+			}),
+			changed: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_ = tracker.Delete(topologyGVR, "lab-ns", "mv")
+			if err := tracker.Create(topologyGVR, tc.stored, "lab-ns"); err != nil {
+				t.Fatal(err)
+			}
+
+			got := r.topologyChangedSinceCreate(context.Background(), "lab-ns", "mv", created)
+			if got != tc.changed {
+				t.Fatalf("topologyChangedSinceCreate() = %t, want %t", got, tc.changed)
+			}
+		})
+	}
+
+	// A Topology that is gone cannot cascade to anyone; the rollback proceeds.
+	if err := tracker.Delete(topologyGVR, "lab-ns", "mv"); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.topologyChangedSinceCreate(context.Background(), "lab-ns", "mv", created); got {
+		t.Fatal("a missing Topology must not count as changed")
+	}
+}
+
+// TestPlanReportsNodeLinkEffects reproduces issue 3469: the c9s dry-run preview must
+// surface the nodes whose Pod a link change replaces, not only the resource-level
+// Topology update. Nodes in the live link apply mode keep their Pod and get no entry.
+func TestPlanReportsNodeLinkEffects(t *testing.T) {
+	const initial = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth1", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth2"]
+`
+	const rewired = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth3", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth4"]
+`
+	const imageOnly = `topology:
+  nodes:
+    sros:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:other
+    sros-live:
+      kind: nokia_sros
+      image: ghcr.io/srl-labs/vrnetlab-nokia_sros:latest
+      link-apply-mode: live
+    linux1:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["sros:eth1", "linux1:eth1"]
+    - endpoints: ["sros-live:eth1", "sros:eth2"]
+`
+
+	r := newTestRuntime()
+	r.kindLinkApplyMode = func(kind string) string {
+		switch kind {
+		case "nokia_sros":
+			return "recreate"
+		case "linux":
+			return "live"
+		default:
+			return "recreate"
+		}
+	}
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The controller compiled the deployed definition into its primitive resources; the
+	// fake cluster holds them with ready nodes. The fixtures compile through the same
+	// preparation the deploy used, so they carry the rendered link definitions.
+	prepared, err := prepareDesiredDeployment(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}, "lab-ns")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range prepared.primitives.links {
+		if _, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+			Create(context.Background(), link.DeepCopy(), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, node := range prepared.primitives.nodes {
+		running := node.DeepCopy()
+		if err := unstructured.SetNestedField(
+			running.Object, "ready", "status", "readiness",
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+			Create(context.Background(), running, metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	rewiredPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(rewired),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]clablabruntime.ChangeAction{
+		"Topology/lab": clablabruntime.ChangeUpdate,
+		"Pod/sros":     clablabruntime.ChangeRecreate,
+	}
+	got := map[string]clablabruntime.ChangeAction{}
+	for _, change := range rewiredPlan.Changes {
+		got[change.Kind+"/"+change.Name] = change.Action
+	}
+	if len(got) != len(want) {
+		t.Fatalf("plan for rewired links = %+v, want %+v", rewiredPlan.Changes, want)
+	}
+	for resource, action := range want {
+		if got[resource] != action {
+			t.Fatalf("plan for rewired links = %+v, want %s on %s",
+				rewiredPlan.Changes, action, resource)
+		}
+	}
+
+	// Deploying the same definition again reports no changes at all.
+	noOpPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noOpPlan.Changes) != 0 {
+		t.Fatalf("no-op plan = %+v, want no changes", noOpPlan.Changes)
+	}
+
+	// An image change alone does not go through the link lifecycle; the plan carries
+	// only the Topology update.
+	imageOnlyPlan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(imageOnly),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(imageOnlyPlan.Changes) != 1 ||
+		imageOnlyPlan.Changes[0].Action != clablabruntime.ChangeUpdate ||
+		imageOnlyPlan.Changes[0].Kind != "Topology" {
+		t.Fatalf("image-only plan = %+v, want one Topology update", imageOnlyPlan.Changes)
+	}
+}
+
+// TestPlanReportsNodeLinkEffectsWithoutKindResolver checks that the plan degrades to the
+// conservative recreate default for every affected node when the runtime carries no kind
+// resolver, instead of silently hiding pod replacements.
+func TestPlanReportsNodeLinkEffectsWithoutKindResolver(t *testing.T) {
+	const initial = `topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+    n2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["n1:eth1", "n2:eth1"]
+`
+	const rewired = `topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:3
+    n2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["n1:eth1", "n2:eth2"]
+`
+
+	r := newTestRuntime()
+
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	prepared, err := prepareDesiredDeployment(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(initial),
+	}, "lab-ns")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range prepared.primitives.links {
+		if _, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+			Create(context.Background(), link.DeepCopy(), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, node := range prepared.primitives.nodes {
+		running := node.DeepCopy()
+		if err := unstructured.SetNestedField(
+			running.Object, "ready", "status", "readiness",
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.client.Resource(nodeGVR).Namespace("lab-ns").
+			Create(context.Background(), running, metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	plan, err := r.Plan(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(rewired),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var podChanges []string
+	for _, change := range plan.Changes {
+		if change.Kind == "Pod" {
+			podChanges = append(podChanges, change.Namespace+"/"+change.Name)
+		}
+	}
+	sort.Strings(podChanges)
+	if len(podChanges) != 2 ||
+		podChanges[0] != "lab-ns/n1" || podChanges[1] != "lab-ns/n2" {
+		t.Fatalf("plan without a kind resolver = %+v, want pods of n1 and n2 recreated",
+			plan.Changes)
 	}
 }
 

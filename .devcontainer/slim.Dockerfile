@@ -1,5 +1,9 @@
 FROM mcr.microsoft.com/devcontainers/python:3.11-bookworm
 
+# The devcontainer user as provided by the base image.
+# Keep in sync with `remoteUser` in the devcontainer.json files.
+ARG USERNAME=vscode
+
 ARG CLAB_VERSION
 
 # Add the netdevops repository
@@ -17,6 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dnsutils \
     telnet \
     curl
+
+# Install Starship
+RUN bash -o pipefail -c 'curl -fsSL https://starship.rs/install.sh | sh -s -- --yes'
+
+# Install uv (keep in sync with UV_VERSION in Makefile)
+COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /uvx /bin/
+ENV PATH="/home/${USERNAME}/.local/bin:/home/${USERNAME}/.atuin/bin:${PATH}"
 
 # Install Containerlab
 RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${CLAB_VERSION}
@@ -38,24 +49,24 @@ RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 # Maintain SSH_AUTH_SOCK env var when using sudo
 RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh_auth_sock
 
-# Add vscode user to clab_admins group so that it can run sudo-less clab commands
-# the group is created when clab is installed via the installation script
-RUN usermod -aG clab_admins vscode
+# Add the devcontainer user to clab_admins group so that it can run sudo-less clab commands
+# Older Containerlab installers may not create the group.
+RUN groupadd -f clab_admins && usermod -aG clab_admins ${USERNAME}
 
-# Switch to the vscode user provided by the base image
-USER vscode
+# Switch to the devcontainer user provided by the base image
+USER ${USERNAME}
 
 # Copy dclab script used to run the local containerlab build after `make build`
 COPY ./.devcontainer/dclab /usr/local/bin/dclab
 
-# Create SSH key for vscode user to enable passwordless SSH to devices
+# Create SSH key for the devcontainer user to enable passwordless SSH to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
-# Add empty docker config files to avoid clab warnings for vscode user
-RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
+# Add empty docker config files to avoid clab warnings for the devcontainer user
+RUN mkdir -p ~/.docker ~/.config && echo "{}" > ~/.docker/config.json
 
 # Setup Zsh and plugins
-COPY --chown=vscode:vscode ./.devcontainer/zsh/.zshrc-slim /home/vscode/.zshrc
-COPY --chown=vscode:vscode ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
 RUN bash -c "/tmp/install-zsh-plugins.sh"
+COPY --chown=${USERNAME}:${USERNAME} ./.devcontainer/zsh/.zshrc /home/${USERNAME}/.zshrc
+COPY --chown=${USERNAME}:${USERNAME} ./.devcontainer/starship.toml /home/${USERNAME}/.config/starship.toml

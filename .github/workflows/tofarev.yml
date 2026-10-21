@@ -10,14 +10,15 @@ jobs:
     if: >-
       github.event.issue.pull_request &&
       github.event.comment.user.type == 'User' &&
-      contains(fromJSON('["hellt","flosch62","kaelemc"]'), github.event.comment.user.login) &&
+      contains(fromJSON('["hellt","flosch62","kaelemc","sacckth"]'), github.event.comment.user.login) &&
       contains(github.event.comment.body, '/tofarev review')
-    uses: hellt/tofarev/.github/workflows/review.yml@688f8c1e404e1910b2ae192bfeba9c053b3f28b0
+    uses: hellt/tofarev/.github/workflows/review.yml@19130835865201fbea6324e6262111807736de99
     with:
       bot_repository: hellt/tofarev
-      bot_ref: 688f8c1e404e1910b2ae192bfeba9c053b3f28b0
+      bot_ref: 19130835865201fbea6324e6262111807736de99
       app_client_id: ${{ vars.TOFAREV_APP_CLIENT_ID }}
-      trusted_config: '{"shareSessions":true}'
+      trusted_config: '{"repository":"srl-labs/containerlab","repositoryId":290960521,"allowedUsers":["hellt","flosch62","kaelemc","sacckth"],"shareSessions":true}'
     secrets:
       TOFAREV_API_KEY: ${{ secrets.TOFAREV_API_KEY }}
+      TOFAREV_PAGES_DEPLOY_KEY: ${{ secrets.TOFAREV_PAGES_DEPLOY_KEY }}
       TOFAREV_APP_PRIVATE_KEY: ${{ secrets.TOFAREV_APP_PRIVATE_KEY }}

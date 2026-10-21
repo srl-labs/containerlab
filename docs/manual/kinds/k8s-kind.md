@@ -106,23 +106,20 @@ With `-{{ kind_code_name }}-` nodes it is possible to use the following configur
 - [image](../nodes.md#image) - to define the kind container image to use for the kind cluster
 - [startup-config](../nodes.md#startup-config) - to provide a kind cluster configuration (optional, kind defaults apply otherwise)
 
-### Extra parameters
+### Kind-specific config
 
-In addition to the generic node parameters, `-{{ kind_code_name }}-` can take following extra parameters from `extras` field.
+In addition to the generic node parameters, `-{{ kind_code_name }}-` accepts the following [kind-specific config keys](../nodes.md#kind-specific-config):
 
 ```yaml
 topology:
   nodes:
     kind0:
       kind: -{{ kind_code_name }}-
-      extras:
-        k8s_kind:
-          deploy:
-            # Corresponds to --kubeconfig option.
-            # Path can be absolute or relative to the topology file
-            kubeconfig: ./kubeconfig
-            # Corresponds to --wait option. Wait given duration until the cluster becomes ready.
-            wait: 0s
+      # Corresponds to the --kubeconfig option.
+      # Path can be absolute or relative to the topology file
+      kubeconfig: ./kubeconfig
+      # Corresponds to the --wait option. Wait given duration until the cluster becomes ready.
+      wait: 0s
 ```
 
 ## Known issues

@@ -1,0 +1,38 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+
+# Inserts a blank line between shell prompts
+add_newline = true
+
+[git_branch]
+symbol = " "
+format = '· [$symbol$branch(:$remote_branch)]($style) '
+
+[git_commit]
+tag_disabled = false
+tag_symbol = "  "
+
+[golang]
+symbol = ' '
+format = '· [$symbol($version )]($style)'
+
+[package]
+format = '· [$symbol$version]($style) '
+symbol = "󰏗 "
+
+[python]
+format = '· [${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+symbol = " "
+
+[kubernetes]
+# disabled = false
+symbol = "󱃾 "
+
+[container]
+disabled = true
+
+[direnv]
+disabled = true
+
+# [hostname]
+# ssh_symbol = " "

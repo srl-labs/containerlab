@@ -145,12 +145,10 @@ func TestCreateFRRFilesUsesStartupConfig(t *testing.T) {
 }
 
 // The daemon list set in the topology must reach the rendered daemons file.
-func TestCreateFRRFilesHonoursExtras(t *testing.T) {
+func TestCreateFRRFilesHonoursDaemons(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{
-		ShortName: "router1",
-		Extras: &clabtypes.Extras{
-			FRR: &clabtypes.FRRExtras{Daemons: []string{"ospfd", "bfdd"}},
-		},
+		ShortName:          "router1",
+		KindSpecificConfig: &KindSpecificConfig{Daemons: []string{"ospfd", "bfdd"}},
 	})
 
 	if err := n.createFRRFiles(); err != nil {
@@ -176,10 +174,8 @@ func TestCreateFRRFilesHonoursExtras(t *testing.T) {
 // node with the wrong daemons running.
 func TestCreateFRRFilesRejectsUnknownDaemon(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{
-		ShortName: "router1",
-		Extras: &clabtypes.Extras{
-			FRR: &clabtypes.FRRExtras{Daemons: []string{"bogusd"}},
-		},
+		ShortName:          "router1",
+		KindSpecificConfig: &KindSpecificConfig{Daemons: []string{"bogusd"}},
 	})
 
 	err := n.createFRRFiles()

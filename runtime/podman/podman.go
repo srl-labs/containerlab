@@ -90,6 +90,18 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 	r.config.KeepMgmtNet = true
 }
 
+// MgmtNetworkExists reports whether the management network bound to the runtime exists.
+var _ runtime.MgmtNetworkChecker = (*PodmanRuntime)(nil)
+
+func (r *PodmanRuntime) MgmtNetworkExists(ctx context.Context) (bool, error) {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return network.Exists(ctx, r.mgmt.Network, &network.ExistsOptions{})
+}
+
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
 func (r *PodmanRuntime) NetworkAddresses(

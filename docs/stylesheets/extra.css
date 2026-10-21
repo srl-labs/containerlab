@@ -612,3 +612,139 @@ div.highlight.code-scroll-sm pre>code {
 }
 
 /* END header wordmark */
+
+/* START light/dark switcher (styled after the search button) ------------------
+   The palette markup lives in overrides/partials/palette.html. The host
+   square borrows the search button's design language of the modern variant:
+   a 1.6rem square with 0.4rem corner radius on a faint --md-default-fg-color
+   fill (hover: fg--lighter, same as the search button). It holds a single
+   animated sun/moon glyph: the sun core scales up while a mask circle slides
+   in to carve the crescent and the beams fade out — the morph is driven
+   purely by the scheme attribute. The palette <input>s and their <label>
+   click targets keep the structure the Zensical palette JS expects (input,
+   label, input, label): the JS unhides the label of the active palette and
+   reacts to radio change events. The visible control is a persistent
+   sibling, so the glyph morphs in place instead of the whole button being
+   swapped on toggle. */
+.md-header__option[data-md-component="palette"] {
+  position: relative;
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin: 0.2rem;
+}
+
+/* invisible click targets; one per palette, toggled via the `hidden` attr */
+.md-switch__target {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+/* the host square, same surface as the search button */
+.md-switch__track {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 0.4rem;
+  background-color: var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color);
+  transition: background-color 0.4s, color 0.4s;
+}
+
+.md-header__option[data-md-component="palette"]:hover .md-switch__track {
+  background-color: var(--md-default-fg-color--lighter);
+}
+
+/* the animated sun/moon glyph — sized so its painted extent matches the
+   magnifier's (~16px): lucide-search's glyph spans 18/24 of its viewBox,
+   while the sun's beams reach the box edges (round line caps), so the glyph
+   box is tuned to 0.85rem. The dark crescent's bite removes its widest edge,
+   so in dark mode the whole glyph grows slightly (12%) to restore the same
+   painted extent as the sun. */
+.md-switch__track .sun-and-moon {
+  position: absolute;
+  top: 0.375rem;
+  left: 0.375rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  stroke-linecap: round;
+}
+
+[data-md-color-scheme="slate"] .md-switch__track .sun-and-moon {
+  transform: scale(1.12);
+}
+
+.sun-and-moon > :is(.moon, .sun, .sun-beams) {
+  transform-origin: center center;
+}
+
+.sun-and-moon > .sun {
+  fill: currentColor;
+}
+
+.sun-and-moon > .sun-beams {
+  stroke: currentColor;
+  stroke-width: 2px;
+}
+
+/* resting states: full sun with beams, or crescent with the beams gone */
+.sun-and-moon > .sun-beams {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+.sun-and-moon .moon > circle {
+  transform: translate(0);
+}
+
+[data-md-color-scheme="slate"] .sun-and-moon > .sun {
+  transform: scale(1.75);
+}
+
+[data-md-color-scheme="slate"] .sun-and-moon > .sun-beams {
+  opacity: 0;
+  transform: rotate(-25deg);
+}
+
+[data-md-color-scheme="slate"] .sun-and-moon .moon > circle {
+  transform: translate(-7px);
+}
+
+/* the palette CSS zeroes every transition while data-md-color-switching is
+   set (it wraps each scheme change), which would skip the morph; re-declare
+   the glyph's own timing with a specificity that beats the zeroing. The
+   outer glyph scale rides the same timing as the core scale. */
+@media (prefers-reduced-motion: no-preference) {
+  .md-switch__track .sun-and-moon,
+  .sun-and-moon > .sun {
+    transition: transform 0.5s cubic-bezier(0.5, 1.25, 0.75, 1.25) !important;
+  }
+
+  .sun-and-moon > .sun-beams {
+    transition:
+      transform 0.5s cubic-bezier(0.5, 1.5, 0.75, 1.25),
+      opacity 0.5s cubic-bezier(0.25, 0, 0.3, 1) !important;
+  }
+
+  .sun-and-moon .moon > circle {
+    transition: transform 0.25s cubic-bezier(0, 0, 0, 1) !important;
+  }
+
+  [data-md-color-scheme="slate"] .md-switch__track .sun-and-moon,
+  [data-md-color-scheme="slate"] .sun-and-moon > .sun {
+    transition: transform 0.25s cubic-bezier(0.25, 0, 0.3, 1) !important;
+  }
+
+  [data-md-color-scheme="slate"] .sun-and-moon > .sun-beams {
+    transition:
+      transform 0.15s cubic-bezier(0.5, 1.5, 0.75, 1.25),
+      opacity 0.15s cubic-bezier(0.25, 0, 0.3, 1) !important;
+  }
+
+  [data-md-color-scheme="slate"] .sun-and-moon .moon > circle {
+    transition: transform 0.5s cubic-bezier(0, 0, 0, 1) 0.25s !important;
+  }
+}
+
+/* END light/dark switcher */
