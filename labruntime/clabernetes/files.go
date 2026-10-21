@@ -204,11 +204,11 @@ func stageTopologyLocalFiles(
 	// Sanitizing after the local files are staged keeps the file lookups on the paths the node
 	// names in the topology file spell out, while everything sent to Kubernetes uses the renamed
 	// nodes.
-	renames, err := sanitizeNodeNames(config, nodeNames)
+	renames, definitionsChanged, err := sanitizeNodeNames(config, nodeNames)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	if len(renames) != 0 {
+	if definitionsChanged {
 		definitionChanged = true
 	}
 
