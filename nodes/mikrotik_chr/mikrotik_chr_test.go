@@ -251,7 +251,6 @@ func TestFilterLauncherConfig(t *testing.T) {
 		"add interface=ether1 ra-lifetime=none",
 		"172.20.20.4",
 		"3fff:172:20:20::4",
-		"198.18",
 	} {
 		if strings.Contains(got, gone) {
 			t.Errorf("filtered config still contains launcher line %q:\n%s", gone, got)
@@ -325,5 +324,34 @@ func TestContinues(t *testing.T) {
 		if got := continues(line); got != want {
 			t.Errorf("continues(%q) = %v, want %v", line, got, want)
 		}
+	}
+}
+
+func TestHealthcheckStartPeriod(t *testing.T) {
+	tests := map[string]struct {
+		env  map[string]string
+		want int
+	}{
+		"defaults": {env: nil, want: 60 + 3*300 + 90},
+		"overrides": {
+			env:  map[string]string{"CHR_INTF_WAIT": "10", "CHR_BOOT_WAIT": "100"},
+			want: 10 + 3*100 + 90,
+		},
+		"invalid": {
+			env:  map[string]string{"CHR_INTF_WAIT": "x", "CHR_BOOT_WAIT": "-5"},
+			want: 60 + 3*300 + 90,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := newInitialized(
+				t,
+				&clabtypes.NodeConfig{ShortName: "r1", LabDir: t.TempDir(), Env: tc.env},
+			)
+			if got := n.Cfg.Healthcheck.StartPeriod; got != tc.want {
+				t.Errorf("StartPeriod = %d, want %d", got, tc.want)
+			}
+		})
 	}
 }

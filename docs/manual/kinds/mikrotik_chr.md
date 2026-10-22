@@ -107,7 +107,7 @@ The node is ready once RouterOS accepted the credentials and the startup config,
 chr-launch: RouterOS ready
 ```
 
-and the kind's default [healthcheck](../nodes.md#healthcheck) reports the container `healthy`, so [`stages`](../nodes.md#stages) with `wait-for` can depend on it. A node whose startup config was rejected never becomes healthy. A `healthcheck` set in the topology replaces the default one.
+and the kind's default [healthcheck](../nodes.md#healthcheck) reports the container `healthy`, so [`stages`](../nodes.md#stages) with `wait-for` can depend on it. A node whose startup config was rejected never becomes healthy. The default healthcheck's start period follows the launcher's own deadlines (`CHR_INTF_WAIT` + 3 × `CHR_BOOT_WAIT` + 90 s, 1050 s with the defaults), so a slow boot never reports `unhealthy`. A `healthcheck` set in the topology replaces the default one.
 
 ### Resources
 
