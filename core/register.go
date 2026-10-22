@@ -34,6 +34,7 @@ import (
 	clabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	clabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
+	clabnodesmikrotik_chr "github.com/srl-labs/containerlab/nodes/mikrotik_chr"
 	clabnodesnvidia_cumulusvx "github.com/srl-labs/containerlab/nodes/nvidia_cumulusvx"
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
 	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
@@ -105,6 +106,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvr_openbsd.Register(c.Reg)
 	clabnodesvr_ftdv.Register(c.Reg)
 	clabnodesvr_ros.Register(c.Reg)
+	clabnodesmikrotik_chr.Register(c.Reg)
 	clabnodesvr_sros.Register(c.Reg)
 	clabnodesvr_veos.Register(c.Reg)
 	clabnodesvr_vmx.Register(c.Reg)

@@ -1,0 +1,20 @@
+name: 16-01-chr
+topology:
+  kinds:
+    mikrotik_chr:
+      image: mikrotik/chr:7.24.5
+  nodes:
+    r1:
+      kind: mikrotik_chr
+      startup-config: r1.rsc
+    r2:
+      kind: mikrotik_chr
+      startup-config: r2.rsc
+      credentials:
+        username: netops
+        password: "chr pass#1"
+    r3:
+      kind: mikrotik_chr
+      startup-config: r3-rejected.rsc
+  links:
+    - endpoints: ["r1:ether2", "r2:ether2"]
