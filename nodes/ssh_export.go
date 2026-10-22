@@ -18,7 +18,7 @@ import (
 
 // ExportConfigOverSSH runs command in an SSH exec session at addr (host:port) with password
 // authentication and returns its output, trimmed. It serves the kinds whose NOS has no
-// scrapligo platform for SaveConfig (MikroTik RouterOS: mikrotik_ros, mikrotik_chr).
+// scrapligo platform for SaveConfig (MikroTik RouterOS).
 func ExportConfigOverSSH(addr, username, password, command string) (string, error) {
 	config := &ssh.ClientConfig{
 		User:            username,
