@@ -16,25 +16,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const (
-	grpcMDCLIConfig    = `/configure system grpc md-cli admin-state enable`
-	profileMDCLIConfig = `/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization md-cli-session permit`
-	tls13CipherCCM8    = `/configure system security tls server-cipher-list "clab-all" tls13-cipher 5 name tls-aes128-ccm8-sha256`
-)
-
-func (n *sros) setVersionSpecificParams(tplData *srosTemplateData) {
-	currVersion := tplData.SwVersion.MajorMinorSemverString()
-
-	if semver.Compare(currVersion, "v26.0") < 0 {
-		tplData.GRPCConfig += "\n" + grpcMDCLIConfig
-		tplData.SystemConfig += "\n" + profileMDCLIConfig
-
-		if tplData.IsSecureGrpc {
-			tplData.GRPCConfig += "\n" + tls13CipherCCM8
-		}
-	}
-}
-
 // buildPKIImportXML builds the NETCONF action XML that imports a PEM file into the PKI store.
 func buildPKIImportXML(inputURL, outputFile, importType string) string {
 	action := etree.NewElement("action")
@@ -205,6 +186,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		ConfigurationMode: configMode,
 		SwVersion:         n.swVersion,
 		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
+		SrosLe25_10:       srosLe25_10(n.swVersion),
 
 		// Node data
 		Name:            n.Cfg.ShortName,
@@ -232,9 +214,33 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 	n.prepareSSHPubKeys(tplData)
 
-	n.setVersionSpecificParams(tplData)
+	tplData.AdminUser = cliQuoted(n.Cfg.Credentials.Username)
+	tplData.AdminPassword = cliQuoted(n.Cfg.Credentials.Password)
 
 	return tplData, nil
+}
+
+// srosLe25_10 reports whether the image has a known SR OS release <= 25.10. Development
+// versions reported as 0.0.0 are treated as the latest release.
+func srosLe25_10(version *SrosVersion) bool {
+	if version == nil || version.MajorMinorSemverString() == "v0.0" {
+		return false
+	}
+	return semver.Compare(version.MajorMinorSemverString(), "v25.10") <= 0
+}
+
+// srosLe26_3 reports whether the image has a known SR OS release <= 26.3.
+// Development versions reported as 0.0.0 are treated as the latest release.
+func srosLe26_3(version *SrosVersion) bool {
+	if version == nil || version.MajorMinorSemverString() == "v0.0" {
+		return false
+	}
+	return semver.Compare(version.MajorMinorSemverString(), "v26.3") <= 0
+}
+
+// cliQuoted returns s as a double-quoted CLI string.
+func cliQuoted(s string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
 }
 
 // addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,

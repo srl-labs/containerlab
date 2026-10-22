@@ -1,0 +1,30 @@
+{{ .SNMPConfig }}
+{{ .LoggingConfig }}
+{{ .GRPCConfig }}
+{{ .NetconfConfig }}
+{{ .SystemConfig }}
+/configure system security user-params local-user user {{ .AdminUser }} restricted-to-home false
+/configure system security user-params local-user user {{ .AdminUser }} password {{ .AdminPassword }}
+/configure system security user-params local-user user {{ .AdminUser }} access console true
+/configure system security user-params local-user user {{ .AdminUser }} access grpc true
+/configure system security user-params local-user user {{ .AdminUser }} access netconf true
+/configure system security user-params local-user user {{ .AdminUser }} console member ["administrative"]
+{{- if .Name }}
+/configure system name {{ .Name }}
+/configure system login-control login-banner pre-login-message message "{{ .Banner }}"
+{{- end }}
+{{ .SSHConfig }}
+{{/* this is part takes care of adding public key config for ssh admin user access */}}
+{{ range $index, $key := .SSHPubKeysRSA }}
+/configure system security user-params local-user user {{ $.AdminUser }} public-keys rsa rsa-key {{ subtract 32 $index }} key-value {{ $key }}
+{{ end }}
+
+{{ range $index, $key := .SSHPubKeysECDSA }}
+/configure system security user-params local-user user {{ $.AdminUser }} public-keys ecdsa ecdsa-key {{ subtract 32 $index }} key-value {{ $key }}
+{{ end }}
+
+{{ range $index, $key := .SSHPubKeysED25519 }}
+/configure system security user-params local-user user {{ $.AdminUser }} public-keys ed25519 ed25519-key {{ subtract 32 $index }} key-value {{ $key }}
+{{ end }}
+{{/* Component configuration for cards, xioms, xiom-mdas and mdas */}}
+{{ .ComponentConfig }}
