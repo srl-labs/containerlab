@@ -8,7 +8,7 @@ tags:
 
 # Installation
 
-Containerlab is distributed as a Linux deb/rpm/apk package for amd64 and arm64 architectures and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
+Containerlab is distributed as a Linux deb/rpm/apk/aur package for amd64 and arm64 architectures and can be installed on any Debian-, RHEL-, Alpine- or Arch-based distributive in a matter of a few seconds.
 
 ## Pre-requisites
 
@@ -78,7 +78,7 @@ Log out and log back in to see the new two-line prompt in action:
 Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) that detects the operating system type and installs the relevant package:
 
 /// note
-Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
+The installation script uses the deb/rpm/apk/aur packages, thus Debian-, RHEL-, Alpine- and Arch-based distributives can leverage package installation.  
 Other systems can follow the [manual installation](#manual-installation) procedure.
 ///
 
@@ -163,7 +163,15 @@ Download `.apk` package from [Github releases](https://github.com/srl-labs/conta
 ///
 
 /// tab | AUR
-Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab).
+
+Arch Linux users can install the binary package from the [AUR repository](https://aur.archlinux.org/packages/containerlab-bin):
+
+```bash
+yay -S containerlab-bin
+```
+
+The AUR package ships the pre-built containerlab binary and is available for the `amd64` (x86_64) architecture only. For other architectures, use the [installation script](#install-script) or the [manual installation](#manual-installation).
+
 ///
 
 /// details | Manual package installation
@@ -397,6 +405,14 @@ apt remove containerlab
 
 ```
 yum remove containerlab
+```
+
+///
+
+/// tab | Arch-based systems
+
+```bash
+sudo pacman -R containerlab-bin
 ```
 
 ///

@@ -53,6 +53,10 @@ detectOS() {
         alpine)
             PKG_FORMAT="apk"
         ;;
+
+        arch|archarm|manjaro|endeavouros|cachyos|artix|garuda)
+            PKG_FORMAT="pkg.tar.zst"
+        ;;
         *)
             if type "rpm" &>/dev/null; then
                 PKG_FORMAT="rpm"
@@ -268,11 +272,11 @@ installPkg() {
 
 # setPkgInstaller deduces the pkg installation command
 setPkgInstaller() {
-    if [ $PKG_FORMAT == "deb" ]; then
+    if [ "$PKG_FORMAT" == "deb" ]; then
         PKG_INSTALLER="dpkg -i"
-    elif [ $PKG_FORMAT == "apk" ]; then
+    elif [ "$PKG_FORMAT" == "apk" ]; then
         PKG_INSTALLER="apk add --allow-untrusted"
-    elif [ $PKG_FORMAT == "rpm" ]; then
+    elif [ "$PKG_FORMAT" == "rpm" ]; then
         if [ -f /etc/os-release ]; then
             VARIANT_ID="$(. /etc/os-release && echo "$VARIANT_ID")"
         fi
@@ -281,6 +285,13 @@ setPkgInstaller() {
         else
             PKG_INSTALLER="rpm -U --oldpackage"
         fi
+    elif [ "$PKG_FORMAT" == "pkg.tar.zst" ]; then
+        PKG_INSTALLER="pacman -U --noconfirm"
+    else
+        echo "Unable to determine the package format of the operating system."
+        echo "Install containerlab from the binary archive instead:"
+        echo "USE_PKG=false bash -c \"\$(curl -sL https://get.containerlab.dev)\""
+        exit 1
     fi
 }
 
