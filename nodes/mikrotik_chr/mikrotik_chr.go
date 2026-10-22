@@ -14,20 +14,19 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
-	"time"
 
-	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
-	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -54,6 +53,12 @@ const (
 
 	// mgmtComment tags every management object the launcher creates in RouterOS.
 	mgmtComment = "clab-mgmt"
+
+	// the launcher's CHR_INTF_WAIT and CHR_BOOT_WAIT defaults, and the time its config
+	// fetch and gateway check add, in seconds.
+	defaultIntfWait  = 60
+	defaultBootWait  = 300
+	startPeriodSlack = 90
 
 	scrapliPlatformName = "mikrotik_routeros" //nolint: misspell
 )
@@ -111,7 +116,7 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 			Interval:    5,
 			Timeout:     3,
 			Retries:     3,
-			StartPeriod: 300,
+			StartPeriod: startPeriod(n.Cfg.Env),
 		}
 	}
 
@@ -120,6 +125,25 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
+}
+
+// startPeriod is the healthcheck start period in seconds: the launcher's own worst case
+// before the ready file, so a slow boot (TCG) never reports unhealthy. It waits up to
+// CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the startup-config
+// import and the SSH banner, plus the config fetch and the gateway check.
+func startPeriod(env map[string]string) int {
+	return envSeconds(env, "CHR_INTF_WAIT", defaultIntfWait) +
+		3*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack
+}
+
+// envSeconds reads a positive number of seconds from env, else returns def (the launcher
+// falls back to its default the same way).
+func envSeconds(env map[string]string, key string, def int) int {
+	if v, err := strconv.Atoi(strings.TrimSpace(env[key])); err == nil && v > 0 {
+		return v
+	}
+
+	return def
 }
 
 // PreDeploy writes the launcher next to the startup config on every deploy, so a
@@ -143,48 +167,21 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 }
 
 // SaveConfig exports the RouterOS configuration over SSH (scrapligo has no RouterOS
-// platform) and writes it as the node's startup config, without the objects the launcher
-// creates at every boot.
+// platform, see clabnodes.ExportConfigOverSSH) and writes it as the node's startup config,
+// without the objects the launcher creates at every boot.
 func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
-	config := &ssh.ClientConfig{
-		User:            n.Cfg.Credentials.Username,
-		Auth:            []ssh.AuthMethod{ssh.Password(n.Cfg.Credentials.Password)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // lab node, host key unknown
-		Timeout:         10 * time.Second,
-	}
-
-	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", n.Cfg.LongName), config)
+	exported, err := clabnodes.ExportConfigOverSSH(
+		net.JoinHostPort(n.Cfg.LongName, "22"),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
+		"/export",
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to %s via SSH: %w", n.Cfg.LongName, err)
-	}
-	defer conn.Close()
-
-	session, err := conn.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SSH session for %s: %w", n.Cfg.LongName, err)
-	}
-	defer session.Close()
-
-	output, err := session.CombinedOutput("/export")
-	if err != nil {
-		return nil, fmt.Errorf("failed to export the configuration of %s: %w", n.Cfg.LongName, err)
+		return nil, err
 	}
 
-	exported := strings.TrimSpace(string(output))
-	if exported == "" {
-		return nil, fmt.Errorf("received empty configuration from %s", n.Cfg.LongName)
-	}
-
-	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
-	err = os.WriteFile(configPath, []byte(filterLauncherConfig(exported)+"\n"),
-		clabconstants.PermissionsOpen) // skipcq: GO-S2306
-	if err != nil {
-		return nil, fmt.Errorf("failed to write config by %s path from %s container: %w",
-			configPath, n.Cfg.ShortName, err)
-	}
-	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
-
-	return &clabnodes.SaveConfigResult{ConfigPath: configPath}, nil
+	return clabnodes.WriteSavedConfig(n.Cfg, n.ConfigDirName, n.StartupCfgFName,
+		[]byte(filterLauncherConfig(exported)+"\n"))
 }
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
