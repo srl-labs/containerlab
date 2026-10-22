@@ -311,15 +311,15 @@ func (c *CLab) destroyLabDirs(
 						}
 					}
 					if labDir == "" {
-						log.Debug(
-							"lab directory not found for cleanup, skipping",
+						log.Info(
+							"lab directory not found, nothing to clean",
 							"candidates",
 							candidates,
 						)
 						return nil
 					}
 				} else {
-					log.Debug("lab directory is not known, skipping cleanup")
+					log.Info("lab directory not found, nothing to clean")
 					return nil
 				}
 			}
@@ -343,7 +343,7 @@ func (c *CLab) destroyLabDirs(
 			}
 
 			if _, err := os.Stat(labDir); os.IsNotExist(err) {
-				log.Debug("lab directory not found, skipping cleanup", "path", labDir)
+				log.Info("lab directory not found, nothing to clean", "path", labDir)
 				return nil
 			} else if err != nil {
 				log.Debug("failed to stat lab directory, skipping", "path", labDir, "error", err)
