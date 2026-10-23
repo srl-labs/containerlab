@@ -27,6 +27,10 @@ import (
 var (
 	connectAccent = lipgloss.Color("212") // hot pink
 
+	// State dot colors: green = running, purple = selected line.
+	connectRunningDotColor  = lipgloss.Color("48")
+	connectSelectedDotColor = lipgloss.Color("141")
+
 	connectTitleStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(lipgloss.Color("255")).
@@ -53,8 +57,7 @@ var (
 					Foreground(lipgloss.Color("255"))
 
 	connectSelectedRowStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("57")).
-				Padding(0, 1)
+				Background(lipgloss.Color("57"))
 
 	connectDetailBorderStyle = lipgloss.NewStyle().
 					BorderLeft(true).
@@ -393,18 +396,17 @@ func (m nodePickerModel) View() string {
 			Foreground(connectKindColor(entry.kind)).
 			Render(fmt.Sprintf("%s", entry.kind))
 
-		state := "●"
-		stateStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("48"))
+		// Smaller state dot (• instead of ●) so lines stay compact.
+		dot := "•"
+		dotStyle := lipgloss.NewStyle().Foreground(connectRunningDotColor)
 		if entry.state != "running" {
-			stateStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+			dotStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 			if entry.state == "exited" || entry.state == "created" {
-				stateStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+				dotStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
 			}
 		}
-
-		cursor := "  "
 		if selected {
-			cursor = lipgloss.NewStyle().Foreground(connectAccent).Bold(true).Render("❯ ")
+			dotStyle = lipgloss.NewStyle().Foreground(connectSelectedDotColor)
 		}
 
 		img := entry.image
@@ -412,9 +414,11 @@ func (m nodePickerModel) View() string {
 			img = img[:27] + "…"
 		}
 
-		line := fmt.Sprintf("%s%s %s  %-18s %s",
-			cursor,
-			stateStyle.Render(state),
+		// Fixed two-space indent keeps lines perfectly aligned when the
+		// cursor moves — selection is conveyed by the dot color and row
+		// background instead of a chevron.
+		line := fmt.Sprintf("  %s %s  %-18s %s",
+			dotStyle.Render(dot),
 			name,
 			kindBadge,
 			connectDimStyle.Render(img),
@@ -613,12 +617,9 @@ func (m methodPickerModel) View() string {
 		}
 		desc := connectDimStyle.Render(method.Description)
 
-		cursor := "  "
-		if selected {
-			cursor = lipgloss.NewStyle().Foreground(connectAccent).Bold(true).Render("❯ ")
-		}
-
-		line := fmt.Sprintf("%s%-16s %s", cursor, label, desc)
+		// Fixed two-space indent keeps method lines aligned while navigating —
+		// selection is conveyed by the row background only.
+		line := fmt.Sprintf("  %-16s %s", label, desc)
 		if selected {
 			line = connectSelectedRowStyle.Render(line)
 		}
