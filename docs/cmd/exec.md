@@ -4,7 +4,9 @@
 
 The `exec` command allows a user to execute a command inside the nodes (containers).
 
-This command is similar to `docker exec`, but it allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
+This command allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
+
+With `--interactive` / `-i` the command drops you into an interactive shell inside a **single** matched container, replacing the current process. The shell is auto-detected from the container image, or overridden with `--shell` / `-s`. Because an interactive session targets one container, `--interactive` and `--cmd` are mutually exclusive. When more than one container matches, a beautiful TUI picker (powered by [charm.land/bubbletea](https://github.com/charmbracelet/bubbletea)) lets you fuzzy-search and keyboard-navigate to the right container — and then pick the right shell.
 
 /// note | VM-based (vrnetlab) kinds
 Like `docker exec`, `exec` runs inside the node's container namespace. For VM-based kinds (vrnetlab integration, e.g. `sonic-vm`), that container is the QEMU launcher wrapping the VM, not the guest VM itself, so guest network-OS commands are not reachable via `exec` and fail with `executable file not found in $PATH`. Use SSH to the node's management address (or its native CLI) to run guest-OS commands. See the [`exec` node property](../manual/nodes.md#exec) for details.
@@ -20,7 +22,7 @@ See [Containerlab runtime](../manual/clabernetes/runtime.md#exec) for details.
 
 ## Usage
 
-`containerlab [global-flags] exec [local-flags]`
+`containerlab [global-flags] exec [local-flags] [containername]`
 
 ## Flags
 
@@ -33,6 +35,8 @@ Note, that with the nodes of [`ext-container` type](../manual/kinds/ext-containe
 ### cmd
 
 The command to be executed on the nodes is provided with `--cmd` flag. The command is provided as a string, thus it needs to be quoted to accommodate for spaces or special characters.
+
+Mutually exclusive with `--interactive`.
 
 ### format
 
@@ -47,6 +51,42 @@ Using `--label` it is possible to filter the nodes to execute the command on usi
 Exec command should either be provided with a topology file, or labels, or both.
 
 Recall that you can check the labels attached to the nodes with `docker inspect -f '{{.Config.Labels | json}}' <container-name>` command.
+
+### interactive
+
+`--interactive | -i` opens an interactive shell inside the single container matched by the topology/label filters and the optional `containername` positional argument. The current process is replaced by the shell, so stdin/stdout/stderr are connected directly (`docker exec -it` under the hood).
+
+When `--topo` / `--name` are not given, the topology file is auto-detected from the current directory. The optional `containername` argument is a substring matched against container names after all other filters have been applied.
+
+When more than one container matches, an interactive TUI picker surfaces the matching names:
+
+* Fuzzy-search by typing — filters on name, lab, kind, image and shell preview.
+* Keyboard navigation with ↑/↓ or j/k, Enter to select, Esc to cancel.
+* A border, status bar and help footer styled with [charm.land/lipgloss](https://github.com/charmbracelet/lipgloss) / [bubbles](https://github.com/charmbracelet/bubbles).
+* After picking a container, a second picker lets you choose the shell (default vs. alternatives) with keyboard navigation.
+
+When stdout is not a TTY (CI/scripts), the TUI gracefully falls back to a plain list and exits with a helpful message; narrow the selection with a more specific name substring, `--label clab-node-name=<name>`, or `--topo`.
+
+Mutually exclusive with `--cmd`.
+
+### shell
+
+`--shell | -s` overrides the shell used when `--interactive` is given. The value is split on whitespace and passed as the command to the container runtime's exec, e.g. `--shell '/bin/sh'` or `--shell '/bin/bash -l'`.
+
+When omitted the shell is resolved in the following priority order:
+
+1. **`--shell` flag** — explicit CLI override, highest priority.
+2. **`CLAB_EXEC_INTERACTIVE_SHELL` env var** — set on the node via the topology `env:` block (per-node, per-group, per-kind, or under `defaults:`). Useful when a specific node needs a different shell from the kind default, for example:
+   ```yaml
+   nodes:
+     web:
+       kind: linux
+       image: example.com/myimage:latest
+       env:
+         CLAB_EXEC_INTERACTIVE_SHELL: /bin/bash -l
+   ```
+3. **Kind default** — each node kind ships a built-in default shell (e.g. `ceos` uses `/usr/bin/Cli -p 15`, `srl` uses `/opt/srlinux/bin/sr_cli`, `fdio_vpp` uses `/usr/bin/nsenter --net=/run/netns/dataplane /bin/bash`).
+4. **`/bin/sh`** — final fallback when no topology is loaded or the node kind has no specific default.
 
 ## Examples
 
@@ -174,4 +214,37 @@ Free Memory       : 21911914 kB
     }
   }
 }
+```
+
+### Open an interactive shell in a single node
+
+Connect to `clab-srl02-srl1` using the auto-detected shell for its image (topology auto-detected from the current directory):
+
+```bash
+❯ containerlab exec -i srl1
+```
+
+Same but with an explicit topology file:
+
+```bash
+❯ containerlab exec -t srl02.clab.yml -i srl1
+```
+
+Connect to the same node but force a specific shell:
+
+```bash
+❯ containerlab exec -i srl1 -s /bin/bash
+```
+
+When multiple containers match, the TUI picker appears — fuzzy-search and keyboard-navigate to the right container, then pick the shell:
+
+```
+ ◉  Containerlab — attach shell
+ ┌──────────────────────────────────────────────────────────────┐
+ │ Filter by name, lab, kind, image…                          │
+ │ ● ceos   ceos01   arista/ceos:4.32.1F ▸ /usr/bin/Cli -p 15  │
+ │ ● srl    srl1     ghcr.io/nokia/srlinux     ▸ /opt/srlinux…│
+ │ ● linux  web      alpine:latest             ▸ /bin/sh       │
+ └──────────────────────────────────────────────────────────────┘
+ ↑↓ move • enter select • type to filter • esc quit  3 containers
 ```
