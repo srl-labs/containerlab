@@ -31,13 +31,6 @@ var (
 	connectRunningDotColor  = lipgloss.Color("48")
 	connectSelectedDotColor = lipgloss.Color("141")
 
-	connectTitleTextStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("255"))
-
-	connectTitleArrowStyle = lipgloss.NewStyle().
-				Foreground(connectAccent)
-
 	connectPromptStyle = lipgloss.NewStyle().
 				Foreground(connectAccent).
 				Bold(true)
@@ -78,15 +71,6 @@ var (
 
 	kindBadgeBaseStyle = lipgloss.NewStyle()
 )
-
-// connectTitle renders a padded, symmetric title decorated with chevrons
-// instead of a block background.
-func connectTitle(text string) string {
-	left := connectTitleArrowStyle.Render(">>>>>")
-	right := connectTitleArrowStyle.Render("<<<<<")
-	title := connectTitleTextStyle.Render(" " + text + " ")
-	return fmt.Sprintf("  %s%s%s", left, title, right)
-}
 
 // ---------------------------------------------------------------------------
 // Shared fuzzy helpers
@@ -281,7 +265,12 @@ func newNodePicker(entries []connectNodeEntry) nodePickerModel {
 	return m
 }
 
-func (m nodePickerModel) Init() tea.Cmd { return textinput.Blink }
+func (m nodePickerModel) Init() tea.Cmd {
+	return tea.Batch(
+		textinput.Blink,
+		tea.SetWindowTitle("containerlab connect"),
+	)
+}
 
 func (m nodePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -375,8 +364,7 @@ func (m nodePickerModel) currentEntry() *connectNodeEntry {
 func (m nodePickerModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(connectTitle("containerlab connect"))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\n")
 
@@ -544,7 +532,12 @@ func newMethodPicker(node *connectNodeEntry, methods []connectMethod) methodPick
 	return m
 }
 
-func (m methodPickerModel) Init() tea.Cmd { return textinput.Blink }
+func (m methodPickerModel) Init() tea.Cmd {
+	return tea.Batch(
+		textinput.Blink,
+		tea.SetWindowTitle("containerlab connect — pick a method"),
+	)
+}
 
 func (m methodPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -604,8 +597,7 @@ func (m *methodPickerModel) refilter() {
 func (m methodPickerModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(connectTitle("how to connect?"))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\n")
 
