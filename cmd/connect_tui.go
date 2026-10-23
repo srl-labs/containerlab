@@ -31,11 +31,12 @@ var (
 	connectRunningDotColor  = lipgloss.Color("48")
 	connectSelectedDotColor = lipgloss.Color("141")
 
-	connectTitleStyle = lipgloss.NewStyle().
+	connectTitleTextStyle = lipgloss.NewStyle().
 				Bold(true).
-				Foreground(lipgloss.Color("255")).
-				Background(connectAccent).
-				Padding(0, 2)
+				Foreground(lipgloss.Color("255"))
+
+	connectTitleArrowStyle = lipgloss.NewStyle().
+				Foreground(connectAccent)
 
 	connectPromptStyle = lipgloss.NewStyle().
 				Foreground(connectAccent).
@@ -77,6 +78,15 @@ var (
 
 	kindBadgeBaseStyle = lipgloss.NewStyle()
 )
+
+// connectTitle renders a padded, symmetric title decorated with chevrons
+// instead of a block background.
+func connectTitle(text string) string {
+	left := connectTitleArrowStyle.Render(">>>>>")
+	right := connectTitleArrowStyle.Render("<<<<<")
+	title := connectTitleTextStyle.Render(" " + text + " ")
+	return fmt.Sprintf("  %s%s%s", left, title, right)
+}
 
 // ---------------------------------------------------------------------------
 // Shared fuzzy helpers
@@ -365,7 +375,7 @@ func (m nodePickerModel) currentEntry() *connectNodeEntry {
 func (m nodePickerModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(connectTitleStyle.Render(" containerlab connect "))
+	b.WriteString(connectTitle("containerlab connect"))
 	b.WriteString("\n\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\n")
@@ -594,7 +604,7 @@ func (m *methodPickerModel) refilter() {
 func (m methodPickerModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(connectTitleStyle.Render(" how to connect? "))
+	b.WriteString(connectTitle("how to connect?"))
 	b.WriteString("\n\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\n")
