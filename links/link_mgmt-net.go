@@ -3,6 +3,7 @@ package links
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/charmbracelet/log"
@@ -16,6 +17,9 @@ type LinkMgmtNetRaw struct {
 	LinkCommonParams `             yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
+	// Network is the name of the management network the link attaches to.
+	// An empty value selects the default (first) management network.
+	Network string `yaml:"network,omitempty"`
 }
 
 func (r *LinkMgmtNetRaw) ToLinkBriefRaw() *LinkBriefRaw {
@@ -50,7 +54,14 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	// Normalize link vars to ensure JSON serialization compatibility
 	link.Vars = normalizeVars(link.Vars)
 
-	mgmtBridgeNode := GetMgmtBrLinkNode()
+	network := r.Network
+	if network == params.DefaultMgmtNetwork {
+		network = ""
+	}
+	mgmtBridgeNode := getMgmtBrLinkNode(network)
+	if mgmtBridgeNode == nil {
+		return nil, fmt.Errorf("failed to get the mgmt-net link node for network %q", r.Network)
+	}
 
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
@@ -104,8 +115,10 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 }
 
 var (
-	_mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
-	_mgmtBrLinkOnce           sync.Once
+	// _mgmtBrLinkNodes holds the mgmt-net link nodes keyed by the management
+	// network name. The empty name is the default management network.
+	_mgmtBrLinkNodes   = map[string]*mgmtBridgeLinkNode{}
+	_mgmtBrLinkNodesMu sync.Mutex
 )
 
 // mgmtBridgeLinkNode is a special node that represents the mgmt bridge node
@@ -145,29 +158,76 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(
 	return curNamespace.Do(f)
 }
 
-func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
-	_mgmtBrLinkOnce.Do(func() {
-		currns, err := ns.GetCurrentNS()
-		if err != nil {
-			log.Errorf("failed to get current network namespace: %v", err)
-			return
-		}
-		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
-			GenericLinkNode: GenericLinkNode{
-				shortname: "mgmt-net",
-				endpoints: []Endpoint{},
-				nspath:    currns.Path(),
-			},
-		}
-	})
-	return _mgmtBrLinkMgmtBrInstance
+// getMgmtBrLinkNode returns the mgmt-net link node of the given management network,
+// creating it on first use. The empty network name selects the default network.
+func getMgmtBrLinkNode(network string) *mgmtBridgeLinkNode {
+	_mgmtBrLinkNodesMu.Lock()
+	defer _mgmtBrLinkNodesMu.Unlock()
+
+	if n, ok := _mgmtBrLinkNodes[network]; ok {
+		return n
+	}
+
+	currns, err := ns.GetCurrentNS()
+	if err != nil {
+		log.Errorf("failed to get current network namespace: %v", err)
+		return nil
+	}
+	n := &mgmtBridgeLinkNode{
+		GenericLinkNode: GenericLinkNode{
+			shortname: "mgmt-net",
+			endpoints: []Endpoint{},
+			nspath:    currns.Path(),
+		},
+	}
+	_mgmtBrLinkNodes[network] = n
+
+	return n
 }
 
+// GetMgmtBrLinkNode returns the mgmt-net link node of the default management network.
 func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
-	return getMgmtBrLinkNode()
+	return getMgmtBrLinkNode("")
 }
 
+// GetMgmtBrLinkNodes returns the mgmt-net link nodes of all management networks
+// that have been referenced so far, starting with the default network.
+func GetMgmtBrLinkNodes() []Node {
+	var nodes []Node
+	if n := getMgmtBrLinkNode(""); n != nil {
+		nodes = append(nodes, n)
+	}
+
+	_mgmtBrLinkNodesMu.Lock()
+	defer _mgmtBrLinkNodesMu.Unlock()
+
+	networks := make([]string, 0, len(_mgmtBrLinkNodes))
+	for network := range _mgmtBrLinkNodes {
+		if network != "" {
+			networks = append(networks, network)
+		}
+	}
+	slices.Sort(networks)
+
+	for _, network := range networks {
+		nodes = append(nodes, _mgmtBrLinkNodes[network])
+	}
+
+	return nodes
+}
+
+// SetMgmtNetUnderlyingBridge sets the bridge of the default management network.
 func SetMgmtNetUnderlyingBridge(bridge string) error {
-	getMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	return SetMgmtNetworkUnderlyingBridge("", bridge)
+}
+
+// SetMgmtNetworkUnderlyingBridge sets the bridge the mgmt-net links of the given
+// management network attach to. The empty network name selects the default network.
+func SetMgmtNetworkUnderlyingBridge(network, bridge string) error {
+	n := getMgmtBrLinkNode(network)
+	if n == nil {
+		return fmt.Errorf("failed to get the mgmt-net link node for network %q", network)
+	}
+	n.GenericLinkNode.shortname = bridge
 	return nil
 }

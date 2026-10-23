@@ -777,6 +777,16 @@ type fakeMgmtResolveCheckableRuntime struct {
 	fakeMgmtResolveRuntime
 }
 
+// ForMgmtNet binds a copy of the fake to another management network, so the fake
+// supports the multiple management networks of a topology.
+func (f *fakeMgmtResolveCheckableRuntime) ForMgmtNet(
+	m *clabtypes.MgmtNet,
+) clabruntime.ContainerRuntime {
+	c := *f
+	c.mgmt = m
+	return &c
+}
+
 func (*fakeMgmtResolveCheckableRuntime) MgmtNetworkExists(context.Context) (bool, error) {
 	stats := mgmtResolveRuntimeStatsPtr.Load()
 	if stats != nil {
