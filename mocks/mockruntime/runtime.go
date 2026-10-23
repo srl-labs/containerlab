@@ -574,6 +574,45 @@ func (mr *MockMgmtNetBinderMockRecorder) ForMgmtNet(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForMgmtNet", reflect.TypeOf((*MockMgmtNetBinder)(nil).ForMgmtNet), arg0)
 }
 
+// MockMgmtNetworkChecker is a mock of MgmtNetworkChecker interface.
+type MockMgmtNetworkChecker struct {
+	ctrl     *gomock.Controller
+	recorder *MockMgmtNetworkCheckerMockRecorder
+	isgomock struct{}
+}
+
+// MockMgmtNetworkCheckerMockRecorder is the mock recorder for MockMgmtNetworkChecker.
+type MockMgmtNetworkCheckerMockRecorder struct {
+	mock *MockMgmtNetworkChecker
+}
+
+// NewMockMgmtNetworkChecker creates a new mock instance.
+func NewMockMgmtNetworkChecker(ctrl *gomock.Controller) *MockMgmtNetworkChecker {
+	mock := &MockMgmtNetworkChecker{ctrl: ctrl}
+	mock.recorder = &MockMgmtNetworkCheckerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMgmtNetworkChecker) EXPECT() *MockMgmtNetworkCheckerMockRecorder {
+	return m.recorder
+}
+
+// MgmtNetworkExists mocks base method.
+func (m *MockMgmtNetworkChecker) MgmtNetworkExists(arg0 context.Context) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MgmtNetworkExists", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MgmtNetworkExists indicates an expected call of MgmtNetworkExists.
+func (mr *MockMgmtNetworkCheckerMockRecorder) MgmtNetworkExists(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MgmtNetworkExists", reflect.TypeOf((*MockMgmtNetworkChecker)(nil).MgmtNetworkExists), arg0)
+}
+
 // MockNode is a mock of Node interface.
 type MockNode struct {
 	ctrl     *gomock.Controller

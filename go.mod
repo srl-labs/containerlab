@@ -42,6 +42,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/sftp v1.13.11
 	github.com/pmorjan/kmod v1.1.1
+	github.com/sahilm/fuzzy v0.1.1
 	github.com/scrapli/scrapligo v1.4.2
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
@@ -69,6 +70,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.3 // indirect
 	cyphar.com/go-pathrs v0.2.5 // indirect
 	dario.cat/mergo v1.0.2 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carlmontanari/difflibgo v0.0.0-20240227210139-93685b1c22ae // indirect

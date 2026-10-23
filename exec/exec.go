@@ -237,6 +237,9 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 			result.WriteString(k)
 			result.WriteString("\n")
 			for _, er := range execResults {
+				if er == nil {
+					continue
+				}
 				// write entry
 				result.WriteString(er.String())
 			}
@@ -254,6 +257,9 @@ func (ec *ExecCollection) Log() {
 	ec.m.RLock()
 	defer ec.m.RUnlock()
 	for _, entry := range ec.orderedEntries {
+		if entry.result == nil {
+			continue
+		}
 		switch {
 		case entry.result.GetReturnCode() != 0:
 			log.Error(

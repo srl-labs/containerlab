@@ -31,6 +31,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		startCmd,
 		stopCmd,
 		restartCmd,
+		connectCmd,
 		execCmd,
 		generateCmd,
 		graphCmd,
