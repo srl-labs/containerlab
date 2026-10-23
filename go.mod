@@ -96,7 +96,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsouza/go-dockerclient v1.13.2 // indirect
-	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
@@ -194,10 +194,10 @@ require (
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	k8s.io/apiextensions-apiserver v0.36.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/streaming v0.36.4 // indirect
-	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
+	k8s.io/streaming v0.37.1 // indirect
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 	tags.cncf.io/container-device-interface v1.1.0 // indirect
 )
 
@@ -275,7 +275,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.36.4
+	k8s.io/apimachinery v0.37.1
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/yaml v1.6.0
 )
