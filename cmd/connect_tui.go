@@ -56,9 +56,6 @@ var (
 					Bold(true).
 					Foreground(lipgloss.Color("255"))
 
-	connectSelectedRowStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("57"))
-
 	connectDetailBorderStyle = lipgloss.NewStyle().
 					BorderLeft(true).
 					BorderStyle(lipgloss.ThickBorder()).
@@ -78,7 +75,7 @@ var (
 		"nokia_sros":     lipgloss.Color("81"),
 	}
 
-	kindBadgeBaseStyle = lipgloss.NewStyle().Bold(true)
+	kindBadgeBaseStyle = lipgloss.NewStyle()
 )
 
 // ---------------------------------------------------------------------------
@@ -415,18 +412,13 @@ func (m nodePickerModel) View() string {
 		}
 
 		// Fixed two-space indent keeps lines perfectly aligned when the
-		// cursor moves — selection is conveyed by the dot color and row
-		// background instead of a chevron.
+		// cursor moves — selection is conveyed by the dot color only.
 		line := fmt.Sprintf("  %s %s  %-18s %s",
 			dotStyle.Render(dot),
 			name,
 			kindBadge,
 			connectDimStyle.Render(img),
 		)
-
-		if selected {
-			line = connectSelectedRowStyle.Render(line)
-		}
 		rows = append(rows, line)
 	}
 
@@ -618,11 +610,8 @@ func (m methodPickerModel) View() string {
 		desc := connectDimStyle.Render(method.Description)
 
 		// Fixed two-space indent keeps method lines aligned while navigating —
-		// selection is conveyed by the row background only.
+		// selection is conveyed by the label styling only.
 		line := fmt.Sprintf("  %-16s %s", label, desc)
-		if selected {
-			line = connectSelectedRowStyle.Render(line)
-		}
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
