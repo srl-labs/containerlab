@@ -118,6 +118,9 @@
         <loc>https://containerlab.dev/manual/kinds/plvision_sonic/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/manual/kinds/mikrotik_chr/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/manual/kinds/vr-ros/</loc>
       </url>
       <url>
@@ -509,6 +512,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/lab-examples/generic_vm01/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/rn/0.82/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/rn/0.81/</loc>

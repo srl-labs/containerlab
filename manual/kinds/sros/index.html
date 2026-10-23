@@ -919,12 +919,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.81/" class="md-tabs__link">
+        <a href="../../../rn/0.82/" class="md-tabs__link">
           
   
   Release notes
@@ -2165,22 +2167,52 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vr-ros/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../mikrotik_chr/" class="md-nav__link">
+      
   
   
   <span class="md-ellipsis">
     
   
-  MikroTik RouterOS
+  MikroTik
 
     
   </span>
   
   
 
-      </a>
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
     </li>
   
 
@@ -3383,6 +3415,8 @@
       
         
       
+        
+      
     
     
     
@@ -3401,7 +3435,7 @@
   
   
   
-    <a href="../../../rn/0.81/" class="md-nav__link">
+    <a href="../../../rn/0.82/" class="md-nav__link">
       
   
   
@@ -4050,6 +4084,7 @@ Pizza-box systems with integrated line cards run in an integrated model with one
 <li>username: <code>admin</code></li>
 <li>password: <code>NokiaSros1!</code></li>
 </ul>
+<p>The generated startup configuration uses the node <code>credentials</code> (these defaults when unset). Postdeploy SSH and NETCONF use the same username and password.</p>
 <blockquote>
 <p>Note: the admin password is changed by Containerlab from the default <code>admin:admin</code> combination.</p>
 </blockquote>
@@ -4169,8 +4204,11 @@ You would see these Linux-compatible interface names used when SR-SIM is launche
 </div>
 </div>
 </div>
-<p>For known SR/IXR integrated nodes, containerlab's default model-driven configuration also provisions the default card and MDA configuration. The built-in defaults cover <code>sr-1</code>, <code>sr-1s</code>, <code>ixr-r6</code>, <code>ixr-e2</code>, <code>ixr-e2c</code>, <code>ixr-e2n</code>, <code>ixr-e2n-s</code>, <code>ixr-e3c</code>, <code>ixr-e3x</code> and <code>ixr-ec</code>. If the hardware is overridden with <code>components</code> or SR-SIM environment variables, the generated SR OS card/MDA configuration follows those overrides.</p>
-<p>Integrated nodes accept at most one <code>components</code> entry because they still run as a single container. The component slot can be omitted or set to <code>A</code>; <code>ixr-r6</code> also accepts a single <code>B</code> slot override.</p>
+<p>For known SR and IXR integrated types, containerlab generates model-driven configuration for the default card and MDA(s).</p>
+<p>The built-in defaults cover <code>sr-1</code>, <code>sr-1s</code>, <code>ixr-r6</code>, <code>ixr-e2</code>, <code>ixr-e2c</code>, <code>ixr-e2n</code>, <code>ixr-e2n-s</code>, <code>ixr-e2sc</code>, <code>ixr-e3c</code>, <code>ixr-e3x</code> and <code>ixr-ec</code>.</p>
+<p>An integrated node other than <code>ixr-r6</code> runs as one container and accepts one <code>components</code> entry. The slot can be omitted or set to <code>A</code>. <code>ixr-r6</code> accepts slots <code>A</code> and <code>B</code>. Two <code>ixr-r6</code> entries, one for <code>A</code> and one for <code>B</code>, run as a dual-CPIOM node with one container per CPM. Integrated nodes do not accept numeric line-card slots.</p>
+<p>A <code>components</code> entry with <code>type</code> sets <code>NOKIA_SROS_CARD</code>. Containerlab then skips generated card and MDA configuration, because those defaults belong to the built-in card. Set <code>type</code> when the integrated card itself must change, for example <code>cpm-ixr-e2n/imm4-sfp+4-sfp+</code>.</p>
+<p>Node <code>env</code> overrides <code>components</code>: <code>type</code>, <code>xiom</code>, <code>mda</code>, per-component <code>env</code>, and the <code>sfm</code> key. When both set the same variable to different values, the environment variable wins and containerlab logs a warning naming that variable. <code>NOKIA_SROS_MDA_*</code> and <code>NOKIA_SROS_XIOM_*</code> are written into the generated configuration. <code>NOKIA_SROS_CARD</code> skips that generation, the same as a component <code>type</code>. On a distributed node, <code>NOKIA_SROS_SLOT</code> does not replace each component's slot.</p>
 <h3 id="distributed">Distributed<a class="headerlink" href="#distributed" title="Permanent link">#</a></h3>
 <p>When the emulated platform is chassis-based, like SR-7, SR-14s, etc., the SR-SIM node must be defined in a distributed mode in the topology file.</p>
 <p>A distributed SR-SIM node consists of two or more containers with a specific role: CPM or IOM. A node can boot in either mode depending on the settings of the <code>NOKIA_SROS_SLOT</code> environment variable and the SR-SIM node type.
@@ -4300,10 +4338,11 @@ There are several other variables that will modify the default settings for a si
 <li>Component containers are attached to an internal namespace pause container.</li>
 <li>When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.</li>
 <li>Links can be added referring to the node name. The same <a href="#interface-naming">interface naming</a> convention holds for all SR-SIM nodes.</li>
-<li>Environment variable based configuration on per-component, or node-level will override the configuration set in <code>type</code>, <code>xiom</code> and <code>mda</code> fields.</li>
+<li>Environment variable based configuration on per-component, or node-level will override the configuration set in <code>type</code>, <code>xiom</code> and <code>mda</code> fields. Node-level <code>env</code> wins over both. When the values differ, containerlab logs a warning naming the environment variable that was kept.</li>
 </ol>
 <h5 id="configuration-for-components">Configuration for components<a class="headerlink" href="#configuration-for-components" title="Permanent link">#</a></h5>
 <p>When using the <code>components</code> structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">5</a></sup> to ensure the installed components come up without requiring a user to manually provide the configuration. The same generated configuration mechanism is used for the built-in SR/IXR integrated defaults.</p>
+<p>At deploy time, containerlab reads <code>chassis_info.json</code> from the selected SR-SIM image and compares the effective <code>components</code> configuration with the hardware types listed for that chassis. Unsupported card slots and card, SFM, XIOM, or MDA types produce warnings but do not stop deployment. This is a best-effort check: compatibility that is not represented in <code>chassis_info.json</code>, such as the MDA types supported by a specific XIOM, is not validated.</p>
 <details class="tip">
 <summary>Disabling generated SR OS configuration for <code>components</code></summary>
 <p>You can disable this config generation behavior by setting the <code>gen-component-config: false</code> <a href="../../nodes/#kind-specific-config">kind-specific config key</a> on the node, or on the base node for a distributed chassis.</p>

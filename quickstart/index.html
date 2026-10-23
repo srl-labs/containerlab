@@ -919,12 +919,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../rn/0.81/" class="md-tabs__link">
+        <a href="../rn/0.82/" class="md-tabs__link">
           
   
   Release notes
@@ -1820,6 +1822,8 @@
       
         
       
+        
+      
     
     
     
@@ -1838,7 +1842,7 @@
   
   
   
-    <a href="../rn/0.81/" class="md-nav__link">
+    <a href="../rn/0.82/" class="md-nav__link">
       
   
   
@@ -2152,7 +2156,11 @@
 <li><code>ceos:4.32.0F</code> - for Arista cEOS node</li>
 </ul>
 <p>When containerlab starts to deploy the lab, it will first check if the images are available locally. Local images can be listed with <code>docker images</code> command.</p>
-<p>Containerlab will compare the image names from the topology file with the local images and if the images are not available locally, it will try to pull them from the remote registry.</p>
+<p>Containerlab will compare the image names from the topology file with the local images and if the images are not available locally, it will try to pull them from the remote registry. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The registry pull will only be attempted after the <code>deploy</code> command is used, not when the .yml file is registered.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">Images availability</p>
 <p>Quickstart lab includes Nokia SR Linux and Arista cEOS images. While Nokia SR Linux is a publicly available image and can be pulled by anyone, its counterpart, Arista cEOS image, is not available in a public registry.</p>
@@ -2165,15 +2173,16 @@
 <h2 id="deploying-a-lab">Deploying a lab<a class="headerlink" href="#deploying-a-lab" title="Permanent link">#</a></h2>
 <p>Now when we know what a basic topology file consists of, refreshed our knowledge on what container image name is and imported cEOS image, we can proceed with deploying this lab. To keep things easy and guessable, the command to deploy a lab is called <a href="../cmd/deploy/"><code>deploy</code></a>.</p>
 <p>Doesn't hurt to verify that we have cEOS image imported before we hit the deploy command:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>images<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ceos
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>images<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ceos
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>REPOSITORY<span class="w">                        </span>TAG<span class="w">        </span>IMAGE<span class="w"> </span>ID<span class="w">       </span>CREATED<span class="w">         </span>SIZE
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="hll">ceos<span class="w">                              </span><span class="m">4</span>.32.0F<span class="w">    </span>40d39e1a92c2<span class="w">   </span><span class="m">24</span><span class="w"> </span>hours<span class="w"> </span>ago<span class="w">    </span><span class="m">2</span>.4GB
 </span></span></code></pre></div>
+Don't worry if this is your first time setting up containerlab and the above output is empty, the images will be pulled when you enter run the <code>deploy</code>.</p>
 <div class="admonition inline end tip">
 <p class="admonition-title">Remote topology files</p>
 <p>Containerlab allows to deploy labs from files located in remote Git repositories and/or HTTP URLs. Check out deploy command <a href="../cmd/deploy/#remote-topology-files">documentation</a> for more details.</p>
 </div>
-<p>While you can pre-pull the Nokia SR Linux image, containerlab will do it for you if it's not available locally, handy! So we are ready to deploy:</p>
+<p>While you can pre-pull the Nokia SR Linux image, containerlab will do it for you (at deployment time) if it's not available locally, handy! So we are ready to deploy:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sudo<span class="w"> </span>containerlab<span class="w"> </span>deploy<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>

@@ -919,12 +919,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.81/" class="md-tabs__link">
+        <a href="../../../rn/0.82/" class="md-tabs__link">
           
   
   Release notes
@@ -2706,6 +2708,8 @@
       
         
       
+        
+      
     
     
     
@@ -2724,7 +2728,7 @@
   
   
   
-    <a href="../../../rn/0.81/" class="md-nav__link">
+    <a href="../../../rn/0.82/" class="md-nav__link">
       
   
   
@@ -3482,6 +3486,12 @@ follow the node. Node names on the command line (<code>node start R1</code>,
 containerlab reports back — <code>inspect</code>, container names, the <code>clab-node-name</code>
 label — uses the sanitized name, because that is the name the objects carry in
 the cluster.</p>
+<p>To keep the original names reachable, containerlab injects a
+<code>c9s.run/originalNodeName</code> label into the stored topology definition and onto
+every c9s Node object. The label holds the node name exactly as the clab file
+spells it, so tooling that only sees the clab file can select the c9s Nodes by
+those names. The label key is reserved by containerlab: a value set for it in
+the topology file is overwritten on every deploy.</p>
 <p>Two node names that differ only in a character Kubernetes cannot carry (<code>R1</code>
 and <code>r1</code>) would end up as one object; that is an error, not a merge.</p>
 <p><code>c9s-&lt;lab-name&gt;</code> must still fit in a DNS label of 63 characters, which leaves
