@@ -69,6 +69,15 @@ Data ports start at `ether2`: `ether1` is the management interface. Using `ether
 
 The container interface `ethN` is RouterOS `ether(N+1)`, also when links leave gaps: a link on `eth12` alone still lands on `ether13`, with `ether2` to `ether12` present and unlinked. Interface MTU follows the link MTU, and LLDP frames are forwarded, so `/ip neighbor` shows the peers.
 
+On AMD64, data NICs are placed behind PCI bridges rather than sharing the default PC's root bus with all other devices. This removes the default layout's limit of 29 total Ethernet interfaces (management plus 28 data ports), so links can use `ether30` and higher without a custom launcher. ARM64 still uses a single PCI bus on the `virt` machine and remains limited to roughly 30 NICs including management; the PCI-bridge expansion applies only to AMD64.
+
+/// admonition
+    type: warning
+The highest interface index is limited to `eth255` / `ether256`: the launcher's MAC-address scheme reserves index zero for management and uses one octet for the data-port index. Larger indices are rejected during deployment. This is an addressing limit, not a guarantee that every CHR version and host can run 256 interfaces.
+///
+
+Sparse interface numbering also consumes VM resources for the intervening ports; memory defaults scale with the highest index, not just the number of links.
+
 ## Node configuration
 
 -{{ kind_display_name }}- nodes boot with the default CHR configuration plus the credentials, the identity (set to the node name) and the management setup described below.

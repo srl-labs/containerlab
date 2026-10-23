@@ -151,11 +151,20 @@ func TestInterfaceParsing(t *testing.T) {
 		wantErr bool
 	}{
 		"routeros-names": {
-			ifaces: []string{"ether2", "ether5", "ether13"},
-			want:   []string{"eth1", "eth4", "eth12"},
+			ifaces: []string{"ether2", "ether5", "ether13", "ether30", "ether33", "ether256"},
+			want:   []string{"eth1", "eth4", "eth12", "eth29", "eth32", "eth255"},
 		},
-		"eth-names":   {ifaces: []string{"eth1", "eth3"}, want: []string{"eth1", "eth3"}},
-		"mgmt-ether1": {ifaces: []string{"ether1"}, wantErr: true},
+		"eth-names": {
+			ifaces: []string{"eth1", "eth3", "eth255"},
+			want:   []string{"eth1", "eth3", "eth255"},
+		},
+		"mgmt-ether1":      {ifaces: []string{"ether1"}, wantErr: true},
+		"ether-overflow":   {ifaces: []string{"ether257"}, wantErr: true},
+		"ether300":         {ifaces: []string{"ether300"}, wantErr: true},
+		"eth-overflow":     {ifaces: []string{"eth256"}, wantErr: true},
+		"eth300":           {ifaces: []string{"eth300"}, wantErr: true},
+		"integer-overflow": {ifaces: []string{"eth999999999999999999999999"}, wantErr: true},
+		"duplicate":        {ifaces: []string{"eth1", "eth1"}, wantErr: true},
 	}
 
 	for name, tc := range tests {

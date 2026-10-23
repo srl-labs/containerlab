@@ -54,6 +54,9 @@ const (
 	// mgmtComment tags every management object the launcher creates in RouterOS.
 	mgmtComment = "clab-mgmt"
 
+	// The last MAC octet is the NIC index; zero is reserved for management.
+	maxDataNICIndex = 255
+
 	// the launcher's CHR_INTF_WAIT and CHR_BOOT_WAIT defaults, and the time its config
 	// fetch and gateway check add, in seconds.
 	defaultIntfWait  = 60
@@ -123,6 +126,26 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
+
+	return nil
+}
+
+// CheckInterfaceName rejects data NIC indices that would wrap the launcher's MAC addresses.
+func (n *mikrotikCHR) CheckInterfaceName() error {
+	if err := n.VRNode.CheckInterfaceName(); err != nil {
+		return err
+	}
+
+	for _, ep := range n.Endpoints {
+		ifName := ep.GetIfaceName()
+		index, err := strconv.Atoi(strings.TrimPrefix(ifName, "eth"))
+		if err != nil || index > maxDataNICIndex {
+			return fmt.Errorf(
+				"node %q interface %q exceeds the maximum data NIC index %d (eth255 / ether256)",
+				n.Cfg.ShortName, ifName, maxDataNICIndex,
+			)
+		}
+	}
 
 	return nil
 }
