@@ -147,21 +147,37 @@ func TestQEMUDataNIC(t *testing.T) {
 }
 
 func TestCheckNICIndex(t *testing.T) {
+	tests := map[string]struct {
+		pciBridges int
+		index      int
+		errText    string // empty when the index is accepted
+	}{
+		"bridges-zero":      {pciBridges: 1, index: 0},
+		"bridges-old-limit": {pciBridges: 1, index: 28},
+		"bridges-ether33":   {pciBridges: 1, index: 32},
+		"bridges-max":       {pciBridges: 1, index: 255},
+		"bridges-wrap":      {pciBridges: 1, index: 256, errText: "would reuse a NIC MAC"},
+		"bridges-wrap-511":  {pciBridges: 1, index: 511, errText: "would reuse a NIC MAC"},
+		"no-bridges-max":    {pciBridges: 0, index: 29},
+		"no-bridges-full":   {pciBridges: 0, index: 30, errText: "no PCI slot for the disk"},
+		"no-bridges-wrap":   {pciBridges: 0, index: 256, errText: "would reuse a NIC MAC"},
+	}
+
 	fn := launcherFunction(t, "check_nic_index")
-	for _, index := range []int{0, 28, 29, 31, 32, 255, 256, 511} {
-		t.Run(fmt.Sprint(index), func(t *testing.T) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c",
-				"log() { printf '%s\\n' \"$*\" >&2; }\n"+fn+"check_nic_index \"$1\"",
-				"chr-launch-test", fmt.Sprint(index))
+				"log() { printf '%s\\n' \"$*\" >&2; }\n"+fn+"PCI_BRIDGES=\"$1\"; check_nic_index \"$2\"",
+				"chr-launch-test", fmt.Sprint(tc.pciBridges), fmt.Sprint(tc.index))
 			out, err := cmd.CombinedOutput()
-			if index <= 255 {
+			if tc.errText == "" {
 				if err != nil {
-					t.Fatalf("index %d rejected: %v\n%s", index, err, out)
+					t.Fatalf("index %d rejected: %v\n%s", tc.index, err, out)
 				}
 				return
 			}
-			if err == nil || !strings.Contains(string(out), "would reuse a NIC MAC") {
-				t.Errorf("index %d: want MAC reuse error, got %v: %s", index, err, out)
+			if err == nil || !strings.Contains(string(out), tc.errText) {
+				t.Errorf("index %d: want error containing %q, got %v: %s", tc.index, tc.errText, err, out)
 			}
 		})
 	}

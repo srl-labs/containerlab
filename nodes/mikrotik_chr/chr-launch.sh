@@ -182,10 +182,15 @@ case "$node_id" in
 esac
 NET="-netdev tap,id=mgmt,ifname=tap0,script=no,downscript=no -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
 
-check_nic_index() { # check_nic_index <max-index>: reject MAC-address wraparound
+check_nic_index() { # check_nic_index <max-index>: reject indices the NIC layout cannot hold
     # The last MAC octet holds the NIC index; zero belongs to management.
     if [ "$1" -gt 255 ]; then
         log "at most 255 data NICs are supported (eth255 / ether256); index $1 would reuse a NIC MAC"
+        return 1
+    fi
+    # Without bridges (arm64 virt) one bus holds the disk, management and 29 data NICs.
+    if [ "$PCI_BRIDGES" != 1 ] && [ "$1" -gt 29 ]; then
+        log "at most 29 data NICs fit without PCI bridges (eth29 / ether30); index $1 leaves no PCI slot for the disk"
         return 1
     fi
 }

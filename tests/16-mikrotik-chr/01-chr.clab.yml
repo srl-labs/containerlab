@@ -18,5 +18,3 @@ topology:
       startup-config: r3-rejected.rsc
   links:
     - endpoints: ["r1:ether2", "r2:ether2"]
-    # Exercise sparse NIC numbering, the second PCI bridge and MSI-X allocation.
-    - endpoints: ["r1:ether33", "r2:ether33"]

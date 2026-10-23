@@ -146,9 +146,11 @@ func TestPreDeployWritesLauncherAndStartupConfig(t *testing.T) {
 
 func TestInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
+		goarch  string // defaults to amd64, so the result doesn't depend on the test host
 		ifaces  []string
 		want    []string
 		wantErr bool
+		errText string // when set, the error must contain it
 	}{
 		"routeros-names": {
 			ifaces: []string{"ether2", "ether5", "ether13", "ether30", "ether33", "ether256"},
@@ -158,18 +160,39 @@ func TestInterfaceParsing(t *testing.T) {
 			ifaces: []string{"eth1", "eth3", "eth255"},
 			want:   []string{"eth1", "eth3", "eth255"},
 		},
-		"mgmt-ether1":      {ifaces: []string{"ether1"}, wantErr: true},
-		"ether-overflow":   {ifaces: []string{"ether257"}, wantErr: true},
-		"ether300":         {ifaces: []string{"ether300"}, wantErr: true},
-		"eth-overflow":     {ifaces: []string{"eth256"}, wantErr: true},
-		"eth300":           {ifaces: []string{"eth300"}, wantErr: true},
-		"integer-overflow": {ifaces: []string{"eth999999999999999999999999"}, wantErr: true},
-		"duplicate":        {ifaces: []string{"eth1", "eth1"}, wantErr: true},
+		"mgmt-ether1":    {ifaces: []string{"ether1"}, wantErr: true},
+		"ether-overflow": {ifaces: []string{"ether257"}, wantErr: true, errText: "exceeds the maximum"},
+		"ether300":       {ifaces: []string{"ether300"}, wantErr: true, errText: "exceeds the maximum"},
+		"eth-overflow":   {ifaces: []string{"eth256"}, wantErr: true, errText: "exceeds the maximum"},
+		"eth300":         {ifaces: []string{"eth300"}, wantErr: true, errText: "exceeds the maximum"},
+		"integer-overflow": {
+			ifaces:  []string{"eth999999999999999999999999"},
+			wantErr: true,
+			errText: "exceeds the maximum",
+		},
+		// VMInterfaceRegexp is not anchored at the start, so this passes the parent check.
+		"malformed": {ifaces: []string{"xeth5"}, wantErr: true, errText: "cannot parse interface index"},
+		"duplicate": {ifaces: []string{"eth1", "eth1"}, wantErr: true},
+		"arm64-limit": {
+			goarch: "arm64",
+			ifaces: []string{"ether2", "ether30"},
+			want:   []string{"eth1", "eth29"},
+		},
+		"arm64-overflow": {
+			goarch:  "arm64",
+			ifaces:  []string{"ether31"},
+			wantErr: true,
+			errText: "exceeds the maximum data NIC index 29 on arm64 (eth29 / ether30)",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			n := newInitialized(t, &clabtypes.NodeConfig{ShortName: "r1", LabDir: t.TempDir()})
+			n.goarch = "amd64"
+			if tc.goarch != "" {
+				n.goarch = tc.goarch
+			}
 
 			var err error
 			for _, ifName := range tc.ifaces {
@@ -187,6 +210,9 @@ func TestInterfaceParsing(t *testing.T) {
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("interfaces %v: want an error, got none", tc.ifaces)
+				}
+				if !strings.Contains(err.Error(), tc.errText) {
+					t.Errorf("interfaces %v: error %q, want it to contain %q", tc.ifaces, err, tc.errText)
 				}
 				return
 			}
