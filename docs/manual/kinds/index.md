@@ -99,6 +99,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
 | **v::n osvbng**            | [`veesix_osvbng`](veesix_osvbng.md)                 | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
+| **Unmanaged switch**       | [`unmanaged-switch`](unmanaged-switch.md)           | supported | container |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |
 

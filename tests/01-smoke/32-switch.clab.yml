@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: switch
+
+topology:
+  kinds:
+    linux:
+      image: alpine:3
+  nodes:
+    sw1:
+      kind: unmanaged-switch
+    c1:
+      kind: linux
+      exec:
+        - ip addr add 192.168.10.1/24 dev eth1
+    c2:
+      kind: linux
+      exec:
+        - ip addr add 192.168.10.2/24 dev eth1
+
+  links:
+    - endpoints: ["c1:eth1", "sw1:eth1"]
+    - endpoints: ["c2:eth1", "sw1:eth2"]

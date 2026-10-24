@@ -253,6 +253,7 @@
                         "linux",
                         "bridge",
                         "ovs-bridge",
+                        "unmanaged-switch",
                         "host",
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
@@ -3651,6 +3652,16 @@
                             ]
                         },
                         "ovs-bridge": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-other"
+                                }
+                            ]
+                        },
+                        "unmanaged-switch": {
                             "allOf": [
                                 {
                                     "$ref": "#/definitions/node-config"

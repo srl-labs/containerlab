@@ -45,6 +45,7 @@ import (
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabnodestailscale "github.com/srl-labs/containerlab/nodes/tailscale"
+	clabnodesunmanaged_switch "github.com/srl-labs/containerlab/nodes/unmanaged_switch"
 	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -89,6 +90,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodeskeysight_ixiacone.Register(c.Reg)
 	clabnodeslinux.Register(c.Reg)
 	clabnodesovs.Register(c.Reg)
+	clabnodesunmanaged_switch.Register(c.Reg)
 	clabnodessonic.Register(c.Reg)
 	clabnodessrl.Register(c.Reg)
 	clabnodessros.Register(c.Reg)

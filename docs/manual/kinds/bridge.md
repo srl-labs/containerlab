@@ -23,6 +23,11 @@ For example, by connecting a lab node to a bridge we can:
 
 Containerlab doesn't create bridges on users behalf, that means that in order to use a bridge in the [topology definition file](../topo-def-file.md), the bridge needs to be created and enabled first.
 
+/// admonition
+    type: subtle-note
+To interconnect nodes of a single lab, use the [`unmanaged-switch`](unmanaged-switch.md) kind, which is created and removed together with the lab.
+///
+
 Once the bridge is created, it needs to be referenced as a node inside the topology file:
 
 ```yaml

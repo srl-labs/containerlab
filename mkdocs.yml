@@ -75,6 +75,7 @@ nav:
       - RARE/freeRtr: manual/kinds/rare-freertr.md
       - FRRouting: manual/kinds/frr.md
       - Openvswitch bridge: manual/kinds/ovs-bridge.md
+      - Unmanaged switch: manual/kinds/unmanaged-switch.md
       - External container: manual/kinds/ext-container.md
       - Host: manual/kinds/host.md
   - User manual:
