@@ -1023,6 +1023,40 @@ func TestMgmtNetLinkSelectsNetwork(t *testing.T) {
 	}
 }
 
+// apply reconciles the mgmt-net endpoints of every management network under the
+// stable mgmt-net owner, independent of the bridge the endpoint attaches to.
+func TestMgmtNetLinkApplyEndpointKey(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTopo(t, mgmtNetLinkTopo), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.setMgmtNetLinkBridges(); err != nil {
+		t.Fatal(err)
+	}
+	// the mgmt-net link nodes are shared by the package, release their endpoints
+	t.Cleanup(c.resetResolvedLinks)
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]bool{"r1-eth1": true, "r1-eth2": true, "r1-eth3": true, "r1-eth4": true}
+	for _, ep := range c.Endpoints {
+		if !want[ep.GetIfaceName()] {
+			continue
+		}
+		delete(want, ep.GetIfaceName())
+
+		key := endpointKeyFromEndpoint(ep)
+		if key.node != "mgmt-net" || key.iface != ep.GetIfaceName() {
+			t.Errorf("mgmt-net endpoint %s keyed as %s; want mgmt-net:%s",
+				ep.GetIfaceName(), key.String(), ep.GetIfaceName())
+		}
+	}
+	for iface := range want {
+		t.Errorf("mgmt-net endpoint %s not resolved", iface)
+	}
+}
+
 func TestMgmtNetLinkNetworkValidation(t *testing.T) {
 	for _, tc := range []struct {
 		name string

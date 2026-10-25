@@ -621,7 +621,18 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 }
 
 func ownershipAltName(endpt Endpoint) string {
-	return ownershipAltNameFor(endpt.GetNode().GetShortName(), endpt.GetIfaceName())
+	return ownershipAltNameFor(ownershipName(endpt.GetNode()), endpt.GetIfaceName())
+}
+
+// ownershipName returns the logical owner name recorded in the ownership marker
+// of node's interfaces. mgmt-net link nodes use a stable name rather than the
+// bridge they resolve to, so the marker of a mgmt-net endpoint does not depend
+// on the management network it attaches to.
+func ownershipName(node Node) string {
+	if _, ok := node.(*mgmtBridgeLinkNode); ok {
+		return mgmtNetOwnerName
+	}
+	return node.GetShortName()
 }
 
 func ownershipAltNameFor(nodeName, ifaceName string) string {

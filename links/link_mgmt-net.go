@@ -114,6 +114,10 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 	return link, nil
 }
 
+// mgmtNetOwnerName is the logical owner name of the interfaces created for
+// mgmt-net links, shared by the mgmt-net link nodes of all management networks.
+const mgmtNetOwnerName = "mgmt-net"
+
 var (
 	// _mgmtBrLinkNodes holds the mgmt-net link nodes keyed by the management
 	// network name. The empty name is the default management network.
@@ -175,7 +179,7 @@ func getMgmtBrLinkNode(network string) *mgmtBridgeLinkNode {
 	}
 	n := &mgmtBridgeLinkNode{
 		GenericLinkNode: GenericLinkNode{
-			shortname: "mgmt-net",
+			shortname: mgmtNetOwnerName,
 			endpoints: []Endpoint{},
 			nspath:    currns.Path(),
 		},

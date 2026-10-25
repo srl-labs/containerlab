@@ -914,14 +914,7 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 		return false
 	}
 
-	if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[0].IsNodeless() &&
-		left.MasterName != endpoints[0].GetNode().GetShortName() {
-		return false
-	}
-	if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[1].IsNodeless() &&
-		right.MasterName != endpoints[1].GetNode().GetShortName() {
+	if bridgeMasterMismatch(endpoints[0], left) || bridgeMasterMismatch(endpoints[1], right) {
 		return false
 	}
 
@@ -929,6 +922,24 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 		right.PeerIndex != 0 &&
 		left.PeerIndex == right.Index &&
 		right.PeerIndex == left.Index
+}
+
+// bridgeMasterMismatch reports whether the live interface of a bridge endpoint is
+// attached to a bridge other than the one the endpoint resolves to, e.g. after a
+// mgmt-net link moved to another management network. mgmt-net endpoints whose
+// management network bridge is not resolved are not checked.
+func bridgeMasterMismatch(ep clablinks.Endpoint, live clablinks.OwnedInterface) bool {
+	node := ep.GetNode()
+	if node.GetLinkEndpointType() != clablinks.LinkEndpointTypeBridge {
+		return false
+	}
+
+	bridge := node.GetShortName()
+	if ep.IsNodeless() && (bridge == "" || bridge == "mgmt-net") {
+		return false
+	}
+
+	return live.MasterName != bridge
 }
 
 func (p *applyPlan) deployNodeNames() []string {
