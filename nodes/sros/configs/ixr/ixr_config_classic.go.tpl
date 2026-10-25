@@ -116,8 +116,8 @@ echo "System Security Configuration"
             password
                 attempts 64 time 5 lockout 10
             exit
-            user "admin"
-                password "NokiaSros1!"
+            user {{ .AdminUser }}
+                password {{ .AdminPassword }}
                 access console netconf grpc
                 no restricted-to-home
                 public-keys
@@ -199,7 +199,9 @@ echo "System Security Cpm Hw Filters, PKI, TLS and LDAP Configuration"
                     tls13-cipher 2 name tls-aes256-gcm-sha384
                     tls13-cipher 3 name tls-chacha20-poly1305-sha256
                     tls13-cipher 4 name tls-aes128-ccm-sha256
+{{ if srosLe26_3 }}
                     tls13-cipher 5 name tls-aes128-ccm8-sha256
+{{ end }}
                 exit
                 server-tls-profile "clab-grpc-tls" create
                     cert-profile "clab-grpc-certs"

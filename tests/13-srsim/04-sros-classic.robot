@@ -2,6 +2,7 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
 Suite Teardown      Run Keyword    Cleanup
 
@@ -11,7 +12,7 @@ ${lab-name}         sr04
 ${lab-file-name}    04-srsim-classic.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
-${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.49.0
 ${gnmic_flags}      --username admin --password NokiaSros1! --values-only
 
 
@@ -25,11 +26,7 @@ Create SSH keypair - ecdsa512
     ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
 
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
@@ -60,5 +57,8 @@ Check Mixed Config Mode on srsim
 
 *** Keywords ***
 Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    rm -f ${key-path}*
+    TRY
+        Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
+    FINALLY
+        Run    rm -f ${key-path}*
+    END

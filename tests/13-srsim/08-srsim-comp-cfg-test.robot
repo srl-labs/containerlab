@@ -2,25 +2,22 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
 ${lab-name}         comp-cfg-gen-test
 ${lab-file-name}    08-srsim-comp-cfg-test.clab.yml
 ${runtime}          docker
-${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.49.0
 ${gnmic_flags}      --username admin --password NokiaSros1! --values-only --insecure
 
 
 *** Test Cases ***
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Wait for 45s
     Sleep    45s    Let everything fully provision & come up
@@ -123,9 +120,6 @@ Check SR-2s-ncofg has unprovisioned card
     Should Contain    ${output}    unprovisioned
 
 *** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-
 Check SR-2S MDA state
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr2s --path /state/card[slot-number=1]/xiom[xiom-slot=x1]/mda[mda-slot=1]/hardware-data/oper-state

@@ -60,6 +60,8 @@ type DefaultNode struct {
 	OverwriteNode NodeOverwrites
 	// List of link endpoints that are connected to the node.
 	Endpoints []clablinks.Endpoint
+	// Preserve topology endpoint objects while they belong to the parking node.
+	parkingNode *clablinks.ParkingNode
 	// Interface aliasing-related variables
 	InterfaceRegexp       *regexp.Regexp
 	InterfaceMappedPrefix string
@@ -1169,25 +1171,34 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
 	}
-	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+	// Reuse the parking node retained by a failed restore so it keeps the parked endpoints.
+	parkingNode := d.parkingNode
+	reused := parkingNode != nil
+	if !reused {
+		parkingNode = clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+	}
 
 	if err := parkingNode.CaptureFrom(ctx, d); err != nil {
-		_ = d.cleanupParkingNetNS()
+		if !reused {
+			_ = d.cleanupParkingNetNS()
+		}
 		return err
 	}
 
 	if err := parkingNode.RepointSymlink(); err != nil {
-		_, restoreErr := parkingNode.RestoreTo(ctx, d)
-		cleanupErr := d.cleanupParkingNetNS()
-		if restoreErr != nil || cleanupErr != nil {
-			return errors.Join(
-				fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err),
-				restoreErr,
-				cleanupErr,
-			)
+		repointErr := fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+		if _, restoreErr := parkingNode.RestoreTo(ctx, d); restoreErr != nil {
+			// Keep the parking netns and its endpoints so a later restore can recover them.
+			d.parkingNode = parkingNode
+			return errors.Join(repointErr, restoreErr)
 		}
-		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+		d.parkingNode = nil
+		if cleanupErr := d.cleanupParkingNetNS(); cleanupErr != nil {
+			return errors.Join(repointErr, cleanupErr)
+		}
+		return repointErr
 	}
+	d.parkingNode = parkingNode
 
 	return nil
 }
@@ -1199,10 +1210,14 @@ func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
 		// No parking netns means the node had no parked interfaces - e.g. it was
 		// stopped outside of containerlab (so its interfaces were never parked) or
 		// it has no dataplane links. Nothing to restore.
+		d.parkingNode = nil
 		log.Debugf("node %q has no parking netns, nothing to restore", d.Cfg.ShortName)
 		return nil
 	}
-	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+	parkingNode := d.parkingNode
+	if parkingNode == nil {
+		parkingNode = clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+	}
 
 	restored, err := parkingNode.RestoreTo(ctx, d)
 	if err != nil {
@@ -1216,6 +1231,7 @@ func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
 	if err := d.cleanupParkingNetNS(); err != nil {
 		return fmt.Errorf("failed to cleanup parking netns for node %q: %w", d.Cfg.ShortName, err)
 	}
+	d.parkingNode = nil
 
 	return nil
 }

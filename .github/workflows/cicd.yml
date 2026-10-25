@@ -154,19 +154,6 @@ jobs:
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
 
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - run: make test
 
       # upload coverage report from unit tests, as they are then
@@ -493,6 +480,17 @@ jobs:
       uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  mikrotik_chr-tests:
+    uses: ./.github/workflows/mikrotik_chr-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
     needs:
@@ -556,6 +554,7 @@ jobs:
       - cisco_iol-tests
       - fdio_vpp-tests
       - frr-tests
+      - mikrotik_chr-tests
       - download-tests
       - cumulus-tests
       - process-gitref
@@ -661,6 +660,7 @@ jobs:
       - fortigate-tests
       - fdio_vpp-tests
       - frr-tests
+      - mikrotik_chr-tests
       - download-tests
       - cumulus-tests
       - process-gitref
@@ -674,19 +674,6 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ needs.process-gitref.outputs.go_ver }}
-
-      - name: Cache go modules
-        uses: actions/cache@v6
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4

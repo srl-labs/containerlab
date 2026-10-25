@@ -128,12 +128,12 @@ func createCgroupV1Files(labDir string) error {
 
 	for controller, files := range cgControllers {
 		dir := path.Join(base, controller)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("error creating dir %q: %w", controller, err)
 		}
 
 		for name, content := range files {
-			if err := os.WriteFile(path.Join(dir, name), []byte(content+"\n"), 0644); err != nil {
+			if err := os.WriteFile(path.Join(dir, name), []byte(content+"\n"), 0o644); err != nil {
 				return fmt.Errorf(
 					"error creating cgroup %q: %w",
 					fmt.Sprintf("%s/%s", controller, name),
@@ -150,7 +150,7 @@ func createCgroupV1Files(labDir string) error {
 
 	// Standalone memory limit file also needed at /cgroup/memory/.
 	if err := os.WriteFile(path.Join(base, "memory.limit_in_bytes"),
-		[]byte(cgroupMemLimit+"\n"), 0644); err != nil {
+		[]byte(cgroupMemLimit+"\n"), 0o644); err != nil {
 		return fmt.Errorf("error creating cgroup mem file %q: %w", "memory.limit_in_bytes", err)
 	}
 

@@ -33,7 +33,7 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 			setup: func() []string {
 				// Create file with one valid key
 				content := validKey1 + " test@example.com\n"
-				if err := os.WriteFile(validKeyFile, []byte(content), 0644); err != nil {
+				if err := os.WriteFile(validKeyFile, []byte(content), 0o644); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 				return []string{validKeyFile}
@@ -47,7 +47,7 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 				// Create file with multiple keys
 				content := validKey1 + " test1@example.com\n" +
 					validKey2 + " test2@example.com\n"
-				if err := os.WriteFile(multiKeyFile, []byte(content), 0644); err != nil {
+				if err := os.WriteFile(multiKeyFile, []byte(content), 0o644); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 				return []string{multiKeyFile}
@@ -59,7 +59,7 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 			name: "empty_file",
 			setup: func() []string {
 				// Create empty file
-				if err := os.WriteFile(emptyFile, []byte(""), 0644); err != nil {
+				if err := os.WriteFile(emptyFile, []byte(""), 0o644); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 				return []string{emptyFile}
@@ -75,7 +75,7 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 					validKey1 + " test@example.com\n" +
 					"# Another comment\n" +
 					validKey2 + " test2@example.com\n"
-				if err := os.WriteFile(commentedFile, []byte(content), 0644); err != nil {
+				if err := os.WriteFile(commentedFile, []byte(content), 0o644); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 				return []string{commentedFile}
@@ -102,14 +102,14 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 				if err := os.WriteFile(
 					file1,
 					[]byte(validKey1+" test1@example.com\n"),
-					0644,
+					0o644,
 				); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 				if err := os.WriteFile(
 					file2,
 					[]byte(validKey2+" test2@example.com\n"),
-					0644,
+					0o644,
 				); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
@@ -163,7 +163,7 @@ func TestLoadSSHPubKeysFromFiles_InvalidKey(t *testing.T) {
 	invalidKeyFile := filepath.Join(tmpDir, "invalid.pub")
 	invalidKeyContent := "ssh-rsa invalid-key-data test@example.com\n"
 
-	if err := os.WriteFile(invalidKeyFile, []byte(invalidKeyContent), 0644); err != nil {
+	if err := os.WriteFile(invalidKeyFile, []byte(invalidKeyContent), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 

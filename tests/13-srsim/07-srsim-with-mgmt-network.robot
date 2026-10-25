@@ -2,28 +2,20 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
 ${lab-name}         sr07
 ${lab-file-name}    07-srsim-mix.clab.yml
 ${runtime}          docker
-${key-name}         clab-test-key
 
 
 *** Test Cases ***
-Set key-path Variable
-    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
-    Set Suite Variable    ${key-path}
-
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
@@ -53,21 +45,16 @@ Check Cards after 20s on srsim11
 Do a gNMI GET using TLS
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic:0.42.1 get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10 --path /state/system/oper-name --values-only
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic:0.49.0 get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10 --path /state/system/oper-name --values-only
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    srsim10-a
 
 *** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    rm -f ${key-path}*
-
-
 Do a gNOI ping to other node
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.0 system ping --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10 --destination 100.0.0.11 --ns Base --count 3
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.1 system ping --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10 --destination 100.0.0.11 --ns Base --count 3
     Log    ${output}
     Should Contain    ${output}    3 packets sent
     Should Contain    ${output}    3 packets received

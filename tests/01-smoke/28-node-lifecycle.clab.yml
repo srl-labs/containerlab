@@ -11,6 +11,7 @@ topology:
       kind: linux
       image: alpine:3
       exec:
+        - apk add ethtool
         - >
           ash -c '
           ip link set dev eth1 up &&

@@ -91,12 +91,46 @@ func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 func (n *linux) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 
+	n.disableEth0TxOffload(ctx)
+
+	return nil
+}
+
+// Start re-applies the eth0 TX offload fix after a stop/start cycle. The runtime recreates
+// the mgmt veth (it is never parked), so its offload settings reset to defaults.
+// See disableEth0TxOffload for why TX offload must stay disabled on eth0.
+func (n *linux) Start(ctx context.Context) error {
+	if err := n.DefaultNode.Start(ctx); err != nil {
+		return err
+	}
+
+	// DefaultNode.Start no-ops for root-ns and auto-remove nodes; skip the offload fix
+	// for them as well, as there is no container netns to adjust.
+	if n.ShouldSkipLifecycle() {
+		return nil
+	}
+
+	n.disableEth0TxOffload(ctx)
+
+	return nil
+}
+
+// disableEth0TxOffload disables TX checksum offload on the container's eth0 interface.
+// Frames crossing the veth with an offloaded (CHECKSUM_PARTIAL) checksum break consumers
+// that bridge or capture traffic on that interface, so the setting is (re-)applied on
+// deploy and after every stop/start cycle, when the runtime recreates the mgmt veth.
+//
+// Nodes running with host network mode are skipped: their eth0 is the host's interface,
+// and toggling its offload settings would alter the host networking state.
+func (n *linux) disableEth0TxOffload(ctx context.Context) {
+	if n.Cfg.NetworkMode == "host" {
+		return
+	}
+
 	err := n.ExecFunction(ctx, clabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
 	if err != nil {
 		log.Error(err)
 	}
-
-	return nil
 }
 
 func (n *linux) GetImages(_ context.Context) map[string]string {
