@@ -175,28 +175,40 @@ func (c *CLab) mgmtNetLinkNetworks() []*clabtypes.MgmtNet {
 // resolveMgmtNetLinkNetworks populates the bridge names of the non-default management
 // networks that mgmt-net links reference without an explicit bridge. The runtime names
 // such a bridge when it creates the network, so the bridge of an existing network is
-// inspected from the runtime. Networks that do not exist yet are left unresolved.
+// looked up from the runtime. The lookup neither creates networks nor changes host
+// state, so it is safe for dry runs. Networks that do not exist yet are left unresolved.
 func (c *CLab) resolveMgmtNetLinkNetworks(ctx context.Context) error {
-	var networks clabtypes.MgmtNetworks
+	var resolved clabtypes.MgmtNetworks
 	for _, m := range c.mgmtNetLinkNetworks() {
-		if m == c.Config.Mgmt || m.Bridge != "" || slices.Contains(networks, m) {
+		if m == c.Config.Mgmt || m.Bridge != "" || slices.Contains(resolved, m) {
 			continue
 		}
-		networks = append(networks, m)
+		resolved = append(resolved, m)
+
+		rt, err := c.mgmtRuntime(c.globalRuntimeName, m)
+		if err != nil {
+			// runtimes without multiple network support never created extra networks
+			log.Debug("Skipping management network resolution", "network", m.Network, "error", err)
+			continue
+		}
+		resolver, ok := rt.(clabruntime.MgmtBridgeResolver)
+		if !ok {
+			continue
+		}
+		if err := resolver.ResolveMgmtBridge(ctx); err != nil {
+			return err
+		}
 	}
-	if len(networks) == 0 {
-		return nil
-	}
-	return c.resolveExistingMgmtNetworks(ctx, networks)
+	return nil
 }
 
-// setMgmtNetLinkBridges points the mgmt-net link nodes of every management network
-// at the bridge of that network.
+// setMgmtNetLinkBridges points the mgmt-net link nodes of the management networks
+// that mgmt-net links select at the bridge of that network.
 func (c *CLab) setMgmtNetLinkBridges() error {
 	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
 		return err
 	}
-	for _, m := range c.allMgmtNetworks() {
+	for _, m := range c.mgmtNetLinkNetworks() {
 		if m == c.Config.Mgmt || m.Network == "" {
 			continue
 		}

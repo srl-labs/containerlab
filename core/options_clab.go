@@ -79,6 +79,16 @@ func WithSkippedBindsPathsCheck() ClabOption {
 	}
 }
 
+// WithSkippedMgmtNetLinksCheck skips the mgmt-net link checks.
+// It must precede the options that load the topology, as those run the checks.
+func WithSkippedMgmtNetLinksCheck() ClabOption {
+	return func(c *CLab) error {
+		c.checkMgmtNetLinks = false
+
+		return nil
+	}
+}
+
 // checkMgmtOverride rejects management network flags for topologies with several networks,
 // since a flag cannot tell which network it applies to.
 func (c *CLab) checkMgmtOverride() error {

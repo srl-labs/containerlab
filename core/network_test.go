@@ -1169,10 +1169,11 @@ func TestResolveMgmtNetLinkNetworksAutoBridge(t *testing.T) {
 		{name: "missing network is not created", networkExists: false, wantBridge: ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// a CreateNet call would change host state, e.g. during a dry run
 			setMgmtResolveBehavior(t, &mgmtResolveBehavior{
 				checkable:     true,
 				networkExists: tc.networkExists,
-				failCreateNet: !tc.networkExists,
+				failCreateNet: true,
 			})
 
 			c, err := NewContainerLab(
@@ -1198,8 +1199,11 @@ func TestResolveMgmtNetLinkNetworksAutoBridge(t *testing.T) {
 			}
 
 			stats := mgmtResolveRuntimeStatsPtr.Load()
-			if got := stats.existsCalls.Load(); got != 1 {
-				t.Fatalf("MgmtNetworkExists calls = %d, want 1", got)
+			if got := stats.resolveCalls.Load(); got != 1 {
+				t.Fatalf("ResolveMgmtBridge calls = %d, want 1", got)
+			}
+			if got := stats.createNetCalls.Load(); got != 0 {
+				t.Fatalf("CreateNet calls = %d, want 0", got)
 			}
 
 			var got string

@@ -144,6 +144,9 @@ func (c *CLab) makeCopyForDestroy(
 ) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
+		// a topology edited after deploy may no longer pass the mgmt-net link checks,
+		// which must not prevent the removal of the deployed lab.
+		WithSkippedMgmtNetLinksCheck(),
 	}
 
 	// Try to load topology file if it exists, otherwise use lab name only.
