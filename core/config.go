@@ -109,6 +109,17 @@ func (c *CLab) parseTopology() error {
 	for nodeName, topologyNode := range c.Config.Topology.Nodes {
 		// this case is when runtime was overridden at the node level
 		if r := c.Config.Topology.GetNodeRuntime(nodeName); r != "" {
+			log.Warn(
+				"Deprecation notice",
+				"notice",
+				"Per-node runtime is deprecated and will be removed in a future release. "+
+					"Set the lab runtime with the --runtime flag or CLAB_RUNTIME env var instead",
+				"node",
+				nodeName,
+				"runtime",
+				r,
+			)
+
 			nodeRuntimes[nodeName] = r
 			continue
 		}

@@ -442,8 +442,9 @@
                 },
                 "runtime": {
                     "type": "string",
-                    "description": "Runtime used to launch the container node",
-                    "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
+                    "deprecated": true,
+                    "description": "Deprecated: the runtime is set for the whole lab with the --runtime flag or CLAB_RUNTIME env var. Mixing runtimes in one lab is not supported",
+                    "markdownDescription": "**Deprecated**: the [runtime](https://containerlab.dev/manual/nodes/#runtime) is set for the whole lab with the `--runtime` flag or `CLAB_RUNTIME` env var. Mixing runtimes in one lab is not supported",
                     "enum": [
                         "docker",
                         "podman"
