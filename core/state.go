@@ -44,7 +44,7 @@ func (c *CLab) WriteState() error {
 		return fmt.Errorf("create state file: %w", err)
 	}
 	defer os.Remove(temp.Name())
-	if err := temp.Chmod(0644); err != nil {
+	if err := temp.Chmod(0o644); err != nil {
 		temp.Close()
 		return err
 	}

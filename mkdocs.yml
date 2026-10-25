@@ -47,7 +47,9 @@ nav:
           - Enterprise SONiC: manual/kinds/dell_sonic.md
       - PLVision:
           - Enterprise SONiC: manual/kinds/plvision_sonic.md
-      - MikroTik RouterOS: manual/kinds/vr-ros.md
+      - MikroTik:
+          - RouterOS CHR: manual/kinds/mikrotik_chr.md
+          - RouterOS: manual/kinds/vr-ros.md
       - Huawei VRP: manual/kinds/huawei_vrp.md
       - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
       - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
@@ -197,6 +199,7 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.82": rn/0.82.md
       - "0.81": rn/0.81.md
       - "0.80": rn/0.80.md
       - "0.79": rn/0.79.md

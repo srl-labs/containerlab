@@ -37,7 +37,7 @@ func setupTestGitRepo(t *testing.T, branchName string) (string, string, func()) 
 
 	// Create a test file
 	testFile := filepath.Join(tmpDir, "test.txt")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	err = os.WriteFile(testFile, []byte("test content"), 0o644)
 	require.NoError(t, err)
 
 	// Get worktree
@@ -112,7 +112,7 @@ func TestGetGitInfo_WithGitRepo(t *testing.T) {
 
 			// Create a dummy topology file in the repo for TopoPaths
 			dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-			err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+			err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 			require.NoError(t, err)
 
 			c := &CLab{
@@ -150,7 +150,7 @@ func TestGetGitInfo_WithoutGitRepo(t *testing.T) {
 
 	// Create a dummy topology file for TopoPaths
 	dummyTopoFile := filepath.Join(tmpDir, "dummy.clab.yml")
-	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -174,7 +174,7 @@ func TestMagicTopoNameReplacer_WithGitRepo(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -204,7 +204,7 @@ func TestMagicTopoNameReplacer_WithoutGitRepo(t *testing.T) {
 
 	// Create a dummy topology file for TopoPaths
 	dummyTopoFile := filepath.Join(tmpDir, "dummy.clab.yml")
-	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -252,7 +252,7 @@ func TestMagicTopoNameReplacer_BranchNameSanitization(t *testing.T) {
 
 			// Create a dummy topology file in the repo for TopoPaths
 			dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-			err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+			err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 			require.NoError(t, err)
 
 			c := &CLab{
@@ -279,7 +279,7 @@ func TestParseTopology_GitVariableSubstitution(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -313,7 +313,7 @@ func TestAddDefaultLabels_GitLabels(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -346,7 +346,7 @@ func TestAddDefaultLabels_NoGitRepo(t *testing.T) {
 
 	// Create a dummy topology file for TopoPaths
 	dummyTopoFile := filepath.Join(tmpDir, "dummy.clab.yml")
-	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err = os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -380,7 +380,7 @@ func TestGetGitInfo_Caching(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -411,7 +411,7 @@ func TestMagicTopoNameReplacer_MultipleVariables(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -439,7 +439,7 @@ func TestMagicTopoNameReplacer_OnlyBranch(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -463,7 +463,7 @@ func TestMagicTopoNameReplacer_OnlyHash(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{
@@ -487,7 +487,7 @@ func TestParseTopology_GitVariableInName(t *testing.T) {
 
 	// Create a dummy topology file in the repo for TopoPaths
 	dummyTopoFile := filepath.Join(repoDir, "dummy.clab.yml")
-	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0644)
+	err := os.WriteFile(dummyTopoFile, []byte("name: test"), 0o644)
 	require.NoError(t, err)
 
 	c := &CLab{

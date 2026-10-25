@@ -72,6 +72,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Dell FTOS10v**           | [`dell_ftosv`](vr-ftosv.md)                         | supported |    VM     |
 | **Dell SONiC**             | [`dell_sonic`](dell_sonic.md)                       | supported |    VM     |
 | **Mikrotik RouterOS**      | [`mikrotik_ros`](vr-ros.md)                         | supported |    VM     |
+| **Mikrotik RouterOS CHR**  | [`mikrotik_chr`](mikrotik_chr.md)                   | supported |    VM     |
 | **Huawei VRP**             | [`huawei_vrp`](huawei_vrp.md)                       | supported |    VM     |
 | **IPInfusion OcNOS**       | [`ipinfusion_ocnos`](ipinfusion-ocnos.md)           | supported |    VM     |
 | **Palo Alto PAN-OS**       | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
