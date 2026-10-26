@@ -158,18 +158,23 @@ func (n *mikrotikCHR) CheckInterfaceName() error {
 	limit := dataNICLimit(n.goarch)
 	for _, ep := range n.Endpoints {
 		ifName := ep.GetIfaceName()
+		// Name the interface as written in the topology (etherN), with its ethN mapping.
+		shown := fmt.Sprintf("%q", ep.GetIfaceDisplayName())
+		if ep.GetIfaceDisplayName() != ifName {
+			shown += " (" + ifName + ")"
+		}
 		index, err := strconv.Atoi(strings.TrimPrefix(ifName, "eth"))
 		// An index too large for an int is still an index over the limit.
 		if err != nil && !errors.Is(err, strconv.ErrRange) {
 			return fmt.Errorf(
-				"node %q interface %q: cannot parse interface index: %w",
-				n.Cfg.ShortName, ifName, err,
+				"node %q interface %s: cannot parse interface index: %w",
+				n.Cfg.ShortName, shown, err,
 			)
 		}
 		if err != nil || index > limit {
 			return fmt.Errorf(
-				"node %q interface %q exceeds the maximum data NIC index %d on %s (eth%d / ether%d)",
-				n.Cfg.ShortName, ifName, limit, n.goarch, limit, limit+1,
+				"node %q interface %s exceeds the maximum data NIC index %d on %s (eth%d / ether%d)",
+				n.Cfg.ShortName, shown, limit, n.goarch, limit, limit+1,
 			)
 		}
 	}

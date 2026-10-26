@@ -160,11 +160,19 @@ func TestInterfaceParsing(t *testing.T) {
 			ifaces: []string{"eth1", "eth3", "eth255"},
 			want:   []string{"eth1", "eth3", "eth255"},
 		},
-		"mgmt-ether1":    {ifaces: []string{"ether1"}, wantErr: true},
-		"ether-overflow": {ifaces: []string{"ether257"}, wantErr: true, errText: "exceeds the maximum"},
-		"ether300":       {ifaces: []string{"ether300"}, wantErr: true, errText: "exceeds the maximum"},
-		"eth-overflow":   {ifaces: []string{"eth256"}, wantErr: true, errText: "exceeds the maximum"},
-		"eth300":         {ifaces: []string{"eth300"}, wantErr: true, errText: "exceeds the maximum"},
+		"mgmt-ether1": {ifaces: []string{"ether1"}, wantErr: true},
+		"ether-overflow": {
+			ifaces:  []string{"ether257"},
+			wantErr: true,
+			errText: `interface "ether257" (eth256) exceeds the maximum data NIC index 255 on amd64`,
+		},
+		"ether300": {ifaces: []string{"ether300"}, wantErr: true, errText: "exceeds the maximum"},
+		"eth-overflow": {
+			ifaces:  []string{"eth256"},
+			wantErr: true,
+			errText: `interface "eth256" exceeds the maximum`,
+		},
+		"eth300": {ifaces: []string{"eth300"}, wantErr: true, errText: "exceeds the maximum"},
 		"integer-overflow": {
 			ifaces:  []string{"eth999999999999999999999999"},
 			wantErr: true,
@@ -182,7 +190,7 @@ func TestInterfaceParsing(t *testing.T) {
 			goarch:  "arm64",
 			ifaces:  []string{"ether31"},
 			wantErr: true,
-			errText: "exceeds the maximum data NIC index 29 on arm64 (eth29 / ether30)",
+			errText: `interface "ether31" (eth30) exceeds the maximum data NIC index 29 on arm64 (eth29 / ether30)`,
 		},
 	}
 
