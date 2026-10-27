@@ -54,10 +54,23 @@ const (
 	captureEndGrace = 30 * time.Second
 	// captureStartRetries bounds the attempts to start a follow-up segment.
 	captureStartRetries = 3
+	// captureStdinCloseGrace is how long a segment's exec may take to end after its stdin was
+	// closed before the stream is cut.
+	captureStdinCloseGrace = 3 * time.Second
+	// clabwireStopOnStdinClose makes clabwire end a capture when its stdin closes. A
+	// Kubernetes exec does not stop its process when the stream ends, but it closes the
+	// process's stdin, so every capture runs with stdin attached and this flag.
+	clabwireStopOnStdinClose = "--stop-on-stdin-close"
 
 	// envCaptureSegment overrides the segment length. It exists to exercise chaining in tests
 	// without hour-long captures.
 	envCaptureSegment = "CLAB_C9S_CAPTURE_SEGMENT"
+	// defaultCaptureReorderWindow is how long the merged stream holds a packet back so packets
+	// of other nodes stamped earlier but delivered later still go out before it.
+	defaultCaptureReorderWindow = 250 * time.Millisecond
+	// envCaptureReorderWindow overrides the reorder window; 0 writes packets as they arrive.
+	// It is an internal knob, not a supported setting.
+	envCaptureReorderWindow = "CLAB_C9S_CAPTURE_REORDER_WINDOW"
 )
 
 // podExecFunc runs a command in a pod container and streams its output. A nonzero exit returns
@@ -66,6 +79,7 @@ type podExecFunc func(
 	ctx context.Context,
 	namespace, pod, container string,
 	command []string,
+	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error
 
@@ -109,6 +123,33 @@ func (r *Runtime) captureSegmentLength() time.Duration {
 	}
 
 	return maxCaptureSegment
+}
+
+// captureReorderWindowLength is the reorder window of the merged stream; zero disables
+// reordering.
+func (r *Runtime) captureReorderWindowLength() time.Duration {
+	switch {
+	case r.captureReorderWindow < 0:
+		return 0
+	case r.captureReorderWindow > 0:
+		return r.captureReorderWindow
+	}
+
+	return defaultCaptureReorderWindow
+}
+
+// captureReorderWindowFromEnv reads the reorder window knob: unset or invalid keeps the
+// default (0), "0" disables reordering (-1).
+func captureReorderWindowFromEnv() time.Duration {
+	value, err := time.ParseDuration(os.Getenv(envCaptureReorderWindow))
+	switch {
+	case err != nil || value < 0:
+		return 0
+	case value == 0:
+		return -1
+	}
+
+	return value
 }
 
 func captureSegmentFromEnv() time.Duration {
@@ -208,7 +249,7 @@ func (r *Runtime) listCaptureInterfaces(
 			var stdout, stderr bytes.Buffer
 			err := exec(groupCtx, location.Namespace, location.Pod, clabwireContainer,
 				[]string{clabwireManager, "node-runtime", "packet-capture", "--list-interfaces"},
-				&stdout, &stderr)
+				nil, &stdout, &stderr)
 			if err != nil {
 				return fmt.Errorf("failed to list the capturable interfaces of pod %s/%s: %w%s",
 					location.Namespace, location.Pod, err, stderrSuffix(stderr.Bytes()))
@@ -442,6 +483,13 @@ func validateCaptureRequest(req *clablabruntime.CaptureRequest) error {
 // one starts before the current one ends, and the stream switches at a cut in the overlap. See
 // captureChain for how packets of the overlap are kept once.
 //
+// Packets go out in timestamp order across nodes, through a reorder buffer (captureReorder).
+//
+// Every clabwire process runs with stdin attached and --stop-on-stdin-close: a Kubernetes exec
+// does not stop its process when the stream closes, so containerlab closes stdin whenever a
+// segment ends (the capture ends, fails, its output fails, or a newer segment took over) and
+// clabwire ends the capture itself.
+//
 // Capture returns when Duration has passed, PacketLimit packets were written, or ctx ends; an
 // ended ctx is not an error. Every block reaches w in one write, so the stream is a valid capture
 // whenever it stops. A clabwire Denied or Failed audit record is returned as an error.
@@ -480,6 +528,7 @@ func (r *Runtime) Capture(
 		segment:  r.captureSegmentLength(),
 		deadline: time.Time{},
 	}
+	run.reorder = newCaptureReorder(r.captureReorderWindowLength(), writer.WritePacket, stop)
 	if req.Duration > 0 {
 		run.deadline = time.Now().Add(req.Duration)
 	}
@@ -494,6 +543,13 @@ func (r *Runtime) Capture(
 		defer cancelTimeout()
 	}
 
+	reorderCtx, stopReorder := context.WithCancel(context.WithoutCancel(ctx))
+	reorderDone := make(chan struct{})
+	go func() {
+		defer close(reorderDone)
+		run.reorder.run(reorderCtx)
+	}()
+
 	group, groupCtx := errgroup.WithContext(captureCtx)
 	for _, captureGroup := range resolved.groups {
 		chain := &captureChain{capture: run, group: captureGroup}
@@ -503,6 +559,9 @@ func (r *Runtime) Capture(
 	}
 
 	err = group.Wait()
+	stopReorder()
+	<-reorderDone
+	run.reorder.flush()
 	if writeErr := writer.err; writeErr != nil {
 		return writeErr
 	}
@@ -518,6 +577,8 @@ type captureRun struct {
 	r      *Runtime
 	req    clablabruntime.CaptureRequest
 	writer *pcapngWriter
+	// reorder writes the packets of every chain in timestamp order.
+	reorder *captureReorder
 	// stop ends every chain, once the packet limit is reached.
 	stop context.CancelFunc
 	// written counts the packets written to the stream.
@@ -538,7 +599,7 @@ func (run *captureRun) emit(id uint32, packet *pcapngPacket) (bool, error) {
 			run.stop()
 			return false, nil
 		}
-		if err := run.writer.WritePacket(id, packet); err != nil {
+		if err := run.reorder.push(id, packet); err != nil {
 			return false, err
 		}
 		if count == int64(run.req.PacketLimit) {
@@ -551,7 +612,7 @@ func (run *captureRun) emit(id uint32, packet *pcapngPacket) (bool, error) {
 
 	run.written.Add(1)
 
-	return true, run.writer.WritePacket(id, packet)
+	return true, run.reorder.push(id, packet)
 }
 
 func (run *captureRun) reportGap(gap clablabruntime.CaptureGap) {
@@ -571,6 +632,11 @@ type captureSegment struct {
 	localStart time.Time
 	duration   time.Duration
 	cancel     context.CancelFunc
+	// closeStdin closes the stdin of the segment's clabwire process, which ends it; it may be
+	// called any number of times.
+	closeStdin func()
+	// stopTimer closes stdin once the segment is no longer needed after a switch-over.
+	stopTimer *time.Timer
 	// started and ended are the pod-clock times of the Started and Succeeded audit records.
 	started time.Time
 	ended   time.Time
@@ -607,6 +673,10 @@ type segmentEvent struct {
 //     when segment k wrote the same bytes on the same interface, and every other one is written.
 //     From then on segment k+1 streams live.
 //
+// Once the pod clock passed T+W, segment k's stdin is closed so it ends without running to its
+// planned end. While packets are held back, the chain holds the reorder buffer at T-W, so other
+// nodes' later packets do not overtake them in the merged stream.
+//
 // W (500 ms, less for short test segments) covers the stamping difference. Identical frames on
 // the same interface within W of the cut can be paired with each other, which can drop a true
 // repeat; nothing else is lost or doubled. A follow-up segment that does not start in time leaves
@@ -638,6 +708,7 @@ func (c *captureChain) run(ctx context.Context) error {
 	defer func() {
 		cancel()
 		c.drain()
+		c.capture.reorder.release(c)
 	}()
 
 	c.active = c.start(ctx, c.segmentDuration(time.Now()))
@@ -721,6 +792,9 @@ func (c *captureChain) handle(
 		return c.handlePacket(segment, event.packet)
 	case event.done:
 		segment.done = true
+		if segment.stopTimer != nil {
+			segment.stopTimer.Stop()
+		}
 		if event.err != nil && ctx.Err() == nil {
 			if segment == c.next && segment.started.IsZero() && c.retries < captureStartRetries {
 				// the follow-up did not start; try again while the active one still runs
@@ -796,6 +870,20 @@ func (c *captureChain) setCut() {
 		return
 	}
 	c.cut = overlapStart.Add(overlapEnd.Sub(overlapStart) / 2).UnixNano()
+
+	window := c.capture.window.Nanoseconds()
+	// Packets the next segment holds back are stamped from T-W on: other chains' packets after
+	// that wait in the reorder buffer until the switch, so the merged stream stays in order.
+	c.capture.reorder.hold(c, c.cut-window)
+
+	// The active segment only matters for packets stamped before T. Once the pod clock passed
+	// T+W, it is closed: packets it read until then are still delivered, and the ones it reads
+	// later are stamped after T and dropped anyway. The next segment's Started record was
+	// written on the pod clock no later than now, so the pod clock passes T+W no later than
+	// (T - Started + W) from now.
+	active := c.active
+	active.stopTimer = time.AfterFunc(
+		time.Duration(c.cut-c.next.started.UnixNano()+window), active.closeStdin)
 }
 
 func (c *captureChain) handlePacket(segment *captureSegment, packet *pcapngPacket) (bool, error) {
@@ -829,6 +917,9 @@ func (c *captureChain) emit(packet *pcapngPacket) (bool, error) {
 // switchSegments makes the next segment the active one after the active one ended, writing the
 // held packets of the next one that the active one did not write.
 func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (bool, error) {
+	// the held packets are in the reorder buffer once this returns
+	defer c.capture.reorder.release(c)
+
 	ended := c.active
 	if c.final && c.next == nil {
 		return true, nil
@@ -922,8 +1013,10 @@ func packetKey(packet *pcapngPacket) uint64 {
 // start runs one clabwire capture and reports its packets, audit records and end as events.
 func (c *captureChain) start(ctx context.Context, duration time.Duration) *captureSegment {
 	segmentCtx, cancel := context.WithCancel(ctx)
+	stdinReader, stdinWriter := io.Pipe()
 	segment := &captureSegment{
 		index: c.segments, localStart: time.Now(), duration: duration, cancel: cancel,
+		closeStdin: func() { _ = stdinWriter.Close() },
 	}
 	c.segments++
 
@@ -933,6 +1026,7 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 		"--format", "pcapng",
 		"--snapLength", strconv.Itoa(c.capture.req.SnapLength),
 		"--duration", duration.String(),
+		clabwireStopOnStdinClose,
 	}
 	for _, name := range c.group.interfaces {
 		command = append(command, "--interface", name)
@@ -954,7 +1048,14 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 	stdoutReader, stdoutWriter := io.Pipe()
 	stderr := &auditLineWriter{send: func(audit *captureAudit) { send(segmentEvent{audit: audit}) }}
 
-	c.wg.Add(2)
+	// The exec outlives the segment's context by up to captureStdinCloseGrace: when the segment
+	// ends for any reason (the capture is cancelled or failed, the output failed, or a newer
+	// segment took over), its stdin is closed first so clabwire ends on its own, and the stream
+	// is cut only if it does not.
+	execCtx, cancelExec := context.WithCancel(context.WithoutCancel(segmentCtx))
+	execDone := make(chan struct{})
+
+	c.wg.Add(3)
 	readDone := make(chan error, 1)
 	go func() {
 		defer c.wg.Done()
@@ -965,10 +1066,32 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 	}()
 	go func() {
 		defer c.wg.Done()
+		select {
+		case <-execDone:
+			return
+		case <-segmentCtx.Done():
+		}
+		segment.closeStdin()
+		grace := time.NewTimer(captureStdinCloseGrace)
+		defer grace.Stop()
+		select {
+		case <-execDone:
+		case <-grace.C:
+			log.Debug("Capture segment did not end after its stdin closed, cutting the stream",
+				"node", c.group.display, "segment", segment.index)
+			cancelExec()
+		}
+	}()
+	go func() {
+		defer c.wg.Done()
 		defer cancel()
+		defer cancelExec()
 
-		err := c.capture.r.execInPodContainer()(segmentCtx, c.group.location.Namespace,
-			c.group.location.Pod, clabwireContainer, command, stdoutWriter, stderr)
+		err := c.capture.r.execInPodContainer()(execCtx, c.group.location.Namespace,
+			c.group.location.Pod, clabwireContainer, command, stdinReader, stdoutWriter, stderr)
+		close(execDone)
+		// the process ended: release the stdin copy of the exec stream
+		segment.closeStdin()
 		_ = stdoutWriter.Close()
 		readErr := <-readDone
 		stderr.flush()
@@ -976,12 +1099,29 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 			err = readErr
 		}
 		if err != nil && stderr.text() != "" {
-			err = fmt.Errorf("%w: %s", err, stderr.text())
+			if unsupported := unsupportedClabwire(c.group.location, stderr.text()); unsupported != nil {
+				err = unsupported
+			} else {
+				err = fmt.Errorf("%w: %s", err, stderr.text())
+			}
 		}
 		send(segmentEvent{done: true, err: err})
 	}()
 
 	return segment
+}
+
+// unsupportedClabwire recognizes a clabwire that rejects --stop-on-stdin-close, which every
+// capture passes: its release predates the capture contract the runtime needs.
+func unsupportedClabwire(location clablabruntime.NodeLocation, stderr string) error {
+	if !strings.Contains(stderr, "flag provided but not defined") ||
+		!strings.Contains(stderr, strings.TrimPrefix(clabwireStopOnStdinClose, "-")) {
+		return nil
+	}
+
+	return &unsupportedClabernetesError{reason: fmt.Sprintf(
+		"clabwire in pod %s/%s does not accept packet-capture %s",
+		location.Namespace, location.Pod, clabwireStopOnStdinClose)}
 }
 
 // readSegment checks that a segment's interfaces are the requested ones and passes its packets

@@ -19,11 +19,14 @@ import (
 )
 
 // streamPodExec runs a command in a pod container without a terminal and streams its stdout
-// and stderr. A nonzero exit returns a *labruntime.CommandExitError.
+// and stderr. A non-nil stdin is attached: when it ends, the process's stdin is closed (the
+// websocket v5 close signal, or a half-closed SPDY stream). A nonzero exit returns a
+// *labruntime.CommandExitError.
 func (r *Runtime) streamPodExec(
 	ctx context.Context,
 	namespace, pod, container string,
 	command []string,
+	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
 	execURL := r.kubeClient.CoreV1().RESTClient().Post().
@@ -34,6 +37,7 @@ func (r *Runtime) streamPodExec(
 		VersionedParams(&corev1.PodExecOptions{
 			Container: container,
 			Command:   command,
+			Stdin:     stdin != nil,
 			Stdout:    stdout != nil,
 			Stderr:    stderr != nil,
 		}, scheme.ParameterCodec).URL()
@@ -47,6 +51,7 @@ func (r *Runtime) streamPodExec(
 	// capture ends that way on purpose, so it goes to the debug log
 	err = executor.StreamWithContext(withKubernetesClientDebugLogs(ctx),
 		remotecommand.StreamOptions{
+			Stdin:  stdin,
 			Stdout: stdout,
 			Stderr: stderr,
 		})
@@ -154,7 +159,7 @@ func (r *Runtime) sampleInterfaceStates(
 
 			var stdout, stderr bytes.Buffer
 			err := exec(ctx, location.Namespace, location.Pod, location.Container,
-				[]string{"sh", "-c", interfaceSampleScript}, &stdout, &stderr)
+				[]string{"sh", "-c", interfaceSampleScript}, nil, &stdout, &stderr)
 			if err != nil {
 				log.Debug("Cannot read the interface state of a c9s node",
 					"node", location.NodeName, "error", err)

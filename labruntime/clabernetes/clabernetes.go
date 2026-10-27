@@ -91,6 +91,9 @@ type Runtime struct {
 	// captureSegment is the length of one chained packet capture; zero uses the clabwire
 	// maximum of one hour.
 	captureSegment time.Duration
+	// captureReorderWindow is how long the merged capture stream holds packets back to write
+	// them in timestamp order: zero uses the default, a negative value disables reordering.
+	captureReorderWindow time.Duration
 	// support checks once per runtime instance, before the first cluster call, that the
 	// cluster runs a clabernetes release with the contract this runtime needs. Every view
 	// shares it. It is nil when the clients were injected (tests).
@@ -261,5 +264,6 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		clients:              newClientLoader(),
 		support:              &supportCheck{},
 		captureSegment:       captureSegmentFromEnv(),
+		captureReorderWindow: captureReorderWindowFromEnv(),
 	}, nil
 }
