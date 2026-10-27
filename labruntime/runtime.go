@@ -218,9 +218,12 @@ type NodeState struct {
 type ExposedPort = clabtypes.ExposedPort
 
 type LabState struct {
-	Name         string
-	Namespace    string
-	Owner        string
+	Name      string
+	Namespace string
+	Owner     string
+	// TopologyPath is the absolute path of the topology file the lab was deployed from, on the
+	// machine that deployed it. A lab the runtime did not deploy from a file reports where the
+	// runtime keeps its definition instead (for c9s k8s://<namespace>/topologies/<lab>).
 	TopologyPath string
 	State        string
 	Ready        bool

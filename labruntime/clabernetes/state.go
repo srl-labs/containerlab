@@ -24,6 +24,13 @@ func stateFromNodeResources(
 		Namespace:    namespace,
 		TopologyPath: fmt.Sprintf("k8s://%s/labs/%s", namespace, name),
 	}
+	// Without a Topology resource the Nodes record the file the lab was deployed from.
+	for idx := range nodeResources {
+		if path := nodeResources[idx].GetAnnotations()[annotationTopologyFile]; path != "" {
+			state.TopologyPath = path
+			break
+		}
+	}
 	if len(nodeResources) != 0 {
 		state.Owner = nodeResources[0].GetLabels()[clabconstants.Owner]
 		if state.Owner == "" {
