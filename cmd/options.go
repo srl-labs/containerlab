@@ -55,6 +55,10 @@ func GetOptions() *Options {
 			Logs: &LogsOptions{
 				Tail: -1,
 			},
+			Capture: &CaptureOptions{
+				Write:  "-",
+				Format: "table",
+			},
 			Graph: &GraphOptions{
 				Server:           "0.0.0.0:50080",
 				MermaidDirection: "TD",
@@ -144,6 +148,7 @@ type Options struct {
 	Graph          *GraphOptions
 	Events         *EventsOptions
 	Logs           *LogsOptions
+	Capture        *CaptureOptions
 	ToolsAPI       *ToolsApiOptions
 	ToolsCert      *ToolsCertOptions
 	ToolsTxOffload *ToolsDisableTxOffloadOptions
@@ -258,6 +263,11 @@ type GlobalOptions struct {
 	// (or not) when root context is canceled. The signal handler goroutine reads it while
 	// deploy is running, so it is atomic.
 	CleanOnCancel atomic.Bool
+
+	// FinishOnCancel informs the context handler that the running command ends cleanly on its
+	// own once the root context is canceled (capture finishes its output), so the handler
+	// waits for it instead of exiting.
+	FinishOnCancel atomic.Bool
 
 	// special flag that is only set on deploy,
 	// if true, the topology file backup is created at /tmp/.clab/bak
