@@ -797,6 +797,7 @@ The kube identity used by the outer containerlab process must be able to:
 - list, get, and update Deployments
 - create, get, list, update, and delete ConfigMaps used for local files
 - exec into device Pods with `pods/exec`
+- list and delete PersistentVolumeClaims for `destroy --cleanup`
 
 Useful checks:
 
