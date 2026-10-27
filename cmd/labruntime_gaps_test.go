@@ -147,3 +147,29 @@ func TestInspectJSONReportsLabRuntimeWorkload(t *testing.T) {
 		t.Fatalf("exposed port = %v", port)
 	}
 }
+
+func TestLogsCommandFlags(t *testing.T) {
+	o := &Options{Global: &GlobalOptions{}, Logs: &LogsOptions{Tail: -1}}
+
+	c, err := logsCmd(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, flag := range []string{"node", "tail", "follow", "timestamps"} {
+		if c.Flags().Lookup(flag) == nil {
+			t.Fatalf("logs has no --%s flag", flag)
+		}
+	}
+	if c.Flags().ShorthandLookup("n").Name != "node" ||
+		c.Flags().ShorthandLookup("f").Name != "follow" {
+		t.Fatal("logs shorthands -n/-f are missing")
+	}
+
+	if err := logsFn(c, o); err == nil || !strings.Contains(err.Error(), "--name") {
+		t.Fatalf("logs without a lab = %v", err)
+	}
+	o.Global.TopologyName = "lab1"
+	if err := logsFn(c, o); err == nil || !strings.Contains(err.Error(), "--node") {
+		t.Fatalf("logs without a node = %v", err)
+	}
+}

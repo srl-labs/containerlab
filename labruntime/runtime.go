@@ -2,7 +2,11 @@ package labruntime
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"net"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,9 +48,29 @@ func NormalizeExposeType(value string) (string, error) {
 	)
 }
 
+// Identity is the Kubernetes identity a lab runtime acts as, through user impersonation. The
+// zero value acts with the configured credentials (the kubeconfig) as they are. A server that
+// runs labs for many users sets it per call, so the cluster's RBAC and audit log see the user.
+type Identity struct {
+	User   string
+	Groups []string
+}
+
+// IsZero reports whether the identity leaves the configured credentials as they are.
+func (i Identity) IsZero() bool {
+	return i.User == "" && len(i.Groups) == 0
+}
+
+// Equal reports whether two identities impersonate the same user and groups.
+func (i Identity) Equal(other Identity) bool {
+	return i.User == other.User && slices.Equal(i.Groups, other.Groups)
+}
+
 type Config struct {
 	Timeout   time.Duration
 	Namespace string
+	// Identity is the identity of every call that does not set its own.
+	Identity Identity
 
 	// KindLinkApplyMode resolves the default link apply mode ("live", "restart" or
 	// "recreate") a node kind declares, as containerlab's node registry reports it. An
@@ -82,6 +106,8 @@ type DeployRequest struct {
 	// that for not needing a dynamically provisionable storage class, and every Pod
 	// replacement then resets the node to its declared configuration.
 	NoPersistence bool
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type DestroyRequest struct {
@@ -94,11 +120,15 @@ type DestroyRequest struct {
 	// it the storage is kept, like the lab directory of a local runtime, and a later deploy
 	// of the lab boots from it.
 	Cleanup bool
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type InspectRequest struct {
 	Name      string
 	Namespace string
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 // ListRequest selects the labs List reports. A Namespace, or the runtime's configured
@@ -106,6 +136,8 @@ type InspectRequest struct {
 type ListRequest struct {
 	Namespace     string
 	AllNamespaces bool
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type NodeRequest struct {
@@ -113,6 +145,8 @@ type NodeRequest struct {
 	Namespace string
 	Nodes     []string
 	Timeout   time.Duration
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type ExecRequest struct {
@@ -120,6 +154,8 @@ type ExecRequest struct {
 	Namespace string
 	NodeName  string
 	Command   []string
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type SaveRequest struct {
@@ -127,6 +163,8 @@ type SaveRequest struct {
 	Namespace string
 	Nodes     []string
 	Copy      bool
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 // EventStreamRequest selects the events StreamEvents reports. Name limits the stream to one
@@ -139,6 +177,8 @@ type EventStreamRequest struct {
 	IncludeInitialState   bool
 	IncludeInterfaceStats bool
 	StatsInterval         time.Duration
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
 }
 
 type SavedFile struct {
@@ -221,6 +261,126 @@ type Event struct {
 	ActorName   string
 	ActorFullID string
 	Attributes  map[string]string
+}
+
+// NodeLocation is the workload that runs a lab node.
+type NodeLocation struct {
+	// NodeName is the node name the runtime carries (the sanitized name).
+	NodeName  string
+	Namespace string
+	Pod       string
+	// Container is the node's primary device container in Pod.
+	Container string
+	// NodeUID identifies the runtime's node resource (the clabernetes Node UID).
+	NodeUID string
+	// ExposedPorts are the node ports the runtime publishes through a Service.
+	ExposedPorts        []ExposedPort
+	LoadBalancerAddress string
+}
+
+// TerminalSize is the size of an interactive terminal, in characters.
+type TerminalSize struct {
+	Width  uint16
+	Height uint16
+}
+
+// AttachRequest selects the node and the command of an interactive session.
+type AttachRequest struct {
+	// Name is the lab name.
+	Name      string
+	Namespace string
+	// NodeName is the node to attach to, as the topology or the runtime names it.
+	NodeName string
+	// Container overrides the node's primary device container.
+	Container string
+	// Command runs in the container; empty runs "sh".
+	Command []string
+	// TTY allocates a terminal. Stdout then carries the combined output, and Resize applies.
+	TTY      bool
+	Identity Identity
+}
+
+// AttachStreams connects an interactive session. Nil streams are not attached.
+type AttachStreams struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+	// Resize delivers terminal size changes of a TTY session; closing it stops resizing.
+	Resize <-chan TerminalSize
+}
+
+// CommandExitError reports a command that ran and exited with a nonzero code.
+type CommandExitError struct {
+	Code int
+}
+
+func (e *CommandExitError) Error() string {
+	return fmt.Sprintf("command exited with code %d", e.Code)
+}
+
+// LogRequest selects the node log StreamLogs writes.
+type LogRequest struct {
+	// Name is the lab name.
+	Name      string
+	Namespace string
+	// NodeName is the node whose log is streamed, as the topology or the runtime names it.
+	NodeName string
+	// Container overrides the node's primary device container.
+	Container string
+	// Tail limits the output to the last lines of the log; nil writes the whole log.
+	Tail *int64
+	// Follow keeps streaming new log lines until the context ends.
+	Follow bool
+	// Timestamps prefixes every line with its timestamp.
+	Timestamps bool
+	Identity   Identity
+}
+
+// NodeStats is a resource usage sample of a node.
+type NodeStats struct {
+	NodeName  string
+	Namespace string
+	Pod       string
+	// CPUMilliCores is the CPU usage of the node's device containers, in thousandths of a core.
+	CPUMilliCores int64
+	// MemoryBytes is the memory working set of the node's device containers.
+	MemoryBytes int64
+	// Timestamp and Window describe the sampling interval the usage was measured over.
+	Timestamp time.Time
+	Window    time.Duration
+}
+
+// ErrMetricsUnavailable reports a cluster without a resource metrics API (metrics.k8s.io), for
+// example one without metrics-server.
+var ErrMetricsUnavailable = errors.New("metrics API (metrics.k8s.io) not available")
+
+// NodeLocator resolves lab nodes to the workloads that run them. Empty NodeRequest.Nodes
+// locates every node of the lab.
+type NodeLocator interface {
+	LocateNode(ctx context.Context, req NodeRequest) ([]NodeLocation, error)
+}
+
+// NodeAttacher runs an interactive command (stdin, TTY and resize) in a node's container. It
+// returns a *CommandExitError when the command exits with a nonzero code.
+type NodeAttacher interface {
+	Attach(ctx context.Context, req AttachRequest, streams AttachStreams) error
+}
+
+// NodeLogStreamer writes a node container's log.
+type NodeLogStreamer interface {
+	StreamLogs(ctx context.Context, req LogRequest, w io.Writer) error
+}
+
+// NodePortForwarder opens a stream to a TCP port of a node (SSH, web UIs). The request must name
+// exactly one node. Closing the connection closes the stream.
+type NodePortForwarder interface {
+	DialPort(ctx context.Context, req NodeRequest, port int) (net.Conn, error)
+}
+
+// NodeStatsSampler reports the resource usage of a lab's nodes. It returns an error wrapping
+// ErrMetricsUnavailable when the cluster serves no resource metrics.
+type NodeStatsSampler interface {
+	SampleStats(ctx context.Context, req InspectRequest) ([]NodeStats, error)
 }
 
 type LabRuntime interface {

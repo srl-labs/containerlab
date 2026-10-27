@@ -71,7 +71,7 @@ func TestConnectLoadsClientsOnce(t *testing.T) {
 	}}
 
 	for range 3 {
-		view, err := r.connect()
+		view, err := r.connect(clablabruntime.Identity{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func TestConnectLoadsClientsOnce(t *testing.T) {
 		if view.namespace != defaultNamespace {
 			t.Fatalf("namespace = %q, want %q", view.namespace, defaultNamespace)
 		}
-		again, err := view.connect()
+		again, err := view.connect(clablabruntime.Identity{})
 		if err != nil || again != view {
 			t.Fatalf("connect() on a connected view = %p, %v; want the view itself", again, err)
 		}
@@ -99,7 +99,7 @@ func TestConnectLoadsClientsOnce(t *testing.T) {
 		},
 		newClients: newKubeClients,
 	}}
-	if _, err := failing.connect(); err == nil {
+	if _, err := failing.connect(clablabruntime.Identity{}); err == nil {
 		t.Fatal("connect() error = nil, want the load error")
 	}
 }

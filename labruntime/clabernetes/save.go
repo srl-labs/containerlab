@@ -34,7 +34,7 @@ func (r *Runtime) Save(
 	ctx context.Context,
 	req clablabruntime.SaveRequest,
 ) (*clablabruntime.SaveResult, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}

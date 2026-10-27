@@ -2027,6 +2027,43 @@ func (d *DockerRuntime) StreamLogs(
 	return logStream, nil
 }
 
+// WriteContainerLogs writes a container's log, demultiplexing stdout and stderr unless the
+// container has a TTY.
+func (d *DockerRuntime) WriteContainerLogs(
+	ctx context.Context,
+	containerName string,
+	opts clabruntime.ContainerLogOptions,
+	stdout, stderr io.Writer,
+) error {
+	inspect, err := d.Client.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return fmt.Errorf("failed to inspect container %q: %w", containerName, err)
+	}
+
+	logStream, err := d.Client.ContainerLogs(ctx, containerName, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     opts.Follow,
+		Timestamps: opts.Timestamps,
+		Tail:       clabruntime.LogTail(opts.Tail),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get container logs: %w", err)
+	}
+	defer logStream.Close()
+
+	if inspect.Config != nil && inspect.Config.Tty {
+		_, err = io.Copy(stdout, logStream)
+	} else {
+		_, err = stdcopy.StdCopy(stdout, stderr, logStream)
+	}
+	if err != nil && ctx.Err() == nil {
+		return fmt.Errorf("failed to read container logs: %w", err)
+	}
+
+	return nil
+}
+
 // InspectImage returns detailed information about a container image.
 func (d *DockerRuntime) InspectImage(
 	ctx context.Context,

@@ -202,6 +202,22 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	}
 }
 
+// WithLabRuntimeIdentity makes every lab runtime call of this CLab act as the given Kubernetes
+// identity, through user impersonation. A server that runs labs for many users sets it per user;
+// the zero identity acts with the kubeconfig as it is. Local container runtimes ignore it.
+func WithLabRuntimeIdentity(identity clablabruntime.Identity) ClabOption {
+	return func(c *CLab) error {
+		c.labRuntimeIdentity = identity
+
+		return nil
+	}
+}
+
+// LabRuntimeIdentity returns the Kubernetes identity lab runtime calls act as.
+func (c *CLab) LabRuntimeIdentity() clablabruntime.Identity {
+	return c.labRuntimeIdentity
+}
+
 func labRuntimeNamespace(config *clabruntime.RuntimeConfig) string {
 	if config == nil {
 		return ""
