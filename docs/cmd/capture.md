@@ -56,11 +56,11 @@ The output is one pcapng section:
 
 - a Section Header Block with `shb_userappl` set to `containerlab`
 - one Interface Description Block per target, in the order of the `--target` flags, written before any packet: link type Ethernet, the snap length, nanosecond timestamps, and the name `<node>:<interface>` (for example `srl1:e1-1`), with the node named as the topology spells it
-- Enhanced Packet Blocks of all targets, as they arrive
+- Enhanced Packet Blocks of all targets, in timestamp order: packets are held for 250 ms and written ordered by timestamp, so packets of different nodes come out in order even though each node's stream arrives on its own; a packet that arrives later than that is written as it comes
 
 The interface name shows in Wireshark's interface column (`frame.interface_name`), so a capture of several nodes can be filtered by node and interface.
 
-When the capture ends (duration, packet limit, Ctrl+C or SIGTERM), the command finishes the stream and exits with code 0; the file is a valid capture. Status messages go to stderr.
+When the capture ends (duration, packet limit, Ctrl+C or SIGTERM), the command finishes the stream and exits with code 0; the file is a valid capture. Status messages go to stderr. With c9s, every `clabwire` capture in the pods ends with the command: containerlab closes its stdin, and `clabwire` (`--stop-on-stdin-close`) stops.
 
 `--list -f json` prints an array:
 
@@ -80,7 +80,7 @@ When the capture ends (duration, packet limit, Ctrl+C or SIGTERM), the command f
 
 ### Long captures
 
-With c9s, one `clabwire` capture lasts at most one hour. `capture` chains captures: it starts the next one shortly before the current one ends, lets both run for a few seconds, and switches between them in the middle of that overlap. The repeated section and interface headers of the follow-up are dropped, and packets seen by both captures near the switch are written once (they are matched by content, because each capture stamps packets when it reads them). If a follow-up capture does not start in time, the missing interval is reported as a warning with its start and end time; it is never skipped silently.
+With c9s, one `clabwire` capture lasts at most one hour. `capture` chains captures: it starts the next one shortly before the current one ends, lets both run for a few seconds, and switches between them in the middle of that overlap. The repeated section and interface headers of the follow-up are dropped, and packets seen by both captures near the switch are written once (they are matched by content, because each capture stamps packets when it reads them). Once the switch time has passed, the previous capture is stopped through its stdin instead of running to its end. If a follow-up capture does not start in time, the missing interval is reported as a warning with its start and end time; it is never skipped silently. The timestamp order holds across switches: while one node's capture switches, packets of other nodes stamped after the switch wait for it.
 
 ### Examples
 

@@ -146,7 +146,7 @@ Containerlab needs a clabernetes release that has:
   `Stopped` condition, and restart requests through the
   `c9s.run/restart-requested` annotation
 - the clabwire packet capture contract: `--nodeName`, repeated `--interface`,
-  `--format pcapng` and `--list-interfaces`
+  `--format pcapng`, `--list-interfaces` and `--stop-on-stdin-close`
 - the namespace-bindable `clabernetes-lab-viewer` and `clabernetes-lab-editor`
   roles
 
@@ -162,6 +162,17 @@ an older release every other command fails like this:
 the clabernetes release on this cluster is not supported: nodes.c9s.run has no
 spec.runState (Node run state); the c9s runtime needs clabernetes with Node run
 state and the clabwire capture contract (0.11 or newer)
+```
+
+A cluster that passes this check but runs a `clabwire` without
+`--stop-on-stdin-close` (a development build between the two features) fails
+the first capture with the same kind of error, naming the pod:
+
+```text
+the clabernetes release on this cluster is not supported: clabwire in pod
+<namespace>/<pod> does not accept packet-capture --stop-on-stdin-close; the c9s
+runtime needs clabernetes with Node run state and the clabwire capture contract
+(0.11 or newer)
 ```
 
 Library users can run the check up front with
@@ -608,12 +619,17 @@ containerlab -r c9s capture --name clos --list
 How it works:
 
 - containerlab locates each target node's pod and runs one `clabwire` capture
-  per node, with `--nodeName`, every requested interface of that node and
-  `--format pcapng`.
+  per node, with `--nodeName`, every requested interface of that node,
+  `--format pcapng` and `--stop-on-stdin-close`, with stdin attached.
 - The streams are merged into one section: one Interface Description Block per
   target named `<node>:<interface>` (the node as the topology spells it),
   written before the first packet, and the packets of every target with their
   interface IDs remapped.
+- Packets are written in timestamp order. Each node's stream arrives over its
+  own exec stream, so the merged stream holds every packet for 250 ms and
+  writes the held packets ordered by timestamp. A packet that arrives later
+  than that, stamped before a packet already written, is written as it comes;
+  the number of such packets goes to the debug log.
 - `clabwire` limits one capture to one hour. Longer captures, and captures
   without `--duration`, chain captures with a few seconds of overlap and switch
   in the middle of it; packets near the switch are matched by content so each
@@ -637,9 +653,13 @@ The management interface and the pod's `c9s0` interface cannot be captured.
 
 Ctrl+C or SIGTERM ends a capture cleanly: the output stays a valid pcapng
 file and the command exits with code 0. Kubernetes does not stop a command
-when its exec stream closes, so an interrupted `clabwire` capture keeps
-running in the pod until its next packet fails to write or its segment ends
-(at most one hour); it does not hold any lab resource.
+when its exec stream closes, but it closes the command's stdin. containerlab
+closes the stdin of every `clabwire` capture when the capture ends for any
+reason (the duration or packet limit, Ctrl+C, an error, a failed write of the
+output such as a closed Wireshark, or a newer segment taking over), and
+`clabwire` then ends the capture within milliseconds. If the process does not
+end within three seconds, containerlab cuts the exec stream. A killed
+containerlab drops the connection, which closes stdin as well.
 
 Capturing needs `get` and `create` on `pods/exec` in the lab namespace, which
 `clabernetes-lab-editor` grants. `inspect interfaces -r c9s` lists the same
