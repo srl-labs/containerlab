@@ -545,6 +545,41 @@ These fields are only present for lab runtimes; Docker and Podman output is
 unchanged. Fields without a value, such as `pod` for a stopped node, are left
 out. `--details` keeps printing the raw records.
 
+The other fields mean what they mean for Docker and Podman, so clients can treat
+c9s nodes like containers:
+
+| Field | c9s value |
+|---|---|
+| `state` | `created` while the node's pod is scheduled and prepared, `running` once its device containers run, `exited` once the node is stopped (or its pod ends or is replaced) |
+| `status` | `healthy` once the node is ready or its device containers are, `health: starting` while a running device boots, `Created`, `Exited` |
+| `labPath`, `absLabPath` | the topology file the lab was deployed from (see below) |
+| `name` | `<lab>-<node>`, the name events use as `actor_name` |
+
+### Topology file
+
+A deploy records the absolute path of the topology file, on the machine that
+deployed it, in the annotation `containerlab.dev/topo-file`:
+
+- with a `Topology` resource, on the `Topology`; every deploy records the file
+  it read
+- with `--no-topology-cr`, on every `Node`. clabernetes copies a Node's
+  annotations into its pod, so a Node keeps the file it was created from: a
+  later deploy from another file does not change it and does not restart the
+  node. Destroy and deploy again to record a new file.
+
+`inspect` reports the recorded file as `labPath` and `absLabPath` (shortened
+for the table, as for Docker), and events as `clab-topo-file`, so a client
+matches a running lab to its file the same way for every runtime. The file is a
+path on the deploying machine; a client on another machine cannot assume it
+exists there.
+
+A lab that containerlab did not deploy from a file, for example one applied from
+`deploy --emit-crs` output with `kubectl` (the emitted manifests do not carry
+the annotation), has no recorded file. It reports where its definition lives in
+the cluster: `k8s://<namespace>/topologies/<lab>`, or
+`k8s://<namespace>/labs/<lab>` without a `Topology` resource. With `-t`,
+`inspect` reports the given file.
+
 Useful kubernetes checks for the same state are:
 
 ```bash
@@ -699,8 +734,14 @@ What a stopped node keeps and loses:
 - The `Node`, its Services, PersistentVolumeClaims and Links stay. Saved
   configuration survives a stop and start.
 - Its links go carrier-down on every peer, like an unplugged cable;
-  `events` reports them as interface `down` events.
-- `inspect` shows the node as `stopped` (`stopping` while its Pod terminates).
+  `events` reports an interface `update` with state `lower-layer-down` on the
+  peers, and deletes the stopped node's interfaces.
+- `inspect` shows the node as `exited` with status `Exited`.
+- `events` reports the container actions Docker reports for `containerlab stop`
+  and `start`: `kill`, `stop` and `die` when the node's pod goes, `start` when
+  its new pod runs, then `health_status: starting` and
+  `health_status: healthy` as the device boots. A restart reports `kill`,
+  `stop`, `die` and `start`.
 - clabernetes keeps a running peer of a stopped node `notready`: its
   connectivity sidecar waits for the far end of the wire. Deploy, apply, start
   and restart treat such a node as settled when its containers are ready, and
@@ -756,8 +797,10 @@ files, the c9s runtime has nothing to copy for that node.
 
 ## Events
 
-The c9s runtime can stream Node, Topology, pod, interface state and
-interface-stat events:
+The c9s runtime streams container, interface state and interface-stat events
+with the actions and attributes the Docker runtime reports, so a client that
+reads Docker events reads c9s events the same way. It also streams `topology`
+events, which only c9s has:
 
 ```bash
 containerlab --runtime c9s events --format json
@@ -774,6 +817,8 @@ watches:
 - `Topology` resources
 - Pods labeled with `c9s.run/topologyOwner`
 
+and reads a lab again whenever one of them changes.
+
 What the stream covers:
 
 | Invocation | Scope |
@@ -785,41 +830,124 @@ What the stream covers:
 An identity whose RBAC only covers one namespace needs one of the scoped forms;
 watching every namespace requires cluster-wide `list` and `watch`.
 
-With `--initial-state`, the stream starts with synthetic events for the current
-c9s node state and the state of every interface, then continues with live
-watches.
+### Container events
 
-Container events use the node's `<namespace>/<lab>/<node>` ID as actor, the
-`container_id` inspect reports.
+Each node is reported as a container. Its state follows its pod: `created`
+while the pod is scheduled and prepared, `running` once the device containers
+run, `exited` once the node is stopped, or its pod ends or is replaced. A change
+is reported with the actions Docker reports for the same change:
+
+| Change | Actions |
+|---|---|
+| the node appears (deploy, apply) | `create`, then `start` once its pod runs |
+| the device boots, is ready, is not ready anymore | `health_status: starting`, `health_status: healthy`, `health_status: unhealthy` |
+| `stop` | `kill`, `stop`, `die` |
+| `start` | `start` |
+| `restart`, or the pod is replaced | `kill`, `stop`, `die`, `start` |
+| the node is removed (destroy, apply) | `kill`, `die` (when it ran), `destroy` |
+
+With `--initial-state`, the stream starts with one event per node whose action
+is its state (`running`, `exited`, `created`) and `origin` `snapshot`, like the
+snapshot of a Docker container.
+
+Every container event describes the node with the attributes of a Docker
+container event, taken from the record `inspect` reports for the node:
+
+```json
+{
+  "timestamp": "2026-10-27T10:15:02.123456789Z",
+  "type": "container",
+  "action": "start",
+  "actor_id": "c9s-clos/clos/srl1",
+  "actor_name": "clos-srl1",
+  "actor_full_id": "c9s-clos/clos/srl1",
+  "attributes": {
+    "containerlab": "clos",
+    "clab-node-name": "srl1",
+    "clab-node-longname": "clos-srl1",
+    "clab-node-kind": "nokia_srlinux",
+    "clab-node-type": "ixr-d2l",
+    "clab-topo-file": "/home/user/clos.clab.yml",
+    "clab-owner": "alice",
+    "image": "ghcr.io/nokia/srlinux",
+    "mgmt_ipv4": "172.20.20.11/24",
+    "ports": "22/tcp;57400/tcp",
+    "state": "running",
+    "id": "c9s-clos/clos/srl1",
+    "name": "clos-srl1",
+    "lab": "clos",
+    "node": "srl1",
+    "namespace": "c9s-clos",
+    "pod": "srl1-7d9c6b5f4-x2k8p"
+  }
+}
+```
+
+- The actor ID is the node's `<namespace>/<lab>/<node>` ID, the `container_id`
+  inspect reports, and `actor_name` and `name` are the inspect `name`.
+- `clab-node-name` is the node name as the topology spells it.
+- `clab-topo-file` is the file the lab was deployed from (see
+  [Topology file](#topology-file)).
+- `state` is the container state after the event: `created`, `running` or
+  `exited`. Docker leaves it to the client to derive it from the action; c9s
+  reports it on every container event.
+- `ports` lists the node's exposed ports without a host binding: they are
+  reached through the node's Service or a port-forward, not on a port of the
+  local machine.
+- `kill` carries `signal` `15`; Kubernetes stops containers with SIGTERM.
+- `namespace`, `lab`, `node` and `pod` are c9s attributes on top.
+
+Docker attributes c9s does not report: `scope`, `clab-mgmt-net-bridge` (no
+Docker bridge), `clab-node-lab-dir` (a c9s lab has no lab directory on the
+deploying machine; node state lives in the cluster), and `exitCode` and
+`execDuration` on `die`. `clab-node-type` and `clab-node-group` are reported
+when the topology sets them, and with `-t` also a kind's default type; read by
+`--name` alone, a default type such as SR Linux's `ixr-d2l` is not known.
 
 ### Interface events
 
 Containerlab samples the interfaces of every running node by exec into its
 device container. One exec per node and interval reads `/proc/net/dev` and
 `/sys/class/net/*/operstate` (with index, MTU, MAC address, flags and alias).
-All containers of a device pod share one network namespace, so the samples
-cover the node's pod interfaces.
 
-Interface state events are always streamed. They use the same schema as the
-interface events of the local runtimes, with the operational state as action:
+It reports the interfaces a Docker container of the same node kind has, named
+as in that container:
+
+- the node's lab link interfaces, with the names and aliases clabwire lists for
+  them (`containerlab capture --list`): `eth1` for a linux node, `e1-1` with
+  alias `ethernet-1/1` for SR Linux, so a client finds a link's interface by
+  the endpoint name in the topology or its alias
+- the management interface `eth0`
+- the loopback `lo`
+
+The pod's own interfaces (the pod network interface `c9s0`, clabernetes'
+interposition interfaces `c9sr0` and `c9sm0`, and the link transport interfaces
+`c9ss*`) are not reported, and neither are the aliases clabernetes sets for its
+own use (`c9s:…`).
+
+Interface state events are always streamed, with the actions and attributes of
+the local runtimes' netlink events:
 
 ```json
 {
   "timestamp": "2026-10-27T10:15:02.123456789Z",
   "type": "interface",
-  "action": "down",
+  "action": "update",
   "actor_id": "c9s-clos/clos/srl1",
   "actor_name": "clos-srl1",
-  "actor_full_id": "srl1-7d9c6b5f4-x2k8p",
+  "actor_full_id": "c9s-clos/clos/srl1",
   "attributes": {
     "ifname": "e1-1",
-    "state": "lowerlayerdown",
+    "alias": "ethernet-1/1",
+    "state": "lower-layer-down",
+    "type": "veth",
     "index": "7",
     "mtu": "9232",
     "mac": "aa:c1:ab:5e:2f:01",
     "lab": "clos",
-    "node": "srl1",
     "name": "clos-srl1",
+    "id": "c9s-clos/clos/srl1",
+    "node": "srl1",
     "namespace": "c9s-clos",
     "pod": "srl1-7d9c6b5f4-x2k8p",
     "origin": "clabernetes"
@@ -827,19 +955,23 @@ interface events of the local runtimes, with the operational state as action:
 }
 ```
 
-- `action` is `up` when the operational state is `up`, or `unknown` on an
-  administratively up interface (loopback, tunnels); otherwise `down`.
-- `attributes.state` is the raw operational state from
-  `/sys/class/net/<if>/operstate`. An interface that disappears, or whose node
-  stops running, is reported once as `down` with state `notpresent`.
-- An event is emitted when an interface appears, when its action or state
-  changes, and, with `--initial-state`, once for every interface at the start.
-- Device containers without a shell report statistics only, no interface state.
+- `action` is `snapshot` for every interface at the start with
+  `--initial-state`, `create` when an interface appears (for example when a
+  node starts), `update` when one of its attributes changes, and `delete` when
+  it disappears or its node stops running.
+- `state` is the operational state in netlink's names: `up`, `down`,
+  `lower-layer-down`, `unknown` (loopback), `dormant`, `testing`, `not-present`.
+- `type` is `veth` for the lab link and management interfaces and `device` for
+  loopback.
+- Device containers without a shell report statistics only, no interface state,
+  and no `index` or `mtu`.
 
 With `--interface-stats`, the same exec also produces `interface stats` events
-with byte and packet counters and rates. They use the node ID as actor, like
-the state events. `--interface-stats-interval` sets the sampling interval of
-both (default 1s).
+for the same interfaces, with their attributes and the byte and packet counters
+and rates. `--interface-stats-interval` sets the sampling interval of both
+(default 1s).
+
+`inspect interfaces -r c9s` lists the same interfaces with the same values.
 
 /// note | Polling, not netlink
 c9s interface state and statistics are sampled periodically. The first sample
