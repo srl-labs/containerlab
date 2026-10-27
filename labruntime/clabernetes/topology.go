@@ -50,9 +50,10 @@ func topologyWithExposeType(exposeType string) topologyObjectOption {
 
 // topologyWithPersistence backs each node's artifact volume with a persistent claim so saved
 // device configuration survives Pod replacement, the same contract a local runtime provides
-// through the lab directory. Disabled leaves persistence unset entirely: ephemeral storage is
-// the CRD default, and a reconcile that drops the field makes the controller remove the
-// c9s-owned claims.
+// through the lab directory. The claims are retained when their Node is deleted, so a plain
+// destroy keeps the saved configuration like the local lab directory, and a redeploy boots from
+// it; destroy --cleanup deletes them. Disabled leaves persistence unset entirely: ephemeral
+// storage is the CRD default.
 func topologyWithPersistence(enabled bool) topologyObjectOption {
 	return func(spec map[string]any) {
 		if !enabled {
@@ -65,6 +66,7 @@ func topologyWithPersistence(enabled bool) topologyObjectOption {
 		}
 		deployment["persistence"] = map[string]any{
 			"enabled": true,
+			"reclaim": persistenceReclaimRetain,
 		}
 	}
 }

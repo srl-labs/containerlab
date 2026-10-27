@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -33,6 +34,10 @@ const (
 	labelIgnoreReconcile  = "c9s.run/ignoreReconcile"
 	clabernetesAppValue   = "clabernetes"
 	restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
+	// persistenceReclaimRetain keeps a node's persistent claim when its Node is deleted.
+	persistenceReclaimRetain = "Retain"
+	// defaultContainerAnnotation names the primary device container of a c9s pod.
+	defaultContainerAnnotation = "kubectl.kubernetes.io/default-container"
 )
 
 var topologyGVR = schema.GroupVersionResource{
@@ -71,6 +76,93 @@ type Runtime struct {
 	// kindLinkApplyMode resolves the default link apply mode a node kind declares.
 	// The plan uses it to predict the pod lifecycle impact of link changes.
 	kindLinkApplyMode func(kind string) string
+	// clients loads the Kubernetes clients on first use. Commands that only compile the
+	// topology (validate, deploy --emit-crs) never call it, so they work without a
+	// kubeconfig that loads. It is nil when the clients were injected (tests).
+	clients *clientLoader
+	// connected marks a runtime view whose client fields are populated.
+	connected bool
+}
+
+// kubeClients is the set of Kubernetes clients a runtime view operates with.
+type kubeClients struct {
+	dynamic    dynamic.Interface
+	kube       kubernetes.Interface
+	restConfig *rest.Config
+}
+
+// clientLoader loads the kubeconfig once and builds the Kubernetes clients from it.
+type clientLoader struct {
+	loadConfig func() (*rest.Config, string, error)
+	newClients func(*rest.Config) (*kubeClients, error)
+
+	once      sync.Once
+	clients   *kubeClients
+	namespace string
+	err       error
+}
+
+func newClientLoader() *clientLoader {
+	return &clientLoader{
+		loadConfig: kubeClientConfig,
+		newClients: newKubeClients,
+	}
+}
+
+func newKubeClients(restConfig *rest.Config) (*kubeClients, error) {
+	client, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes dynamic client: %w", err)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
+	return &kubeClients{dynamic: client, kube: kubeClient, restConfig: restConfig}, nil
+}
+
+func (l *clientLoader) load() (*kubeClients, string, error) {
+	l.once.Do(func() {
+		restConfig, namespace, err := l.loadConfig()
+		if err != nil {
+			l.err = err
+			return
+		}
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+
+		l.clients, l.err = l.newClients(restConfig)
+		l.namespace = namespace
+	})
+
+	return l.clients, l.namespace, l.err
+}
+
+// connect returns a view of the runtime with its Kubernetes clients populated, loading the
+// kubeconfig on first use. Every operation that reads or changes cluster state calls it first.
+func (r *Runtime) connect() (*Runtime, error) {
+	if r.connected || r.clients == nil {
+		return r, nil
+	}
+
+	clients, namespace, err := r.clients.load()
+	if err != nil {
+		return nil, err
+	}
+
+	view := *r
+	view.client = clients.dynamic
+	view.kubeClient = clients.kube
+	view.restConfig = clients.restConfig
+	if view.namespace == "" {
+		view.namespace = namespace
+	}
+	view.connected = true
+
+	return &view, nil
 }
 
 func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
@@ -89,33 +181,13 @@ func init() {
 	clablabruntime.Register(clablabruntime.ClabernetesRuntimeName, New)
 }
 
+// New returns the c9s lab runtime. It does not load the kubeconfig: the Kubernetes clients
+// are created on the first operation that needs the cluster.
 func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
-	kubeConfig, namespace, err := kubeClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := dynamic.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes dynamic client: %w", err)
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
-	}
-
-	if namespace == "" {
-		namespace = defaultNamespace
-	}
-
 	return &Runtime{
-		client:               client,
-		kubeClient:           kubeClient,
-		restConfig:           kubeConfig,
-		namespace:            namespace,
 		labNamespaceOverride: configuredLabNamespace(cfg.Namespace),
 		timeout:              cfg.Timeout,
 		kindLinkApplyMode:    cfg.KindLinkApplyMode,
+		clients:              newClientLoader(),
 	}, nil
 }
