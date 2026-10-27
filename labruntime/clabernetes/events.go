@@ -32,11 +32,12 @@ func (r *Runtime) StreamEvents(
 	}
 
 	events := make(chan clablabruntime.Event, 128)
-	errs := make(chan error, 3)
+	errs := make(chan error, 4)
+	// changed carries the labs whose Topology, Nodes or pods changed; the container tracker
+	// reads them again and reports what changed for their nodes.
+	changed := make(chan labRef, 256)
 
-	if req.IncludeInitialState {
-		go r.emitInitialEvents(ctx, scope, events, errs)
-	}
+	go r.trackContainers(ctx, scope, req.IncludeInitialState, changed, events, errs)
 
 	// Interface state events are always reported, like the netlink-backed events of the local
 	// runtimes; statistics only on request. Both come from the same exec per node.
@@ -46,11 +47,28 @@ func (r *Runtime) StreamEvents(
 		includeInitialState: req.IncludeInitialState,
 	}, events)
 
-	go r.watchTopologies(ctx, scope, events, errs)
-	go r.watchNodes(ctx, scope, events, errs)
-	go r.watchPods(ctx, scope, events, errs)
+	go r.watchTopologies(ctx, scope, changed, events, errs)
+	go r.watchNodes(ctx, scope, changed, errs)
+	go r.watchPods(ctx, scope, changed, errs)
 
 	return events, errs, nil
+}
+
+// labRef names a lab in a namespace.
+type labRef struct {
+	namespace string
+	lab       string
+}
+
+func sendChangedLab(ctx context.Context, changed chan<- labRef, ref labRef) {
+	if ref.lab == "" {
+		return
+	}
+
+	select {
+	case changed <- ref:
+	case <-ctx.Done():
+	}
 }
 
 // eventScope is the namespace and, optionally, the single lab an event stream covers.
@@ -125,7 +143,7 @@ func (r *Runtime) labStates(
 func (r *Runtime) watchNodes(
 	ctx context.Context,
 	scope eventScope,
-	eventSink chan<- clablabruntime.Event,
+	changed chan<- labRef,
 	errSink chan<- error,
 ) {
 	resource := r.client.Resource(nodeGVR).Namespace(scope.namespace)
@@ -143,7 +161,7 @@ func (r *Runtime) watchNodes(
 			return
 		}
 
-		if !r.forwardNodeWatch(ctx, watcher, eventSink, errSink) {
+		if !r.forwardNodeWatch(ctx, watcher, changed, errSink) {
 			return
 		}
 
@@ -153,10 +171,11 @@ func (r *Runtime) watchNodes(
 	}
 }
 
+// forwardNodeWatch reports the lab of every changed Node to the container tracker.
 func (r *Runtime) forwardNodeWatch(
 	ctx context.Context,
 	watcher watch.Interface,
-	eventSink chan<- clablabruntime.Event,
+	changed chan<- labRef,
 	errSink chan<- error,
 ) bool {
 	defer watcher.Stop()
@@ -180,61 +199,9 @@ func (r *Runtime) forwardNodeWatch(
 				continue
 			}
 
-			labName := node.GetLabels()[labelTopologyOwner]
-			if labName == "" {
-				continue
-			}
-			readiness, _, _ := unstructured.NestedString(node.Object, "status", "readiness")
-			r.sendEvent(ctx, eventSink, clablabruntime.Event{
-				Timestamp: time.Now(),
-				Type:      "container",
-				Action:    strings.ToLower(string(ev.Type)),
-				ActorID:   fmt.Sprintf("%s/%s/%s", node.GetNamespace(), labName, node.GetName()),
-				ActorName: fmt.Sprintf("%s-%s", labName, node.GetName()),
-				Attributes: map[string]string{
-					"namespace": node.GetNamespace(),
-					"lab":       labName,
-					"node":      node.GetName(),
-					"state":     readiness,
-				},
-			})
-		}
-	}
-}
-
-func (r *Runtime) emitInitialEvents(
-	ctx context.Context,
-	scope eventScope,
-	eventSink chan<- clablabruntime.Event,
-	errSink chan<- error,
-) {
-	states, err := r.labStates(ctx, scope)
-	if err != nil {
-		sendEventError(ctx, errSink, err)
-		return
-	}
-
-	for _, state := range states {
-		for _, node := range state.Nodes {
-			action := node.State
-			if node.Ready {
-				action = "running"
-			}
-			if action == "" {
-				action = state.State
-			}
-			r.sendEvent(ctx, eventSink, clablabruntime.Event{
-				Timestamp: time.Now(),
-				Type:      "container",
-				Action:    action,
-				ActorID:   fmt.Sprintf("%s/%s/%s", state.Namespace, state.Name, node.Name),
-				ActorName: fmt.Sprintf("%s-%s", state.Name, node.Name),
-				Attributes: map[string]string{
-					"namespace": state.Namespace,
-					"lab":       state.Name,
-					"node":      node.Name,
-					"state":     node.State,
-				},
+			sendChangedLab(ctx, changed, labRef{
+				namespace: node.GetNamespace(),
+				lab:       node.GetLabels()[labelTopologyOwner],
 			})
 		}
 	}
@@ -243,6 +210,7 @@ func (r *Runtime) emitInitialEvents(
 func (r *Runtime) watchTopologies(
 	ctx context.Context,
 	scope eventScope,
+	changed chan<- labRef,
 	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) {
@@ -263,7 +231,7 @@ func (r *Runtime) watchTopologies(
 			return
 		}
 
-		if !r.forwardTopologyWatch(ctx, scope.namespace, watcher, eventSink, errSink) {
+		if !r.forwardTopologyWatch(ctx, scope.namespace, watcher, changed, eventSink, errSink) {
 			return
 		}
 
@@ -273,10 +241,13 @@ func (r *Runtime) watchTopologies(
 	}
 }
 
+// forwardTopologyWatch reports Topology changes as topology events, which only c9s has, and
+// reports the lab to the container tracker.
 func (r *Runtime) forwardTopologyWatch(
 	ctx context.Context,
 	namespace string,
 	watcher watch.Interface,
+	changed chan<- labRef,
 	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) bool {
@@ -319,6 +290,7 @@ func (r *Runtime) forwardTopologyWatch(
 					"ready":     fmt.Sprintf("%t", state.Ready),
 				},
 			})
+			sendChangedLab(ctx, changed, labRef{namespace: state.Namespace, lab: state.Name})
 		}
 	}
 }
@@ -326,7 +298,7 @@ func (r *Runtime) forwardTopologyWatch(
 func (r *Runtime) watchPods(
 	ctx context.Context,
 	scope eventScope,
-	eventSink chan<- clablabruntime.Event,
+	changed chan<- labRef,
 	errSink chan<- error,
 ) {
 	for {
@@ -343,7 +315,7 @@ func (r *Runtime) watchPods(
 			return
 		}
 
-		if !r.forwardPodWatch(ctx, watcher, eventSink, errSink) {
+		if !r.forwardPodWatch(ctx, watcher, changed, errSink) {
 			return
 		}
 
@@ -353,10 +325,11 @@ func (r *Runtime) watchPods(
 	}
 }
 
+// forwardPodWatch reports the lab of every changed pod to the container tracker.
 func (r *Runtime) forwardPodWatch(
 	ctx context.Context,
 	watcher watch.Interface,
-	eventSink chan<- clablabruntime.Event,
+	changed chan<- labRef,
 	errSink chan<- error,
 ) bool {
 	defer watcher.Stop()
@@ -381,27 +354,9 @@ func (r *Runtime) forwardPodWatch(
 				continue
 			}
 
-			labName := pod.Labels[labelTopologyOwner]
-			nodeName := pod.Labels[labelTopologyNode]
-			if labName == "" || nodeName == "" {
-				continue
-			}
-
-			r.sendEvent(ctx, eventSink, clablabruntime.Event{
-				Timestamp:   time.Now(),
-				Type:        "container",
-				Action:      strings.ToLower(string(ev.Type)),
-				ActorID:     fmt.Sprintf("%s/%s/%s", pod.Namespace, labName, nodeName),
-				ActorName:   fmt.Sprintf("%s-%s", labName, nodeName),
-				ActorFullID: pod.Name,
-				Attributes: map[string]string{
-					"namespace": pod.Namespace,
-					"lab":       labName,
-					"node":      nodeName,
-					"pod":       pod.Name,
-					"phase":     string(pod.Status.Phase),
-					"pod_ip":    pod.Status.PodIP,
-				},
+			sendChangedLab(ctx, changed, labRef{
+				namespace: pod.Namespace,
+				lab:       pod.Labels[labelTopologyOwner],
 			})
 		}
 	}

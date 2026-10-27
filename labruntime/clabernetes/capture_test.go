@@ -15,6 +15,7 @@ import (
 	"time"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -648,12 +649,19 @@ func TestCaptureValidatesTargets(t *testing.T) {
 	}
 }
 
+// TestInspectInterfacesReportsStateFromSysfs lists what a Docker container of the node reports:
+// the lab link interfaces with their topology aliases, eth0 and lo, not clabernetes' own
+// interfaces, with netlink's state names.
 func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 	t.Parallel()
 
 	r, clabwire := captureTestRuntime(t, time.Millisecond)
 	clabwire.sysfs = "Inter-|   Receive\n face |bytes\n" + interfaceSysfsMarker + "\n" +
-		"e1-1\t12\t9500\taa:c1:ab:00:00:01\tup\t0x1003\t\n" +
+		"lo\t1\t65536\t00:00:00:00:00:00\tunknown\t0x9\t\n" +
+		"c9s0\t2\t1500\t6e:43:ce:6b:3f:dc\tup\t0x1003\t\n" +
+		"eth0\t4\t1450\t3a:3b:86:d8:73:37\tup\t0x1003\tc9s:interposition:v1\n" +
+		"c9ss1\t6\t9500\t3e:9c:45:56:67:2f\tup\t0x1003\tc9s:direct:v1:x\n" +
+		"e1-1\t12\t9500\taa:c1:ab:00:00:01\tup\t0x1003\tc9s:direct:v1:x\n" +
 		"e1-2\t13\t1500\taa:c1:ab:00:00:02\tlowerlayerdown\t0x1003\t\n"
 
 	interfaces, err := r.InspectInterfaces(context.Background(), clablabruntime.NodeRequest{
@@ -663,17 +671,28 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(interfaces) != 1 || interfaces[0].ContainerName != "lab1-r1" ||
-		len(interfaces[0].Interfaces) != 2 {
+		len(interfaces[0].Interfaces) != 4 {
 		t.Fatalf("interfaces = %+v", interfaces)
 	}
-	first := interfaces[0].Interfaces[0]
-	if first.InterfaceName != "e1-1" || first.InterfaceAlias != "ethernet-1/1" ||
+	byName := map[string]*clabtypes.ContainerInterfaceDetails{}
+	for _, iface := range interfaces[0].Interfaces {
+		byName[iface.InterfaceName] = iface
+	}
+	first := byName["e1-1"]
+	if first == nil || first.InterfaceAlias != "ethernet-1/1" ||
 		first.InterfaceMAC != "aa:c1:ab:00:00:01" || first.InterfaceIndex != 12 ||
-		first.InterfaceMTU != 9500 || first.InterfaceState != "up" {
+		first.InterfaceMTU != 9500 || first.InterfaceState != "up" || first.InterfaceType != "veth" {
 		t.Fatalf("e1-1 = %+v", first)
 	}
-	if second := interfaces[0].Interfaces[1]; second.InterfaceState != "lowerlayerdown" {
+	if second := byName["e1-2"]; second == nil || second.InterfaceState != "lower-layer-down" {
 		t.Fatalf("e1-2 = %+v", second)
+	}
+	if eth0 := byName["eth0"]; eth0 == nil || eth0.InterfaceAlias != "" || eth0.InterfaceType != "veth" {
+		t.Fatalf("eth0 = %+v", eth0)
+	}
+	if lo := byName["lo"]; lo == nil || lo.InterfaceType != "device" || lo.InterfaceMAC != "" ||
+		lo.InterfaceState != "unknown" {
+		t.Fatalf("lo = %+v", lo)
 	}
 }
 

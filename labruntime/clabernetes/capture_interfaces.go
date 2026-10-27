@@ -68,11 +68,12 @@ func (r *Runtime) streamPodExec(
 	return nil
 }
 
-// InspectInterfaces lists the capturable link interfaces of the requested nodes, or of every
-// running node, in the shape of `inspect interfaces`: per node (named <lab>-<node> like in
-// inspect), the interface and its alias as clabwire reports them, and the MAC address, index,
+// InspectInterfaces lists the interfaces of the requested nodes, or of every running node, in
+// the shape of `inspect interfaces`, with the interfaces the interface events report: the lab
+// link interfaces and their aliases as clabwire lists them, the management interface and
+// loopback. Per node (named <lab>-<node> like in inspect) it reports the MAC address, index,
 // MTU and operational state read from sysfs in the device container. A node whose device
-// container has no shell reports its interfaces without these attributes.
+// container has no shell reports its link interfaces without these attributes.
 func (r *Runtime) InspectInterfaces(
 	ctx context.Context,
 	req clablabruntime.NodeRequest,
@@ -111,18 +112,28 @@ func (r *Runtime) InspectInterfaces(
 			ContainerName: req.Name + "-" + location.NodeName,
 			Interfaces:    []*clabtypes.ContainerInterfaceDetails{},
 		}
-		for _, entry := range listed[location.NodeName] {
-			details := &clabtypes.ContainerInterfaceDetails{
-				InterfaceName:  entry.Interface,
-				InterfaceAlias: entry.Alias,
-				// clabwire realizes every lab link interface as a veth pair
-				InterfaceType: "veth",
+		sampled, hasStates := states[location.NodeName]
+		for name, alias := range reportedInterfaces(listed[location.NodeName]) {
+			state, ok := sampled[name]
+			if !ok {
+				if hasStates || (name == managementInterface || name == loopbackInterface) {
+					// not present in the node (yet), or not known without its states
+					continue
+				}
+				state = c9sIfaceState{Name: name}
 			}
-			if state, ok := states[location.NodeName][entry.Interface]; ok {
-				details.InterfaceMAC = state.MAC
-				details.InterfaceIndex = state.Index
-				details.InterfaceMTU = state.MTU
-				details.InterfaceState = state.OperState
+
+			data := interfaceEventData(state, alias)
+			details := &clabtypes.ContainerInterfaceDetails{
+				InterfaceName:  data.Name,
+				InterfaceAlias: data.Alias,
+				InterfaceType:  data.Type,
+				InterfaceMAC:   data.MAC,
+				InterfaceIndex: data.Index,
+				InterfaceMTU:   data.MTU,
+			}
+			if ok {
+				details.InterfaceState = data.OperState
 			}
 			container.Interfaces = append(container.Interfaces, details)
 		}
