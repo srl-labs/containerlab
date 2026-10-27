@@ -191,13 +191,33 @@ func reconciledPrimitiveObject(
 		delete(updated.Object, "spec")
 	}
 
+	carryOverNodeRunState(existing, updated)
+
 	updated.SetLabels(mergeDesiredMetadata(existing.GetLabels(), desired.GetLabels()))
 	updated.SetAnnotations(
 		mergeDesiredMetadata(existing.GetAnnotations(), desired.GetAnnotations()),
 	)
-	deleteLifecycleLabels(updated)
 
 	return updated
+}
+
+// carryOverNodeRunState keeps the run state of an existing Node. spec.runState is operational
+// state that stop and start own, not part of the compiled definition: the compiler never sets
+// it, so replacing the spec would start a stopped node on every apply, and the API default
+// (Running) would otherwise count as drift on every plan. Restart requests live in annotations,
+// which the merge keeps.
+func carryOverNodeRunState(existing, updated *unstructured.Unstructured) {
+	if existing.GetKind() != "Node" || existing.GetAPIVersion() != c9sAPIVersion {
+		return
+	}
+
+	runState, found, _ := unstructured.NestedString(existing.Object, "spec", "runState")
+	if !found || runState == "" {
+		unstructured.RemoveNestedField(updated.Object, "spec", "runState")
+		return
+	}
+
+	_ = unstructured.SetNestedField(updated.Object, runState, "spec", "runState")
 }
 
 func mergeDesiredMetadata(existing, desired map[string]string) map[string]string {
@@ -210,12 +230,6 @@ func mergeDesiredMetadata(existing, desired map[string]string) map[string]string
 	}
 
 	return result
-}
-
-func deleteLifecycleLabels(obj *unstructured.Unstructured) {
-	labelsMap := obj.GetLabels()
-	delete(labelsMap, labelIgnoreReconcile)
-	obj.SetLabels(labelsMap)
 }
 
 func primitiveObjectsConform(existing, desired *unstructured.Unstructured) bool {

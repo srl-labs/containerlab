@@ -174,15 +174,12 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	}
 
 	networkModes := make(map[string]string, len(nodeResources.Items))
+	resourcesByName := make(map[string]*unstructured.Unstructured, len(nodeResources.Items))
 	for idx := range nodeResources.Items {
 		nodeResource := &nodeResources.Items[idx]
 		nodesByName[nodeResource.GetName()] = nodeStateFromResource(nodeResource)
 		networkModes[nodeResource.GetName()] = nodeNetworkMode(nodeResource)
-	}
-
-	deployments, err := r.deploymentsForTopology(ctx, state.Name, state.Namespace)
-	if err != nil {
-		return err
+		resourcesByName[nodeResource.GetName()] = nodeResource
 	}
 
 	pods, err := r.kubeClient.CoreV1().Pods(state.Namespace).List(ctx, metav1.ListOptions{
@@ -205,55 +202,24 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		podsByNode[nodeName] = newestPod(podsByNode[nodeName], &pods.Items[idx])
 	}
 
-	for idx := range deployments.Items {
-		deployment := &deployments.Items[idx]
-		nodeName := deployment.Labels[labelTopologyNode]
-		if nodeName == "" {
-			continue
-		}
-
-		replicas := int32(1)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
-		}
-
-		deploymentState := "notready"
-		deploymentReady := false
-		switch {
-		case replicas == 0:
-			deploymentState = "stopped"
-		case deployment.Status.ReadyReplicas > 0:
-			deploymentState = "ready"
-			deploymentReady = true
-		case podsByNode[nodeName] != nil && podsByNode[nodeName].Status.Phase != "":
-			deploymentState = strings.ToLower(string(podsByNode[nodeName].Status.Phase))
-		}
-
-		matched := false
-		for logicalNodeName, node := range nodesByName {
-			if resolvePrimaryNode(logicalNodeName, networkModes) != nodeName {
-				continue
+	// The Node's status.readiness is the authoritative device signal. The primary Node's run
+	// state governs the pod a group of nodes shares: a stopped primary stops the whole group.
+	// Nodes without readiness yet report their pod phase.
+	for nodeName, node := range nodesByName {
+		primary := resolvePrimaryNode(nodeName, networkModes)
+		if primaryResource := resourcesByName[primary]; primaryResource != nil &&
+			nodeRunState(primaryResource) == nodeRunStateStopped {
+			node.State = "stopping"
+			if condition := nodeCondition(primaryResource, nodeConditionStopped); condition != nil &&
+				condition.status == string(metav1.ConditionTrue) {
+				node.State = "stopped"
 			}
-
-			// The Node's status.readiness is the authoritative signal for the device itself; a
-			// Deployment can report ready before the controller has observed the device
-			// container as ready. Deployment state is therefore only the fallback for a Node
-			// carrying no readiness yet, and replicas=0 is always an explicit stopped state.
-			if replicas == 0 || node.State == "" {
-				node.State = deploymentState
-				node.Ready = deploymentReady
-			}
-			nodesByName[logicalNodeName] = node
-			matched = true
+			node.Ready = false
+		} else if pod := podsByNode[primary]; node.State == "" && pod != nil &&
+			pod.Status.Phase != "" {
+			node.State = strings.ToLower(string(pod.Status.Phase))
 		}
-
-		if !matched {
-			node := nodesByName[nodeName]
-			node.Name = nodeName
-			node.State = deploymentState
-			node.Ready = deploymentReady
-			nodesByName[nodeName] = node
-		}
+		nodesByName[nodeName] = node
 	}
 
 	// Nodes grouped through network-mode container: share the pod of the group's primary

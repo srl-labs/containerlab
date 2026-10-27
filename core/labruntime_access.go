@@ -18,6 +18,21 @@ import (
 // them or as a lab runtime sanitized them. Lab runtime calls act as the identity set with
 // WithLabRuntimeIdentity.
 
+// CheckLabRuntimeSupport checks that the cluster behind the lab runtime runs a controller release
+// with the contract the runtime needs (for c9s: clabernetes with Node run state and the clabwire
+// capture contract). Lab runtime operations run the same check before their first cluster call;
+// servers call it to fail early. The error wraps labruntime.ErrUnsupportedRuntimeVersion when the
+// release is too old.
+func (c *CLab) CheckLabRuntimeSupport(ctx context.Context) error {
+	checker, err := labRuntimeCapability[clablabruntime.SupportChecker](
+		c, "checking the lab runtime version")
+	if err != nil {
+		return err
+	}
+
+	return checker.CheckSupport(ctx, c.labRuntimeIdentity)
+}
+
 // LocateLabRuntimeNodes reports the workload (namespace, pod, primary device container, Node
 // UID, exposed ports) of the given nodes, or of every node of the lab when none are given.
 func (c *CLab) LocateLabRuntimeNodes(

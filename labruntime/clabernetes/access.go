@@ -49,7 +49,7 @@ func (r *Runtime) LocateNode(
 	ctx context.Context,
 	req clablabruntime.NodeRequest,
 ) ([]clablabruntime.NodeLocation, error) {
-	r, err := r.connect(req.Identity)
+	r, err := r.connect(ctx, req.Identity)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (r *Runtime) Attach(
 	req clablabruntime.AttachRequest,
 	streams clablabruntime.AttachStreams,
 ) error {
-	r, err := r.connect(req.Identity)
+	r, err := r.connect(ctx, req.Identity)
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (r *Runtime) StreamLogs(
 	req clablabruntime.LogRequest,
 	w io.Writer,
 ) error {
-	r, err := r.connect(req.Identity)
+	r, err := r.connect(ctx, req.Identity)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (r *Runtime) DialPort(
 	req clablabruntime.NodeRequest,
 	port int,
 ) (net.Conn, error) {
-	r, err := r.connect(req.Identity)
+	r, err := r.connect(ctx, req.Identity)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +436,7 @@ func (r *Runtime) SampleStats(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) ([]clablabruntime.NodeStats, error) {
-	r, err := r.connect(req.Identity)
+	r, err := r.connect(ctx, req.Identity)
 	if err != nil {
 		return nil, err
 	}

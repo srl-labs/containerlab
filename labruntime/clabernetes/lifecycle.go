@@ -23,7 +23,7 @@ func (r *Runtime) Deploy(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.LabState, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -207,7 +207,7 @@ func (r *Runtime) Deploy(
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return connErr
 	}
@@ -446,7 +446,7 @@ func (r *Runtime) Inspect(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (*clablabruntime.LabState, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -501,7 +501,7 @@ func (r *Runtime) LabExists(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (bool, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return false, connErr
 	}
@@ -531,7 +531,7 @@ func (r *Runtime) List(
 	ctx context.Context,
 	req clablabruntime.ListRequest,
 ) ([]*clablabruntime.LabState, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -610,6 +610,7 @@ func (r *Runtime) waitReady(
 	defer cancel()
 
 	var lastState *clablabruntime.LabState
+	settledWithStopped := false
 	readinessProgress := nodeReadinessProgress{}
 	imageProgress := imagePullProgress{}
 	phaseProgress := nodePhaseProgress{}
@@ -640,6 +641,12 @@ func (r *Runtime) waitReady(
 			if state.Ready {
 				return true, nil
 			}
+			if settled, err := r.labSettledWithStoppedNodes(ctx, state); err != nil {
+				return false, err
+			} else if settled {
+				settledWithStopped = true
+				return true, nil
+			}
 			if failure := phaseProgress.terminalFailure(); failure != "" {
 				return false, fmt.Errorf(
 					"clabernetes lab %s/%s cannot be deployed: %s",
@@ -659,7 +666,9 @@ func (r *Runtime) waitReady(
 			return false, nil
 		})
 	if err == nil {
-		log.Info("C9s lab is ready", "name", name, "namespace", namespace)
+		if !settledWithStopped {
+			log.Info("C9s lab is ready", "name", name, "namespace", namespace)
+		}
 
 		return nil
 	}
@@ -698,6 +707,50 @@ func (r *Runtime) waitReady(
 		name,
 		strings.Join(pendingNodes, ", "),
 	)
+}
+
+// labSettledWithStoppedNodes reports whether a lab with stopped nodes reached the state an
+// apply can reach: every node is ready, stopped on purpose, or up and only waiting for stopped
+// link peers. A lab without stopped nodes is settled only when it is ready.
+func (r *Runtime) labSettledWithStoppedNodes(
+	ctx context.Context,
+	state *clablabruntime.LabState,
+) (bool, error) {
+	hasStopped := false
+	for _, node := range state.Nodes {
+		if node.State == "stopped" || node.State == "stopping" {
+			hasStopped = true
+		}
+	}
+	if !hasStopped {
+		return false, nil
+	}
+
+	states, err := r.labRunStates(ctx, state.Name, state.Namespace)
+	if err != nil {
+		if ctx.Err() != nil || contextDeadlineIsImminent(ctx) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	notes := make([]string, 0)
+	for _, node := range state.Nodes {
+		if node.Ready {
+			continue
+		}
+		settled, reason := states.settledNode(node.Name)
+		if !settled {
+			return false, nil
+		}
+		notes = append(notes, fmt.Sprintf("%s (%s)", node.Name, reason))
+	}
+
+	log.Info("C9s lab is ready apart from stopped nodes", "name", state.Name,
+		"namespace", state.Namespace, "nodes", strings.Join(notes, ", "))
+
+	return true, nil
 }
 
 type trackedNodeReadiness struct {

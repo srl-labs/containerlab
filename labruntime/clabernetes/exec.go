@@ -25,7 +25,7 @@ func (r *Runtime) Exec(
 	ctx context.Context,
 	req clablabruntime.ExecRequest,
 ) (*clabexec.ExecResult, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
