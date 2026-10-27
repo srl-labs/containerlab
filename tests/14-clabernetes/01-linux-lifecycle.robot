@@ -25,6 +25,8 @@ ${iface-events-err}     /tmp/clab-c9s-iface-events.err
 ${offline-env}          env CLAB_KUBECONFIG\=/nonexistent/kubeconfig KUBECONFIG\=/nonexistent/kubeconfig
 ${recovery-timeout}     180s
 ${retry-interval}       5s
+${capture-file}         /tmp/clab-c9s-capture.pcapng
+${chain-file}           /tmp/clab-c9s-capture-chain.pcapng
 
 
 *** Test Cases ***
@@ -131,6 +133,116 @@ Graph renders from the topology file without a cluster
 Exec into client and verify dataplane
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Client Eth1 Should Be Visible
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Succeed
+
+Inspect interfaces lists the link interfaces with their state
+    ${output} =    Run Clab Command    inspect interfaces -t ${topo} -f json
+    Should Be Equal As Integers    ${output.rc}    0
+    ${containers} =    Evaluate    json.loads($output.stdout)    modules=json
+    Length Should Be    ${containers}    2
+    FOR    ${container}    IN    @{containers}
+        Should Match Regexp    ${container}[name]    ^${lab-name}-(client|server)$
+        Length Should Be    ${container}[interfaces]    1
+        ${iface} =    Set Variable    ${container}[interfaces][0]
+        Should Be Equal    ${iface}[name]    eth1
+        Should Be Equal    ${iface}[type]    veth
+        Should Be Equal    ${iface}[state]    up
+        Should Match Regexp    ${iface}[mac]    ^([0-9a-f]{2}:){5}[0-9a-f]{2}$
+        Should Be True    ${iface}[ifindex] > 0 and ${iface}[mtu] > 0
+    END
+
+    ${one} =    Run Clab Command    inspect interfaces --name ${lab-name} -n client -f json
+    Should Be Equal As Integers    ${one.rc}    0
+    ${only} =    Evaluate    [c["name"] for c in json.loads($one.stdout)]    modules=json
+    Should Be Equal    ${only}    ${{["${lab-name}-client"]}}
+
+Capture lists the capturable interfaces with their peers
+    ${output} =    Run Clab Command    capture -t ${topo} --list -f json
+    Should Be Equal As Integers    ${output.rc}    0
+    ${interfaces} =    Evaluate    json.loads($output.stdout)    modules=json
+    ${want} =    Evaluate
+    ...    [{"node": "client", "interface": "eth1", "peer_node": "server", "peer_interface": "eth1"}, {"node": "server", "interface": "eth1", "peer_node": "client", "peer_interface": "eth1"}]
+    Should Be Equal    ${interfaces}    ${want}
+
+Capture both ends of a link into one pcapng stream
+    Skip If    not shutil.which("tshark")    tshark is not installed
+    Remove File If Exists    ${capture-file}
+    Start Process    ${CLAB_BIN} --runtime ${runtime} exec -t ${topo} --label ${client-label} --cmd 'ping -c 10 -i 0.3 10.10.10.2'
+    ...    shell=True    alias=c9s_ping
+    ${output} =    Run Clab Command
+    ...    capture -t ${topo} --target client:eth1 --target server:eth1 --duration 5s -w ${capture-file}
+    Wait For Process    c9s_ping    timeout=30s
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${idbs} =    Process.Run Process    capinfos -T -m -I ${capture-file}    shell=True
+    Log    ${idbs.stdout}
+    ${names} =    Process.Run Process
+    ...    tshark -r ${capture-file} -T fields -e frame.interface_name -Y icmp | sort | uniq -c
+    ...    shell=True
+    Log    ${names.stdout}
+    Should Be Equal As Integers    ${names.rc}    0
+    ${counts} =    Evaluate
+    ...    {l.split()[1]: int(l.split()[0]) for l in $names.stdout.splitlines() if l.strip()}
+    Should Be Equal    ${{sorted($counts)}}    ${{["client:eth1", "server:eth1"]}}
+    Should Be True    ${counts}[client:eth1] >= 10 and ${counts}[server:eth1] >= 10
+
+    ${info} =    Process.Run Process    capinfos ${capture-file}    shell=True
+    Log    ${info.stdout}
+    Should Contain    ${info.stdout}    Number of interfaces in file: 2
+    Should Contain    ${info.stdout}    Capture application: containerlab
+    Should Contain    ${info.stdout}    nanoseconds
+    [Teardown]    Remove File If Exists    ${capture-file}
+
+Capture chains segments without duplicates or gaps
+    Skip If    not shutil.which("tshark")    tshark is not installed
+    Remove File If Exists    ${chain-file}
+    Start Process    ${CLAB_BIN} --runtime ${runtime} exec -t ${topo} --label ${client-label} --cmd 'ping -c 130 -i 0.2 10.10.10.2'
+    ...    shell=True    alias=c9s_ping
+    Sleep    1s
+    # a 6 s segment length forces four switches in 20 s
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} --log-level debug capture -t ${topo} --target client:eth1 --duration 20s -w ${chain-file}
+    ...    shell=True
+    ...    env:CLAB_C9S_CAPTURE_SEGMENT=6s
+    Log    ${output.stderr}
+    Wait For Process    c9s_ping    timeout=60s
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${output.stderr}    segment=4
+    Should Not Contain    ${output.stderr}    gap
+
+    ${seqs} =    Process.Run Process
+    ...    tshark -r ${chain-file} -Y 'icmp.type \=\= 8' -T fields -e icmp.seq
+    ...    shell=True
+    Should Be Equal As Integers    ${seqs.rc}    0
+    ${numbers} =    Evaluate    [int(x) for x in $seqs.stdout.split()]
+    ${count} =    Get Length    ${numbers}
+    Should Be True    ${count} >= 90    only ${count} echo requests
+    ${unique} =    Evaluate    len(set($numbers))
+    Should Be Equal As Integers    ${unique}    ${count}    duplicate echo requests
+    ${span} =    Evaluate    max($numbers) - min($numbers) + 1
+    Should Be Equal As Integers    ${span}    ${count}    missing echo requests
+    [Teardown]    Remove File If Exists    ${chain-file}
+
+Capture works for a lab editor and is forbidden without a binding
+    ${rbac} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} create serviceaccount capture-editor && kubectl -n ${lab-namespace} create rolebinding capture-editor --clusterrole\=clabernetes-lab-editor --serviceaccount\=${lab-namespace}:capture-editor
+    ...    shell=True
+    Log    ${rbac.stdout}${\n}${rbac.stderr}
+    Should Be Equal As Integers    ${rbac.rc}    0
+
+    ${result} =    Process.Run Process
+    ...    go test ./core/ -run TestC9sClusterCapture -count\=1 -v
+    ...    shell=True
+    ...    cwd=${CURDIR}/../..
+    ...    env:CLAB_C9S_TEST_LAB=${lab-name}
+    ...    env:CLAB_C9S_TEST_CAPTURE_USER=system:serviceaccount:${lab-namespace}:capture-editor
+    ...    env:CLAB_C9S_TEST_FORBIDDEN_USER=system:serviceaccount:${lab-namespace}:nobody
+    Log    ${result.stdout}${\n}${result.stderr}    console=${True}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterCapture/capture_both_ends_of_a_link
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterCapture/restart_as_lab_editor
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterCapture/forbidden_identity
+    Should Not Contain    ${result.stdout}    SKIP
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
 Logs shows the device container log
     ${result} =    Run Clab Command    logs -t ${topo} -n client --tail 2 --timestamps
