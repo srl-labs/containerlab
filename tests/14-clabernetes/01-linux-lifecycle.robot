@@ -29,6 +29,11 @@ ${capture-file}         /tmp/clab-c9s-capture.pcapng
 ${chain-file}           /tmp/clab-c9s-capture-chain.pcapng
 ${stop-file}            /tmp/clab-c9s-capture-stop.pcapng
 ${stop-err}             /tmp/clab-c9s-capture-stop.err
+${lifecycle-log}        /tmp/clab-c9s-lifecycle-events.log
+${lifecycle-err}        /tmp/clab-c9s-lifecycle-events.err
+${redeploy-log}         /tmp/clab-c9s-redeploy-events.log
+${redeploy-err}         /tmp/clab-c9s-redeploy-events.err
+${node-image}           ghcr.io/srl-labs/network-multitool
 
 
 *** Test Cases ***
@@ -105,6 +110,43 @@ Inspect all is scoped by the namespace override
     Should Be Equal As Integers    ${other.rc}    0
     Should Not Contain    ${other.stdout}    ${lab-name}
 
+Inspect reports the topology file the lab was deployed from
+    # the deploy recorded this machine's file on the Topology; inspect without the file reports it
+    ${annotation} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get topology.c9s.run ${lab-name} -o jsonpath\='{.metadata.annotations.containerlab\\.dev/topo-file}'
+    ...    shell=True
+    Should Be Equal As Integers    ${annotation.rc}    0
+    Should Be Equal    ${annotation.stdout}    ${topo}
+
+    ${output} =    Run Clab Command    inspect --all --format json
+    Should Be Equal As Integers    ${output.rc}    0
+    ${labs} =    Evaluate    json.loads($output.stdout)    modules=json
+    FOR    ${node}    IN    @{labs}[${lab-name}]
+        Should Be Equal    ${node}[absLabPath]    ${topo}
+        Should Not Start With    ${node}[labPath]    k8s://
+        Should Be Equal    ${node}[state]    running
+        Should Be Equal    ${node}[status]    healthy
+    END
+
+    # manifests are applied by other means; they do not carry this machine's path
+    ${emit} =    Run Offline Clab Command    deploy -t ${topo} --emit-crs
+    Should Be Equal As Integers    ${emit.rc}    0
+    Should Not Contain    ${emit.stdout}    containerlab.dev/topo-file
+
+Events carry the attributes of Docker events
+    ${events} =    Collect Events    --name ${lab-name} events --format json --initial-state
+    FOR    ${node}    IN    client    server
+        Container Event Should Carry Docker Attributes    ${events}    ${node}    running    running
+        # the interfaces a Docker container of the node has: the lab link, eth0 and lo, named
+        # as in the topology, the link up
+        ${ifaces} =    Interface States    ${events}    ${node}
+        Should Be Equal    ${{sorted($ifaces)}}    ${{["eth0", "eth1", "lo"]}}
+        Should Be Equal    ${ifaces}[eth1]    up
+        Should Be Equal    ${ifaces}[eth0]    up
+        Should Be Equal    ${ifaces}[lo]    unknown
+    END
+    Should Not Contain    ${events}    "ifname":"c9s
+
 Validate and emit-crs work without a kubeconfig
     ${validate} =    Run Offline Clab Command    validate -t ${topo}
     Should Be Equal As Integers    ${validate.rc}    0
@@ -143,13 +185,19 @@ Inspect interfaces lists the link interfaces with their state
     Length Should Be    ${containers}    2
     FOR    ${container}    IN    @{containers}
         Should Match Regexp    ${container}[name]    ^${lab-name}-(client|server)$
-        Length Should Be    ${container}[interfaces]    1
-        ${iface} =    Set Variable    ${container}[interfaces][0]
+        # what a Docker container of the node lists: eth0, the lab link and loopback
+        ${names} =    Evaluate    [i["name"] for i in $container["interfaces"]]
+        Should Be Equal    ${names}    ${{["eth0", "eth1", "lo"]}}
+        ${iface} =    Set Variable    ${container}[interfaces][1]
         Should Be Equal    ${iface}[name]    eth1
+        Should Be Equal    ${iface}[alias]    ${EMPTY}
         Should Be Equal    ${iface}[type]    veth
         Should Be Equal    ${iface}[state]    up
         Should Match Regexp    ${iface}[mac]    ^([0-9a-f]{2}:){5}[0-9a-f]{2}$
         Should Be True    ${iface}[ifindex] > 0 and ${iface}[mtu] > 0
+        ${lo} =    Set Variable    ${container}[interfaces][2]
+        Should Be Equal    ${lo}[type]    device
+        Should Be Equal    ${lo}[state]    unknown
     END
 
     ${one} =    Run Clab Command    inspect interfaces --name ${lab-name} -n client -f json
@@ -339,6 +387,15 @@ Library attaches, port-forwards, streams logs and samples stats as an impersonat
     Should Not Contain    ${result.stdout}    SKIP
 
 Stop server and verify dataplane interruption
+    # the events of the stop and the following start are checked as they happen
+    Remove File If Exists    ${lifecycle-log}
+    Start Process    ${CLAB_BIN} --runtime ${runtime} --name ${lab-name} events --format json
+    ...    shell=True
+    ...    alias=c9s_lifecycle
+    ...    stdout=${lifecycle-log}
+    ...    stderr=${lifecycle-err}
+    Sleep    5s
+
     ${output} =    Run Clab Command    stop -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
 
@@ -352,9 +409,27 @@ Stop server and verify dataplane interruption
     ...    shell=True
     Should Be Empty    ${pods.stdout}
     ${inspect} =    Run Clab Command    inspect -t ${topo} --format json
-    Should Contain    ${inspect.stdout}    "state": "stopped"
+    ${states} =    Evaluate
+    ...    {n["name"]: (n["state"], n["status"]) for n in json.loads($inspect.stdout)["${lab-name}"]}
+    ...    modules=json
+    Should Be Equal    ${states}[${lab-name}-server]    ${{("exited", "Exited")}}
 
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Fail
+
+Stopping a node reports the events Docker reports for containerlab stop
+    # Docker: kill, stop, die; the node's interfaces go with it, its peer loses carrier
+    Wait Until Keyword Succeeds    30s    1s
+    ...    Container Actions Should Include In Order    ${lifecycle-log}    server
+    ...    kill    stop    die
+    ${events} =    Get File    ${lifecycle-log}
+    Container Event Should Carry Docker Attributes    ${events}    server    die    exited
+    Wait Until Keyword Succeeds    30s    1s
+    ...    Interface Event Should Be Logged    ${lifecycle-log}    server    eth1    delete
+    Wait Until Keyword Succeeds    30s    1s
+    ...    Interface Event Should Be Logged    ${lifecycle-log}    client    eth1    update
+    ...    lower-layer-down    down
+    ${client} =    Container Actions    ${lifecycle-log}    client
+    Should Not Contain    ${client}    die
 
 Apply while server is stopped keeps it stopped
     ${output} =    Run Clab Command    deploy -t ${applied-topo}
@@ -385,6 +460,27 @@ Start server by lab name and verify dataplane restore
     Should Contain    ${mark_output}    applied-while-stopped
 
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
+
+Starting a node reports the events Docker reports for containerlab start
+    TRY
+        # Docker: start; the device's readiness as a container health check
+        Wait Until Keyword Succeeds    60s    1s
+        ...    Container Actions Should Include In Order    ${lifecycle-log}    server
+        ...    kill    stop    die    start    health_status: healthy
+        ${events} =    Get File    ${lifecycle-log}
+        Container Event Should Carry Docker Attributes    ${events}    server    start    running
+        Container Event Should Carry Docker Attributes
+        ...    ${events}    server    health_status: healthy    running
+        Wait Until Keyword Succeeds    60s    1s
+        ...    Interface Event Should Be Logged    ${lifecycle-log}    server    eth1    create
+        Wait Until Keyword Succeeds    60s    1s
+        ...    Interface Event Should Be Logged    ${lifecycle-log}    client    eth1    update    up
+        Validate JSON Lines    ${lifecycle-log}
+    FINALLY
+        Run Keyword And Ignore Error    Terminate Process    c9s_lifecycle    kill=True
+        Remove File If Exists    ${lifecycle-log}
+        Remove File If Exists    ${lifecycle-err}
+    END
 
 Restart server and keep dataplane working
     ${before} =    Server Pod Name
@@ -446,13 +542,14 @@ Events report interface up and down
         Sleep    5s
         Set Client Eth1    down
         Wait Until Keyword Succeeds    30s    1s
-        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    down
+        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    update    down
         # the peer loses carrier
         Wait Until Keyword Succeeds    30s    1s
-        ...    Interface Event Should Be Logged    ${iface-events-log}    server    eth1    down
+        ...    Interface Event Should Be Logged    ${iface-events-log}    server    eth1    update
+        ...    lower-layer-down    down
         Set Client Eth1    up
         Wait Until Keyword Succeeds    30s    1s
-        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    up
+        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    update    up
         Validate JSON Lines    ${iface-events-log}
     FINALLY
         Stop Events Process
@@ -462,6 +559,15 @@ Events report interface up and down
     END
 
 Destroy without cleanup keeps the persistent claims
+    # the events of the destroy and the following deploy are checked after the deploy
+    Remove File If Exists    ${redeploy-log}
+    Start Process    ${CLAB_BIN} --runtime ${runtime} --namespace ${lab-namespace} events --format json
+    ...    shell=True
+    ...    alias=c9s_redeploy
+    ...    stdout=${redeploy-log}
+    ...    stderr=${redeploy-err}
+    Sleep    5s
+
     ${before} =    Persistent Claim Volumes
     Should Not Be Empty    ${before}
 
@@ -479,6 +585,27 @@ Deploy reuses the retained persistent claims
 
     ${volumes} =    Persistent Claim Volumes
     Should Be Equal    ${volumes}    ${retained-volumes}
+
+Destroy and deploy report the events Docker reports
+    TRY
+        FOR    ${node}    IN    client    server
+            # Docker: kill, die, destroy; then create, start (and the health check)
+            Wait Until Keyword Succeeds    60s    1s
+            ...    Container Actions Should Include In Order    ${redeploy-log}    ${node}
+            ...    kill    die    destroy    create    start    health_status: healthy
+            ${events} =    Get File    ${redeploy-log}
+            Container Event Should Carry Docker Attributes    ${events}    ${node}    destroy    exited
+            Container Event Should Carry Docker Attributes    ${events}    ${node}    create    created
+            Container Event Should Carry Docker Attributes    ${events}    ${node}    start    running
+            Wait Until Keyword Succeeds    60s    1s
+            ...    Interface Event Should Be Logged    ${redeploy-log}    ${node}    eth1    create    up
+        END
+        Validate JSON Lines    ${redeploy-log}
+    FINALLY
+        Run Keyword And Ignore Error    Terminate Process    c9s_redeploy    kill=True
+        Remove File If Exists    ${redeploy-log}
+        Remove File If Exists    ${redeploy-err}
+    END
 
 Destroy c9s linux lab
     ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
@@ -509,6 +636,14 @@ Deploy c9s linux lab without a Topology resource
     Should Be Equal As Integers    ${nodes.rc}    0
     Should Contain    ${nodes.stdout}    node.c9s.run/client
     Should Contain    ${nodes.stdout}    node.c9s.run/server
+
+    # without a Topology the Nodes record the file; inspect without the file reports it
+    ${annotation} =    Node Field    client    {.metadata.annotations.containerlab\\.dev/topo-file}
+    Should Be Equal    ${annotation}    ${topo}
+    ${output} =    Run Clab Command    inspect --name ${lab-name} --format json
+    ${paths} =    Evaluate    {n["absLabPath"] for n in json.loads($output.stdout)["${lab-name}"]}
+    ...    modules=json
+    Should Be Equal    ${paths}    ${{{"${topo}"}}}
 
 Apply without a Topology resource keeps a stopped node stopped
     ${output} =    Run Clab Command    stop -t ${topo} --node client
@@ -550,6 +685,8 @@ Setup
 
 Teardown
     Stop Events Process
+    Run Keyword And Ignore Error    Terminate Process    c9s_lifecycle    kill=True
+    Run Keyword And Ignore Error    Terminate Process    c9s_redeploy    kill=True
     Run Clab Command    destroy -t ${topo} --cleanup
     Remove File If Exists    ${events-log}
     Remove File If Exists    ${events-err}
@@ -640,13 +777,64 @@ Set Client Eth1
     Run Clab Command    exec -t ${topo} --label ${client-label} --cmd 'ip link set dev eth1 ${state}'
 
 Interface Event Should Be Logged
-    [Arguments]    ${path}    ${node}    ${ifname}    ${action}
+    [Documentation]    An interface event with the action and, when given, one of the states.
+    [Arguments]    ${path}    ${node}    ${ifname}    ${action}    @{states}
     ${contents} =    Get File    ${path}
     ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
     ${found} =    Evaluate
-    ...    ($action, $actor, $ifname) in [(e.get("action"), e.get("actor_id"), e.get("attributes", {}).get("ifname")) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface"]
+    ...    any(e.get("action") == $action and e.get("actor_id") == $actor and e.get("attributes", {}).get("ifname") == $ifname and (not $states or e.get("attributes", {}).get("state") in $states) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface")
     ...    modules=json
-    Should Be True    ${found}    no interface ${action} event for ${node}:${ifname}
+    Should Be True    ${found}    no interface ${action} event ${states} for ${node}:${ifname}
+
+Container Actions
+    [Arguments]    ${path}    ${node}
+    ${contents} =    Get File    ${path}
+    ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
+    ${actions} =    Evaluate
+    ...    [e["action"] for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "container" and e.get("actor_id") == $actor]
+    ...    modules=json
+    RETURN    ${actions}
+
+Container Actions Should Include In Order
+    [Arguments]    ${path}    ${node}    @{expected}
+    ${actions} =    Container Actions    ${path}    ${node}
+    ${in_order} =    Evaluate    (lambda it: all(a in it for a in $expected))(iter($actions))
+    Should Be True    ${in_order}    ${node} reported ${actions}, not ${expected} in this order
+
+Container Event Should Carry Docker Attributes
+    [Documentation]    The last container event of a node with the action carries the attributes
+    ...    a Docker container event of the node has, and the container state.
+    [Arguments]    ${events}    ${node}    ${action}    ${state}
+    ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
+    ${matching} =    Evaluate
+    ...    [e for e in map(json.loads, filter(str.strip, $events.splitlines())) if e.get("type") == "container" and e.get("actor_id") == $actor and e.get("action") == $action]
+    ...    modules=json
+    Should Not Be Empty    ${matching}    no container ${action} event for ${node}
+    ${event} =    Set Variable    ${matching}[-1]
+    ${attributes} =    Set Variable    ${event}[attributes]
+    Log    ${attributes}
+    Should Be Equal    ${attributes}[containerlab]    ${lab-name}
+    Should Be Equal    ${attributes}[clab-node-name]    ${node}
+    Should Be Equal    ${attributes}[clab-node-longname]    ${lab-name}-${node}
+    Should Be Equal    ${attributes}[clab-node-kind]    linux
+    Should Be Equal    ${attributes}[clab-topo-file]    ${topo}
+    Should Not Be Empty    ${attributes}[clab-owner]
+    Should Be Equal    ${attributes}[image]    ${node-image}
+    Should Be Equal    ${attributes}[name]    ${lab-name}-${node}
+    Should Be Equal    ${attributes}[id]    ${actor}
+    Should Be Equal    ${event}[actor_full_id]    ${actor}
+    Should Match Regexp    ${attributes}[mgmt_ipv4]    ^\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+$
+    Should Contain    ${attributes}[ports]    22/tcp
+    Should Be Equal    ${attributes}[state]    ${state}
+
+Interface States
+    [Documentation]    The interfaces the events report for a node, with their last state.
+    [Arguments]    ${events}    ${node}
+    ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
+    ${states} =    Evaluate
+    ...    {e["attributes"]["ifname"]: e["attributes"].get("state", "") for e in map(json.loads, filter(str.strip, $events.splitlines())) if e.get("type") == "interface" and e.get("actor_id") == $actor}
+    ...    modules=json
+    RETURN    ${states}
 
 Log File Should Contain
     [Arguments]    ${path}    ${text}
