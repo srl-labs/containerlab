@@ -80,8 +80,18 @@ type fakeClabwire struct {
 
 	// startDelay delays the Started record of the given process index (all nodes).
 	startDelay map[int]time.Duration
+	// firstStartDelay delays the Started record of a node's first process.
+	firstStartDelay map[string]time.Duration
 	// fail makes a process write this audit status and exit 1.
 	fail string
+	// stderrOnly makes a process write this text to stderr and exit 1, like a clabwire that
+	// rejects a flag.
+	stderrOnly string
+	// stampSkew stamps the packets of a node this much earlier, as if its stream reached
+	// containerlab this much later than the others.
+	stampSkew map[string]time.Duration
+	// stdinClosed counts the processes that ended because their stdin closed, per node.
+	stdinClosed map[string]int
 	// sysfs is the device container's interface sample.
 	sysfs string
 }
@@ -91,7 +101,9 @@ func newFakeClabwire(t *testing.T, tick time.Duration) *fakeClabwire {
 
 	return &fakeClabwire{
 		t: t, epoch: time.Now(), tick: tick, processes: map[string]int{},
-		startDelay: map[int]time.Duration{},
+		startDelay: map[int]time.Duration{}, stampSkew: map[string]time.Duration{},
+		firstStartDelay: map[string]time.Duration{},
+		stdinClosed:     map[string]int{},
 	}
 }
 
@@ -99,6 +111,7 @@ func (f *fakeClabwire) exec(
 	ctx context.Context,
 	namespace, pod, container string,
 	command []string,
+	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
 	f.mu.Lock()
@@ -113,7 +126,7 @@ func (f *fakeClabwire) exec(
 		return json.NewEncoder(stdout).Encode(captureListing[pod])
 	}
 
-	return f.capture(ctx, command, stdout, stderr)
+	return f.capture(ctx, command, stdin, stdout, stderr)
 }
 
 func flagValues(command []string, name string) []string {
@@ -144,8 +157,29 @@ func (f *fakeClabwire) audit(stderr io.Writer, status, node string, interfaces [
 func (f *fakeClabwire) capture(
 	ctx context.Context,
 	command []string,
+	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
+	f.mu.Lock()
+	rejected := f.stderrOnly
+	f.mu.Unlock()
+	if rejected != "" {
+		_, _ = io.WriteString(stdout, "Incorrect Usage: "+rejected+"\n\nNAME:\n   manager\n")
+		_, _ = io.WriteString(stderr, rejected+"\n")
+		return &clablabruntime.CommandExitError{Code: 1}
+	}
+
+	// clabwire ends the capture when stdin closes (--stop-on-stdin-close)
+	if !slices.Contains(command, clabwireStopOnStdinClose) || stdin == nil {
+		f.t.Errorf("capture without stdin and %s: %v", clabwireStopOnStdinClose, command)
+		return fmt.Errorf("no stdin")
+	}
+	stdinClosed := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(io.Discard, stdin)
+		close(stdinClosed)
+	}()
+
 	node := flagValues(command, "--nodeName")[0]
 	interfaces := flagValues(command, "--interface")
 	duration, err := time.ParseDuration(flagValues(command, "--duration")[0])
@@ -160,7 +194,11 @@ func (f *fakeClabwire) capture(
 	index := f.processes[node]
 	f.processes[node]++
 	delay := f.startDelay[index]
+	if index == 0 {
+		delay += f.firstStartDelay[node]
+	}
 	failure := f.fail
+	skew := f.stampSkew[node]
 	f.mu.Unlock()
 
 	if failure != "" {
@@ -172,6 +210,10 @@ func (f *fakeClabwire) capture(
 	case <-time.After(delay):
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-stdinClosed:
+		f.audit(stderr, captureAuditStarted, node, interfaces, "")
+		f.audit(stderr, captureAuditSucceeded, node, interfaces, "client closed: stdin reached EOF")
+		return nil
 	}
 
 	writer := newPCAPNGWriter(stdout)
@@ -192,6 +234,12 @@ func (f *fakeClabwire) capture(
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case <-stdinClosed:
+			f.mu.Lock()
+			f.stdinClosed[node]++
+			f.mu.Unlock()
+			f.audit(stderr, captureAuditSucceeded, node, interfaces, "client closed: stdin reached EOF")
+			return nil
 		case <-time.After(time.Until(at)):
 		}
 		for id := range interfaces {
@@ -199,7 +247,7 @@ func (f *fakeClabwire) capture(
 			binary.BigEndian.PutUint64(data[0:], uint64(next))
 			copy(data[8:], node+":"+interfaces[id])
 			if err := writer.WritePacket(uint32(id), &pcapngPacket{ //nolint:gosec // small
-				Timestamp: at.Add(jitter).UnixNano(), OriginalLength: 64, Data: data,
+				Timestamp: at.Add(jitter - skew).UnixNano(), OriginalLength: 64, Data: data,
 			}); err != nil {
 				return err
 			}
@@ -626,5 +674,203 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 	}
 	if second := interfaces[0].Interfaces[1]; second.InterfaceState != "lowerlayerdown" {
 		t.Fatalf("e1-2 = %+v", second)
+	}
+}
+
+// TestCaptureClosesStdinWhenItEnds ends every clabwire process through its stdin, whether the
+// caller cancels the capture or the output fails, so no capture is left running in the pod.
+func TestCaptureClosesStdinWhenItEnds(t *testing.T) {
+	t.Parallel()
+
+	targets := []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}}
+
+	t.Run("cancel", func(t *testing.T) {
+		t.Parallel()
+
+		r, clabwire := captureTestRuntime(t, 2*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+
+		if err := r.Capture(ctx, clablabruntime.CaptureRequest{Name: "lab1", Targets: targets},
+			io.Discard); err != nil {
+			t.Fatal(err)
+		}
+		requireStdinClosedEverywhere(t, clabwire)
+	})
+
+	t.Run("output fails", func(t *testing.T) {
+		t.Parallel()
+
+		r, clabwire := captureTestRuntime(t, 2*time.Millisecond)
+		output := &failingWriter{accept: 3}
+		err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
+			Name: "lab1", Targets: targets, Duration: time.Hour,
+		}, output)
+		if err == nil || !strings.Contains(err.Error(), "broken pipe") {
+			t.Fatalf("Capture() = %v, want the write error", err)
+		}
+		requireStdinClosedEverywhere(t, clabwire)
+	})
+}
+
+// failingWriter accepts some writes, then fails like a closed pipe.
+type failingWriter struct {
+	mu     sync.Mutex
+	accept int
+}
+
+func (w *failingWriter) Write(data []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.accept == 0 {
+		return 0, errors.New("write |1: broken pipe")
+	}
+	w.accept--
+
+	return len(data), nil
+}
+
+func requireStdinClosedEverywhere(t *testing.T, clabwire *fakeClabwire) {
+	t.Helper()
+
+	clabwire.mu.Lock()
+	defer clabwire.mu.Unlock()
+	for _, node := range []string{"r1", "r2"} {
+		if clabwire.processes[node] == 0 || clabwire.stdinClosed[node] != clabwire.processes[node] {
+			t.Fatalf("%s: %d processes, %d ended through stdin", node,
+				clabwire.processes[node], clabwire.stdinClosed[node])
+		}
+	}
+}
+
+// TestCaptureRejectsAClabwireWithoutStopOnStdinClose turns the usage error of an older clabwire
+// into the release error.
+func TestCaptureRejectsAClabwireWithoutStopOnStdinClose(t *testing.T) {
+	t.Parallel()
+
+	r, clabwire := captureTestRuntime(t, time.Millisecond)
+	clabwire.stderrOnly = "flag provided but not defined: -stop-on-stdin-close"
+
+	err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
+		Name: "lab1", Targets: []clablabruntime.CaptureTarget{{Node: "r2", Interface: "e1-1"}},
+		Duration: time.Second,
+	}, io.Discard)
+	if !errors.Is(err, clablabruntime.ErrUnsupportedRuntimeVersion) ||
+		!strings.Contains(err.Error(), "clabwire in pod lab-ns/lab1-r2-def does not accept "+
+			"packet-capture --stop-on-stdin-close") ||
+		!strings.Contains(err.Error(), "(0.11 or newer)") {
+		t.Fatalf("Capture() = %v, want the release error", err)
+	}
+}
+
+// requireTimeOrdered checks that the merged stream's timestamps never decrease.
+func requireTimeOrdered(t *testing.T, packets []pcapngPacket) {
+	t.Helper()
+
+	for idx := 1; idx < len(packets); idx++ {
+		if packets[idx].Timestamp < packets[idx-1].Timestamp {
+			t.Fatalf("packet %d (%s) at %d precedes packet %d (%s) at %d", idx,
+				packetOrigin(packets[idx]), packets[idx].Timestamp, idx-1,
+				packetOrigin(packets[idx-1]), packets[idx-1].Timestamp)
+		}
+	}
+}
+
+// TestCaptureMergesNodesInTimestampOrder merges two nodes whose streams arrive with different
+// delays: r2's packets are stamped 60 ms before they reach containerlab. The reorder window puts
+// them in order; without it they are not.
+func TestCaptureMergesNodesInTimestampOrder(t *testing.T) {
+	t.Parallel()
+
+	for _, reorder := range []bool{true, false} {
+		t.Run(fmt.Sprintf("reorder=%v", reorder), func(t *testing.T) {
+			t.Parallel()
+
+			r, clabwire := captureTestRuntime(t, 5*time.Millisecond)
+			clabwire.stampSkew["r2"] = 60 * time.Millisecond
+			if !reorder {
+				r.captureReorderWindow = -1
+			}
+
+			var out bytes.Buffer
+			err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
+				Name:     "lab1",
+				Targets:  []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}},
+				Duration: 500 * time.Millisecond,
+			}, &out)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			packets := parseCapture(t, out.Bytes()).packets
+			ordered := slices.IsSortedFunc(packets, func(a, b pcapngPacket) int {
+				return int(a.Timestamp - b.Timestamp)
+			})
+			if reorder {
+				requireTimeOrdered(t, packets)
+			} else if ordered {
+				t.Fatal("the skewed streams came out ordered without the reorder window")
+			}
+		})
+	}
+}
+
+// TestCaptureChainsSeveralNodesInOrderWithoutDuplicates chains two nodes with skewed streams and a
+// reorder window shorter than a segment switch:
+// every tick appears exactly once per interface and the merged stream stays in timestamp order
+// across every segment switch, while old segments are ended through stdin at the switch.
+func TestCaptureChainsSeveralNodesInOrderWithoutDuplicates(t *testing.T) {
+	t.Parallel()
+
+	r, clabwire := captureTestRuntime(t, 4*time.Millisecond)
+	r.captureSegment = 300 * time.Millisecond
+	// a window shorter than a switch: the chains' holds keep the order across the switches
+	r.captureReorderWindow = 15 * time.Millisecond
+	clabwire.stampSkew["r2"] = 5 * time.Millisecond
+	// r2 switches segments 120 ms after r1, so one chain streams live while the other holds
+	clabwire.firstStartDelay["r2"] = 120 * time.Millisecond
+
+	var gaps []clablabruntime.CaptureGap
+	var out bytes.Buffer
+	err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
+		Name:     "lab1",
+		Targets:  []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}},
+		Duration: 1300 * time.Millisecond,
+		OnGap:    func(gap clablabruntime.CaptureGap) { gaps = append(gaps, gap) },
+	}, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gaps) != 0 {
+		t.Fatalf("gaps = %+v", gaps)
+	}
+
+	parsed := parseCapture(t, out.Bytes())
+	requireTimeOrdered(t, parsed.packets)
+	for id := range uint32(2) {
+		var sequence []uint64
+		for _, packet := range parsed.packets {
+			if packet.InterfaceID == id {
+				sequence = append(sequence, packetSequence(packet))
+			}
+		}
+		slices.Sort(sequence)
+		if len(sequence) < 200 {
+			t.Fatalf("interface %d has %d packets", id, len(sequence))
+		}
+		for idx := 1; idx < len(sequence); idx++ {
+			if sequence[idx] != sequence[idx-1]+1 {
+				t.Fatalf("interface %d: tick %d followed by %d", id, sequence[idx-1], sequence[idx])
+			}
+		}
+	}
+
+	clabwire.mu.Lock()
+	defer clabwire.mu.Unlock()
+	for _, node := range []string{"r1", "r2"} {
+		if clabwire.processes[node] < 4 || clabwire.stdinClosed[node] == 0 {
+			t.Fatalf("%s: %d processes, %d stopped through stdin at a switch", node,
+				clabwire.processes[node], clabwire.stdinClosed[node])
+		}
 	}
 }
