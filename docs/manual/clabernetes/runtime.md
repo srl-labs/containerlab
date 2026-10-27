@@ -895,6 +895,9 @@ container event, taken from the record `inspect` reports for the node:
   reached through the node's Service or a port-forward, not on a port of the
   local machine.
 - `kill` carries `signal` `15`; Kubernetes stops containers with SIGTERM.
+- `create` can come before the controller has allocated the node's management
+  address and Service, so it may lack `mgmt_ipv4`, `mgmt_ipv6` and `ports`;
+  the following events carry them.
 - `namespace`, `lab`, `node` and `pod` are c9s attributes on top.
 
 Docker attributes c9s does not report: `scope`, `clab-mgmt-net-bridge` (no
