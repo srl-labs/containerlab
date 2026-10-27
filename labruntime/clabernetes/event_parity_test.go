@@ -707,7 +707,9 @@ func TestEnrichStateReportsContainerStateAndHealth(t *testing.T) {
 		[]k8sruntime.Object{
 			captureTestPod("lab1-r1-a", "r1"),
 			captureTestPod("lab1-r2-a", "r2"),
-			captureTestPod("lab1-r3-a", "r3"),
+			withNodeUID(captureTestPod("lab1-r3-a", "r3"), "uid-r3"),
+			// the newer pod of an earlier Node r3 that still terminates is not r3's pod
+			withNodeUID(withCreation(captureTestPod("lab1-r3-stale", "r3"), time.Hour), "uid-old"),
 		},
 	)
 
@@ -720,6 +722,9 @@ func TestEnrichStateReportsContainerStateAndHealth(t *testing.T) {
 		"r1": "running/healthy", "r2": "running/healthy", "r3": "running/starting", "r4": "exited/",
 	}
 	for _, node := range state.Nodes {
+		if node.Name == "r3" && node.Pod != "lab1-r3-a" {
+			t.Fatalf("r3 pod = %q, want its own Node's pod", node.Pod)
+		}
 		if got := node.ContainerState + "/" + node.Health; got != want[node.Name] {
 			t.Fatalf("%s = %s, want %s", node.Name, got, want[node.Name])
 		}
@@ -926,4 +931,19 @@ func TestStateReportsTheRecordedTopologyFile(t *testing.T) {
 		"/home/alice/lab1.clab.yml" {
 		t.Fatalf("deployed Nodes = %q", got)
 	}
+}
+
+func withNodeUID(pod *corev1.Pod, uid string) *corev1.Pod {
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	pod.Annotations[annotationDirectNodeUID] = uid
+
+	return pod
+}
+
+func withCreation(pod *corev1.Pod, age time.Duration) *corev1.Pod {
+	pod.CreationTimestamp = metav1.NewTime(time.Now().Add(age))
+
+	return pod
 }

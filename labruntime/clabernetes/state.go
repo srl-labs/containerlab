@@ -222,6 +222,14 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		if nodeName == "" {
 			continue
 		}
+		// A pod of an earlier Node of the same name (a redeploy while the old pod still
+		// terminates) is not this node's pod.
+		if uid := pods.Items[idx].Annotations[annotationDirectNodeUID]; uid != "" {
+			if resource := resourcesByName[nodeName]; resource != nil &&
+				string(resource.GetUID()) != uid {
+				continue
+			}
+		}
 		podsByNode[nodeName] = newestPod(podsByNode[nodeName], &pods.Items[idx])
 	}
 
