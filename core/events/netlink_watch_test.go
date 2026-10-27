@@ -130,7 +130,10 @@ func addDummy(t *testing.T, handle *netlink.Handle, name string) {
 	}
 }
 
-func newTestContainer(t *testing.T, getNSPath func() (string, error)) *clabruntime.GenericContainer {
+func newTestContainer(
+	t *testing.T,
+	getNSPath func() (string, error),
+) *clabruntime.GenericContainer {
 	t.Helper()
 
 	rt := mockruntime.NewMockContainerRuntime(gomock.NewController(t))
@@ -148,7 +151,10 @@ func newTestContainer(t *testing.T, getNSPath func() (string, error)) *clabrunti
 	return container
 }
 
-func startRegistry(t *testing.T, container *clabruntime.GenericContainer) (*netlinkRegistry, *eventLog) {
+func startRegistry(
+	t *testing.T,
+	container *clabruntime.GenericContainer,
+) (*netlinkRegistry, *eventLog) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -289,7 +295,11 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 		known           netlink.Link
 		want            []string
 	}{
-		"first subscription":                  {includeSnapshot: true, initial: true, want: []string{"snapshot"}},
+		"first subscription": {
+			includeSnapshot: true,
+			initial:         true,
+			want:            []string{"snapshot"},
+		},
 		"first subscription without snapshot": {initial: true},
 		"new after resubscribe":               {want: []string{"create"}},
 		"changed after resubscribe":           {known: link(1400), want: []string{"update"}},
