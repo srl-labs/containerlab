@@ -27,6 +27,8 @@ ${recovery-timeout}     180s
 ${retry-interval}       5s
 ${capture-file}         /tmp/clab-c9s-capture.pcapng
 ${chain-file}           /tmp/clab-c9s-capture-chain.pcapng
+${stop-file}            /tmp/clab-c9s-capture-stop.pcapng
+${stop-err}             /tmp/clab-c9s-capture-stop.err
 
 
 *** Test Cases ***
@@ -190,7 +192,43 @@ Capture both ends of a link into one pcapng stream
     Should Contain    ${info.stdout}    Number of interfaces in file: 2
     Should Contain    ${info.stdout}    Capture application: containerlab
     Should Contain    ${info.stdout}    nanoseconds
+
+    # the packets of both nodes are merged in timestamp order
+    ${times} =    Process.Run Process
+    ...    tshark -r ${capture-file} -T fields -e frame.time_epoch
+    ...    shell=True
+    Should Be Equal As Integers    ${times.rc}    0
+    ${epochs} =    Evaluate    [decimal.Decimal(x) for x in $times.stdout.split()]    modules=decimal
+    ${count} =    Get Length    ${epochs}
+    Should Be True    ${count} >= 20    only ${count} packets
+    ${inversions} =    Evaluate
+    ...    [(i, str($epochs[i - 1]), str($epochs[i])) for i in range(1, len($epochs)) if $epochs[i] < $epochs[i - 1]]
+    Should Be Empty    ${inversions}    frame.time_epoch decreases
     [Teardown]    Remove File If Exists    ${capture-file}
+
+Stopping a capture leaves no capture process in clabwire
+    Skip If    not shutil.which("docker")    docker is needed to list the processes of a KinD worker
+    Remove File If Exists    ${stop-file}
+    Start Process    ${CLAB_BIN}    --runtime    ${runtime}    capture    -t    ${topo}
+    ...    --target    client:eth1    --target    server:eth1    -w    ${stop-file}
+    ...    alias=c9s_capture    stderr=${stop-err}
+    Wait Until Keyword Succeeds    60s    1s    Capture Process Should Run In Clabwire    client
+    Wait Until Keyword Succeeds    10s    1s    Capture Process Should Run In Clabwire    server
+
+    Send Signal To Process    SIGINT    c9s_capture
+    ${result} =    Wait For Process    c9s_capture    timeout=30s    on_timeout=kill
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+    # Kubernetes does not stop an exec'd process when its stream closes; clabwire ends the
+    # capture when containerlab closes its stdin
+    Wait Until Keyword Succeeds    5s    500ms    No Capture Process Should Run In Clabwire    client
+    Wait Until Keyword Succeeds    5s    500ms    No Capture Process Should Run In Clabwire    server
+
+    ${info} =    Process.Run Process    capinfos ${stop-file}    shell=True
+    Should Be Equal As Integers    ${info.rc}    0
+    Should Contain    ${info.stdout}    Number of interfaces in file: 2
+    [Teardown]    Run Keywords    Remove File If Exists    ${stop-file}
+    ...    AND    Remove File If Exists    ${stop-err}
 
 Capture chains segments without duplicates or gaps
     Skip If    not shutil.which("tshark")    tshark is not installed
@@ -524,6 +562,28 @@ Run Clab Command
     Log    stdout:${\n}${output.stdout}    console=${True}
     Log    stderr:${\n}${output.stderr}    console=${True}
     RETURN    ${output}
+
+Clabwire Capture Processes
+    [Arguments]    ${node}
+    ${result} =    Process.Run Process
+    ...    ${CURDIR}/clabwire-captures.sh ${lab-namespace} ${node}
+    ...    shell=True
+    Log    ${result.stdout}${\n}${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+    ${lines} =    Get Lines Containing String    ${result.stdout}    packet-capture
+    ${count} =    Get Line Count    ${lines}
+    RETURN    ${count}
+
+Capture Process Should Run In Clabwire
+    [Arguments]    ${node}
+    ${count} =    Clabwire Capture Processes    ${node}
+    Should Be True    ${count} > 0    no packet-capture process in the clabwire container of ${node}
+
+No Capture Process Should Run In Clabwire
+    [Arguments]    ${node}
+    ${count} =    Clabwire Capture Processes    ${node}
+    Should Be Equal As Integers    ${count}    0
+    ...    ${count} packet-capture processes still run in the clabwire container of ${node}
 
 Ping From Client Should Succeed
     ${output} =    Run Clab Command
