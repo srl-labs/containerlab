@@ -450,43 +450,62 @@ func (c *CLab) containersFromLabState(
 	return containers
 }
 
+// LabRuntimeContainer describes a lab runtime node as a container record, the way inspect
+// reports it. The events command describes lab runtime nodes with it too.
+func (c *CLab) LabRuntimeContainer(
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
+) clabruntime.GenericContainer {
+	return c.containerFromLabNode(state, node)
+}
+
 func (c *CLab) containerFromLabNode(
 	state *clablabruntime.LabState,
 	node clablabruntime.NodeState,
 ) clabruntime.GenericContainer {
 	nodeName := fmt.Sprintf("%s-%s", state.Name, node.Name)
-	containerState := node.State
-	containerStatus := node.State
-	if containerState == "" {
-		containerState = state.State
+	containerState, containerStatus := labRuntimeContainerState(state, node)
+
+	topologyNode := node.Name
+	if node.TopologyName != "" {
+		topologyNode = node.TopologyName
 	}
-	if node.Ready {
-		containerState = "running"
-		containerStatus = "healthy"
+	if c.Config.Topology != nil {
+		topologyNode = c.topologyNodeName(topologyNode)
 	}
 
 	labels := map[string]string{
 		clabconstants.Containerlab: state.Name,
-		clabconstants.NodeName:     node.Name,
+		clabconstants.NodeName:     topologyNode,
 		clabconstants.LongName:     nodeName,
 		clabconstants.TopoFile:     labRuntimeTopologyPath(c, state),
 	}
 
 	var image string
 	if c.Config.Topology != nil {
-		topologyNode := c.topologyNodeName(node.Name)
 		labels[clabconstants.NodeKind] = c.Config.Topology.GetNodeKind(topologyNode)
 		image = c.Config.Topology.GetNodeImage(topologyNode)
-
-		if group := c.Config.Topology.GetNodeGroup(topologyNode); group != "" {
-			labels[clabconstants.NodeGroup] = group
-		}
 	}
 	if node.Kind != "" {
 		labels[clabconstants.NodeKind] = node.Kind
 	}
 	if node.Image != "" {
 		image = node.Image
+	}
+
+	// The node's type and group: from the loaded topology's node, with the kind's defaults the
+	// local runtimes report too, otherwise as the topology set them on the runtime's node.
+	nodeType, group := node.Type, node.Group
+	if topologyNodeConfig, ok := c.Nodes[topologyNode]; ok {
+		nodeType, group = topologyNodeConfig.Config().NodeType, topologyNodeConfig.Config().Group
+	} else if c.Config.Topology != nil && group == "" {
+		group = c.Config.Topology.GetNodeGroup(topologyNode)
+	}
+	if nodeType != "" {
+		labels[clabconstants.NodeType] = nodeType
+	}
+	if group != "" {
+		labels[clabconstants.NodeGroup] = group
 	}
 
 	if state.Owner != "" {
@@ -509,6 +528,7 @@ func (c *CLab) containerFromLabNode(
 		Labels:          labels,
 		NetworkName:     state.Namespace,
 		NetworkSettings: managementAddress(node),
+		Ports:           labRuntimePorts(node.ExposedPorts),
 		Workload: &clabtypes.LabRuntimeWorkload{
 			Namespace:           state.Namespace,
 			Pod:                 node.Pod,
@@ -518,6 +538,56 @@ func (c *CLab) containerFromLabNode(
 			LoadBalancerAddress: node.LoadBalancerAddress,
 		},
 	}
+}
+
+// labRuntimeContainerState is a lab runtime node's state and status in the vocabulary of the
+// container runtimes: state created, running or exited; status healthy or "health: starting"
+// for a running node, as inspect shortens a Docker status line with a healthcheck, Created or
+// Exited otherwise. A runtime that reports no container state keeps its own state.
+func labRuntimeContainerState(
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
+) (string, string) {
+	switch node.ContainerState {
+	case clablabruntime.ContainerStateRunning:
+		if node.Health == clablabruntime.ContainerHealthHealthy {
+			return node.ContainerState, "healthy"
+		}
+
+		return node.ContainerState, "health: starting"
+	case clablabruntime.ContainerStateCreated:
+		return node.ContainerState, "Created"
+	case clablabruntime.ContainerStateExited:
+		return node.ContainerState, "Exited"
+	}
+
+	if node.Ready {
+		return clablabruntime.ContainerStateRunning, "healthy"
+	}
+	if node.State == "" {
+		return state.State, ""
+	}
+
+	return node.State, node.State
+}
+
+// labRuntimePorts reports the ports a lab runtime exposes for a node as the ports a container
+// exposes without publishing them on the host: the node is reached through the runtime (a
+// Service, a port-forward), never on a port of this machine.
+func labRuntimePorts(ports []clablabruntime.ExposedPort) []*clabtypes.GenericPortBinding {
+	if len(ports) == 0 {
+		return nil
+	}
+
+	bindings := make([]*clabtypes.GenericPortBinding, 0, len(ports))
+	for _, port := range ports {
+		bindings = append(bindings, &clabtypes.GenericPortBinding{
+			ContainerPort: port.Port,
+			Protocol:      port.Protocol,
+		})
+	}
+
+	return bindings
 }
 
 // labRuntimeContainerID is the ID of a lab runtime node: <namespace>/<lab>/<node>.

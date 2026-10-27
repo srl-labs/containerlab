@@ -193,12 +193,38 @@ type SaveResult struct {
 	Files []SavedFile
 }
 
+// Container states and health in the vocabulary of container runtimes (Docker), which inspect
+// and events report for lab runtime nodes too.
+const (
+	ContainerStateCreated = "created"
+	ContainerStateRunning = "running"
+	ContainerStateExited  = "exited"
+
+	ContainerHealthHealthy   = "healthy"
+	ContainerHealthStarting  = "starting"
+	ContainerHealthUnhealthy = "unhealthy"
+)
+
 type NodeState struct {
-	Name  string
-	Kind  string
-	Image string
+	Name string
+	// TopologyName is the node name as the topology file spells it, when the runtime had to
+	// carry the node under another name (Name). Empty means Name.
+	TopologyName string
+	Kind         string
+	Image        string
+	// Type and Group are the node's type and group when the topology set them.
+	Type  string
+	Group string
+	// State is the runtime's own view of the node, such as the clabernetes Node readiness, or
+	// stopped.
 	State string
 	Ready bool
+	// ContainerState is the node's state in container runtime terms: created, running or
+	// exited (the ContainerState* constants). Empty when the runtime does not report one.
+	ContainerState string
+	// Health is the device health of a running node in container runtime terms: healthy or
+	// starting. Empty when the node does not run.
+	Health string
 	// MgmtIPv4Address and MgmtIPv6Address are the node's allocated management addresses in
 	// CIDR notation, when the runtime reports them.
 	MgmtIPv4Address     string

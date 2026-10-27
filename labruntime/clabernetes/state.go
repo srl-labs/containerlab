@@ -51,11 +51,16 @@ func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabrunti
 		Name:    nodeResource.GetName(),
 		NodeUID: string(nodeResource.GetUID()),
 	}
+	if original := nodeResource.GetLabels()[labelOriginalNodeName]; original != node.Name {
+		node.TopologyName = original
+	}
 	node.ExposedPorts = nodeExposedPorts(nodeResource)
 	// The same container exec targets: the observed primary device container.
 	node.Container, _ = preferredDeviceContainerName(nodeResource, node.Name)
 	node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
 	node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
+	node.Type, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "type")
+	node.Group, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "group")
 	node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
 	node.Ready = node.State == "ready"
 	node.LoadBalancerAddress, _, _ = unstructured.NestedString(
@@ -141,10 +146,21 @@ func intField(value any) int {
 	}
 }
 
-// newestPod prefers a running pod and, among equals, the newest one: several pods can match a
-// node during a rolling update.
+// newestPod prefers a pod that is not being deleted, then a running pod and, among equals, the
+// newest one: several pods can match a node during a rolling update or a restart, when the old
+// pod terminates while its replacement starts.
 func newestPod(current, candidate *corev1.Pod) *corev1.Pod {
 	if current == nil {
+		return candidate
+	}
+
+	currentDeleting := current.DeletionTimestamp != nil
+	candidateDeleting := candidate.DeletionTimestamp != nil
+	if currentDeleting != candidateDeleting {
+		if candidateDeleting {
+			return current
+		}
+
 		return candidate
 	}
 
@@ -214,8 +230,10 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	// Nodes without readiness yet report their pod phase.
 	for nodeName, node := range nodesByName {
 		primary := resolvePrimaryNode(nodeName, networkModes)
-		if primaryResource := resourcesByName[primary]; primaryResource != nil &&
-			nodeRunState(primaryResource) == nodeRunStateStopped {
+		primaryResource := resourcesByName[primary]
+		stopRequested := primaryResource != nil &&
+			nodeRunState(primaryResource) == nodeRunStateStopped
+		if stopRequested {
 			node.State = "stopping"
 			if condition := nodeCondition(primaryResource, nodeConditionStopped); condition != nil &&
 				condition.status == string(metav1.ConditionTrue) {
@@ -225,6 +243,10 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		} else if pod := podsByNode[primary]; node.State == "" && pod != nil &&
 			pod.Status.Phase != "" {
 			node.State = strings.ToLower(string(pod.Status.Phase))
+		}
+		node.ContainerState = nodeContainerState(stopRequested, podsByNode[primary])
+		if node.ContainerState == clablabruntime.ContainerStateRunning {
+			node.Health = nodeHealth(node, resourcesByName[nodeName])
 		}
 		nodesByName[nodeName] = node
 	}
@@ -275,4 +297,45 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	}
 
 	return nil
+}
+
+// nodeContainerState is the state of a node in container runtime terms, from its pod: created
+// while the pod is scheduled and prepared (init containers), running once the device containers
+// run, and exited once the node was stopped, its pod is being deleted, or the pod ended. Between
+// the pods of a restart the node is exited, then created.
+func nodeContainerState(stopRequested bool, pod *corev1.Pod) string {
+	switch {
+	case pod == nil && stopRequested:
+		return clablabruntime.ContainerStateExited
+	case pod == nil:
+		return clablabruntime.ContainerStateCreated
+	case stopRequested || pod.DeletionTimestamp != nil:
+		return clablabruntime.ContainerStateExited
+	}
+
+	switch pod.Status.Phase {
+	case corev1.PodRunning:
+		return clablabruntime.ContainerStateRunning
+	case corev1.PodSucceeded, corev1.PodFailed:
+		return clablabruntime.ContainerStateExited
+	default:
+		return clablabruntime.ContainerStateCreated
+	}
+}
+
+// nodeHealth is the health of a running node: healthy once the Node is ready or its device
+// containers are, starting before. Device containers are the analogue of a container
+// healthcheck: a node whose links wait for a stopped peer is not ready, but its device is.
+func nodeHealth(node clablabruntime.NodeState, resource *unstructured.Unstructured) string {
+	if node.Ready {
+		return clablabruntime.ContainerHealthHealthy
+	}
+	if resource != nil {
+		if condition := nodeCondition(resource, nodeConditionContainersReady); condition != nil &&
+			condition.status == string(metav1.ConditionTrue) {
+			return clablabruntime.ContainerHealthHealthy
+		}
+	}
+
+	return clablabruntime.ContainerHealthStarting
 }
