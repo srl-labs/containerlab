@@ -265,6 +265,38 @@ func normalizeAPIDefaultedJSON(value any) any {
 
 		return result
 	default:
+		return normalizeJSONNumber(value)
+	}
+}
+
+// normalizeJSONNumber gives every number one Go type. Objects read from the API server carry
+// int64 and float64, while rendered objects carry the types the renderer used (int, uint32);
+// the same value must compare equal either way.
+func normalizeJSONNumber(value any) any {
+	switch typed := value.(type) {
+	case int:
+		return float64(typed)
+	case int8:
+		return float64(typed)
+	case int16:
+		return float64(typed)
+	case int32:
+		return float64(typed)
+	case int64:
+		return float64(typed)
+	case uint:
+		return float64(typed)
+	case uint8:
+		return float64(typed)
+	case uint16:
+		return float64(typed)
+	case uint32:
+		return float64(typed)
+	case uint64:
+		return float64(typed)
+	case float32:
+		return float64(typed)
+	default:
 		return value
 	}
 }

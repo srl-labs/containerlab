@@ -213,6 +213,13 @@ func primitiveObject(
 	}
 	obj.SetLabels(labels)
 
+	if kind == "Node" {
+		// The compiler copies the definition's labels into the Node metadata and leaves them in
+		// the spec, which the Node schema does not have: the API server prunes them, and
+		// keeping them would make every apply and plan report the Node as changed.
+		unstructured.RemoveNestedField(obj.Object, "spec", "labels")
+	}
+
 	if owner := desiredTopology.GetAnnotations()[clabconstants.Owner]; owner != "" {
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
