@@ -468,9 +468,11 @@ Starting a node reports the events Docker reports for containerlab start
         ...    Container Actions Should Include In Order    ${lifecycle-log}    server
         ...    kill    stop    die    start    health_status: healthy
         ${events} =    Get File    ${lifecycle-log}
-        Container Event Should Carry Docker Attributes    ${events}    server    start    running
+        # the lab was last deployed from the applied file, which the Topology now records
         Container Event Should Carry Docker Attributes
-        ...    ${events}    server    health_status: healthy    running
+        ...    ${events}    server    start    running    ${applied-topo}
+        Container Event Should Carry Docker Attributes
+        ...    ${events}    server    health_status: healthy    running    ${applied-topo}
         Wait Until Keyword Succeeds    60s    1s
         ...    Interface Event Should Be Logged    ${lifecycle-log}    server    eth1    create
         Wait Until Keyword Succeeds    60s    1s
@@ -594,11 +596,16 @@ Destroy and deploy report the events Docker reports
             ...    Container Actions Should Include In Order    ${redeploy-log}    ${node}
             ...    kill    die    destroy    create    start    health_status: healthy
             ${events} =    Get File    ${redeploy-log}
-            Container Event Should Carry Docker Attributes    ${events}    ${node}    destroy    exited
+            # the destroyed lab was last deployed from the applied file, the new one from ${topo}
+            Container Event Should Carry Docker Attributes
+            ...    ${events}    ${node}    destroy    exited    ${applied-topo}
             Container Event Should Carry Docker Attributes    ${events}    ${node}    create    created
             Container Event Should Carry Docker Attributes    ${events}    ${node}    start    running
+            # like Docker, the link may be created down and come up after
             Wait Until Keyword Succeeds    60s    1s
-            ...    Interface Event Should Be Logged    ${redeploy-log}    ${node}    eth1    create    up
+            ...    Interface Event Should Be Logged    ${redeploy-log}    ${node}    eth1    create
+            Wait Until Keyword Succeeds    60s    1s
+            ...    Last Interface State Should Be    ${redeploy-log}    ${node}    eth1    up
         END
         Validate JSON Lines    ${redeploy-log}
     FINALLY
@@ -782,9 +789,15 @@ Interface Event Should Be Logged
     ${contents} =    Get File    ${path}
     ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
     ${found} =    Evaluate
-    ...    any(e.get("action") == $action and e.get("actor_id") == $actor and e.get("attributes", {}).get("ifname") == $ifname and (not $states or e.get("attributes", {}).get("state") in $states) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface")
+    ...    any([e.get("action") == $action and e.get("actor_id") == $actor and e.get("attributes", {}).get("ifname") == $ifname and (not $states or e.get("attributes", {}).get("state") in $states) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface"])
     ...    modules=json
     Should Be True    ${found}    no interface ${action} event ${states} for ${node}:${ifname}
+
+Last Interface State Should Be
+    [Arguments]    ${path}    ${node}    ${ifname}    ${state}
+    ${contents} =    Get File    ${path}
+    ${states} =    Interface States    ${contents}    ${node}
+    Should Be Equal    ${states}[${ifname}]    ${state}
 
 Container Actions
     [Arguments]    ${path}    ${node}
@@ -798,13 +811,16 @@ Container Actions
 Container Actions Should Include In Order
     [Arguments]    ${path}    ${node}    @{expected}
     ${actions} =    Container Actions    ${path}    ${node}
-    ${in_order} =    Evaluate    (lambda it: all(a in it for a in $expected))(iter($actions))
+    # the expected actions appear in this order, other actions may come between them
+    ${in_order} =    Evaluate
+    ...    re.search("\\n" + "\\n(?:.*\\n)*?".join([re.escape(a) for a in $expected]) + "\\n", "\\n" + "\\n".join($actions) + "\\n") is not None
+    ...    modules=re
     Should Be True    ${in_order}    ${node} reported ${actions}, not ${expected} in this order
 
 Container Event Should Carry Docker Attributes
     [Documentation]    The last container event of a node with the action carries the attributes
     ...    a Docker container event of the node has, and the container state.
-    [Arguments]    ${events}    ${node}    ${action}    ${state}
+    [Arguments]    ${events}    ${node}    ${action}    ${state}    ${topo-file}=${topo}
     ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
     ${matching} =    Evaluate
     ...    [e for e in map(json.loads, filter(str.strip, $events.splitlines())) if e.get("type") == "container" and e.get("actor_id") == $actor and e.get("action") == $action]
@@ -817,14 +833,17 @@ Container Event Should Carry Docker Attributes
     Should Be Equal    ${attributes}[clab-node-name]    ${node}
     Should Be Equal    ${attributes}[clab-node-longname]    ${lab-name}-${node}
     Should Be Equal    ${attributes}[clab-node-kind]    linux
-    Should Be Equal    ${attributes}[clab-topo-file]    ${topo}
+    Should Be Equal    ${attributes}[clab-topo-file]    ${topo-file}
     Should Not Be Empty    ${attributes}[clab-owner]
     Should Be Equal    ${attributes}[image]    ${node-image}
     Should Be Equal    ${attributes}[name]    ${lab-name}-${node}
     Should Be Equal    ${attributes}[id]    ${actor}
     Should Be Equal    ${event}[actor_full_id]    ${actor}
-    Should Match Regexp    ${attributes}[mgmt_ipv4]    ^\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+$
-    Should Contain    ${attributes}[ports]    22/tcp
+    # a node is created before the controller allocates its management address and Service
+    IF    $state != "created"
+        Should Match Regexp    ${attributes}[mgmt_ipv4]    ^\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+$
+        Should Contain    ${attributes}[ports]    22/tcp
+    END
     Should Be Equal    ${attributes}[state]    ${state}
 
 Interface States
