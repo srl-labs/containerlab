@@ -345,7 +345,8 @@ func TestContainerSnapshotParity(t *testing.T) {
 
 		assertAttributeParity(t, docker, c9s, dockerOnlyContainerAttributes)
 		got := mergedEventAttributes(c9s)
-		if docker.Action != c9s.Action || got["origin"] != "snapshot" || got["state"] != "running" ||
+		if docker.Action != c9s.Action || got["origin"] != "snapshot" ||
+			got["state"] != "running" ||
 			got["status"] != "healthy" ||
 			got["network"] != "c9s-parity" {
 			t.Fatalf("%s snapshot = %s %v", node, c9s.Action, got)
