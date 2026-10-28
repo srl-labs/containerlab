@@ -42,7 +42,10 @@ func TestNewDoesNotLoadKubeconfig(t *testing.T) {
 		Name:               "lab1",
 		TopologyDefinition: []byte(offlineDefinition),
 	}
-	if err := lr.(clablabruntime.TopologyValidator).Validate(context.Background(), req); err != nil {
+	if err := lr.(clablabruntime.TopologyValidator).Validate(
+		context.Background(),
+		req,
+	); err != nil {
 		t.Fatalf("Validate() error = %v, want offline validation", err)
 	}
 	manifests, err := lr.(clablabruntime.ManifestEmitter).Manifests(context.Background(), req)
@@ -349,7 +352,8 @@ func TestEnrichStateReportsPodAndContainer(t *testing.T) {
 		got[node.Name] = node
 	}
 
-	if n := got["r1"]; n.Pod != "lab1-r1-new" || n.Container != "node-r1-x" || n.NodeUID != "uid-r1" {
+	if n := got["r1"]; n.Pod != "lab1-r1-new" || n.Container != "node-r1-x" ||
+		n.NodeUID != "uid-r1" {
 		t.Fatalf("r1 = %+v, want the newest running pod and the observed container", n)
 	}
 	if n := got["r2"]; n.Pod != "lab1-r2-a" || n.Container != "node-r2" {

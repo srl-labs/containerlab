@@ -152,7 +152,8 @@ func TestContainerFromLabNodeReportsTheTopologyNode(t *testing.T) {
 				container.Labels)
 		}
 	}
-	if container.State != "running" || container.Status != "healthy" || container.Names[0] != "lab1-r1" {
+	if container.State != "running" || container.Status != "healthy" ||
+		container.Names[0] != "lab1-r1" {
 		t.Fatalf("container = %s %s %v", container.State, container.Status, container.Names)
 	}
 	if len(container.Ports) != 1 || container.Ports[0].ContainerPort != 57400 ||

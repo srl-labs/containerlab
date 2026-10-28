@@ -142,7 +142,10 @@ func dockerContainerEvent(
 }
 
 // c9sNode is the same node as the c9s runtime reports it, deployed from the same file.
-func c9sNode(c *clabcore.CLab, path, node string) (*clablabruntime.LabState, clablabruntime.NodeState) {
+func c9sNode(
+	c *clabcore.CLab,
+	path, node string,
+) (*clablabruntime.LabState, clablabruntime.NodeState) {
 	cfg := c.Nodes[node].Config()
 	state := &clablabruntime.LabState{
 		Name: "parity", Namespace: "c9s-parity", Owner: "alice", TopologyPath: path,
@@ -155,7 +158,12 @@ func c9sNode(c *clabcore.CLab, path, node string) (*clablabruntime.LabState, cla
 		MgmtIPv4Address: "172.20.20.84/24", MgmtIPv6Address: "3fff:172:20:20::84/64",
 		Pod: node + "-88598986c-rbdfq", Container: "node-" + node, NodeUID: "uid-" + node,
 		ExposedPorts: []clablabruntime.ExposedPort{
-			{Port: 22, ExposePort: 22, Protocol: "tcp"}, {Port: 80, ExposePort: 80, Protocol: "tcp"},
+			{
+				Port:       22,
+				ExposePort: 22,
+				Protocol:   "tcp",
+			},
+			{Port: 80, ExposePort: 80, Protocol: "tcp"},
 		},
 	}
 	state.Nodes = []clablabruntime.NodeState{nodeState}
@@ -338,7 +346,8 @@ func TestContainerSnapshotParity(t *testing.T) {
 		assertAttributeParity(t, docker, c9s, dockerOnlyContainerAttributes)
 		got := mergedEventAttributes(c9s)
 		if docker.Action != c9s.Action || got["origin"] != "snapshot" || got["state"] != "running" ||
-			got["status"] != "healthy" || got["network"] != "c9s-parity" {
+			got["status"] != "healthy" ||
+			got["network"] != "c9s-parity" {
 			t.Fatalf("%s snapshot = %s %v", node, c9s.Action, got)
 		}
 	}
@@ -359,14 +368,22 @@ func TestContainerStateUsesDockerVocabulary(t *testing.T) {
 		node          clablabruntime.NodeState
 		state, status string
 	}{
-		{clablabruntime.NodeState{Name: "a", ContainerState: "created", State: "notready"},
-			"created", "Created"},
-		{clablabruntime.NodeState{Name: "b", ContainerState: "running", Health: "starting",
-			State: "notready"}, "running", "health: starting"},
-		{clablabruntime.NodeState{Name: "c", ContainerState: "running", Health: "healthy",
-			State: "ready", Ready: true}, "running", "healthy"},
-		{clablabruntime.NodeState{Name: "d", ContainerState: "exited", State: "stopped"},
-			"exited", "Exited"},
+		{
+			clablabruntime.NodeState{Name: "a", ContainerState: "created", State: "notready"},
+			"created", "Created",
+		},
+		{clablabruntime.NodeState{
+			Name: "b", ContainerState: "running", Health: "starting",
+			State: "notready",
+		}, "running", "health: starting"},
+		{clablabruntime.NodeState{
+			Name: "c", ContainerState: "running", Health: "healthy",
+			State: "ready", Ready: true,
+		}, "running", "healthy"},
+		{
+			clablabruntime.NodeState{Name: "d", ContainerState: "exited", State: "stopped"},
+			"exited", "Exited",
+		},
 	}
 	for _, tt := range tests {
 		container := c9sLab.LabRuntimeContainer(state, tt.node)
@@ -423,16 +440,32 @@ func TestInterfaceEventParity(t *testing.T) {
 		node string
 		data clablabruntime.InterfaceEventData
 	}{
-		{"client", clablabruntime.InterfaceEventData{
-			Name: "eth1", Index: 7, MTU: 9500, MAC: "aa:c1:ab:56:aa:46", OperState: "up", Type: "veth",
-		}},
+		{
+			"client",
+			clablabruntime.InterfaceEventData{
+				Name:      "eth1",
+				Index:     7,
+				MTU:       9500,
+				MAC:       "aa:c1:ab:56:aa:46",
+				OperState: "up",
+				Type:      "veth",
+			},
+		},
 		{"srl1", clablabruntime.InterfaceEventData{
 			Name: "e1-1", Alias: "ethernet-1/1", Index: 7, MTU: 9500, MAC: "aa:c1:ab:56:aa:47",
 			OperState: "lower-layer-down", Type: "veth",
 		}},
-		{"client", clablabruntime.InterfaceEventData{
-			Name: "eth0", Index: 4, MTU: 1500, MAC: "02:42:ac:14:14:02", OperState: "up", Type: "veth",
-		}},
+		{
+			"client",
+			clablabruntime.InterfaceEventData{
+				Name:      "eth0",
+				Index:     4,
+				MTU:       1500,
+				MAC:       "02:42:ac:14:14:02",
+				OperState: "up",
+				Type:      "veth",
+			},
+		},
 		{"client", clablabruntime.InterfaceEventData{
 			Name: "lo", Index: 1, MTU: 65536, OperState: "unknown", Type: "device",
 		}},

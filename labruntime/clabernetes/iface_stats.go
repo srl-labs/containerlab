@@ -296,7 +296,10 @@ func (p *interfacePoller) sampleAll(
 	return samples
 }
 
-func (p *interfacePoller) sample(ctx context.Context, target interfaceSampleTarget) interfaceSample {
+func (p *interfacePoller) sample(
+	ctx context.Context,
+	target interfaceSampleTarget,
+) interfaceSample {
 	sample := interfaceSample{target: target}
 	podName := target.pod.Name
 
@@ -384,7 +387,10 @@ func (p *interfacePoller) nodeLinks(
 			return nil, err
 		}
 
-		listing = &podInterfaceListing{names: names, byNode: map[string][]clabwireInterface{}}
+		listing = &podInterfaceListing{
+			names:  names,
+			byNode: map[string][]clabwireInterface{},
+		}
 		for _, entry := range entries {
 			listing.byNode[entry.Node] = append(listing.byNode[entry.Node], entry)
 		}

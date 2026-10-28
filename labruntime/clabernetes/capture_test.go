@@ -549,7 +549,8 @@ func TestCaptureReportsAGapWhenTheFollowUpStartsLate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(gaps) == 0 || gaps[0].Node != "r2" || !slices.Equal(gaps[0].Interfaces, []string{"e1-1"}) ||
+	if len(gaps) == 0 || gaps[0].Node != "r2" ||
+		!slices.Equal(gaps[0].Interfaces, []string{"e1-1"}) ||
 		gaps[0].From.IsZero() ||
 		gaps[0].Reason == "" {
 		t.Fatalf("gaps = %+v, want the late follow-up reported", gaps)
@@ -746,7 +747,8 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 	if second := byName["e1-2"]; second == nil || second.InterfaceState != "lower-layer-down" {
 		t.Fatalf("e1-2 = %+v", second)
 	}
-	if eth0 := byName["eth0"]; eth0 == nil || eth0.InterfaceAlias != "" || eth0.InterfaceType != "veth" {
+	if eth0 := byName["eth0"]; eth0 == nil || eth0.InterfaceAlias != "" ||
+		eth0.InterfaceType != "veth" {
 		t.Fatalf("eth0 = %+v", eth0)
 	}
 	if lo := byName["lo"]; lo == nil || lo.InterfaceType != "device" || lo.InterfaceMAC != "" ||

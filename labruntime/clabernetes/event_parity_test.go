@@ -175,19 +175,25 @@ func TestInterfacePollerReportsTheTopologyInterfaces(t *testing.T) {
 			ctx := context.Background()
 			start := time.Now()
 
-			p.processSample(ctx, interfaceTestSample("r1", start, links, podInterfaces(tt.link, "up")))
+			p.processSample(
+				ctx,
+				interfaceTestSample("r1", start, links, podInterfaces(tt.link, "up")),
+			)
 			got := interfacesByName(drain(sink))
 			if len(got) != 3 {
 				t.Fatalf("first round reported %v, want %s, eth0 and lo", got, tt.link)
 			}
 			link := got[tt.link]
-			if link.Action != interfaceActionSnapshot || link.Type != clablabruntime.EventTypeInterface ||
-				link.ActorID != "c9s-lab1/lab1/r1" || link.ActorFullID != "c9s-lab1/lab1/r1" ||
+			if link.Action != interfaceActionSnapshot ||
+				link.Type != clablabruntime.EventTypeInterface ||
+				link.ActorID != "c9s-lab1/lab1/r1" ||
+				link.ActorFullID != "c9s-lab1/lab1/r1" ||
 				link.ActorName != "lab1-r1" || link.Interface.Alias != tt.alias ||
 				link.Interface.OperState != "up" || link.Interface.Type != "veth" ||
 				link.Lab == nil || link.Node == nil || link.Node.Name != "r1" ||
 				link.Attributes["origin"] != "clabernetes" ||
-				link.Attributes["pod"] != "lab1-r1-abc" || link.Attributes["namespace"] != "c9s-lab1" {
+				link.Attributes["pod"] != "lab1-r1-abc" ||
+				link.Attributes["namespace"] != "c9s-lab1" {
 				t.Fatalf("%s event = %+v", tt.link, link)
 			}
 			if got["lo"].Interface.Type != "device" || got["eth0"].Interface.Alias != "" {
@@ -215,7 +221,10 @@ func TestInterfacePollerReportsTheTopologyInterfaces(t *testing.T) {
 			// the link interface disappears, then comes back
 			withoutLink := podInterfaces(tt.link, "up")
 			withoutLink = withoutLink[:len(withoutLink)-1]
-			p.processSample(ctx, interfaceTestSample("r1", start.Add(3*time.Second), links, withoutLink))
+			p.processSample(
+				ctx,
+				interfaceTestSample("r1", start.Add(3*time.Second), links, withoutLink),
+			)
 			events = drain(sink)
 			if len(events) != 1 || events[0].Action != interfaceActionDelete ||
 				events[0].Interface.Name != tt.link {
@@ -257,7 +266,12 @@ func TestInterfacePollerStatsCoverTheReportedInterfaces(t *testing.T) {
 	t.Parallel()
 
 	sink := make(chan clablabruntime.Event, 32)
-	p := newInterfacePoller(&Runtime{}, eventScope{}, interfacePollOptions{includeStats: true}, sink)
+	p := newInterfacePoller(
+		&Runtime{},
+		eventScope{},
+		interfacePollOptions{includeStats: true},
+		sink,
+	)
 	links := []clabwireInterface{{Node: "r1", Interface: "e1-1", Alias: "ethernet-1/1"}}
 	start := time.Now()
 	first := interfaceTestSample("r1", start, links, podInterfaces("e1-1", "up"))
@@ -318,7 +332,12 @@ func TestInterfacePollerListsAPodOncePerInterfaceSet(t *testing.T) {
 		},
 	}}
 	r := &Runtime{podExec: listing.exec}
-	p := newInterfacePoller(r, eventScope{}, interfacePollOptions{}, make(chan clablabruntime.Event))
+	p := newInterfacePoller(
+		r,
+		eventScope{},
+		interfacePollOptions{},
+		make(chan clablabruntime.Event),
+	)
 	target := interfaceTestSample("r1", time.Now(), nil, nil).target
 
 	for range 3 {
@@ -369,26 +388,42 @@ func TestContainerTransitionActions(t *testing.T) {
 		want     string
 	}{
 		{"new pending node", nil, tracked(created, "", ""), "create"},
-		{"new running node", nil, tracked(running, start, "p1"),
-			"create,start,health_status: starting"},
-		{"new ready node", nil, tracked(running, healthy, "p1"),
-			"create,start,health_status: healthy"},
+		{
+			"new running node", nil, tracked(running, start, "p1"),
+			"create,start,health_status: starting",
+		},
+		{
+			"new ready node", nil, tracked(running, healthy, "p1"),
+			"create,start,health_status: healthy",
+		},
 		{"new stopped node", nil, tracked(exited, "", ""), "create,stop"},
-		{"pod starts", tracked(created, "", "p1"), tracked(running, start, "p1"),
-			"start,health_status: starting"},
-		{"device ready", tracked(running, start, "p1"), tracked(running, healthy, "p1"),
-			"health_status: healthy"},
+		{
+			"pod starts", tracked(created, "", "p1"), tracked(running, start, "p1"),
+			"start,health_status: starting",
+		},
+		{
+			"device ready", tracked(running, start, "p1"), tracked(running, healthy, "p1"),
+			"health_status: healthy",
+		},
 		{"still booting", tracked(running, start, "p1"), tracked(running, start, "p1"), ""},
 		{"no change", tracked(running, healthy, "p1"), tracked(running, healthy, "p1"), ""},
-		{"device not ready again", tracked(running, healthy, "p1"), tracked(running, sick, "p1"),
-			"health_status: unhealthy"},
+		{
+			"device not ready again", tracked(running, healthy, "p1"), tracked(running, sick, "p1"),
+			"health_status: unhealthy",
+		},
 		{"stop", tracked(running, healthy, "p1"), tracked(exited, "", ""), "kill,stop,die"},
-		{"start", tracked(exited, "", ""), tracked(running, healthy, "p2"),
-			"start,health_status: healthy"},
-		{"restart, new pod pending", tracked(running, healthy, "p1"), tracked(created, "", "p2"),
-			"kill,stop,die"},
-		{"restart, new pod running", tracked(running, healthy, "p1"),
-			tracked(running, start, "p2"), "kill,stop,die,start,health_status: starting"},
+		{
+			"start", tracked(exited, "", ""), tracked(running, healthy, "p2"),
+			"start,health_status: healthy",
+		},
+		{
+			"restart, new pod pending", tracked(running, healthy, "p1"), tracked(created, "", "p2"),
+			"kill,stop,die",
+		},
+		{
+			"restart, new pod running", tracked(running, healthy, "p1"),
+			tracked(running, start, "p2"), "kill,stop,die,start,health_status: starting",
+		},
 		{"stopped before it ran", tracked(created, "", "p1"), tracked(exited, "", ""), "stop"},
 		{"stopped node rescheduled", tracked(exited, "", ""), tracked(created, "", "p2"), ""},
 	}
@@ -403,7 +438,10 @@ func TestContainerTransitionActions(t *testing.T) {
 		"kill,die,destroy" {
 		t.Fatalf("removal of a running node = %q", got)
 	}
-	if got := strings.Join(containerRemovalActions(tracked(exited, "", "")), ","); got != "destroy" {
+	if got := strings.Join(
+		containerRemovalActions(tracked(exited, "", "")),
+		",",
+	); got != "destroy" {
 		t.Fatalf("removal of a stopped node = %q", got)
 	}
 
@@ -419,7 +457,11 @@ func TestContainerTransitionActions(t *testing.T) {
 }
 
 // trackerTestNode is a Node of lab1 in lab-ns.
-func trackerTestNode(name string, runState string, conditions ...map[string]any) *unstructured.Unstructured {
+func trackerTestNode(
+	name string,
+	runState string,
+	conditions ...map[string]any,
+) *unstructured.Unstructured {
 	status := map[string]any{
 		"readiness":        "notready",
 		"directContainers": []any{map[string]any{"name": "node-" + name, "id": name}},
@@ -465,7 +507,11 @@ type trackerHarness struct {
 	sink    chan clablabruntime.Event
 }
 
-func newTrackerHarness(t *testing.T, node *unstructured.Unstructured, pods ...*corev1.Pod) *trackerHarness {
+func newTrackerHarness(
+	t *testing.T,
+	node *unstructured.Unstructured,
+	pods ...*corev1.Pod,
+) *trackerHarness {
 	t.Helper()
 
 	kubeObjects := make([]k8sruntime.Object, 0, len(pods))
@@ -580,7 +626,8 @@ func TestContainerTrackerReportsTheNodeLifecycle(t *testing.T) {
 	}
 
 	// stop: the Node is stopped and its pod goes
-	h.setNode(trackerTestNode("r1", nodeRunStateStopped, condition(nodeConditionStopped, "True")))
+	h.setNode(trackerTestNode("r1", nodeRunStateStopped,
+		condition(nodeConditionStopped, "True")))
 	h.deletePod("lab1-r1-a")
 	if got := h.refresh(); got != "kill=running/15,stop=exited,die=exited" {
 		t.Fatalf("stop: %s", got)
@@ -594,7 +641,9 @@ func TestContainerTrackerReportsTheNodeLifecycle(t *testing.T) {
 	}
 	h.deletePod("lab1-r1-b")
 	h.addPod(trackerTestPod("lab1-r1-b", corev1.PodRunning))
-	h.setNode(trackerTestNode("r1", nodeRunStateRunning, condition(nodeConditionContainersReady, "True")))
+	h.setNode(
+		trackerTestNode("r1", nodeRunStateRunning, condition(nodeConditionContainersReady, "True")),
+	)
 	if got := h.refresh(); got != "start=running,health_status: healthy=running" {
 		t.Fatalf("started: %s", got)
 	}
@@ -806,7 +855,8 @@ func TestDeployRecordsTheTopologyFile(t *testing.T) {
 		t.Fatalf("TopologyPath without a Topology = %q", state.TopologyPath)
 	}
 
-	plan, err := r.Plan(context.Background(), sourceDeployRequest("/srv/labs/lab1.clab.yml", true))
+	plan, err := r.Plan(context.Background(),
+		sourceDeployRequest("/srv/labs/lab1.clab.yml", true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -866,7 +916,10 @@ func TestCarryOverNodeTopologyFile(t *testing.T) {
 	}
 	desired := node(map[string]any{annotationTopologyFile: "/new.clab.yml"})
 
-	updated := reconciledPrimitiveObject(node(map[string]any{annotationTopologyFile: "/old.clab.yml"}), desired)
+	updated := reconciledPrimitiveObject(
+		node(map[string]any{annotationTopologyFile: "/old.clab.yml"}),
+		desired,
+	)
 	if got := updated.GetAnnotations()[annotationTopologyFile]; got != "/old.clab.yml" {
 		t.Fatalf("existing Node file = %q, want it kept", got)
 	}
@@ -913,11 +966,17 @@ func TestStateReportsTheRecordedTopologyFile(t *testing.T) {
 	t.Parallel()
 
 	topology := topologyObject("lab1", "lab-ns", "", "topology:\n")
-	if got := stateFromTopology(topology, "lab-ns").TopologyPath; got != "k8s://lab-ns/topologies/lab1" {
+	if got := stateFromTopology(
+		topology,
+		"lab-ns",
+	).TopologyPath; got != "k8s://lab-ns/topologies/lab1" {
 		t.Fatalf("lab created by other means = %q", got)
 	}
 	setTopologySourceFile(topology, "/home/alice/lab1.clab.yml")
-	if got := stateFromTopology(topology, "lab-ns").TopologyPath; got != "/home/alice/lab1.clab.yml" {
+	if got := stateFromTopology(
+		topology,
+		"lab-ns",
+	).TopologyPath; got != "/home/alice/lab1.clab.yml" {
 		t.Fatalf("deployed lab = %q", got)
 	}
 
