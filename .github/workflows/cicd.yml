@@ -425,6 +425,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      go_ver: ${{ needs.process-gitref.outputs.go_ver }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
