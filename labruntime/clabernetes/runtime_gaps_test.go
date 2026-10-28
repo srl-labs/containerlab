@@ -42,7 +42,10 @@ func TestNewDoesNotLoadKubeconfig(t *testing.T) {
 		Name:               "lab1",
 		TopologyDefinition: []byte(offlineDefinition),
 	}
-	if err := lr.(clablabruntime.TopologyValidator).Validate(context.Background(), req); err != nil {
+	if err := lr.(clablabruntime.TopologyValidator).Validate(
+		context.Background(),
+		req,
+	); err != nil {
 		t.Fatalf("Validate() error = %v, want offline validation", err)
 	}
 	manifests, err := lr.(clablabruntime.ManifestEmitter).Manifests(context.Background(), req)
@@ -349,7 +352,8 @@ func TestEnrichStateReportsPodAndContainer(t *testing.T) {
 		got[node.Name] = node
 	}
 
-	if n := got["r1"]; n.Pod != "lab1-r1-new" || n.Container != "node-r1-x" || n.NodeUID != "uid-r1" {
+	if n := got["r1"]; n.Pod != "lab1-r1-new" || n.Container != "node-r1-x" ||
+		n.NodeUID != "uid-r1" {
 		t.Fatalf("r1 = %+v, want the newest running pod and the observed container", n)
 	}
 	if n := got["r2"]; n.Pod != "lab1-r2-a" || n.Container != "node-r2" {
@@ -387,7 +391,13 @@ func TestParseInterfaceSample(t *testing.T) {
 	wantActions := map[string]string{"eth1": "up", "eth2": "down", "lo": "up", "dummy0": "down"}
 	for _, state := range states {
 		if got := state.action(); got != wantActions[state.Name] {
-			t.Fatalf("%s action = %q, want %q (%+v)", state.Name, got, wantActions[state.Name], state)
+			t.Fatalf(
+				"%s action = %q, want %q (%+v)",
+				state.Name,
+				got,
+				wantActions[state.Name],
+				state,
+			)
 		}
 	}
 	if states[0].Index != 3 || states[0].MTU != 9500 || states[0].MAC != "aa:c1:ab:00:00:01" ||
