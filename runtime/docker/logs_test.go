@@ -39,7 +39,10 @@ func TestWriteContainerLogs(t *testing.T) {
 			}
 		}))
 
-		cli, err := dockerC.NewClientWithOpts(dockerC.WithHost(srv.URL), dockerC.WithVersion("1.45"))
+		cli, err := dockerC.NewClientWithOpts(
+			dockerC.WithHost(srv.URL),
+			dockerC.WithVersion("1.45"),
+		)
 		if err != nil {
 			t.Fatal(err)
 		}

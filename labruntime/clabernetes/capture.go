@@ -411,7 +411,10 @@ func (r *Runtime) resolveCaptureTargets(
 
 		group := groups[location.NodeName]
 		if group == nil {
-			group = &captureGroup{location: location, display: names.display(location.NodeName)}
+			group = &captureGroup{
+				location: location,
+				display:  names.display(location.NodeName),
+			}
 			groups[location.NodeName] = group
 			resolved.groups = append(resolved.groups, group)
 		}
@@ -526,7 +529,10 @@ func (r *Runtime) Capture(
 	}
 
 	writer := newPCAPNGWriter(w)
-	if err := writer.WriteHeader(resolved.names, uint32(req.SnapLength)); err != nil { //nolint:gosec // validated
+	if err := writer.WriteHeader(
+		resolved.names,
+		uint32(req.SnapLength),
+	); err != nil { //nolint:gosec // validated
 		return err
 	}
 
@@ -775,7 +781,8 @@ func (c *captureChain) segmentDuration(now time.Time) time.Duration {
 // final when none is due.
 func (c *captureChain) nextStartIn() time.Duration {
 	activeEnd := c.active.localStart.Add(c.active.duration)
-	if !c.capture.deadline.IsZero() && !activeEnd.Before(c.capture.deadline.Add(-c.capture.window)) {
+	if !c.capture.deadline.IsZero() &&
+		!activeEnd.Before(c.capture.deadline.Add(-c.capture.window)) {
 		c.final = true
 		return maxCaptureSegment
 	}
@@ -1112,7 +1119,10 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 			err = readErr
 		}
 		if err != nil && stderr.text() != "" {
-			if unsupported := unsupportedClabwire(c.group.location, stderr.text()); unsupported != nil {
+			if unsupported := unsupportedClabwire(
+				c.group.location,
+				stderr.text(),
+			); unsupported != nil {
 				err = unsupported
 			} else {
 				err = fmt.Errorf("%w: %s", err, stderr.text())
@@ -1217,7 +1227,11 @@ func (w *auditLineWriter) line(line []byte) {
 	}
 
 	var audit captureAudit
-	if err := json.Unmarshal(line, &audit); err == nil && audit.SchemaVersion == captureAuditSchema {
+	if err := json.Unmarshal(
+		line,
+		&audit,
+	); err == nil &&
+		audit.SchemaVersion == captureAuditSchema {
 		w.send(&audit)
 		return
 	}

@@ -459,8 +459,18 @@ func (r *Runtime) labRunStates(
 	}
 
 	for idx := range links.Items {
-		a, _, _ := unstructured.NestedString(links.Items[idx].Object, "spec", "endpointA", "nodeName")
-		b, _, _ := unstructured.NestedString(links.Items[idx].Object, "spec", "endpointB", "nodeName")
+		a, _, _ := unstructured.NestedString(
+			links.Items[idx].Object,
+			"spec",
+			"endpointA",
+			"nodeName",
+		)
+		b, _, _ := unstructured.NestedString(
+			links.Items[idx].Object,
+			"spec",
+			"endpointB",
+			"nodeName",
+		)
 		if states.stopped(b) {
 			states.stoppedPeers[a] = append(states.stoppedPeers[a], b)
 		}

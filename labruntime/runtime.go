@@ -532,7 +532,10 @@ type PacketCapturer interface {
 // InterfaceInspector lists the link interfaces of a lab's nodes with their current state, in the
 // shape of `inspect interfaces`.
 type InterfaceInspector interface {
-	InspectInterfaces(ctx context.Context, req NodeRequest) ([]*clabtypes.ContainerInterfaces, error)
+	InspectInterfaces(
+		ctx context.Context,
+		req NodeRequest,
+	) ([]*clabtypes.ContainerInterfaces, error)
 }
 
 // NodeStatsSampler reports the resource usage of a lab's nodes. It returns an error wrapping

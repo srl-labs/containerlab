@@ -274,14 +274,19 @@ func TestStartWaitsForTheObservedGenerationAndReadiness(t *testing.T) {
 		t.Fatal("a condition of an older generation counted as started")
 	}
 
-	if err := r.Start(ctx, clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r1"}}); err != nil {
+	if err := r.Start(
+		ctx,
+		clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r1"}},
+	); err != nil {
 		t.Fatal(err)
 	}
 	node := getTestPrimitive(t, r, nodeGVR, "lab-ns", "r1")
 	if nodeRunState(node) != nodeRunStateRunning || nodeReadiness(node) != nodeReadinessReady {
 		t.Fatalf("Start returned before r1 was ready: %+v", node.Object)
 	}
-	if got := nodeRunState(getTestPrimitive(t, r, nodeGVR, "lab-ns", "r2")); got != nodeRunStateStopped {
+	if got := nodeRunState(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "r2"),
+	); got != nodeRunStateStopped {
 		t.Fatalf("starting r1 changed r2 to %s", got)
 	}
 	assertNoWorkloadAccess(t, r)
@@ -293,7 +298,10 @@ func TestRestartSetsANewTokenAndWaitsForIt(t *testing.T) {
 	r, controller := runStateTestRuntime(t, 2)
 	ctx := context.Background()
 
-	if err := r.Restart(ctx, clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r1"}}); err != nil {
+	if err := r.Restart(
+		ctx,
+		clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r1"}},
+	); err != nil {
 		t.Fatal(err)
 	}
 	first := controller.patchBodies()["r1"]
@@ -314,10 +322,16 @@ func TestRestartSetsANewTokenAndWaitsForIt(t *testing.T) {
 	}
 
 	// a stopped node is started by the restart patch, with a different token
-	if err := r.Stop(ctx, clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r2"}}); err != nil {
+	if err := r.Stop(
+		ctx,
+		clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r2"}},
+	); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.Restart(ctx, clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r2b"}}); err != nil {
+	if err := r.Restart(
+		ctx,
+		clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"r2b"}},
+	); err != nil {
 		t.Fatal(err)
 	}
 	second := controller.patchBodies()["r2"]
@@ -363,7 +377,10 @@ func TestNodeLifecycleRejectsUnknownNodes(t *testing.T) {
 
 	empty := newTestRuntime()
 	empty.labNamespaceOverride = "lab-ns"
-	if err := empty.Start(context.Background(), clablabruntime.NodeRequest{Name: "lab1"}); err == nil ||
+	if err := empty.Start(
+		context.Background(),
+		clablabruntime.NodeRequest{Name: "lab1"},
+	); err == nil ||
 		!strings.Contains(err.Error(), "no Node resources") {
 		t.Fatalf("Start() on a lab without Nodes = %v", err)
 	}
@@ -412,7 +429,9 @@ func TestPrimitivePlanAndApplyKeepTheRunState(t *testing.T) {
 	if _, err := r.Deploy(ctx, request); err != nil {
 		t.Fatal(err)
 	}
-	if got := nodeRunState(getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")); got != nodeRunStateStopped {
+	if got := nodeRunState(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1"),
+	); got != nodeRunStateStopped {
 		t.Fatalf("runState after apply = %s, want Stopped", got)
 	}
 }
@@ -588,17 +607,19 @@ func TestSupportCheckReadsTheOpenAPIDocumentAsTheCaller(t *testing.T) {
 	for name, fixture := range fixtures {
 		var mu sync.Mutex
 		var users []string
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			mu.Lock()
-			users = append(users, req.URL.Path+" as "+req.Header.Get("Impersonate-User"))
-			mu.Unlock()
-			if req.URL.Path != c9sOpenAPIPath {
-				http.NotFound(w, req)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(fixture)
-		}))
+		server := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				mu.Lock()
+				users = append(users, req.URL.Path+" as "+req.Header.Get("Impersonate-User"))
+				mu.Unlock()
+				if req.URL.Path != c9sOpenAPIPath {
+					http.NotFound(w, req)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(fixture)
+			}),
+		)
 
 		r := &Runtime{
 			clients: &clientLoader{
@@ -609,7 +630,9 @@ func TestSupportCheckReadsTheOpenAPIDocumentAsTheCaller(t *testing.T) {
 			},
 			support: &supportCheck{},
 		}
-		err := r.CheckSupport(context.Background(), clablabruntime.Identity{User: "clab:alice"})
+		err := r.CheckSupport(context.Background(), clablabruntime.Identity{
+			User: "clab:alice",
+		})
 		server.Close()
 
 		switch name {
@@ -676,7 +699,9 @@ func TestStartAcceptsANodeWhoseLinkPeerIsStopped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start() of a node with a stopped peer = %v", err)
 	}
-	if got := nodeReadiness(getTestPrimitive(t, r, nodeGVR, "lab-ns", "client")); got == nodeReadinessReady {
+	if got := nodeReadiness(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "client"),
+	); got == nodeReadinessReady {
 		t.Fatal("the fake controller reported client ready despite the stopped peer")
 	}
 	if err := r.Restart(ctx, clablabruntime.NodeRequest{
@@ -691,7 +716,10 @@ func TestLabSettlesWithStoppedNodesAndTheirPeers(t *testing.T) {
 
 	r, _ := linkedRunStateTestRuntime(t)
 	ctx := context.Background()
-	if err := r.Stop(ctx, clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"server"}}); err != nil {
+	if err := r.Stop(
+		ctx,
+		clablabruntime.NodeRequest{Name: "lab1", Nodes: []string{"server"}},
+	); err != nil {
 		t.Fatal(err)
 	}
 	// let the fake controller report client as waiting for its peer
@@ -762,7 +790,12 @@ func TestPrimitiveObjectsConformAfterAnAPIRoundTrip(t *testing.T) {
 			}
 			if group.kind == "Node" {
 				// the API server defaults the run state and prunes fields the schema lacks
-				_ = unstructured.SetNestedField(stored.Object, nodeRunStateRunning, "spec", "runState")
+				_ = unstructured.SetNestedField(
+					stored.Object,
+					nodeRunStateRunning,
+					"spec",
+					"runState",
+				)
 				unstructured.RemoveNestedField(stored.Object, "spec", "labels")
 				if obj.GetLabels()[labelOriginalNodeName] == "" {
 					t.Errorf("Node %s lost its %s label", obj.GetName(), labelOriginalNodeName)

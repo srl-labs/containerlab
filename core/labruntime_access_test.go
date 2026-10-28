@@ -196,7 +196,12 @@ func TestLabRuntimeAccessHelpersReportMissingSupport(t *testing.T) {
 	if _, err := unnamed.SampleLabRuntimeNodeStats(ctx); err == nil {
 		t.Fatal("stats without a lab name succeeded")
 	}
-	if err := unnamed.NodeLogs(ctx, NodeLogOptions{NodeName: "r1"}, io.Discard, io.Discard); err == nil {
+	if err := unnamed.NodeLogs(
+		ctx,
+		NodeLogOptions{NodeName: "r1"},
+		io.Discard,
+		io.Discard,
+	); err == nil {
 		t.Fatal("logs without a lab name succeeded")
 	}
 }
@@ -229,7 +234,9 @@ func TestNodeLogsWithALocalRuntime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mock := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	mock.EXPECT().ListContainers(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, filters []*clabtypes.GenericFilter) ([]clabruntime.GenericContainer, error) {
+		func(_ context.Context, filters []*clabtypes.GenericFilter) (
+			[]clabruntime.GenericContainer, error,
+		) {
 			labels := map[string]string{}
 			for _, filter := range filters {
 				labels[filter.Field] = filter.Match
@@ -242,7 +249,8 @@ func TestNodeLogsWithALocalRuntime(t *testing.T) {
 			}
 
 			return []clabruntime.GenericContainer{{Names: []string{"clab-lab1-r1"}}}, nil
-		}).AnyTimes()
+		}).
+		AnyTimes()
 
 	runtime := &logWritingRuntime{MockContainerRuntime: mock}
 	c := &CLab{
@@ -255,8 +263,10 @@ func TestNodeLogsWithALocalRuntime(t *testing.T) {
 		&stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if runtime.containerName != "clab-lab1-r1" || !runtime.opts.Follow || runtime.opts.Tail != nil ||
-		stdout.String() != "out\n" || stderr.String() != "err\n" {
+	if runtime.containerName != "clab-lab1-r1" || !runtime.opts.Follow ||
+		runtime.opts.Tail != nil ||
+		stdout.String() != "out\n" ||
+		stderr.String() != "err\n" {
 		t.Fatalf("container %q opts %+v stdout %q stderr %q",
 			runtime.containerName, runtime.opts, stdout.String(), stderr.String())
 	}

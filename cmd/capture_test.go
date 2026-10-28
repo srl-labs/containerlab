@@ -62,7 +62,13 @@ func TestPrintCaptureInterfaces(t *testing.T) {
 	t.Parallel()
 
 	interfaces := []clablabruntime.CaptureInterface{
-		{Node: "srl1", Interface: "e1-1", Alias: "ethernet-1/1", PeerNode: "srl2", PeerInterface: "ethernet-1/1"},
+		{
+			Node:          "srl1",
+			Interface:     "e1-1",
+			Alias:         "ethernet-1/1",
+			PeerNode:      "srl2",
+			PeerInterface: "ethernet-1/1",
+		},
 		{Node: "srl1", Interface: "e1-2", PeerNode: "host", PeerInterface: "srl1-e1-2"},
 	}
 
@@ -82,7 +88,12 @@ func TestPrintCaptureInterfaces(t *testing.T) {
 	}
 
 	out.Reset()
-	if err := printCaptureInterfaces(&out, nil, "json"); err != nil || strings.TrimSpace(out.String()) != "[]" {
+	if err := printCaptureInterfaces(
+		&out,
+		nil,
+		"json",
+	); err != nil ||
+		strings.TrimSpace(out.String()) != "[]" {
 		t.Fatalf("empty json = %q, %v", out.String(), err)
 	}
 

@@ -53,14 +53,19 @@ func interleavedStreams(t *testing.T, q *captureReorder, ticks int, delay time.D
 		stamp := start.Add(time.Duration(tick) * 2 * time.Millisecond)
 		deliveries = append(deliveries,
 			delivery{at: stamp, id: 0, ts: stamp.UnixNano()},
-			delivery{at: stamp.Add(time.Millisecond + delay), id: 1,
-				ts: stamp.Add(time.Millisecond).UnixNano()})
+			delivery{
+				at: stamp.Add(time.Millisecond + delay), id: 1,
+				ts: stamp.Add(time.Millisecond).UnixNano(),
+			})
 	}
 	slices.SortStableFunc(deliveries, func(a, b delivery) int { return a.at.Compare(b.at) })
 
 	for _, next := range deliveries {
 		time.Sleep(time.Until(next.at))
-		if err := q.push(next.id, &pcapngPacket{InterfaceID: next.id, Timestamp: next.ts}); err != nil {
+		if err := q.push(
+			next.id,
+			&pcapngPacket{InterfaceID: next.id, Timestamp: next.ts},
+		); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -172,7 +177,12 @@ func TestCaptureReorderStopsAtTheFirstWriteError(t *testing.T) {
 	stop()
 
 	if err == nil || failed != 1 || len(sink.timestamps()) != 2 {
-		t.Fatalf("push error = %v, onFail calls %d, written %d", err, failed, len(sink.timestamps()))
+		t.Fatalf(
+			"push error = %v, onFail calls %d, written %d",
+			err,
+			failed,
+			len(sink.timestamps()),
+		)
 	}
 }
 
@@ -192,8 +202,12 @@ func TestCaptureReorderWithoutWindowWritesThrough(t *testing.T) {
 }
 
 func TestCaptureReorderWindowKnob(t *testing.T) {
-	cases := map[string]time.Duration{"": 250 * time.Millisecond, "0": 0, "75ms": 75 * time.Millisecond,
-		"bogus": 250 * time.Millisecond}
+	cases := map[string]time.Duration{
+		"":      250 * time.Millisecond,
+		"0":     0,
+		"75ms":  75 * time.Millisecond,
+		"bogus": 250 * time.Millisecond,
+	}
 	for value, want := range cases {
 		t.Setenv(envCaptureReorderWindow, value)
 		r := &Runtime{captureReorderWindow: captureReorderWindowFromEnv()}

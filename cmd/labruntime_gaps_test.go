@@ -23,7 +23,11 @@ func TestGraphUnderLabRuntimeRendersOnlyFromTheTopologyFile(t *testing.T) {
 		{name: "dot", flags: map[string]string{"dot": "true"}},
 		{name: "mermaid", flags: map[string]string{"mermaid": "true"}},
 		{name: "drawio", flags: map[string]string{"drawio": "true"}},
-		{name: "explicitly not offline", flags: map[string]string{"offline": "false"}, wantErr: true},
+		{
+			name:    "explicitly not offline",
+			flags:   map[string]string{"offline": "false"},
+			wantErr: true,
+		},
 		{
 			name:    "node filter",
 			flags:   map[string]string{"mermaid": "true", "node-filter": "r1"},
@@ -86,11 +90,13 @@ func TestInspectJSONReportsLabRuntimeWorkload(t *testing.T) {
 			State:   "running",
 			Labels:  labels("c9s", "r1"),
 			Workload: &clabtypes.LabRuntimeWorkload{
-				Namespace:           "c9s-c9s",
-				Pod:                 "c9s-r1-abc",
-				Container:           "node-r1-x",
-				NodeUID:             "uid-1",
-				ExposedPorts:        []clabtypes.ExposedPort{{Port: 22, ExposePort: 22, Protocol: "tcp"}},
+				Namespace: "c9s-c9s",
+				Pod:       "c9s-r1-abc",
+				Container: "node-r1-x",
+				NodeUID:   "uid-1",
+				ExposedPorts: []clabtypes.ExposedPort{
+					{Port: 22, ExposePort: 22, Protocol: "tcp"},
+				},
 				LoadBalancerAddress: "192.0.2.10",
 			},
 		},
@@ -143,7 +149,8 @@ func TestInspectJSONReportsLabRuntimeWorkload(t *testing.T) {
 		t.Fatalf("c9s exposed_ports = %v", c9s["exposed_ports"])
 	}
 	port := ports[0].(map[string]any)
-	if port["port"] != float64(22) || port["expose_port"] != float64(22) || port["protocol"] != "tcp" {
+	if port["port"] != float64(22) || port["expose_port"] != float64(22) ||
+		port["protocol"] != "tcp" {
 		t.Fatalf("exposed port = %v", port)
 	}
 }
