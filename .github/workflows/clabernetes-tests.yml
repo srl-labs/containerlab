@@ -66,6 +66,17 @@ jobs:
           kind create cluster --name c9s --config /tmp/c9s-kind-config.yaml
           kubectl wait --for=condition=Ready nodes --all --timeout=120s
 
+      # node stats come from the resource metrics API (metrics.k8s.io), which
+      # kind does not serve on its own. kind kubelets use self-signed serving
+      # certificates, hence --kubelet-insecure-tls.
+      - name: Install metrics-server
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
+          kubectl -n kube-system patch deployment metrics-server --type=json \
+            -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+          kubectl -n kube-system rollout status deploy/metrics-server --timeout=180s
+          kubectl wait --for=condition=Available apiservice/v1beta1.metrics.k8s.io --timeout=180s
+
       - name: Install Clabernetes
         run: |
           docker run --network host --rm \

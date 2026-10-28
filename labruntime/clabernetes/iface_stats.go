@@ -259,7 +259,10 @@ func (p *interfacePoller) sampleAll(
 	return samples
 }
 
-func (p *interfacePoller) sample(ctx context.Context, target interfaceSampleTarget) interfaceSample {
+func (p *interfacePoller) sample(
+	ctx context.Context,
+	target interfaceSampleTarget,
+) interfaceSample {
 	sample := interfaceSample{target: target}
 	podName := target.pod.Name
 
@@ -355,7 +358,8 @@ func (p *interfacePoller) processSample(ctx context.Context, sample interfaceSam
 		tracked.ifaces[iface.Name] = trackedIface{state: iface, action: action}
 
 		switch {
-		case seen && previous.action == action && previous.state.OperState == iface.OperState:
+		case seen && previous.action == action &&
+			previous.state.OperState == iface.OperState:
 			continue
 		case !seen && p.firstRound && !p.opts.includeInitialState:
 			// Interfaces that exist when the stream starts are only reported with

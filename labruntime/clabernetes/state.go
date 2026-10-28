@@ -210,7 +210,10 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		if primaryResource := resourcesByName[primary]; primaryResource != nil &&
 			nodeRunState(primaryResource) == nodeRunStateStopped {
 			node.State = "stopping"
-			if condition := nodeCondition(primaryResource, nodeConditionStopped); condition != nil &&
+			if condition := nodeCondition(
+				primaryResource,
+				nodeConditionStopped,
+			); condition != nil &&
 				condition.status == string(metav1.ConditionTrue) {
 				node.State = "stopped"
 			}
