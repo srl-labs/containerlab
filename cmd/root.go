@@ -218,7 +218,12 @@ var labRuntimeUnsupportedCommands = map[string]struct{}{
 
 // graphTopologyFileFlags select graph modes that render from the topology file alone, without
 // running containers. Lab runtimes support only these modes.
-var graphTopologyFileFlags = []string{"dot", "mermaid", "drawio", "offline"} //nolint:gochecknoglobals
+var graphTopologyFileFlags = []string{ //nolint:gochecknoglobals
+	"dot",
+	"mermaid",
+	"drawio",
+	"offline",
+}
 
 // labRuntimeUnsupportedFlags is the explicit CLI compatibility contract for controller-driven
 // runtimes. A flag listed here must fail before topology parsing or remote mutation instead of
@@ -287,7 +292,8 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 func graphRendersFromTopologyFile(cobraCmd *cobra.Command) bool {
 	for _, flagName := range graphTopologyFileFlags {
 		flag := cobraCmd.Flag(flagName)
-		if flag != nil && flag.Value.String() == "true" && labRuntimeFlagWasSet(cobraCmd, flagName) {
+		if flag != nil && flag.Value.String() == "true" &&
+			labRuntimeFlagWasSet(cobraCmd, flagName) {
 			return true
 		}
 	}

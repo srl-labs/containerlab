@@ -18,7 +18,8 @@ func TestLabRuntimeEventStreamRequestScope(t *testing.T) {
 	if all.Name != "" || !all.AllNamespaces {
 		t.Fatalf("no lab = %+v, want every namespace", all)
 	}
-	if !all.IncludeInitialState || !all.IncludeInterfaceStats || all.StatsInterval != 2*time.Second {
+	if !all.IncludeInitialState || !all.IncludeInterfaceStats ||
+		all.StatsInterval != 2*time.Second {
 		t.Fatalf("options were not copied: %+v", all)
 	}
 
