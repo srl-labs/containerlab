@@ -100,8 +100,11 @@ func TestCaptureIsNotSupportedByLocalRuntimesYet(t *testing.T) {
 	}
 
 	unsupported := newAccessTestCLab(&recordingDestroyLabRuntime{})
-	if err := unsupported.Capture(context.Background(), clablabruntime.CaptureRequest{},
-		io.Discard); err == nil || !strings.Contains(err.Error(), "does not support packet capture") {
+	if err := unsupported.Capture(
+		context.Background(),
+		clablabruntime.CaptureRequest{},
+		io.Discard,
+	); err == nil || !strings.Contains(err.Error(), "does not support packet capture") {
 		t.Fatalf("lab runtime without capture: error = %v", err)
 	}
 }

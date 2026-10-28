@@ -17,8 +17,18 @@ func TestPCAPNGWriterAndReaderRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	packets := []pcapngPacket{
-		{InterfaceID: 1, Timestamp: 1_761_559_200_123_456_789, OriginalLength: 98, Data: []byte("abcde")},
-		{InterfaceID: 0, Timestamp: 1_761_559_200_123_456_790, OriginalLength: 4, Data: []byte("wxyz")},
+		{
+			InterfaceID:    1,
+			Timestamp:      1_761_559_200_123_456_789,
+			OriginalLength: 98,
+			Data:           []byte("abcde"),
+		},
+		{
+			InterfaceID:    0,
+			Timestamp:      1_761_559_200_123_456_790,
+			OriginalLength: 4,
+			Data:           []byte("wxyz"),
+		},
 	}
 	for idx := range packets {
 		if err := writer.WritePacket(packets[idx].InterfaceID, &packets[idx]); err != nil {

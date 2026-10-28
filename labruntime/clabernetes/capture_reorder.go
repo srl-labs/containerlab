@@ -72,7 +72,11 @@ func (q reorderQueue) Less(i, j int) bool {
 
 func (q reorderQueue) Swap(i, j int) { q[i], q[j] = q[j], q[i] }
 
-func (q *reorderQueue) Push(x any) { *q = append(*q, x.(reorderedPacket)) } //nolint:forcetypeassert // heap contract
+func (q *reorderQueue) Push(
+	x any,
+) {
+	*q = append(*q, x.(reorderedPacket))
+} //nolint:forcetypeassert // heap contract
 
 func (q *reorderQueue) Pop() any {
 	old := *q

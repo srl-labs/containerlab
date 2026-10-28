@@ -56,11 +56,23 @@ func captureTestPod(name, node string) *corev1.Pod {
 // captureListing is the --list-interfaces output of each pod.
 var captureListing = map[string][]clabwireInterface{ //nolint:gochecknoglobals
 	"lab1-r1-abc": {
-		{Node: "r1", Interface: "e1-1", Alias: "ethernet-1/1", PeerNode: "r2", PeerInterface: "ethernet-1/1"},
+		{
+			Node:          "r1",
+			Interface:     "e1-1",
+			Alias:         "ethernet-1/1",
+			PeerNode:      "r2",
+			PeerInterface: "ethernet-1/1",
+		},
 		{Node: "r1", Interface: "e1-2", PeerNode: "host", PeerInterface: "r1-e1-2"},
 	},
 	"lab1-r2-def": {
-		{Node: "r2", Interface: "e1-1", Alias: "ethernet-1/1", PeerNode: "r1", PeerInterface: "ethernet-1/1"},
+		{
+			Node:          "r2",
+			Interface:     "e1-1",
+			Alias:         "ethernet-1/1",
+			PeerNode:      "r1",
+			PeerInterface: "ethernet-1/1",
+		},
 	},
 }
 
@@ -115,7 +127,10 @@ func (f *fakeClabwire) exec(
 	stdout, stderr io.Writer,
 ) error {
 	f.mu.Lock()
-	f.commands = append(f.commands, append([]string{namespace + "/" + pod + "/" + container}, command...))
+	f.commands = append(
+		f.commands,
+		append([]string{namespace + "/" + pod + "/" + container}, command...),
+	)
 	f.mu.Unlock()
 
 	if container != clabwireContainer {
@@ -140,7 +155,12 @@ func flagValues(command []string, name string) []string {
 	return values
 }
 
-func (f *fakeClabwire) audit(stderr io.Writer, status, node string, interfaces []string, reason string) {
+func (f *fakeClabwire) audit(
+	stderr io.Writer,
+	status, node string,
+	interfaces []string,
+	reason string,
+) {
 	record := map[string]any{
 		"schemaVersion": captureAuditSchema, "time": time.Now().UTC(), "operation": "PacketCapture",
 		"status": status, "nodeName": node, "format": "pcapng", "reason": reason,
@@ -238,7 +258,13 @@ func (f *fakeClabwire) capture(
 			f.mu.Lock()
 			f.stdinClosed[node]++
 			f.mu.Unlock()
-			f.audit(stderr, captureAuditSucceeded, node, interfaces, "client closed: stdin reached EOF")
+			f.audit(
+				stderr,
+				captureAuditSucceeded,
+				node,
+				interfaces,
+				"client closed: stdin reached EOF",
+			)
 			return nil
 		case <-time.After(time.Until(at)):
 		}
@@ -265,7 +291,8 @@ func (f *fakeClabwire) captureCommands() [][]string {
 
 	var result [][]string
 	for _, command := range f.commands {
-		if slices.Contains(command, "packet-capture") && !slices.Contains(command, "--list-interfaces") {
+		if slices.Contains(command, "packet-capture") &&
+			!slices.Contains(command, "--list-interfaces") {
 			result = append(result, command)
 		}
 	}
@@ -283,7 +310,10 @@ func captureTestRuntime(t *testing.T, tick time.Duration) (*Runtime, *fakeClabwi
 			captureTestNode("r1", "R1", "node-r1-x"),
 			captureTestNode("r2", "", "node-r2-x"),
 		},
-		[]k8sruntime.Object{captureTestPod("lab1-r1-abc", "r1"), captureTestPod("lab1-r2-def", "r2")},
+		[]k8sruntime.Object{
+			captureTestPod("lab1-r1-abc", "r1"),
+			captureTestPod("lab1-r2-def", "r2"),
+		},
 	)
 	r.labNamespaceOverride = "lab-ns"
 	clabwire := newFakeClabwire(t, tick)
@@ -342,14 +372,29 @@ func TestCaptureInterfacesUsesTopologyNames(t *testing.T) {
 	t.Parallel()
 
 	r, _ := captureTestRuntime(t, time.Millisecond)
-	interfaces, err := r.CaptureInterfaces(context.Background(), clablabruntime.NodeRequest{Name: "lab1"})
+	interfaces, err := r.CaptureInterfaces(
+		context.Background(),
+		clablabruntime.NodeRequest{Name: "lab1"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []clablabruntime.CaptureInterface{
-		{Node: "R1", Interface: "e1-1", Alias: "ethernet-1/1", PeerNode: "r2", PeerInterface: "ethernet-1/1"},
+		{
+			Node:          "R1",
+			Interface:     "e1-1",
+			Alias:         "ethernet-1/1",
+			PeerNode:      "r2",
+			PeerInterface: "ethernet-1/1",
+		},
 		{Node: "R1", Interface: "e1-2", PeerNode: "host", PeerInterface: "r1-e1-2"},
-		{Node: "r2", Interface: "e1-1", Alias: "ethernet-1/1", PeerNode: "R1", PeerInterface: "ethernet-1/1"},
+		{
+			Node:          "r2",
+			Interface:     "e1-1",
+			Alias:         "ethernet-1/1",
+			PeerNode:      "R1",
+			PeerInterface: "ethernet-1/1",
+		},
 	}
 	if !slices.Equal(interfaces, want) {
 		t.Fatalf("interfaces = %+v\nwant %+v", interfaces, want)
@@ -434,8 +479,11 @@ func TestCaptureChainsSegmentsWithoutDuplicatesOrGaps(t *testing.T) {
 	var gaps []clablabruntime.CaptureGap
 	var out bytes.Buffer
 	err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
-		Name:     "lab1",
-		Targets:  []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r1", Interface: "e1-2"}},
+		Name: "lab1",
+		Targets: []clablabruntime.CaptureTarget{
+			{Node: "r1", Interface: "e1-1"},
+			{Node: "r1", Interface: "e1-2"},
+		},
 		Duration: 1300 * time.Millisecond,
 		OnGap:    func(gap clablabruntime.CaptureGap) { gaps = append(gaps, gap) },
 	}, &out)
@@ -470,7 +518,12 @@ func TestCaptureChainsSegmentsWithoutDuplicatesOrGaps(t *testing.T) {
 			case sequence[idx] == sequence[idx-1]:
 				t.Fatalf("interface %d: tick %d written twice", id, sequence[idx])
 			case sequence[idx] != sequence[idx-1]+1:
-				t.Fatalf("interface %d: ticks %d to %d missing", id, sequence[idx-1]+1, sequence[idx]-1)
+				t.Fatalf(
+					"interface %d: ticks %d to %d missing",
+					id,
+					sequence[idx-1]+1,
+					sequence[idx]-1,
+				)
 			}
 		}
 	}
@@ -496,7 +549,8 @@ func TestCaptureReportsAGapWhenTheFollowUpStartsLate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(gaps) == 0 || gaps[0].Node != "r2" || !slices.Equal(gaps[0].Interfaces, []string{"e1-1"}) ||
-		gaps[0].From.IsZero() || gaps[0].Reason == "" {
+		gaps[0].From.IsZero() ||
+		gaps[0].Reason == "" {
 		t.Fatalf("gaps = %+v, want the late follow-up reported", gaps)
 	}
 	if !gaps[0].To.IsZero() && !gaps[0].To.After(gaps[0].From) {
@@ -541,7 +595,9 @@ func TestCaptureAuditLineWriter(t *testing.T) {
 	// lines arrive split across writes
 	_, _ = writer.Write([]byte(started[:20]))
 	_, _ = writer.Write([]byte(started[20:] + "\nnot json\n{\"status\":\"Started\"}\n"))
-	_, _ = writer.Write([]byte(`{"schemaVersion":"` + captureAuditSchema + `","status":"Succeeded","packets":3}`))
+	_, _ = writer.Write(
+		[]byte(`{"schemaVersion":"` + captureAuditSchema + `","status":"Succeeded","packets":3}`),
+	)
 	writer.flush()
 
 	if len(audits) != 2 || audits[0].Status != captureAuditStarted || audits[1].Packets != 3 ||
@@ -571,8 +627,11 @@ func TestCaptureStopsAtThePacketLimit(t *testing.T) {
 	r, clabwire := captureTestRuntime(t, 2*time.Millisecond)
 	var out bytes.Buffer
 	err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
-		Name:        "lab1",
-		Targets:     []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}},
+		Name: "lab1",
+		Targets: []clablabruntime.CaptureTarget{
+			{Node: "r1", Interface: "e1-1"},
+			{Node: "r2", Interface: "e1-1"},
+		},
 		PacketLimit: 7,
 	}, &out)
 	if err != nil {
@@ -682,7 +741,10 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 func TestCaptureClosesStdinWhenItEnds(t *testing.T) {
 	t.Parallel()
 
-	targets := []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}}
+	targets := []clablabruntime.CaptureTarget{
+		{Node: "r1", Interface: "e1-1"},
+		{Node: "r2", Interface: "e1-1"},
+	}
 
 	t.Run("cancel", func(t *testing.T) {
 		t.Parallel()
@@ -794,8 +856,11 @@ func TestCaptureMergesNodesInTimestampOrder(t *testing.T) {
 
 			var out bytes.Buffer
 			err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
-				Name:     "lab1",
-				Targets:  []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}},
+				Name: "lab1",
+				Targets: []clablabruntime.CaptureTarget{
+					{Node: "r1", Interface: "e1-1"},
+					{Node: "r2", Interface: "e1-1"},
+				},
 				Duration: 500 * time.Millisecond,
 			}, &out)
 			if err != nil {
@@ -833,8 +898,11 @@ func TestCaptureChainsSeveralNodesInOrderWithoutDuplicates(t *testing.T) {
 	var gaps []clablabruntime.CaptureGap
 	var out bytes.Buffer
 	err := r.Capture(context.Background(), clablabruntime.CaptureRequest{
-		Name:     "lab1",
-		Targets:  []clablabruntime.CaptureTarget{{Node: "r1", Interface: "e1-1"}, {Node: "r2", Interface: "e1-1"}},
+		Name: "lab1",
+		Targets: []clablabruntime.CaptureTarget{
+			{Node: "r1", Interface: "e1-1"},
+			{Node: "r2", Interface: "e1-1"},
+		},
 		Duration: 1300 * time.Millisecond,
 		OnGap:    func(gap clablabruntime.CaptureGap) { gaps = append(gaps, gap) },
 	}, &out)
