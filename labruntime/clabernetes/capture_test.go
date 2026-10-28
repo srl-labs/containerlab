@@ -548,7 +548,8 @@ func TestCaptureReportsAGapWhenTheFollowUpStartsLate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(gaps) == 0 || gaps[0].Node != "r2" || !slices.Equal(gaps[0].Interfaces, []string{"e1-1"}) ||
+	if len(gaps) == 0 || gaps[0].Node != "r2" ||
+		!slices.Equal(gaps[0].Interfaces, []string{"e1-1"}) ||
 		gaps[0].From.IsZero() ||
 		gaps[0].Reason == "" {
 		t.Fatalf("gaps = %+v, want the late follow-up reported", gaps)
