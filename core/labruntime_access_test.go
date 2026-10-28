@@ -246,7 +246,8 @@ func TestNodeLogsWithALocalRuntime(t *testing.T) {
 		&stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if runtime.containerName != "clab-lab1-r1" || !runtime.opts.Follow || runtime.opts.Tail != nil ||
+	if runtime.containerName != "clab-lab1-r1" || !runtime.opts.Follow ||
+		runtime.opts.Tail != nil ||
 		stdout.String() != "out\n" ||
 		stderr.String() != "err\n" {
 		t.Fatalf("container %q opts %+v stdout %q stderr %q",
