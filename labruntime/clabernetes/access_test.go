@@ -265,7 +265,10 @@ func TestTerminalSizeQueue(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if size := newTerminalSizeQueue(ctx, make(chan clablabruntime.TerminalSize)).Next(); size != nil {
+	if size := newTerminalSizeQueue(
+		ctx,
+		make(chan clablabruntime.TerminalSize),
+	).Next(); size != nil {
 		t.Fatalf("Next() after cancel = %+v, want nil", size)
 	}
 }
@@ -326,7 +329,10 @@ func TestIdentityImpersonatesOnEveryTransport(t *testing.T) {
 			newClients: newKubeClients,
 		},
 	}
-	alice := clablabruntime.Identity{User: "clab:alice", Groups: []string{"clab:users", "clab:admins"}}
+	alice := clablabruntime.Identity{
+		User:   "clab:alice",
+		Groups: []string{"clab:users", "clab:admins"},
+	}
 
 	view, err := r.connect(context.Background(), alice)
 	if err != nil {
