@@ -99,6 +99,8 @@ and the node does not become ready.
 
 [`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses.
 
+Repeated exports on RouterOS 7.24.5, 7.25, 7.25rc3 and 7.26beta4 can include an empty, disabled default `/system keymat-provider` entry that fails to import on a fresh router. Saving omits only that exact entry. Configured default providers and custom providers are preserved. RouterOS 7.23.8 does not emit the entry.
+
 ### Node readiness
 
 The node is ready once RouterOS accepted the credentials and the startup config, reaches its gateway from the management address and, unless the configuration disables SSH, its SSH server answers. An SSH server that does not answer within `CHR_BOOT_WAIT` is logged, and the node is still declared ready, since REST and the console work. The container log then shows

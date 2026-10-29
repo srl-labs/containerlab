@@ -214,6 +214,14 @@ func filterLauncherConfig(config string) string {
 		if launcherOwned(section, trimmed) {
 			continue
 		}
+		// Repeated RouterOS exports can include this disabled factory QKD
+		// placeholder. Fresh imports reject it (duplicate name or empty KME
+		// address). Drop only this exact entry; keep configured providers.
+		if section == "/system keymat-provider" &&
+			strings.Join(strings.Fields(strings.ReplaceAll(trimmed, `\`, "")), " ") ==
+				"add disabled=yes key-size=0 name=default qkd-cache-size=0 qkd-certificate=*0 type=qkd" {
+			continue
+		}
 		out = append(out, line)
 	}
 	if pending != "" {
