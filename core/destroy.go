@@ -459,12 +459,8 @@ func (c *CLab) destroy(
 		c.preDestroyNodes(ctx, slices.Collect(maps.Values(c.Nodes)), maxWorkers)
 
 		if keepLinks {
-			for _, nodeName := range sortedNodeNames(c.Nodes) {
-				node := c.Nodes[nodeName]
-				log.Info("Parking links for node replacement", "node", nodeName)
-				if err := node.ParkEndpoints(ctx); err != nil {
-					return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
-				}
+			if err := c.parkKeptLinks(ctx); err != nil {
+				return err
 			}
 		} else {
 			err := clablinks.CleanupFilteredLinks(
@@ -651,6 +647,32 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 			}
 
 			_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
+		}
+	}
+
+	return nil
+}
+
+// parkKeptLinks moves filtered nodes' data-plane interfaces into their parking
+// namespaces. A container without a joinable netns is skipped: containerlab
+// already parked its interfaces before a lifecycle stop, and an external stop
+// or a missing container took the interfaces with the namespace.
+func (c *CLab) parkKeptLinks(ctx context.Context) error {
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		node := c.Nodes[nodeName]
+		status := node.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(status) {
+			log.Debug(
+				"Skipping link parking; container network namespace is not available",
+				"node", nodeName,
+				"status", status,
+			)
+			continue
+		}
+
+		log.Info("Parking links for node replacement", "node", nodeName)
+		if err := node.ParkEndpoints(ctx); err != nil {
+			return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
 		}
 	}
 

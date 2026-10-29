@@ -219,6 +219,11 @@ renamed or their names are swapped.
 ### Requirements and limits
 
 - `--keep-links` requires a nonempty `--node-filter`. It cannot be combined with `--cleanup`.
+- A selected node is not parked when its container is missing or has no joinable network
+  namespace, including containers that are stopped, created, restarting, or being removed.
+  A node stopped through containerlab already has its interfaces parked. A node stopped or
+  removed outside containerlab no longer has those interfaces. Destroy continues and removes
+  a container that still exists, instead of aborting the filtered destroy.
 - Retain the lab directory and its state and configuration artifacts during replacement.
 - Keep the lab and selected node identities stable. Changing a topology file's path is
   supported, but changing the lab or node name changes how the parking namespace is located.
