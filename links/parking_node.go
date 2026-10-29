@@ -124,6 +124,12 @@ type indexedIface struct {
 // container ns. Resolve that peer from its parking ns (or from leftover old
 // names already restored into the live ns) and match by trailing port index.
 //
+// ponytail: trailing-port matching is best-effort. When both ends are renamed
+// and old/new port indexes cross-map, it can bind the wrong veth; that is only
+// caught by the next apply's peer-index check, not at restore time. Upgrade
+// path: persist the old-to-new interface mapping in the lab state and match on
+// that identity.
+//
 // Renames always go through a temporary clab-* name so overlapping ethN shifts
 // (FRR eth1→cJunosEvolved eth4 while parked eth4 still exists) cannot EEXIST.
 // Ownership altnames are netns-unique: drop the old markers first, then attach
