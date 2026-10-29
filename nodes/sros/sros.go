@@ -109,9 +109,9 @@ var (
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
 	}
 
-	readyCmdCpm  = `/usr/bin/pgrep -f /opt/nokia/cpm`
-	readyCmdBoth = `/usr/bin/pgrep -f /opt/nokia/both`
-	readyCmdIom  = `/usr/bin/pgrep -f /opt/nokia/iom`
+	readyCmdCpm  = `/usr/bin/pgrep -f ^/opt/nokia/cpm`
+	readyCmdBoth = `/usr/bin/pgrep -f ^/opt/nokia/both`
+	readyCmdIom  = `/usr/bin/pgrep -f ^/opt/nokia/iom`
 
 	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
