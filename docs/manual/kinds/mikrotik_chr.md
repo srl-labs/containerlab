@@ -20,7 +20,7 @@ The [`mikrotik_ros`](vr-ros.md) kind runs CHR from an image you build with vrnet
 docker pull mikrotik/chr:7.24.5
 ```
 
-Tags follow RouterOS versions, plus `stable`, `long-term`, `testing` and `development`. The native management VRF has been tested with 7.25 (stable) and 7.23.8 (long-term) on arm64.
+Tags follow RouterOS versions, plus `stable`, `long-term`, `testing` and `development`. The native management VRF has been tested with 7.25 (stable) and 7.23.8 (long-term) on arm64 and amd64, and with 7.25rc3 (testing) and 7.26beta4 (development) on arm64. These checks used QEMU TCG; KVM acceleration was not exercised.
 
 ## Managing -{{ kind_display_name }}- nodes
 
