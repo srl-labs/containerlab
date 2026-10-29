@@ -15,8 +15,8 @@
 #   1. waits for the CLAB_INTFS data interfaces containerlab attaches (eth1..N)
 #   2. management, transparent: the container's eth0 is bridged with the VM's
 #      ether1 tap, and eth0's addresses and default gateways move into RouterOS
-#      ether1. The router IS the node's management address: every service and
-#      LLDP reach it directly, nothing is port-forwarded. The image ships only
+#      ether1. The router IS the node's management address: management services
+#      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
 #      LLDP forwarded). NIC order in the VM follows the eth index, so container
@@ -547,6 +547,30 @@ mgmt_setup() {
     fi
     log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in routing table $MGMT_TABLE"
 }
+# Keep discovery on static data interfaces, excluding management. Set this only
+# on first boot, before attaching eth0: startup-config and subsequent user changes
+# can select a different list, and restarts must preserve that choice.
+discovery_setup() {
+    rest_add "management interface list" interface/list/add \
+        "{\"name\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management interface list member" interface/list/member/add \
+        "{\"list\":\"clab-management\",\"interface\":\"ether1\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "discovery interface list" interface/list/add \
+        "{\"name\":\"clab-discovery\",\"include\":\"static\",\"exclude\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management discovery off" ip/neighbor/discovery-settings/set \
+        '{"discover-interface-list":"clab-discovery"}'
+    rest_has "interface/list?name=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list not applied"
+    rest_has "interface/list/member?list=clab-management&interface=ether1&disabled=false&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list member not applied"
+    rest_has "interface/list?name=clab-discovery&include=static&exclude=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "discovery interface list not applied"
+    case "$(rest "$AUTH" ip/neighbor/discovery-settings)" in
+        *'"discover-interface-list":"clab-discovery"'*) : ;;
+        *) mgmt_fail "management discovery policy not applied" ;;
+    esac
+    log "neighbor discovery: static interfaces except ether1 (clab-discovery)"
+}
 # Join the management network, then have the router reach its gateway from the
 # management address: proves the return path both ways, and the ARP/ND request
 # refreshes the gateway's neighbor entry when the IP was used by another MAC
@@ -622,6 +646,7 @@ case "$got" in
 esac
 
 mgmt_setup
+discovery_setup
 mgmt_attach
 
 # ---- startup config -------------------------------------------------------
