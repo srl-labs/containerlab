@@ -91,7 +91,12 @@ Our topology file defines two nodes, where each node is defined with its own con
 
 When containerlab starts to deploy the lab, it will first check if the images are available locally. Local images can be listed with `docker images` command.
 
-Containerlab will compare the image names from the topology file with the local images and if the images are not available locally, it will try to pull them from the remote registry.
+Containerlab will compare the image names from the topology file with the local images and if the images are not available locally, it will try to pull them from the remote registry. 
+
+/// note
+The registry pull will only be attempted after the `deploy` command is used, not when the .yml file is registered.
+///
+
 
 /// admonition | Images availability
     type: warning
@@ -111,13 +116,14 @@ docker images | grep ceos
 REPOSITORY                        TAG        IMAGE ID       CREATED         SIZE
 ceos                              4.32.0F    40d39e1a92c2   24 hours ago    2.4GB
 ```
+Don't worry if this is your first time setting up containerlab and the above output is empty, the images will be pulled when you enter run the `deploy`.
 
 /// admonition | Remote topology files
     attrs: {class: inline end tip}
 Containerlab allows to deploy labs from files located in remote Git repositories and/or HTTP URLs. Check out deploy command [documentation](cmd/deploy.md#remote-topology-files) for more details.
 ///
 
-While you can pre-pull the Nokia SR Linux image, containerlab will do it for you if it's not available locally, handy! So we are ready to deploy:
+While you can pre-pull the Nokia SR Linux image, containerlab will do it for you (at deployment time) if it's not available locally, handy! So we are ready to deploy:
 
 ```bash
 sudo containerlab deploy # (1)!

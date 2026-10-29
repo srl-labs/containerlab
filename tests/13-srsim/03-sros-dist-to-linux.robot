@@ -2,38 +2,28 @@
 Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
+Resource            ../srsim.robot
 
-Suite Teardown      Run Keyword    Cleanup
+Suite Teardown      Destroy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 
 *** Variables ***
 ${lab-name}         sr03
 ${lab-file-name}    03-srsim-dist.clab.yml
 ${runtime}          docker
-${key-name}         clab-test-key
+${sros-user}        superuser
+${sros-password}    NotAdmin42!
 
 
 *** Test Cases ***
-Set key-path Variable
-    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
-    Set Suite Variable    ${key-path}
-
-Create SSH keypair - RSA
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
-
 Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Deploy SR-SIM Lab    ${CURDIR}/${lab-file-name}    ${runtime}
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
     ...    address=clab-${lab-name}-sros-a
-    ...    username=admin
-    ...    password=NokiaSros1!
+    ...    username=${sros-user}
+    ...    password=${sros-password}
     ...    try_for=10
 
 Verify links in node l1
@@ -54,11 +44,6 @@ Ensure l1 can ping sros over 1/1/1 interface
 Do a gNOI cert get-certs
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.0 cert get-certs --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.2.1 cert get-certs --username ${sros-user} --password '${sros-password}' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
     Log    ${output}
     Should Contain    ${output}    sros-a.${lab-name}.io
-
-*** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    rm -f ${key-path}*

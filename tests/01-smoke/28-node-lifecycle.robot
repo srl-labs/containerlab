@@ -97,6 +97,18 @@ Start all nodes when node flag is omitted
     Node Should Be In State    l2    running
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping Over Dataplane Succeeds
 
+Eth0 TX offload is disabled after the start cycle
+    [Documentation]    Guards the TX offload fix regression: the start cycle recreates
+    ...    the management veth, resetting its offload settings to defaults, and the
+    ...    linux.Start override must re-apply the TX offload fix on eth0.
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label ${l1-label} --cmd 'ethtool -k eth0'
+    ...    shell=True
+    Log    stdout:${\n}${output.stdout}    console=${True}
+    Log    stderr:${\n}${output.stderr}    console=${True}
+    ${combined} =    Catenate    SEPARATOR=\n    ${output.stdout}    ${output.stderr}
+    Should Match Regexp    ${combined}    (?m)^.*tx-checksumming: off$
+
 Restart all nodes when node flag is omitted
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} restart -t ${CURDIR}/${lab-file}

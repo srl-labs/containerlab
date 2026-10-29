@@ -175,7 +175,7 @@ func listContainers(
 
 	if o.Global.TopologyFile != "" {
 		// List containers defined in the topology file
-		containers, err = c.ListNodesContainers(ctx)
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
 		}

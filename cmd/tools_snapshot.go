@@ -88,7 +88,7 @@ func snapshotSaveFn(cmd *cobra.Command, o *Options) error {
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(o.ToolsSnapshot.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(o.ToolsSnapshot.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
