@@ -630,6 +630,79 @@ func TestDiscoverLiveApplyEndpointsRejectsStoppedExternalNode(t *testing.T) {
 	}
 }
 
+func TestPlanDeletedEndpointsDeletesUnclaimedParkedPair(t *testing.T) {
+	t.Parallel()
+
+	n1 := &applyFakeLinkNode{name: "n1"}
+	n2 := &applyFakeLinkNode{name: "n2"}
+	plan := newApplyPlan(nil, nil)
+	plan.addedNodeSet["n1"] = struct{}{}
+	plan.addedNodeSet["n2"] = struct{}{}
+	plan.parkedNodeSet["n1"] = struct{}{}
+	plan.parkedNodeSet["n2"] = struct{}{}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "n1", iface: "eth1"}: {},
+		{node: "n2", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "n1", iface: "eth1"}: {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "n2", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+	plan.endpointNodes = map[string]clablinks.Node{
+		"n1": n1,
+		"n2": n2,
+	}
+
+	// Both nodes were removed with --keep-links, then the n1-n2 link was
+	// dropped from the topology. Apply must delete the parked pair.
+	c := &CLab{}
+	c.planDeletedEndpoints(context.Background(), plan)
+
+	got := applyDeletedEndpointNames(plan.staleEndpoints)
+	want := []string{"n1:eth1", "n2:eth1"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("deleted endpoints = %v, want %v", got, want)
+	}
+}
+
+func TestPlanDeletedEndpointsKeepsPeerMatchedParkedEndpoint(t *testing.T) {
+	t.Parallel()
+
+	dut := &applyFakeLinkNode{name: "dut"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	link := clablinks.NewLinkVEth()
+	link.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(dut, "eth4", link)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(peer, "eth1", link)),
+	}
+
+	plan := newApplyPlan(nil, nil)
+	plan.parkedNodeSet["dut"] = struct{}{}
+	plan.desiredEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth4"}:  {},
+		{node: "peer", iface: "eth1"}: {},
+	}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "dut", iface: "eth1"}:  {},
+		{node: "peer", iface: "eth1"}: {},
+	}
+	plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+		{node: "dut", iface: "eth1"}:  {Name: "eth1", Index: 11, PeerIndex: 22},
+		{node: "peer", iface: "eth1"}: {Name: "eth1", Index: 22, PeerIndex: 11},
+	}
+	plan.endpointNodes = map[string]clablinks.Node{
+		"dut":  dut,
+		"peer": peer,
+	}
+
+	c := &CLab{Links: map[int]clablinks.Link{0: link}}
+	c.planDeletedEndpoints(context.Background(), plan)
+
+	if len(plan.staleEndpoints) != 0 {
+		t.Fatalf("deleted endpoints = %v, want parked dut:eth1 kept for rename to eth4", applyDeletedEndpointNames(plan.staleEndpoints))
+	}
+}
+
 func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 	t.Parallel()
 

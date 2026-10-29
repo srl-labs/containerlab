@@ -445,11 +445,39 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 		if _, exists := plan.desiredEndpointSet[key]; exists {
 			continue
 		}
-		if _, parked := plan.parkedNodeSet[key.node]; parked {
+		// A parked name belongs to the previous kind. Keep it only when a
+		// desired link still peers with this veth; otherwise the link was removed.
+		if _, parked := plan.parkedNodeSet[key.node]; parked && plan.parkedEndpointClaimed(c.Links, key) {
 			continue
 		}
 		c.addStaleApplyEndpoint(ctx, plan, plannedEndpointSet, key)
 	}
+}
+
+func (p *applyPlan) parkedEndpointClaimed(links map[int]clablinks.Link, key applyEndpointKey) bool {
+	info := p.liveEndpointInfo[key]
+	if info.Index == 0 || info.PeerIndex == 0 {
+		return false
+	}
+
+	for _, link := range links {
+		endpoints := clablinks.RuntimeEndpoints(link)
+		if len(endpoints) != 2 {
+			continue
+		}
+		for i, ep := range endpoints {
+			if endpointKeyFromEndpoint(ep).node != key.node {
+				continue
+			}
+			for _, cand := range p.liveEndpointCandidates(endpoints[1-i]) {
+				if cand.Index == info.PeerIndex && cand.PeerIndex == info.Index {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func (c *CLab) addStaleApplyEndpoint(
