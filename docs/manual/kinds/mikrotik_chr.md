@@ -154,7 +154,7 @@ Do not remove or change the `clab-mgmt` objects or the `mgmt` VRF: management of
 
 ## Restarts
 
-[`containerlab restart`](../../cmd/restart.md) and a `/system reboot` inside RouterOS keep the interface names, MAC addresses, configuration and links: the launcher persists the NIC identity in the container on first boot and does not re-run the bootstrap. A plain `docker restart` keeps the router and its management, but Docker deletes the node's veth links, which stay down until the lab is redeployed. A later containerlab restart cannot restore interfaces already deleted by Docker.
+[`containerlab restart`](../../cmd/restart.md) and a `/system reboot` inside RouterOS keep the interface names, MAC addresses, configuration and links: the launcher persists the NIC identity in the container on first boot and does not re-run the bootstrap. A plain `docker restart` keeps the router and its management, but Docker deletes the node's veth links, which stay down until the node is restarted with containerlab or the lab is redeployed.
 
 ## File mounts
 
