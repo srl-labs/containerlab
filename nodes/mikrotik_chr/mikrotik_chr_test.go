@@ -332,14 +332,14 @@ func TestHealthcheckStartPeriod(t *testing.T) {
 		env  map[string]string
 		want int
 	}{
-		"defaults": {env: nil, want: 60 + 3*300 + 90},
+		"defaults": {env: nil, want: 60 + 4*300 + 90},
 		"overrides": {
 			env:  map[string]string{"CHR_INTF_WAIT": "10", "CHR_BOOT_WAIT": "100"},
-			want: 10 + 3*100 + 90,
+			want: 10 + 4*100 + 90,
 		},
 		"invalid": {
 			env:  map[string]string{"CHR_INTF_WAIT": "x", "CHR_BOOT_WAIT": "-5"},
-			want: 60 + 3*300 + 90,
+			want: 60 + 4*300 + 90,
 		},
 	}
 
