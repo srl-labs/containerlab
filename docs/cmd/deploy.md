@@ -58,6 +58,32 @@ mechanism as the `stop`, `start`, and `restart` commands: affected nodes are sto
 dataplane interfaces are parked in a temporary network namespace, and the interfaces are restored
 after the node starts again.
 
+### Restoring links after filtered destroy
+
+A node removed with [`destroy --keep-links`](destroy.md#keep-links) leaves its data-plane
+interfaces in a parking namespace. Deploy detects this state automatically and restores the
+interfaces when it creates the missing node. `apply` provides the same behavior because it is
+an alias of `deploy`.
+
+```bash
+containerlab destroy -t lab.clab.yml --node-filter node1 --keep-links --keep-mgmt-net
+# Update the replacement node in the topology while keeping the lab and node names.
+containerlab deploy -t lab.clab.yml --dry-run
+containerlab deploy -t lab.clab.yml
+```
+
+Preserved veths are matched by their peer identity, including when both ends are parked.
+Changing the replacement's interface names can therefore reuse the existing pairs. A desired
+name that already exists on a different parked interface does not override the peer match.
+If a parked pair does not match the requested wiring, reconciliation fails with diagnostic
+interface and peer indexes instead of creating a replacement veth.
+
+This workflow preserves links while the selected node is replaced; traffic through that node
+is interrupted, and its running configuration and protocol state are not preserved by parking.
+See [the replacement guide](destroy.md#replacing-nodes-while-preserving-links) for complete
+examples, requirements, and troubleshooting. The normal reconciliation limitations below
+still apply.
+
 ### Link apply modes
 
 When deploy adds or removes a link on a node that keeps running, the node kind decides how

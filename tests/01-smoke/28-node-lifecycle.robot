@@ -59,6 +59,21 @@ Restart l2 and keep dataplane working
 
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping Over Dataplane Succeeds
 
+Restart an already exited node recreates lost dataplane links
+    # Bypass parking to reproduce a daemon crash or an external container stop.
+    ${output} =    Process.Run Process
+    ...    ${runtime} stop clab-${lab-name}-l1
+    ...    shell=True
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} restart -t ${CURDIR}/${lab-file} --node l1
+    ...    shell=True
+    Log    stdout:${\n}${output.stdout}    console=${True}
+    Log    stderr:${\n}${output.stderr}    console=${True}
+    Should Be Equal As Integers    ${output.rc}    0
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping Over Dataplane Succeeds
+
 Stop all nodes when node flag is omitted
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} stop -t ${CURDIR}/${lab-file}

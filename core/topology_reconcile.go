@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -15,6 +17,7 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 type applyEndpointKey struct {
@@ -213,8 +216,26 @@ func (c *CLab) planApply(
 	plan := newApplyPlan(currentNodes, state)
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		if _, exists := currentNodes[nodeName]; !exists {
-			status := c.Nodes[nodeName].GetContainerStatus(ctx)
+		_, runtimeExists := currentNodes[nodeName]
+		status := clabruntime.NotFound
+		parkingExists := false
+		if runtimeExists {
+			if _, parked := c.applyParkingLinkNode(nodeName); parked {
+				parkingExists = true
+				status = c.Nodes[nodeName].GetContainerStatus(ctx)
+			}
+		} else {
+			status = c.Nodes[nodeName].GetContainerStatus(ctx)
+		}
+		if treatAsAddedParkedNode(runtimeExists, status, parkingExists) {
+			// Runtime discovery can briefly retain the just-removed container.
+			// The parking namespace is authoritative for a filtered
+			// destroy --keep-links: plan this as an added+parked node.
+			delete(currentNodes, nodeName)
+			runtimeExists = false
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+		if !runtimeExists {
 			if status != clabruntime.NotFound {
 				return nil, fmt.Errorf(
 					"node %q container %q already exists outside the runtime lab state",
@@ -270,6 +291,9 @@ func (c *CLab) planApply(
 		if !plan.linkNeedsDeploy(link) {
 			continue
 		}
+		if err := plan.validatePreservedLinkDeploy(link); err != nil {
+			return nil, err
+		}
 
 		plan.addDeployApplyLink(linkIdx, link)
 
@@ -304,6 +328,14 @@ func (c *CLab) planApply(
 	return plan, nil
 }
 
+func treatAsAddedParkedNode(
+	runtimeExists bool,
+	status clabruntime.ContainerStatus,
+	parkingExists bool,
+) bool {
+	return runtimeExists && status == clabruntime.NotFound && parkingExists
+}
+
 func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
 	if _, planned := p.plannedLinkSet[linkIdx]; planned {
 		return
@@ -327,6 +359,15 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 			continue
 		}
 		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+	}
+
+	// A previous filtered destroy --keep-links leaves the node's interfaces in
+	// its deterministic parking namespace. Treat the missing container as an
+	// already-parked added node so apply restores rather than recreates its links.
+	for nodeName := range plan.addedNodeSet {
+		if _, exists := c.applyParkingLinkNode(nodeName); exists {
 			plan.parkedNodeSet[nodeName] = struct{}{}
 		}
 	}
@@ -407,8 +448,39 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 		if _, exists := plan.desiredEndpointSet[key]; exists {
 			continue
 		}
+		// A parked name belongs to the previous kind. Keep it only when a
+		// desired link still peers with this veth; otherwise the link was removed.
+		if _, parked := plan.parkedNodeSet[key.node]; parked && plan.parkedEndpointClaimed(c.Links, key) {
+			continue
+		}
 		c.addStaleApplyEndpoint(ctx, plan, plannedEndpointSet, key)
 	}
+}
+
+func (p *applyPlan) parkedEndpointClaimed(links map[int]clablinks.Link, key applyEndpointKey) bool {
+	info := p.liveEndpointInfo[key]
+	if info.Index == 0 || info.PeerIndex == 0 {
+		return false
+	}
+
+	for _, link := range links {
+		endpoints := clablinks.RuntimeEndpoints(link)
+		if len(endpoints) != 2 {
+			continue
+		}
+		for i, ep := range endpoints {
+			if endpointKeyFromEndpoint(ep).node != key.node {
+				continue
+			}
+			for _, cand := range p.liveEndpointCandidates(endpoints[1-i]) {
+				if cand.Index == info.PeerIndex && cand.PeerIndex == info.Index {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func (c *CLab) addStaleApplyEndpoint(
@@ -492,7 +564,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	for _, nodeName := range sortedLinkNodeNames(desiredNodes) {
 		n := desiredNodes[nodeName]
 		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
-			continue
+			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+				continue
+			}
 		}
 
 		if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
@@ -500,12 +574,22 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				continue
 			}
 		}
+		usingParkingNode := false
 		if _, added := plan.addedNodeSet[nodeName]; added {
 			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
 				continue
 			}
+			parkingNode, ok := c.applyParkingLinkNode(nodeName)
+			if !ok {
+				continue
+			}
+			n = parkingNode
+			usingParkingNode = true
 		}
-		if _, start := plan.startNodeSet[nodeName]; start {
+		if usingParkingNode {
+			// Added+parked nodes are discovered exclusively through the parking
+			// namespace; their destination container does not exist yet.
+		} else if _, start := plan.startNodeSet[nodeName]; start {
 			parkingNode, ok := c.applyParkingLinkNode(nodeName)
 			if !ok {
 				continue
@@ -603,7 +687,29 @@ func (c *CLab) applyParkingLinkNode(nodeName string) (clablinks.Node, bool) {
 		return nil, false
 	}
 
-	return clablinks.NewParkingNode(node.Config().LongName, parkPath), true
+	parking := clablinks.NewParkingNode(node.Config().LongName, parkPath)
+	// An abandoned, empty namespace is not evidence of preserved links.
+	// Leave it intact for diagnosis, but allow a fresh deployment to create
+	// its veths. Inspection failures must retain the conservative restore path.
+	hasInterfaces := true
+	err = parking.ExecFunction(context.Background(), func(_ ns.NetNS) error {
+		interfaces, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+		hasInterfaces = false
+		for _, iface := range interfaces {
+			if iface.Attrs().Flags&net.FlagLoopback == 0 {
+				hasInterfaces = true
+				break
+			}
+		}
+		return nil
+	})
+	if err == nil && !hasInterfaces {
+		return nil, false
+	}
+	return parking, true
 }
 
 func (c *CLab) applyKnownEndpointNames(
@@ -895,11 +1001,79 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 			}
 		}
 		if _, live := p.liveEndpointSet[key]; !live {
-			return true
+			if _, parked := p.parkedNodeSet[key.node]; !parked {
+				return true
+			}
+			if len(p.liveEndpointCandidates(ep)) == 0 {
+				return true
+			}
 		}
 	}
 
 	return !p.linkIntact(link)
+}
+
+func (p *applyPlan) validatePreservedLinkDeploy(link clablinks.Link) error {
+	var keptNodes []string
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
+		nodeName := ep.GetNode().GetShortName()
+		if _, added := p.addedNodeSet[nodeName]; !added {
+			continue
+		}
+		if _, parked := p.parkedNodeSet[nodeName]; parked {
+			keptNodes = append(keptNodes, nodeName)
+		}
+	}
+	if len(keptNodes) == 0 {
+		return nil
+	}
+
+	sort.Strings(keptNodes)
+	return fmt.Errorf(
+		"cannot restore preserved link %q for node %q: parked veth does not match the desired endpoints; refusing to create a replacement veth (%s)",
+		applyLinkName(link),
+		keptNodes[0],
+		p.preservedLinkMismatchDetail(link),
+	)
+}
+
+func (p *applyPlan) preservedLinkMismatchDetail(link clablinks.Link) string {
+	parts := make([]string, 0, len(clablinks.RuntimeEndpoints(link)))
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
+		key := endpointKeyFromEndpoint(ep)
+		candidates := p.liveEndpointCandidates(ep)
+		sort.Slice(candidates, func(i, j int) bool {
+			if candidates[i].Name != candidates[j].Name {
+				return candidates[i].Name < candidates[j].Name
+			}
+			return candidates[i].Index < candidates[j].Index
+		})
+
+		state := "live"
+		if _, parked := p.parkedNodeSet[key.node]; parked {
+			state = "parked"
+		}
+		if len(candidates) == 0 {
+			parts = append(parts, key.String()+" "+state+"=none")
+			continue
+		}
+
+		formatted := make([]string, len(candidates))
+		for i, candidate := range candidates {
+			formatted[i] = formatOwnedInterface(candidate)
+		}
+		parts = append(parts, key.String()+" "+state+"=["+strings.Join(formatted, ", ")+"]")
+	}
+
+	return strings.Join(parts, "; ")
+}
+
+func formatOwnedInterface(info clablinks.OwnedInterface) string {
+	desc := fmt.Sprintf("name=%s idx=%d peer=%d", info.Name, info.Index, info.PeerIndex)
+	if info.MasterName != "" {
+		desc += " master=" + info.MasterName
+	}
+	return desc
 }
 
 func (p *applyPlan) linkIntact(link clablinks.Link) bool {
@@ -908,27 +1082,47 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 		return true
 	}
 
-	left, leftOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[0])]
-	right, rightOK := p.liveEndpointInfo[endpointKeyFromEndpoint(endpoints[1])]
-	if !leftOK || !rightOK {
-		return false
+	leftCandidates := p.liveEndpointCandidates(endpoints[0])
+	rightCandidates := p.liveEndpointCandidates(endpoints[1])
+
+	for _, left := range leftCandidates {
+		for _, right := range rightCandidates {
+			if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[0].IsNodeless() && left.MasterName != endpoints[0].GetNode().GetShortName() {
+				continue
+			}
+			if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
+				!endpoints[1].IsNodeless() && right.MasterName != endpoints[1].GetNode().GetShortName() {
+				continue
+			}
+			if left.PeerIndex != 0 && right.PeerIndex != 0 &&
+				left.PeerIndex == right.Index && right.PeerIndex == left.Index {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (p *applyPlan) liveEndpointCandidates(ep clablinks.Endpoint) []clablinks.OwnedInterface {
+	key := endpointKeyFromEndpoint(ep)
+	if _, parked := p.parkedNodeSet[key.node]; !parked {
+		if info, ok := p.liveEndpointInfo[key]; ok {
+			return []clablinks.OwnedInterface{info}
+		}
+		return nil
 	}
 
-	if endpoints[0].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[0].IsNodeless() &&
-		left.MasterName != endpoints[0].GetNode().GetShortName() {
-		return false
+	// A parked interface's current name belongs to the old topology. Even when
+	// the desired name exists, it may be paired with a different peer and be
+	// destined for another name. Match every parked candidate by veth identity.
+	var candidates []clablinks.OwnedInterface
+	for liveKey, info := range p.liveEndpointInfo {
+		if liveKey.node == key.node {
+			candidates = append(candidates, info)
+		}
 	}
-	if endpoints[1].GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge &&
-		!endpoints[1].IsNodeless() &&
-		right.MasterName != endpoints[1].GetNode().GetShortName() {
-		return false
-	}
-
-	return left.PeerIndex != 0 &&
-		right.PeerIndex != 0 &&
-		left.PeerIndex == right.Index &&
-		right.PeerIndex == left.Index
+	return candidates
 }
 
 func (p *applyPlan) deployNodeNames() []string {

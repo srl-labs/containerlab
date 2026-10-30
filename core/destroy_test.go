@@ -18,9 +18,28 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
+
+func TestAvailableDestroyTopologyFallsBackToRequestedTopology(t *testing.T) {
+	t.Parallel()
+
+	requested := filepath.Join(t.TempDir(), "current.clab.yml")
+	if err := os.WriteFile(requested, []byte("name: test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := availableDestroyTopology("/missing/temporary-apply.yml", requested, false); got != requested {
+		t.Fatalf("availableDestroyTopology() = %q, want requested topology %q", got, requested)
+	}
+	if got := availableDestroyTopology("/missing/temporary-apply.yml", requested, true); got != "" {
+		t.Fatalf("availableDestroyTopology(all) = %q, want no cross-lab fallback", got)
+	}
+}
 
 // makeCopyForDestroy must apply WithTopoPath (or WithLabNameOnly) before WithNodeFilter so that
 // filterClabNodes runs against a loaded topology. This mirrors the option order used there.
@@ -876,4 +895,42 @@ func boolToInt(b bool) int {
 	}
 
 	return 0
+}
+
+func TestWithDestroyKeepLinks(t *testing.T) {
+	t.Parallel()
+
+	opts := NewDestroyOptions()
+	WithDestroyKeepLinks()(opts)
+
+	if !opts.keepLinks {
+		t.Fatal("WithDestroyKeepLinks did not enable link preservation")
+	}
+}
+
+func TestParkKeptLinksSkipsUnavailableNetns(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	missing := clabmocksmocknodes.NewMockNode(ctrl)
+	stopped := clabmocksmocknodes.NewMockNode(ctrl)
+	running := clabmocksmocknodes.NewMockNode(ctrl)
+
+	missing.EXPECT().GetContainerStatus(ctx).Return(clabruntime.NotFound)
+	stopped.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+	running.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Running)
+	running.EXPECT().ParkEndpoints(ctx).Return(nil)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"missing": missing,
+			"stopped": stopped,
+			"running": running,
+		},
+	}
+
+	if err := c.parkKeptLinks(ctx); err != nil {
+		t.Fatalf("parkKeptLinks() error = %v", err)
+	}
 }

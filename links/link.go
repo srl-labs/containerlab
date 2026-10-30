@@ -38,6 +38,7 @@ const (
 )
 
 var linkAddAltName = netlink.LinkAddAltName
+var linkDelAltName = netlink.LinkDelAltName
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
