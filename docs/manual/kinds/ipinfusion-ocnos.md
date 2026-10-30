@@ -11,8 +11,17 @@ It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/
 
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
-!!!warning
-    OcNOS VM disk images need to be altered to support telnet serial access and ethX interfaces name style. This can be done by modifying the grub config file, as shown [here](https://github.com/srl-labs/vrnetlab/pull/99).
+!!!note
+    OcNOS 7.0.0-262 (`OcNOS-SP-PLUS-x86-7.0.0-262-GA.qcow2`) builds and boots with `make docker-image` without modification.
+    Older images such as 6.0.2 needed a GRUB change for the serial console, as shown [here](https://github.com/srl-labs/vrnetlab/pull/99).
+
+## Getting the image
+
+The OcNOS VM image for KVM is a free download from IP Infusion (registration required):
+[OcNOS-SP VM for KVM](https://www.ipinfusion.com/free-software-demos/?vm=KVM&utm_source=containerlab&utm_medium=docs&utm_campaign=ocnos-vm).
+The VM includes a 365-day license and is licensed for non-production evaluation only ([OcNOS EULA](https://www.ipinfusion.com/eula/)).
+Decompress the image with `xz -d`, then copy the `.qcow2` file into the `ipinfusion/ocnos` directory of
+[srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos) and run `make docker-image`.
 
 ## Managing ipinfusion_ocnos nodes
 
