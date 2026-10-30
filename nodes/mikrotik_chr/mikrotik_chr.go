@@ -13,12 +13,14 @@ package mikrotik_chr
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -54,6 +56,12 @@ const (
 	// mgmtComment tags every management object the launcher creates in RouterOS.
 	mgmtComment = "clab-mgmt"
 
+	// The last MAC octet is the NIC index; zero is reserved for management.
+	maxDataNICIndex = 255
+	// arm64's virt machine gets no PCI bridges: its single bus holds the disk, the
+	// management NIC and at most 29 data NICs before QEMU runs out of slots.
+	maxDataNICIndexARM64 = 29
+
 	// the launcher's CHR_INTF_WAIT and CHR_BOOT_WAIT defaults, and the time its config
 	// fetch and gateway check add, in seconds.
 	defaultIntfWait  = 60
@@ -78,6 +86,9 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type mikrotikCHR struct {
 	clabnodes.VRNode
+	// goarch selects the NIC layout the interface limit is checked against. The
+	// containerlab binary's architecture matches the image's outside emulated setups.
+	goarch string
 }
 
 func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -123,6 +134,45 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
+	n.goarch = runtime.GOARCH
+
+	return nil
+}
+
+// dataNICLimit is the highest data NIC index the launcher's NIC layout holds on goarch.
+func dataNICLimit(goarch string) int {
+	if goarch == "arm64" {
+		return maxDataNICIndexARM64
+	}
+
+	return maxDataNICIndex
+}
+
+// CheckInterfaceName rejects data NIC indices the launcher cannot create: beyond the
+// free PCI slots on arm64, or wrapping the launcher's MAC addresses.
+func (n *mikrotikCHR) CheckInterfaceName() error {
+	if err := n.VRNode.CheckInterfaceName(); err != nil {
+		return err
+	}
+
+	limit := dataNICLimit(n.goarch)
+	for _, ep := range n.Endpoints {
+		ifName := ep.GetIfaceName()
+		index, err := strconv.Atoi(strings.TrimPrefix(ifName, "eth"))
+		// An index too large for an int is still an index over the limit.
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
+			return fmt.Errorf(
+				"node %q interface %q: cannot parse interface index: %w",
+				n.Cfg.ShortName, ifName, err,
+			)
+		}
+		if err != nil || index > limit {
+			return fmt.Errorf(
+				"node %q interface %q exceeds the maximum data NIC index %d on %s (eth%d / ether%d)",
+				n.Cfg.ShortName, ifName, limit, n.goarch, limit, limit+1,
+			)
+		}
+	}
 
 	return nil
 }

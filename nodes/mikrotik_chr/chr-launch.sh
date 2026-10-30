@@ -146,9 +146,11 @@ log "interfaces: $(count_intfs) of $INTFS expected after ${waited}s"
 case "$(uname -m)" in
     aarch64|arm64)
         QEMU="qemu-system-aarch64 -M virt -pflash /usr/share/qemu/edk2-aarch64-code.fd"
+        PCI_BRIDGES=0
         TCG_CPU="-cpu cortex-a57" ;;
     *)
         QEMU="qemu-system-x86_64"
+        PCI_BRIDGES=1
         TCG_CPU="" ;;
 esac
 if [ -e /dev/kvm ]; then
@@ -179,6 +181,43 @@ case "$node_id" in
         ;;
 esac
 NET="-netdev tap,id=mgmt,ifname=tap0,script=no,downscript=no -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
+
+check_nic_index() { # check_nic_index <max-index>: reject indices the NIC layout cannot hold
+    # The last MAC octet holds the NIC index; zero belongs to management.
+    if [ "$1" -gt 255 ]; then
+        log "at most 255 data NICs are supported (eth255 / ether256); index $1 would reuse a NIC MAC"
+        return 1
+    fi
+    # Without bridges (arm64 virt) one bus holds the disk, management and 29 data NICs.
+    if [ "$PCI_BRIDGES" != 1 ] && [ "$1" -gt 29 ]; then
+        log "at most 29 data NICs fit without PCI bridges (eth29 / ether30); index $1 leaves no PCI slot for the disk"
+        return 1
+    fi
+}
+
+qemu_data_nic() { # qemu_data_nic <index> <mac>: append-only QEMU arguments
+    case "$PCI_BRIDGES" in
+        1)
+            # The default PC has only 29 free PCI slots, including management.
+            # Keep management on the root bus and put data NICs behind bridges.
+            # Follow vrnetlab's conservative allocation of 25 NICs per bridge.
+            _bridge=$(( ($1 - 1) / 25 + 1 ))
+            _slot=$(( ($1 - 1) % 25 + 1 ))
+            if [ "$_slot" -eq 1 ]; then
+                printf '%s ' "-device pci-bridge,id=chrpci$_bridge,chassis_nr=$_bridge,bus=pci.0"
+            fi
+            # Omit PXE ROMs to avoid exhausting SeaBIOS option-ROM space.
+            # Keep MSI-X, but share one vector between RX/TX queues (plus one
+            # for config) to reduce IRQ pressure.
+            # Disabling MSI-X entirely can leave NICs missing in RouterOS.
+            printf '%s' "-netdev tap,id=d$1,ifname=tap$1,script=no,downscript=no -device virtio-net,netdev=d$1,mac=$2,bus=chrpci$_bridge,addr=$(printf '0x%x' "$_slot"),romfile=,vectors=2"
+            ;;
+        *)
+            # ARM64 uses the virt machine and keeps its existing NIC layout.
+            printf '%s' "-netdev tap,id=d$1,ifname=tap$1,script=no,downscript=no -device virtio-net,netdev=d$1,mac=$2"
+            ;;
+    esac
+}
 
 # ---- management: eth0 + tap0 on one bridge, eth0's addressing to the VM ----
 ip_global() { # ip_global <4|6> <dev>: the first global address/prefix
@@ -259,6 +298,7 @@ case "$prev" in *[!0-9]*|"") prev=0 ;; esac
 # the watcher bridges the late veths.
 case "$INTFS" in *[!0-9]*|"") INTFS=0 ;; esac
 [ "$INTFS" -gt "$max" ] && max="$INTFS"
+check_nic_index "$max" || exit 1
 [ "$max" -gt "$prev" ] && { printf '%s\n' "$max" > "$NICS_FILE" 2>/dev/null || true; }
 
 # RouterOS v7 memory ≈ 256 + 8·CPUS·(ifaces) MiB (MikroTik CHR system
@@ -314,8 +354,8 @@ while [ "$i" -le "$max" ]; do
     tunctl -t "$tap" >/dev/null 2>&1 || ip tuntap add dev "$tap" mode tap
     [ -e "$SYSNET/eth$i" ] && bridge_eth "$i"
     ip link set "$tap" up
-    mac="$(printf '52:54:00:%s:%02x' "$node_id" "$((i & 255))")"
-    NET="$NET -netdev tap,id=d$i,ifname=$tap,script=no,downscript=no -device virtio-net,netdev=d$i,mac=$mac"
+    mac="$(printf '52:54:00:%s:%02x' "$node_id" "$i")"
+    NET="$NET $(qemu_data_nic "$i" "$mac")"
     i=$((i + 1))
 done
 
