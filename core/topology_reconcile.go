@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -15,6 +17,7 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 type applyEndpointKey struct {
@@ -684,7 +687,29 @@ func (c *CLab) applyParkingLinkNode(nodeName string) (clablinks.Node, bool) {
 		return nil, false
 	}
 
-	return clablinks.NewParkingNode(node.Config().LongName, parkPath), true
+	parking := clablinks.NewParkingNode(node.Config().LongName, parkPath)
+	// An abandoned, empty namespace is not evidence of preserved links.
+	// Leave it intact for diagnosis, but allow a fresh deployment to create
+	// its veths. Inspection failures must retain the conservative restore path.
+	hasInterfaces := true
+	err = parking.ExecFunction(context.Background(), func(_ ns.NetNS) error {
+		interfaces, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+		hasInterfaces = false
+		for _, iface := range interfaces {
+			if iface.Attrs().Flags&net.FlagLoopback == 0 {
+				hasInterfaces = true
+				break
+			}
+		}
+		return nil
+	})
+	if err == nil && !hasInterfaces {
+		return nil, false
+	}
+	return parking, true
 }
 
 func (c *CLab) applyKnownEndpointNames(
