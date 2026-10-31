@@ -138,6 +138,12 @@ func (c *CLab) parseTopology() error {
 
 	// initialize any extra runtimes
 	for _, r := range nodeRuntimes {
+		// Nodes of a lab runtime are only described here; they are not run by a local
+		// container runtime.
+		if c.LabRuntime != nil {
+			break
+		}
+
 		// this is the case for already init'ed runtimes
 		if _, ok := c.Runtimes[r]; ok {
 			continue
@@ -166,6 +172,18 @@ func (c *CLab) parseTopology() error {
 	}
 
 	return c.injectTailscaleSidecars()
+}
+
+// LoadTopologyNodes builds the topology's nodes and links for a lab runtime, without a
+// container runtime behind them. Lab runtimes skip this when they parse a topology; commands
+// that render the topology file itself, such as graph, need the nodes. With a local runtime the
+// nodes are already built, and it does nothing.
+func (c *CLab) LoadTopologyNodes() error {
+	if c.LabRuntime == nil || !c.TopoPaths.TopologyFileIsSet() {
+		return nil
+	}
+
+	return c.parseTopology()
 }
 
 // NewNode initializes a new node object.

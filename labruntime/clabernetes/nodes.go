@@ -15,14 +15,29 @@ import (
 )
 
 func (r *Runtime) Start(ctx context.Context, req clablabruntime.NodeRequest) error {
+	r, connErr := r.connect()
+	if connErr != nil {
+		return connErr
+	}
+
 	return r.setNodesReplicas(ctx, req, 1)
 }
 
 func (r *Runtime) Stop(ctx context.Context, req clablabruntime.NodeRequest) error {
+	r, connErr := r.connect()
+	if connErr != nil {
+		return connErr
+	}
+
 	return r.setNodesReplicas(ctx, req, 0)
 }
 
 func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) error {
+	r, connErr := r.connect()
+	if connErr != nil {
+		return connErr
+	}
+
 	targets, namespace, err := r.targetNodes(ctx, req)
 	if err != nil {
 		return err

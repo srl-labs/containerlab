@@ -34,6 +34,11 @@ func (r *Runtime) Save(
 	ctx context.Context,
 	req clablabruntime.SaveRequest,
 ) (*clablabruntime.SaveResult, error) {
+	r, connErr := r.connect()
+	if connErr != nil {
+		return nil, connErr
+	}
+
 	targets, namespace, err := r.targetNodes(ctx, clablabruntime.NodeRequest{
 		Name:      req.Name,
 		Namespace: req.Namespace,

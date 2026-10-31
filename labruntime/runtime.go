@@ -7,6 +7,7 @@ import (
 	"time"
 
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 const (
@@ -89,6 +90,10 @@ type DestroyRequest struct {
 	Wait       bool
 	Timeout    time.Duration
 	MaxWorkers uint
+	// Cleanup also deletes the lab's persistent node storage (saved configuration). Without
+	// it the storage is kept, like the lab directory of a local runtime, and a later deploy
+	// of the lab boots from it.
+	Cleanup bool
 }
 
 type InspectRequest struct {
@@ -96,6 +101,8 @@ type InspectRequest struct {
 	Namespace string
 }
 
+// ListRequest selects the labs List reports. A Namespace, or the runtime's configured
+// namespace override, limits the listing to that namespace, even with AllNamespaces.
 type ListRequest struct {
 	Namespace     string
 	AllNamespaces bool
@@ -122,7 +129,11 @@ type SaveRequest struct {
 	Copy      bool
 }
 
+// EventStreamRequest selects the events StreamEvents reports. Name limits the stream to one
+// lab, in its namespace. Without Name, Namespace or the runtime's configured namespace override
+// limit it to one namespace; AllNamespaces otherwise covers every namespace.
 type EventStreamRequest struct {
+	Name                  string
 	Namespace             string
 	AllNamespaces         bool
 	IncludeInitialState   bool
@@ -153,7 +164,18 @@ type NodeState struct {
 	MgmtIPv4Address     string
 	MgmtIPv6Address     string
 	LoadBalancerAddress string
+	// Pod is the pod that runs the node. Nodes that share a network namespace share a pod.
+	Pod string
+	// Container is the node's primary device container in Pod.
+	Container string
+	// NodeUID identifies the runtime's node resource (the clabernetes Node UID).
+	NodeUID string
+	// ExposedPorts are the node ports the runtime publishes through a Service.
+	ExposedPorts []ExposedPort
 }
+
+// ExposedPort is a node port a lab runtime publishes through a Service.
+type ExposedPort = clabtypes.ExposedPort
 
 type LabState struct {
 	Name         string

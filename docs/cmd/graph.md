@@ -13,6 +13,10 @@ The following graphing options are available:
 
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
 
+/// note | Lab runtimes
+With a lab runtime such as `--runtime c9s`, `graph` renders from the topology file alone: `--mermaid`, `--dot`, `--drawio` and the HTML server with `--offline` work, and need no cluster access. The default HTML mode, which reads the running containers, and `--node-filter` are rejected. `--drawio` still runs the clab-io-draw container on the local host.
+///
+
 ### HTML
 
 The HTML-based graph representation is the default graphing option. The topology will be graphed and served online using the embedded web server.

@@ -983,9 +983,15 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	return nil
 }
 
-// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it
-// encounters any, otherwise nil.
+// CheckConnectivity checks the connectivity to all local container runtimes, returns an error if
+// it encounters any, otherwise nil.
 func (c *CLab) CheckConnectivity(ctx context.Context) error {
+	// Lab runtimes reach their backend on the first operation and report failures there;
+	// there is no local container runtime to check.
+	if c.LabRuntime != nil {
+		return nil
+	}
+
 	for _, r := range c.Runtimes {
 		err := r.CheckConnection(ctx)
 		if err != nil {

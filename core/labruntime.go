@@ -34,11 +34,14 @@ func (c *CLab) deployWithLabRuntime(
 	}
 
 	if options != nil && options.reconfigure {
+		// --reconfigure regenerates the lab from scratch, like removing a local lab
+		// directory, so it also deletes the persistent node storage.
 		err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
 			Name:       c.Config.Name,
 			Wait:       true,
 			Timeout:    c.timeout,
 			MaxWorkers: options.maxWorkers,
+			Cleanup:    true,
 		})
 		if err != nil {
 			return nil, err
@@ -170,6 +173,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 		Wait:       true,
 		Timeout:    c.timeout,
 		MaxWorkers: opts.maxWorkers,
+		Cleanup:    opts.cleanup,
 	})
 	if err != nil {
 		return err
@@ -237,6 +241,7 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 			Wait:       true,
 			Timeout:    c.timeout,
 			MaxWorkers: opts.maxWorkers,
+			Cleanup:    opts.cleanup,
 		}); err != nil {
 			errs = append(errs, err)
 		}
@@ -472,17 +477,34 @@ func (c *CLab) containerFromLabNode(
 		labels[clabconstants.Owner] = c.customOwner
 	}
 
+	// The ID names the node uniquely across namespaces and labs. It is also the short ID, so
+	// inspect reports it as container_id and it matches the events actor ID.
+	id := labRuntimeContainerID(state.Namespace, state.Name, node.Name)
+
 	return clabruntime.GenericContainer{
 		Names:           []string{nodeName},
-		ID:              fmt.Sprintf("%s/%s/%s", state.Namespace, state.Name, node.Name),
-		ShortID:         "c9s",
+		ID:              id,
+		ShortID:         id,
 		Image:           image,
 		State:           containerState,
 		Status:          containerStatus,
 		Labels:          labels,
 		NetworkName:     state.Namespace,
 		NetworkSettings: managementAddress(node),
+		Workload: &clabtypes.LabRuntimeWorkload{
+			Namespace:           state.Namespace,
+			Pod:                 node.Pod,
+			Container:           node.Container,
+			NodeUID:             node.NodeUID,
+			ExposedPorts:        node.ExposedPorts,
+			LoadBalancerAddress: node.LoadBalancerAddress,
+		},
 	}
+}
+
+// labRuntimeContainerID is the ID of a lab runtime node: <namespace>/<lab>/<node>.
+func labRuntimeContainerID(namespace, lab, node string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, lab, node)
 }
 
 // topologyNodeName maps a node name a lab runtime reports back onto the topology node it belongs
