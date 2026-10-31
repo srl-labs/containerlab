@@ -621,7 +621,18 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 }
 
 func ownershipAltName(endpt Endpoint) string {
-	return ownershipAltNameFor(endpt.GetNode().GetShortName(), endpt.GetIfaceName())
+	return ownershipAltNameFor(ownershipName(endpt.GetNode()), endpt.GetIfaceName())
+}
+
+// ownershipName returns the logical owner name recorded in the ownership marker
+// of node's interfaces. mgmt-net link nodes use a stable name rather than the
+// bridge they resolve to, so the marker of a mgmt-net endpoint does not depend
+// on the management network it attaches to.
+func ownershipName(node Node) string {
+	if _, ok := node.(*mgmtBridgeLinkNode); ok {
+		return mgmtNetOwnerName
+	}
+	return node.GetShortName()
 }
 
 func ownershipAltNameFor(nodeName, ifaceName string) string {
@@ -728,10 +739,12 @@ func retryTransientNetlink(ctx context.Context, operationDesc string, fn func() 
 
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link
 // to resolve it to a concrete link type.
-// Parameters include all nodes of a topology and the name of the management bridge.
+// Parameters include all nodes of a topology and the name of the default management network.
 type ResolveParams struct {
-	Nodes          map[string]Node
-	MgmtBridgeName string
+	Nodes map[string]Node
+	// DefaultMgmtNetwork is the name of the default management network.
+	// mgmt-net links referencing it by name attach to the default mgmt-net link node.
+	DefaultMgmtNetwork string
 	// LabName is the name of the lab, used to scope generated host-global
 	// resources such as veth-stitch network namespaces.
 	LabName string

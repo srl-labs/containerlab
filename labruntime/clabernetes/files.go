@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -246,7 +247,10 @@ func renderClabernetesTopologyDefinition(
 	}
 
 	if config.Topology != nil {
-		links, err := clabernetesBriefLinks(config.Topology.Links)
+		links, err := clabernetesBriefLinks(
+			config.Topology.Links,
+			defaultMgmtNetwork(config.Mgmt),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -266,6 +270,7 @@ func renderClabernetesTopologyDefinition(
 
 func clabernetesBriefLinks(
 	links []*clablinks.LinkDefinition,
+	mgmtNetwork string,
 ) ([]*clablinks.LinkBriefRaw, error) {
 	if len(links) == 0 {
 		return nil, nil
@@ -277,7 +282,7 @@ func clabernetesBriefLinks(
 			continue
 		}
 
-		brief, err := clabernetesBriefLink(link)
+		brief, err := clabernetesBriefLink(link, mgmtNetwork)
 		if err != nil {
 			return nil, err
 		}
@@ -289,6 +294,7 @@ func clabernetesBriefLinks(
 
 func clabernetesBriefLink(
 	link *clablinks.LinkDefinition,
+	mgmtNetwork string,
 ) (*clablinks.LinkBriefRaw, error) {
 	switch raw := link.Link.(type) {
 	case *clablinks.LinkBriefRaw:
@@ -298,6 +304,16 @@ func clabernetesBriefLink(
 	case *clablinks.LinkHostRaw:
 		return raw.ToLinkBriefRaw(), nil
 	case *clablinks.LinkMgmtNetRaw:
+		// the brief form has no network field, it always attaches to the default
+		// management network
+		if raw.Network != "" && raw.Network != mgmtNetwork {
+			return nil, fmt.Errorf(
+				"clabernetes runtime supports mgmt-net links to the default management "+
+					"network %q only, not to %q",
+				mgmtNetwork,
+				raw.Network,
+			)
+		}
 		return raw.ToLinkBriefRaw(), nil
 	case *clablinks.LinkMacVlanRaw:
 		return raw.ToLinkBriefRaw(), nil
@@ -307,6 +323,15 @@ func clabernetesBriefLink(
 			link.Link.GetType(),
 		)
 	}
+}
+
+// defaultMgmtNetwork returns the name of the management network of the topology,
+// falling back to the name containerlab uses when the topology does not set one.
+func defaultMgmtNetwork(mgmt *clabtypes.MgmtNet) string {
+	if mgmt == nil || mgmt.Network == "" {
+		return clabconstants.DefaultMgmtNetworkName
+	}
+	return mgmt.Network
 }
 
 func clabernetesNamingMode(config *clabRuntimeConfig) string {

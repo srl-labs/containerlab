@@ -226,6 +226,34 @@ func (d *DockerRuntime) MgmtNetworkExists(ctx context.Context) (bool, error) {
 	}
 }
 
+// ResolveMgmtBridge sets the bridge of the bound management network if it exists.
+var _ clabruntime.MgmtBridgeResolver = (*DockerRuntime)(nil)
+
+func (d *DockerRuntime) ResolveMgmtBridge(ctx context.Context) error {
+	if d.mgmt.Bridge != "" {
+		return nil
+	}
+
+	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancel()
+
+	netRes, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	switch {
+	case cerrdefs.IsNotFound(err):
+		return nil
+	case err != nil:
+		return err
+	}
+
+	bridge, err := bridgeNameFromInspect(&netRes, d.mgmt.Network)
+	if err != nil {
+		return err
+	}
+	d.mgmt.Bridge = bridge
+
+	return nil
+}
+
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
 func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix,
@@ -2025,6 +2053,43 @@ func (d *DockerRuntime) StreamLogs(
 	}
 
 	return logStream, nil
+}
+
+// WriteContainerLogs writes a container's log, demultiplexing stdout and stderr unless the
+// container has a TTY.
+func (d *DockerRuntime) WriteContainerLogs(
+	ctx context.Context,
+	containerName string,
+	opts clabruntime.ContainerLogOptions,
+	stdout, stderr io.Writer,
+) error {
+	inspect, err := d.Client.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return fmt.Errorf("failed to inspect container %q: %w", containerName, err)
+	}
+
+	logStream, err := d.Client.ContainerLogs(ctx, containerName, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     opts.Follow,
+		Timestamps: opts.Timestamps,
+		Tail:       clabruntime.LogTail(opts.Tail),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get container logs: %w", err)
+	}
+	defer logStream.Close()
+
+	if inspect.Config != nil && inspect.Config.Tty {
+		_, err = io.Copy(stdout, logStream)
+	} else {
+		_, err = stdcopy.StdCopy(stdout, stderr, logStream)
+	}
+	if err != nil && ctx.Err() == nil {
+		return fmt.Errorf("failed to read container logs: %w", err)
+	}
+
+	return nil
 }
 
 // InspectImage returns detailed information about a container image.

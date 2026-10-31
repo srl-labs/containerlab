@@ -2,6 +2,7 @@
 Library             OperatingSystem
 Library             Process
 Library             String
+Library             Collections
 Resource            ../common.robot
 
 Suite Setup         Setup
@@ -14,10 +15,14 @@ ${runtime}              c9s
 ${lab-name}             c9s-linux-lifecycle
 ${lab-file}             01-linux-lifecycle.clab.yml
 ${topo}                 ${CURDIR}/${lab-file}
+${applied-topo}         ${CURDIR}/01-linux-lifecycle-applied.clab.yml
 ${lab-namespace}        c9s-${lab-name}
 ${client-label}         clab-node-name\=client
 ${events-log}           /tmp/clab-c9s-events.log
 ${events-err}           /tmp/clab-c9s-events.err
+${iface-events-log}     /tmp/clab-c9s-iface-events.log
+${iface-events-err}     /tmp/clab-c9s-iface-events.err
+${offline-env}          env CLAB_KUBECONFIG\=/nonexistent/kubeconfig KUBECONFIG\=/nonexistent/kubeconfig
 ${recovery-timeout}     180s
 ${retry-interval}       5s
 
@@ -60,25 +65,188 @@ Inspect c9s linux lab by topology and name
     Should Contain    ${name_inspect.stdout}    client
     Should Contain    ${name_inspect.stdout}    server
 
+Inspect JSON locates the c9s workload of every node
+    ${output} =    Run Clab Command    inspect -t ${topo} --format json
+    Should Be Equal As Integers    ${output.rc}    0
+    ${labs} =    Evaluate    json.loads($output.stdout)    modules=json
+    ${nodes} =    Get From Dictionary    ${labs}    ${lab-name}
+    Length Should Be    ${nodes}    2
+    FOR    ${node}    IN    @{nodes}
+        ${short} =    Fetch From Right    ${node}[name]    ${lab-name}-
+        Should Be Equal    ${node}[container_id]    ${lab-namespace}/${lab-name}/${short}
+        Should Be Equal    ${node}[namespace]    ${lab-namespace}
+
+        ${pod} =    Process.Run Process
+        ...    kubectl -n ${lab-namespace} get pod ${node}[pod] -o jsonpath\='{.metadata.annotations.kubectl\\.kubernetes\\.io/default-container}'
+        ...    shell=True
+        Should Be Equal As Integers    ${pod.rc}    0
+        Should Be Equal    ${pod.stdout}    ${node}[container]
+
+        ${uid} =    Process.Run Process
+        ...    kubectl -n ${lab-namespace} get nodes.c9s.run ${short} -o jsonpath\='{.metadata.uid}'
+        ...    shell=True
+        Should Be Equal As Integers    ${uid.rc}    0
+        Should Be Equal    ${uid.stdout}    ${node}[node_uid]
+
+        ${ports} =    Evaluate    [p["port"] for p in $node["exposed_ports"]]
+        Should Contain    ${ports}    ${22}
+    END
+
+Inspect all is scoped by the namespace override
+    ${scoped} =    Run Clab Command    --namespace ${lab-namespace} inspect --all --format json
+    Should Be Equal As Integers    ${scoped.rc}    0
+    Should Contain    ${scoped.stdout}    ${lab-name}
+
+    ${other} =    Run Clab Command    --namespace default inspect --all --format json
+    Should Be Equal As Integers    ${other.rc}    0
+    Should Not Contain    ${other.stdout}    ${lab-name}
+
+Validate and emit-crs work without a kubeconfig
+    ${validate} =    Run Offline Clab Command    validate -t ${topo}
+    Should Be Equal As Integers    ${validate.rc}    0
+    Should Contain    ${validate.stderr}    Topology is valid for lab runtime
+
+    ${emit} =    Run Offline Clab Command    deploy -t ${topo} --emit-crs
+    Should Be Equal As Integers    ${emit.rc}    0
+    Should Contain    ${emit.stdout}    kind: Topology
+
+Graph renders from the topology file without a cluster
+    ${mermaid} =    Run Offline Clab Command    graph -t ${topo} --mermaid
+    Should Be Equal As Integers    ${mermaid.rc}    0
+    Should Contain    ${mermaid.stderr}    Created mermaid diagram file
+    File Should Exist    ${CURDIR}/clab-${lab-name}/graph/01-linux-lifecycle.clab.mermaid
+    ${diagram} =    Get File    ${CURDIR}/clab-${lab-name}/graph/01-linux-lifecycle.clab.mermaid
+    Should Contain    ${diagram}    client
+    Should Contain    ${diagram}    server
+
+    ${dot} =    Run Offline Clab Command    graph -t ${topo} --dot
+    Should Be Equal As Integers    ${dot.rc}    0
+    File Should Exist    ${CURDIR}/clab-${lab-name}/graph/01-linux-lifecycle.clab.dot
+
+    ${server} =    Run Offline Clab Command    graph -t ${topo}
+    Should Not Be Equal As Integers    ${server.rc}    0
+    Should Contain    ${server.stderr}    --offline
+    [Teardown]    Remove Directory    ${CURDIR}/clab-${lab-name}    recursive=True
+
 Exec into client and verify dataplane
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Client Eth1 Should Be Visible
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Succeed
+
+Logs shows the device container log
+    ${result} =    Run Clab Command    logs -t ${topo} -n client --tail 2 --timestamps
+    Should Be Equal As Integers    ${result.rc}    0
+    ${lines} =    Split To Lines    ${result.stdout}
+    ${count} =    Get Length    ${lines}
+    Should Be True    0 < ${count} <= 2
+    Should Match Regexp    ${lines}[0]    ^\\d{4}-\\d{2}-\\d{2}T\\S+\\s
+
+    # the node name is accepted as the topology spells it or as Kubernetes carries it
+    ${by_name} =    Run Clab Command    logs --name ${lab-name} -n CLIENT --tail 1
+    Should Be Equal As Integers    ${by_name.rc}    0
+
+    ${missing} =    Run Clab Command    logs --name ${lab-name} -n missing
+    Should Not Be Equal As Integers    ${missing.rc}    0
+    Should Contain    ${missing.stderr}    missing
+
+Logs follow streams new device log lines
+    Remove File If Exists    ${events-log}
+    TRY
+        Start Process    ${CLAB_BIN} --runtime ${runtime} logs --name ${lab-name} -n client --tail 0 --follow
+        ...    shell=True
+        ...    alias=c9s_logs
+        ...    stdout=${events-log}
+        ...    stderr=${events-err}
+        Sleep    3s
+        # nginx in the multitool image logs every request
+        Run Clab Command    exec -t ${topo} --label ${client-label} --cmd 'curl -s -o /dev/null http://127.0.0.1/clab-follow-marker'
+        Wait Until Keyword Succeeds    30s    1s    Log File Should Contain    ${events-log}    clab-follow-marker
+    FINALLY
+        Run Keyword And Ignore Error    Terminate Process    c9s_logs    kill=True
+        Remove File If Exists    ${events-log}
+        Remove File If Exists    ${events-err}
+    END
+
+Library attaches, port-forwards, streams logs and samples stats as an impersonated user
+    ${rbac} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} create role c9s-lab-reader --verb\=get,list,watch --resource\=topologies.c9s.run,nodes.c9s.run,links.c9s.run,nodeprofiles.c9s.run,pods.metrics.k8s.io && kubectl -n ${lab-namespace} create rolebinding clab-alice-reader --role\=c9s-lab-reader --user\=clab:alice && kubectl -n ${lab-namespace} create rolebinding clab-alice-admin --clusterrole\=admin --user\=clab:alice
+    ...    shell=True
+    Log    ${rbac.stdout}${\n}${rbac.stderr}
+    Should Be Equal As Integers    ${rbac.rc}    0
+
+    ${result} =    Process.Run Process
+    ...    go test ./core/ -run TestC9sClusterNodeAccess -count\=1 -v
+    ...    shell=True
+    ...    cwd=${CURDIR}/../..
+    ...    env:CLAB_C9S_TEST_LAB=${lab-name}
+    ...    env:CLAB_C9S_TEST_USER=clab:alice
+    ...    env:CLAB_C9S_TEST_FORBIDDEN_USER=clab:mallory
+    Log    ${result.stdout}${\n}${result.stderr}    console=${True}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/attach_with_a_terminal
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/port-forward
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/stats
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/forbidden_identity
+    Should Not Contain    ${result.stdout}    SKIP
 
 Stop server and verify dataplane interruption
     ${output} =    Run Clab Command    stop -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
 
+    # stop is a run state patch on the Node; the controller removes the Pod
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+    ${stopped} =    Node Field    server    {.status.conditions[?(@.type=="Stopped")].status}
+    Should Be Equal    ${stopped}    True
+    ${pods} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get pods -l c9s.run/topologyNode\=server -o name
+    ...    shell=True
+    Should Be Empty    ${pods.stdout}
+    ${inspect} =    Run Clab Command    inspect -t ${topo} --format json
+    Should Contain    ${inspect.stdout}    "state": "stopped"
+
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Fail
+
+Apply while server is stopped keeps it stopped
+    ${output} =    Run Clab Command    deploy -t ${applied-topo}
+    Should Be Equal As Integers    ${output.rc}    0
+    # the wait settles on the stopped node instead of waiting for it
+    Should Contain    ${output.stderr}    C9s lab is ready apart from stopped nodes
+    Should Contain    ${output.stderr}    server (stopped)
+
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+    ${env} =    Node Field    server    {.spec.env.CLAB_APPLY_MARK}
+    Should Be Equal    ${env}    applied-while-stopped
 
 Start server by lab name and verify dataplane restore
     ${output} =    Run Clab Command    start --name ${lab-name} --node server
     Should Be Equal As Integers    ${output.rc}    0
 
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Running
+    ${readiness} =    Node Field    server    {.status.readiness}
+    Should Be Equal    ${readiness}    ready
+
+    # the server boots the definition applied while it was stopped
+    ${mark} =    Run Clab Command
+    ...    exec -t ${applied-topo} --label clab-node-name\=server --cmd 'printenv CLAB_APPLY_MARK'
+    ${mark_output} =    Catenate    SEPARATOR=\n    ${mark.stdout}    ${mark.stderr}
+    Should Be Equal As Integers    ${mark.rc}    0
+    Should Contain    ${mark_output}    applied-while-stopped
+
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
 Restart server and keep dataplane working
+    ${before} =    Server Pod Name
     ${output} =    Run Clab Command    restart -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
+
+    ${after} =    Server Pod Name
+    Should Not Be Equal    ${before}    ${after}
+    ${token} =    Node Field    server    {.metadata.annotations.c9s\\.run/restart-requested}
+    ${observed} =    Node Field    server    {.status.observedRestartToken}
+    Should Not Be Empty    ${token}
+    Should Be Equal    ${token}    ${observed}
 
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
@@ -105,6 +273,62 @@ Events command emits c9s initial state
         Remove File If Exists    ${events-log}
         Remove File If Exists    ${events-err}
     END
+
+Events are scoped to the lab and the namespace
+    ${lab_events} =    Collect Events    --name ${lab-name} events --format json --initial-state
+    Should Contain    ${lab_events}    "actor_id":"${lab-namespace}/${lab-name}/client"
+    Should Contain    ${lab_events}    "type":"interface"
+
+    ${ns_events} =    Collect Events    --namespace ${lab-namespace} events --format json --initial-state
+    Should Contain    ${ns_events}    "actor_id":"${lab-namespace}/${lab-name}/client"
+
+    ${other_events} =    Collect Events    --namespace default events --format json --initial-state
+    Should Not Contain    ${other_events}    ${lab-name}
+
+Events report interface up and down
+    Remove File If Exists    ${iface-events-log}
+    TRY
+        Start Process    ${CLAB_BIN} --runtime ${runtime} --name ${lab-name} events --format json
+        ...    shell=True
+        ...    alias=c9s_events
+        ...    stdout=${iface-events-log}
+        ...    stderr=${iface-events-err}
+        Sleep    5s
+        Set Client Eth1    down
+        Wait Until Keyword Succeeds    30s    1s
+        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    down
+        # the peer loses carrier
+        Wait Until Keyword Succeeds    30s    1s
+        ...    Interface Event Should Be Logged    ${iface-events-log}    server    eth1    down
+        Set Client Eth1    up
+        Wait Until Keyword Succeeds    30s    1s
+        ...    Interface Event Should Be Logged    ${iface-events-log}    client    eth1    up
+        Validate JSON Lines    ${iface-events-log}
+    FINALLY
+        Stop Events Process
+        Set Client Eth1    up
+        Remove File If Exists    ${iface-events-log}
+        Remove File If Exists    ${iface-events-err}
+    END
+
+Destroy without cleanup keeps the persistent claims
+    ${before} =    Persistent Claim Volumes
+    Should Not Be Empty    ${before}
+
+    ${output} =    Run Clab Command    destroy -t ${topo}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${output.stderr}    Keeping persistent node storage
+
+    ${after} =    Persistent Claim Volumes
+    Should Be Equal    ${after}    ${before}
+    Set Suite Variable    ${retained-volumes}    ${before}
+
+Deploy reuses the retained persistent claims
+    ${output} =    Run Clab Command    deploy -t ${topo}
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${volumes} =    Persistent Claim Volumes
+    Should Be Equal    ${volumes}    ${retained-volumes}
 
 Destroy c9s linux lab
     ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
@@ -135,6 +359,25 @@ Deploy c9s linux lab without a Topology resource
     Should Be Equal As Integers    ${nodes.rc}    0
     Should Contain    ${nodes.stdout}    node.c9s.run/client
     Should Contain    ${nodes.stdout}    node.c9s.run/server
+
+Apply without a Topology resource keeps a stopped node stopped
+    ${output} =    Run Clab Command    stop -t ${topo} --node client
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${plan} =    Run Clab Command    deploy -t ${applied-topo} --no-topology-cr --dry-run --format json
+    Should Be Equal As Integers    ${plan.rc}    0
+    ${changes} =    Evaluate    [c["kind"] + "/" + c["name"] for c in json.loads($plan.stdout)["changes"]]    modules=json
+    Should Contain    ${changes}    Node/server
+    Should Not Contain    ${changes}    Node/client
+
+    ${output} =    Run Clab Command    deploy -t ${applied-topo} --no-topology-cr
+    Should Be Equal As Integers    ${output.rc}    0
+    ${run_state} =    Node Field    client    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+
+    ${output} =    Run Clab Command    start -t ${topo} --node client
+    Should Be Equal As Integers    ${output.rc}    0
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
 Destroy c9s linux lab deployed without a Topology resource
     ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
@@ -189,6 +432,77 @@ Client Eth1 Should Be Visible
     ${combined} =    Catenate    SEPARATOR=\n    ${output.stdout}    ${output.stderr}
     Should Be Equal As Integers    ${output.rc}    0
     Should Contain    ${combined}    eth1
+
+Run Offline Clab Command
+    [Arguments]    ${args}
+    ${output} =    Process.Run Process
+    ...    ${offline-env} ${CLAB_BIN} --runtime ${runtime} ${args}
+    ...    shell=True
+    ...    cwd=${CURDIR}
+    Log    stdout:${\n}${output.stdout}    console=${True}
+    Log    stderr:${\n}${output.stderr}    console=${True}
+    RETURN    ${output}
+
+Collect Events
+    [Arguments]    ${args}
+    Remove File If Exists    ${events-log}
+    TRY
+        Start Process    ${CLAB_BIN} --runtime ${runtime} ${args}
+        ...    shell=True
+        ...    alias=c9s_events
+        ...    stdout=${events-log}
+        ...    stderr=${events-err}
+        Sleep    6s
+    FINALLY
+        Stop Events Process
+    END
+    ${events} =    Get File    ${events-log}
+    Log    ${events}
+    Validate JSON Lines    ${events-log}
+    Remove File If Exists    ${events-log}
+    Remove File If Exists    ${events-err}
+    RETURN    ${events}
+
+Set Client Eth1
+    [Arguments]    ${state}
+    Run Clab Command    exec -t ${topo} --label ${client-label} --cmd 'ip link set dev eth1 ${state}'
+
+Interface Event Should Be Logged
+    [Arguments]    ${path}    ${node}    ${ifname}    ${action}
+    ${contents} =    Get File    ${path}
+    ${actor} =    Set Variable    ${lab-namespace}/${lab-name}/${node}
+    ${found} =    Evaluate
+    ...    ($action, $actor, $ifname) in [(e.get("action"), e.get("actor_id"), e.get("attributes", {}).get("ifname")) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface"]
+    ...    modules=json
+    Should Be True    ${found}    no interface ${action} event for ${node}:${ifname}
+
+Log File Should Contain
+    [Arguments]    ${path}    ${text}
+    ${contents} =    Get File    ${path}
+    Should Contain    ${contents}    ${text}
+
+Persistent Claim Volumes
+    ${claims} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get pvc -l c9s.run/topologyOwner\=${lab-name} -o jsonpath\='{range .items[*]}{.metadata.name}\={.spec.volumeName}{" "}{end}'
+    ...    shell=True
+    Should Be Equal As Integers    ${claims.rc}    0
+    ${volumes} =    Strip String    ${claims.stdout}
+    RETURN    ${volumes}
+
+Node Field
+    [Arguments]    ${node}    ${jsonpath}
+    ${result} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get nodes.c9s.run ${node} -o jsonpath\='${jsonpath}'
+    ...    shell=True
+    Should Be Equal As Integers    ${result.rc}    0    ${result.stderr}
+    RETURN    ${result.stdout}
+
+Server Pod Name
+    ${result} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get pods -l c9s.run/topologyNode\=server --field-selector status.phase\=Running -o jsonpath\='{.items[*].metadata.name}'
+    ...    shell=True
+    Should Be Equal As Integers    ${result.rc}    0
+    RETURN    ${result.stdout}
 
 Remove File If Exists
     [Arguments]    ${path}

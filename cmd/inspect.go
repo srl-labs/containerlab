@@ -471,6 +471,9 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 			IPv4Address: containers[idx].GetContainerIPv4(),
 			IPv6Address: containers[idx].GetContainerIPv6(),
 			ContainerID: containers[idx].ShortID,
+			// Only lab runtimes set the workload; it adds namespace, pod, container, node_uid,
+			// exposed_ports and load_balancer_address to the JSON output.
+			LabRuntimeWorkload: containers[idx].Workload,
 		}
 
 		if len(containers[idx].Names) > 0 {

@@ -109,6 +109,17 @@ func (c *CLab) parseTopology() error {
 	for nodeName, topologyNode := range c.Config.Topology.Nodes {
 		// this case is when runtime was overridden at the node level
 		if r := c.Config.Topology.GetNodeRuntime(nodeName); r != "" {
+			log.Warn(
+				"Deprecation notice",
+				"notice",
+				"Per-node runtime is deprecated and will be removed in a future release. "+
+					"Set the lab runtime with the --runtime flag or CLAB_RUNTIME env var instead",
+				"node",
+				nodeName,
+				"runtime",
+				r,
+			)
+
 			nodeRuntimes[nodeName] = r
 			continue
 		}
@@ -127,6 +138,12 @@ func (c *CLab) parseTopology() error {
 
 	// initialize any extra runtimes
 	for _, r := range nodeRuntimes {
+		// Nodes of a lab runtime are only described here; they are not run by a local
+		// container runtime.
+		if c.LabRuntime != nil {
+			break
+		}
+
 		// this is the case for already init'ed runtimes
 		if _, ok := c.Runtimes[r]; ok {
 			continue
@@ -155,6 +172,18 @@ func (c *CLab) parseTopology() error {
 	}
 
 	return c.injectTailscaleSidecars()
+}
+
+// LoadTopologyNodes builds the topology's nodes and links for a lab runtime, without a
+// container runtime behind them. Lab runtimes skip this when they parse a topology; commands
+// that render the topology file itself, such as graph, need the nodes. With a local runtime the
+// nodes are already built, and it does nothing.
+func (c *CLab) LoadTopologyNodes() error {
+	if c.LabRuntime == nil || !c.TopoPaths.TopologyFileIsSet() {
+		return nil
+	}
+
+	return c.parseTopology()
 }
 
 // NewNode initializes a new node object.
@@ -579,10 +608,10 @@ func (c *CLab) verifyRootNetNSLinks() error {
 	}
 
 	// we also need to take the two special nodes host and mgmt-br into account
-	for _, n := range []clablinks.Node{
-		clablinks.GetHostLinkNode(),
-		clablinks.GetMgmtBrLinkNode(),
-	} {
+	for _, n := range append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	) {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
