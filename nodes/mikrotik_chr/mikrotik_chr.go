@@ -175,8 +175,10 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
 		// A normal export omits RouterOS defaults, including an explicit opt-in
-		// to discovery on "static". Preserve that choice on the next deployment.
-		"/export; /ip neighbor discovery-settings export verbose",
+		// to discovery on "static". Append only that omitted setting: verbose
+		// exports also include newer defaults that older RouterOS cannot import.
+		`/export; :if ([/ip neighbor discovery-settings get discover-interface-list] = "static") `+
+			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}`,
 	)
 	if err != nil {
 		return nil, err

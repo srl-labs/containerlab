@@ -99,7 +99,7 @@ and the node does not become ready.
 
 [`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The save filter omits `add` entries tagged `clab-mgmt`, plus IPv4/IPv6 address, DHCP-client and IPv6 neighbor-discovery `add` entries for `ether1`, even without that tag. These management settings belong to the deployment and are recreated by the launcher; custom entries in those `ether1` sections are also omitted. Other interfaces and untagged configuration in other sections are preserved.
 
-Discovery settings are exported explicitly, including RouterOS defaults, so an intentional `discover-interface-list=static` choice survives redeployment. The launcher-owned discovery lists are recreated before the saved configuration is imported.
+Saving explicitly retains an intentional `discover-interface-list=static` choice, which RouterOS normally omits as its default, so it survives redeployment. The launcher-owned discovery lists are recreated before the saved configuration is imported.
 
 ### Node readiness
 

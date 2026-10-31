@@ -11,6 +11,7 @@ Suite Teardown      Run Keyword    Cleanup
 ${lab-name}         16-01-chr
 ${lab-file-name}    01-chr.clab.yml
 ${runtime}          docker
+${redeploy_image}   %{CHR_REDEPLOY_IMAGE=}
 
 
 *** Test Cases ***
@@ -78,7 +79,17 @@ Ensure the rejected startup config of r3 is reported and r3 never becomes health
     ...    sudo -E ${runtime} inspect -f '{{.State.Health.Status}}' clab-${lab-name}-r3
     Should Not Be Equal As Strings    ${status}    healthy
 
-Save the configuration without the launcher's management objects
+Save a custom discovery policy without the launcher's management objects
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r2
+    ...    username=netops
+    ...    password=chr pass#1
+    ...    try_for=30
+    ${output} =    SSHLibrary.Execute Command    :put [/ip neighbor discovery-settings get discover-interface-list]
+    Should Be Equal As Strings    ${output.strip()}    clab-discovery
+    SSHLibrary.Execute Command    /interface list add name="data ports" include=static
+    SSHLibrary.Execute Command    /ip neighbor discovery-settings set discover-interface-list="data ports"
+    SSHLibrary.Close Connection
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r2
     Log    ${output}
@@ -89,9 +100,10 @@ Save the configuration without the launcher's management objects
     Should Not Contain    ${f}    routing-table=mgmt
     Should Not Contain    ${f}    name=mgmt
     Should Not Contain    ${f}    comment=clab-mgmt
-    Should Contain    ${f}    discover-interface-list=clab-discovery
+    Should Contain    ${f}    discover-interface-list="data ports"
+    Should Not Contain    ${f}    dying-gasp=
 
-Ensure an explicit factory discovery policy survives save and clean redeploy
+Ensure discovery overrides survive save and clean redeploy
     Login via SSH with username and password
     ...    address=clab-${lab-name}-r1
     ...    username=admin
@@ -103,10 +115,16 @@ Ensure an explicit factory discovery policy survives save and clean redeploy
     ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/r1/ftpboot/config.auto.rsc
+    Should Contain    ${f}    /ip neighbor discovery-settings set discover-interface-list=static
+    Should Not Contain    ${f}    dying-gasp=
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    IF    $redeploy_image
+        Set Environment Variable    CHR_IMAGE    ${redeploy_image}
+    END
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
@@ -125,6 +143,17 @@ Ensure an explicit factory discovery policy survives save and clean redeploy
     Should Be Equal As Strings    ${output.strip()}    1
     ${output} =    SSHLibrary.Execute Command    /ip address print terse where interface=ether2
     Should Contain    ${output}    address=10.0.0.1/30
+    SSHLibrary.Close Connection
+    Wait Until Keyword Succeeds    300s    5s    Node is healthy    r2
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r2
+    ...    username=netops
+    ...    password=chr pass#1
+    ...    try_for=30
+    ${output} =    SSHLibrary.Execute Command    :put [/ip neighbor discovery-settings get discover-interface-list]
+    Should Be Equal As Strings    ${output.strip()}    data ports
+    ${output} =    SSHLibrary.Execute Command    /ping 10.0.0.1 count=3
+    Should Contain    ${output}    received=3
     SSHLibrary.Close Connection
 
 
