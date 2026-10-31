@@ -21,7 +21,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.8.2
 	github.com/docker/go-units v0.5.0
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/florianl/go-tc v0.4.8
 	github.com/go-logr/logr v1.4.3
 	github.com/go-xmlfmt/xmlfmt v1.1.3
