@@ -6,6 +6,8 @@ package frr
 
 import (
 	"context"
+	"encoding/binary"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,13 +18,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/mock/gomock"
+	"golang.org/x/sys/unix"
 
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-// CHANGE: These interposers execute the real filesystem operations. Each probe models
+// These interposers execute the real filesystem operations. Each probe models
 // FRR starting vtysh between installer steps, without sleeps or production hooks.
 const saveWrapperInterposers = `
 frr_probe() {
@@ -30,23 +33,16 @@ frr_probe() {
     "$FRR_TEST_VTYSH" -b 'two words' > "$FRR_TEST_OUTPUT" 2>&1 || status=$?
     builtin printf '%s:%s\n' "$1" "$status" >> "$FRR_TEST_PROBES"
 }
-cp() {
-    case "$FRR_TEST_FAULT" in
-        copy|copy-interrupted)
-            builtin printf 'partial copy' > "${@: -1}"
-            [ "$FRR_TEST_FAULT" != copy-interrupted ] || kill -KILL $$
-            return 91
-            ;;
-    esac
-    command cp "$@" || return $?
-    frr_probe copy
+ln() {
+    [ "$FRR_TEST_FAULT" != link ] || return 91
+    command ln "$@" || return $?
+    frr_probe link
+    [ "$FRR_TEST_FAULT" != link-interrupted ] || kill -KILL $$
 }
 mv() {
-    local stage=publish
-    [ "${@: -1}" != "$FRR_TEST_VTYSH.containerlab" ] || stage=backup
-    [ "$FRR_TEST_FAULT" != "$stage" ] || return 91
+    [ "$FRR_TEST_FAULT" != publish ] || return 91
     command mv "$@" || return $?
-    frr_probe "$stage"
+    frr_probe publish
 }
 printf() {
     if [ "$FRR_TEST_FAULT" = write ]; then
@@ -202,14 +198,14 @@ func TestConfigSaveWrapperRemainsExecutableDuringInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := []string{"copy:0", "backup:0", "chmod:0", "publish:0", "chmod:0", "publish:0"}
+	want := []string{"link:0", "chmod:0", "publish:0", "chmod:0", "publish:0"}
 	if diff := cmp.Diff(want, strings.Fields(string(data))); diff != "" {
 		t.Errorf("vtysh probes between installation operations (-want +got):\n%s", diff)
 	}
 }
 
 func TestConfigSaveWrapperInstallationFailureAndRetry(t *testing.T) {
-	for _, fault := range []string{"copy", "copy-interrupted", "backup", "write", "chmod", "publish"} {
+	for _, fault := range []string{"link", "link-interrupted", "write", "chmod", "publish"} {
 		t.Run(fault, func(t *testing.T) {
 			f := newSaveWrapperFixture(t)
 			t.Setenv("FRR_TEST_FAULT", fault)
@@ -218,25 +214,17 @@ func TestConfigSaveWrapperInstallationFailureAndRetry(t *testing.T) {
 			}
 
 			f.assertCallable(t)
-			switch fault {
-			case "copy", "copy-interrupted", "backup":
+			if fault == "link" {
 				if _, err := os.Stat(f.path + ".containerlab"); !os.IsNotExist(err) {
-					t.Fatalf("incomplete backup was published: %v", err)
+					t.Fatalf("failed link published a backup: %v", err)
 				}
-			default:
+			} else {
+				// Link creation publishes the complete original atomically;
+				// even SIGKILL immediately afterward leaves a usable backup.
 				f.assertBackup(t)
 			}
 
-			// SIGKILL cannot run cleanup; abandoned temporary files must not
-			// become the original backup or interfere with the next attempt.
-			if fault != "copy-interrupted" {
-				f.assertNoTemporaryFiles(t)
-			}
-
-			leftovers := f.temporaryFiles(t)
-			if fault == "copy-interrupted" && leftovers == "" {
-				t.Fatal("interrupted-copy fixture did not leave a temporary copy")
-			}
+			f.assertNoTemporaryFiles(t)
 
 			t.Setenv("FRR_TEST_FAULT", "")
 			if err := f.install(t); err != nil {
@@ -245,15 +233,7 @@ func TestConfigSaveWrapperInstallationFailureAndRetry(t *testing.T) {
 
 			f.assertCallable(t)
 			f.assertBackup(t)
-			if fault != "copy-interrupted" {
-				f.assertNoTemporaryFiles(t)
-			} else if got := f.temporaryFiles(t); got != leftovers {
-				t.Errorf(
-					"retry changed abandoned temporary files: before=%q after=%q",
-					leftovers,
-					got,
-				)
-			}
+			f.assertNoTemporaryFiles(t)
 		})
 	}
 }
@@ -298,9 +278,7 @@ func TestConfigSaveWrapperPreservesOriginalMetadata(t *testing.T) {
 		}
 	}
 
-	// The image's BusyBox cp preserves timestamps at whole-second precision,
-	// which also matches the packaged executable's timestamp.
-	modified := time.Unix(1_700_000_000, 0)
+	modified := time.Unix(1_700_000_000, 123_456_789)
 	if err := os.Chtimes(f.path, modified, modified); err != nil {
 		t.Fatal(err)
 	}
@@ -323,10 +301,173 @@ func TestConfigSaveWrapperPreservesOriginalMetadata(t *testing.T) {
 		t.Errorf("backup mode/time changed: before=%v %v after=%v %v",
 			before.Mode(), before.ModTime(), after.Mode(), after.ModTime())
 	}
+	if !os.SameFile(before, after) {
+		t.Error("backup does not refer to the original fixture inode")
+	}
 
 	oldStat, oldOK := before.Sys().(*syscall.Stat_t)
 	newStat, newOK := after.Sys().(*syscall.Stat_t)
 	if !oldOK || !newOK || oldStat.Uid != newStat.Uid || oldStat.Gid != newStat.Gid {
 		t.Error("backup ownership changed or could not be inspected")
 	}
+}
+
+func TestConfigSaveWrapperPreservesSymlink(t *testing.T) {
+	for _, relative := range []bool{false, true} {
+		name := "absolute"
+		if relative {
+			name = "relative"
+		}
+		t.Run(name, func(t *testing.T) {
+			f := newSaveWrapperFixture(t)
+			target := filepath.Join(filepath.Dir(f.binDir), "original-vtysh")
+			if err := os.Rename(f.path, target); err != nil {
+				t.Fatal(err)
+			}
+			linkTarget := target
+			if relative {
+				linkTarget = "../original-vtysh"
+			}
+			if err := os.Symlink(linkTarget, f.path); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Lstat(f.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				if err := f.install(t); err != nil {
+					t.Fatal(err)
+				}
+				after, err := os.Lstat(f.path + ".containerlab")
+				if err != nil || !os.SameFile(before, after) {
+					t.Fatalf("backup did not retain the original symlink: %v", err)
+				}
+				got, err := os.Readlink(f.path + ".containerlab")
+				if err != nil || got != linkTarget {
+					t.Fatalf("backup link target = %q, error=%v, want %q", got, err, linkTarget)
+				}
+				f.assertCallable(t)
+				f.assertBackup(t)
+				f.assertNoTemporaryFiles(t)
+			}
+		})
+	}
+}
+
+func TestConfigSaveWrapperRejectsConflictingBackup(t *testing.T) {
+	for _, kind := range []string{"directory", "directory-symlink", "dangling-symlink"} {
+		t.Run(kind, func(t *testing.T) {
+			f := newSaveWrapperFixture(t)
+			backup := f.path + ".containerlab"
+			target := filepath.Join(filepath.Dir(f.binDir), "backup-target")
+			if kind != "dangling-symlink" {
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if kind == "directory" {
+				if err := os.Rename(target, backup); err != nil {
+					t.Fatal(err)
+				}
+				target = backup
+			} else if err := os.Symlink(target, backup); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Lstat(backup)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.install(t); err == nil || !strings.Contains(err.Error(), "router1") {
+				t.Fatalf("installation error = %v, want a node-specific failure", err)
+			}
+			after, err := os.Lstat(backup)
+			if err != nil || !os.SameFile(before, after) {
+				t.Fatalf("conflicting backup was changed: %v", err)
+			}
+			if kind != "dangling-symlink" {
+				entries, err := os.ReadDir(target)
+				if err != nil || len(entries) != 0 {
+					t.Fatalf("backup directory was modified: entries=%v error=%v", entries, err)
+				}
+			}
+			data, err := os.ReadFile(f.path)
+			if err != nil || string(data) != string(f.original) {
+				t.Fatalf("failed installation replaced canonical vtysh: %v", err)
+			}
+			f.assertCallable(t)
+			f.assertNoTemporaryFiles(t)
+		})
+	}
+}
+
+func TestConfigSaveWrapperPreservesExtendedAttributes(t *testing.T) {
+	// Linux POSIX ACL version 2: owner, named user, owning group, mask, other.
+	acl := binary.LittleEndian.AppendUint32(nil, 2)
+	for _, entry := range []struct {
+		tag, permissions uint16
+		id               uint32
+	}{
+		{0x01, 7, 0xffffffff},
+		{0x02, 4, 12345},
+		{0x04, 5, 0xffffffff},
+		{0x10, 5, 0xffffffff},
+		{0x20, 1, 0xffffffff},
+	} {
+		acl = binary.LittleEndian.AppendUint16(acl, entry.tag)
+		acl = binary.LittleEndian.AppendUint16(acl, entry.permissions)
+		acl = binary.LittleEndian.AppendUint32(acl, entry.id)
+	}
+	// Version-2 file capability: permitted CAP_NET_BIND_SERVICE, effective flag.
+	capability := make([]byte, 20)
+	binary.LittleEndian.PutUint32(capability, 0x02000001)
+	binary.LittleEndian.PutUint32(capability[4:], 1<<10)
+	for _, tc := range []struct {
+		name  string
+		value []byte
+	}{
+		{"user.containerlab-test", []byte("preserve original metadata")},
+		{"system.posix_acl_access", acl},
+		{"security.capability", capability},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSaveWrapperFixture(t)
+			if err := unix.Setxattr(f.path, tc.name, tc.value, 0); err != nil {
+				if errors.Is(err, unix.EOPNOTSUPP) || errors.Is(err, unix.EPERM) ||
+					errors.Is(err, unix.EACCES) {
+					t.Skipf("cannot set %s in this test environment: %v", tc.name, err)
+				}
+				t.Fatal(err)
+			}
+			before := readSaveWrapperXattr(t, f.path, tc.name)
+			for range 2 {
+				if err := f.install(t); err != nil {
+					t.Fatal(err)
+				}
+				after := readSaveWrapperXattr(t, f.path+".containerlab", tc.name)
+				if diff := cmp.Diff(before, after); diff != "" {
+					t.Errorf("backup %s changed (-want +got):\n%s", tc.name, diff)
+				}
+				f.assertCallable(t)
+				f.assertBackup(t)
+				f.assertNoTemporaryFiles(t)
+			}
+		})
+	}
+}
+
+func readSaveWrapperXattr(t *testing.T, path, name string) []byte {
+	t.Helper()
+
+	size, err := unix.Getxattr(path, name, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := make([]byte, size)
+	n, err := unix.Getxattr(path, name, value)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return value[:n]
 }
