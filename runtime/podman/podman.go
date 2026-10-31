@@ -102,33 +102,6 @@ func (r *PodmanRuntime) MgmtNetworkExists(ctx context.Context) (bool, error) {
 	return network.Exists(ctx, r.mgmt.Network, &network.ExistsOptions{})
 }
 
-// ResolveMgmtBridge sets the bridge of the bound management network if it exists.
-var _ runtime.MgmtBridgeResolver = (*PodmanRuntime)(nil)
-
-func (r *PodmanRuntime) ResolveMgmtBridge(ctx context.Context) error {
-	if r.mgmt.Bridge != "" {
-		return nil
-	}
-
-	ctx, err := r.connect(ctx)
-	if err != nil {
-		return err
-	}
-
-	exists, err := network.Exists(ctx, r.mgmt.Network, &network.ExistsOptions{})
-	if err != nil || !exists {
-		return err
-	}
-
-	details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
-	if err != nil {
-		return err
-	}
-	r.mgmt.Bridge = details.NetworkInterface
-
-	return nil
-}
-
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
 func (r *PodmanRuntime) NetworkAddresses(
