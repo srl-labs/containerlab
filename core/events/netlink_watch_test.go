@@ -294,6 +294,7 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 		includeSnapshot bool
 		initial         bool
 		known           netlink.Link
+		vanished        bool
 		want            []string
 	}{
 		"first subscription": {
@@ -305,6 +306,7 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 		"new after resubscribe":               {want: []string{"create"}},
 		"changed after resubscribe":           {known: link(1400), want: []string{"update"}},
 		"unchanged after resubscribe":         {known: link(1500)},
+		"deleted while resubscribing":         {vanished: true},
 	}
 
 	for name, tt := range tests {
@@ -321,7 +323,12 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 				states[7] = snapshotFromLink(tt.known)
 			}
 
-			watcher.processExisting(states, nil, link(1500), nil, registry, tt.initial)
+			var vanished map[int]struct{}
+			if tt.vanished {
+				vanished = map[int]struct{}{7: {}}
+			}
+
+			watcher.processExisting(states, nil, link(1500), nil, vanished, registry, tt.initial)
 			close(events)
 
 			var got []string
@@ -331,6 +338,14 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 
 			if !slices.Equal(got, tt.want) {
 				t.Fatalf("actions = %v, want %v", got, tt.want)
+			}
+
+			if tt.vanished {
+				if _, ok := states[7]; ok {
+					t.Fatal("vanished link is tracked again")
+				}
+
+				return
 			}
 
 			if states[7].MTU != 1500 {

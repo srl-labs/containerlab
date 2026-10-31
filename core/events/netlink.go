@@ -391,8 +391,9 @@ func (w *netlinkWatcher) watch(
 		return false, fmt.Errorf("failed to subscribe to netlink updates: %w", err)
 	}
 
+	var vanished map[int]struct{}
 	if len(states) > 0 {
-		w.removeVanishedLinks(netHandle, states, statsSamples, registry)
+		vanished = w.removeVanishedLinks(netHandle, states, statsSamples, registry)
 	}
 
 	// Set up netem polling interval (reuse stats interval or default to 1s).
@@ -436,7 +437,15 @@ func (w *netlinkWatcher) watch(
 
 			// Replies to the listing carry NLM_F_MULTI, notifications do not.
 			if update.Header.Flags&unix.NLM_F_MULTI != 0 {
-				w.processExisting(states, statsSamples, update.Link, netemInfos, registry, initial)
+				w.processExisting(
+					states,
+					statsSamples,
+					update.Link,
+					netemInfos,
+					vanished,
+					registry,
+					initial,
+				)
 
 				continue
 			}
@@ -449,15 +458,24 @@ func (w *netlinkWatcher) watch(
 // processExisting records a link listed when the subscription started. On the
 // first subscription a new link is reported as a snapshot when requested; after
 // a resubscribe it is reported as created.
+//
+// The listing can be older than the check in removeVanishedLinks, so it can
+// still hold a link that check reported as deleted. Such a link is skipped; its
+// deletion notification follows and is ignored, as the link is not tracked.
 func (w *netlinkWatcher) processExisting(
 	states map[int]ifaceSnapshot,
 	statsSamples map[int]ifaceStatsSample,
 	link netlink.Link,
 	netemInfos map[int]netemInfo,
+	vanished map[int]struct{},
 	registry *netlinkRegistry,
 	initial bool,
 ) {
 	if link == nil || link.Attrs() == nil {
+		return
+	}
+
+	if _, ok := vanished[link.Attrs().Index]; ok {
 		return
 	}
 
@@ -486,13 +504,13 @@ func (w *netlinkWatcher) processExisting(
 }
 
 // removeVanishedLinks reports the links that were deleted while no
-// subscription was active.
+// subscription was active and returns their indexes.
 func (w *netlinkWatcher) removeVanishedLinks(
 	netHandle *netlink.Handle,
 	states map[int]ifaceSnapshot,
 	statsSamples map[int]ifaceStatsSample,
 	registry *netlinkRegistry,
-) {
+) map[int]struct{} {
 	current, err := snapshotInterfaces(netHandle)
 	if err != nil {
 		log.Debugf(
@@ -501,18 +519,24 @@ func (w *netlinkWatcher) removeVanishedLinks(
 			err,
 		)
 
-		return
+		return nil
 	}
+
+	vanished := map[int]struct{}{}
 
 	for idx, snapshot := range states {
 		if _, ok := current[idx]; ok {
 			continue
 		}
 
+		vanished[idx] = struct{}{}
+
 		delete(states, idx)
 		delete(statsSamples, idx)
 		registry.emitInterfaceEvent(w.container, "delete", snapshot)
 	}
+
+	return vanished
 }
 
 func (w *netlinkWatcher) processUpdate(
