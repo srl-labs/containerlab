@@ -189,6 +189,16 @@ func getMgmtBrLinkNode(network string) *mgmtBridgeLinkNode {
 	return n
 }
 
+// IsUnresolvedMgmtBridgeEndpoint reports whether ep is a mgmt-net endpoint whose
+// management network bridge is not known yet, e.g. because the network is not created.
+func IsUnresolvedMgmtBridgeEndpoint(ep Endpoint) bool {
+	if !ep.IsNodeless() || ep.GetNode().GetLinkEndpointType() != LinkEndpointTypeBridge {
+		return false
+	}
+	bridge := ep.GetNode().GetShortName()
+	return bridge == "" || bridge == mgmtNetOwnerName
+}
+
 // GetMgmtBrLinkNode returns the mgmt-net link node of the default management network.
 func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
 	return getMgmtBrLinkNode("")

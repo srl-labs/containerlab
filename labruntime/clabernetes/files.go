@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -41,10 +42,6 @@ const (
 	clabLabNameVar = "__clabLabName__"
 	nodeDirVar     = "__clabNodeDir__"
 	nodeNameVar    = "__clabNodeName__"
-
-	// defaultMgmtNetworkName is the management network name containerlab uses when
-	// the topology does not set one.
-	defaultMgmtNetworkName = "clab"
 )
 
 var (
@@ -332,7 +329,7 @@ func clabernetesBriefLink(
 // falling back to the name containerlab uses when the topology does not set one.
 func defaultMgmtNetwork(mgmt *clabtypes.MgmtNet) string {
 	if mgmt == nil || mgmt.Network == "" {
-		return defaultMgmtNetworkName
+		return clabconstants.DefaultMgmtNetworkName
 	}
 	return mgmt.Network
 }

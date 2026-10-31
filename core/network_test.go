@@ -17,6 +17,7 @@ import (
 	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -745,6 +746,37 @@ func TestMgmtNetworkListUnsupportedRuntime(t *testing.T) {
 	}
 }
 
+// apply reports that a mgmt-net link selects a network the runtime cannot provide
+// instead of failing later on the unresolved bridge.
+func TestResolveMgmtNetLinkNetworksUnsupportedRuntime(t *testing.T) {
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Config.MgmtNetworks = clabtypes.MgmtNetworks{
+		c.Config.Mgmt, {Network: "oob"},
+	}
+	c.Config.Topology.Links = []*clablinks.LinkDefinition{{
+		Type: string(clablinks.LinkTypeMgmtNet),
+		Link: &clablinks.LinkMgmtNetRaw{
+			HostInterface: "n1-eth1",
+			Endpoint:      clablinks.NewEndpointRaw("n1", "eth1", ""),
+			Network:       "oob",
+		},
+	}}
+	c.globalRuntimeName = "podman"
+	c.Runtimes["podman"] = clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+
+	err = c.resolveMgmtNetLinkNetworks(context.Background())
+	if err == nil ||
+		!strings.Contains(
+			err.Error(),
+			`runtime "podman" does not support multiple management networks`,
+		) {
+		t.Fatalf("error = %v; want unsupported runtime", err)
+	}
+}
+
 func TestSingleEntryMgmtNetworkListDefaultsNodes(t *testing.T) {
 	path := writeTopo(t, `
 name: single-list
@@ -1248,6 +1280,15 @@ func TestResolveMgmtNetLinkNetworksAutoBridge(t *testing.T) {
 			}
 			if got != tc.wantBridge {
 				t.Fatalf("mgmt-net link attached to %q; want %q", got, tc.wantBridge)
+			}
+
+			// apply verifies the links before it creates the missing network
+			if !tc.networkExists {
+				params := clablinks.NewVerifyLinkParams()
+				params.AllowExistingEndpoint = true
+				if err := c.verifyLinks(context.Background(), params); err != nil {
+					t.Fatalf("verifyLinks() = %v, want nil", err)
+				}
 			}
 		})
 	}

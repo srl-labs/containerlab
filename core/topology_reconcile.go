@@ -930,16 +930,12 @@ func (p *applyPlan) linkIntact(link clablinks.Link) bool {
 // management network bridge is not resolved are not checked.
 func bridgeMasterMismatch(ep clablinks.Endpoint, live clablinks.OwnedInterface) bool {
 	node := ep.GetNode()
-	if node.GetLinkEndpointType() != clablinks.LinkEndpointTypeBridge {
+	if node.GetLinkEndpointType() != clablinks.LinkEndpointTypeBridge ||
+		clablinks.IsUnresolvedMgmtBridgeEndpoint(ep) {
 		return false
 	}
 
-	bridge := node.GetShortName()
-	if ep.IsNodeless() && (bridge == "" || bridge == "mgmt-net") {
-		return false
-	}
-
-	return live.MasterName != bridge
+	return live.MasterName != node.GetShortName()
 }
 
 func (p *applyPlan) deployNodeNames() []string {

@@ -176,7 +176,8 @@ func (c *CLab) mgmtNetLinkNetworks() []*clabtypes.MgmtNet {
 // networks that mgmt-net links reference without an explicit bridge. The runtime names
 // such a bridge when it creates the network, so the bridge of an existing network is
 // looked up from the runtime. The lookup neither creates networks nor changes host
-// state, so it is safe for dry runs. Networks that do not exist yet are left unresolved.
+// state, so it is safe for dry runs. Networks that do not exist yet are left unresolved
+// until they are created.
 func (c *CLab) resolveMgmtNetLinkNetworks(ctx context.Context) error {
 	var resolved clabtypes.MgmtNetworks
 	for _, m := range c.mgmtNetLinkNetworks() {
@@ -187,9 +188,7 @@ func (c *CLab) resolveMgmtNetLinkNetworks(ctx context.Context) error {
 
 		rt, err := c.mgmtRuntime(c.globalRuntimeName, m)
 		if err != nil {
-			// runtimes without multiple network support never created extra networks
-			log.Debug("Skipping management network resolution", "network", m.Network, "error", err)
-			continue
+			return fmt.Errorf("mgmt-net link selects network %q: %w", m.Network, err)
 		}
 		resolver, ok := rt.(clabruntime.MgmtBridgeResolver)
 		if !ok {
