@@ -3,8 +3,6 @@ package nodes
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -137,25 +135,7 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	}
 
 	// Save config to mounted labdir startup config path
-	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
-	err = os.WriteFile(
-		configPath,
-		[]byte(config),
-		clabconstants.PermissionsOpen,
-	) // skipcq: GO-S2306
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to write config by %s path from %s container: %v",
-			configPath,
-			n.Cfg.ShortName,
-			err,
-		)
-	}
-	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
-
-	return &SaveConfigResult{
-		ConfigPath: configPath,
-	}, nil
+	return WriteSavedConfig(n.Cfg, n.ConfigDirName, n.StartupCfgFName, []byte(config))
 }
 
 // PreStop prepares vrnetlab-specific state before DefaultNode.Stop parks interfaces and stops the
