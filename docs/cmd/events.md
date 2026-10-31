@@ -77,8 +77,12 @@ Currently supported runtimes:
 - `c9s`
 
 With `--runtime c9s`, events are backed by kubernetes watches for Clabernetes
-`Topology` resources and labeled Pods. Interface statistics are sampled inside
-the device containers, not through local host netlink.
+`Topology` and `Node` resources and labeled Pods. Interface state (`interface up`
+and `interface down` events) and statistics are sampled inside the device
+containers, not through local host netlink. The stream covers every namespace by
+default; `--namespace` (or `CLAB_KUBE_NAMESPACE`) limits it to one namespace,
+and `-t`/`--name` to one lab. With Docker and Podman the lab selection is ignored
+and every lab is streamed.
 
 Runtimes that do not implement the `events` API, or are not yet supported by Containerlab, will exit with an explanatory error.
 

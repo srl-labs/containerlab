@@ -129,11 +129,11 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 
 // startPeriod is the healthcheck start period in seconds: the launcher's own worst case
 // before the ready file, so a slow boot (TCG) never reports unhealthy. It waits up to
-// CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the startup-config
-// import and the SSH banner, plus the config fetch and the gateway check.
+// CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the VRF
+// handoff, the startup-config import and the SSH banner, plus fetch and gateway checks.
 func startPeriod(env map[string]string) int {
 	return envSeconds(env, "CHR_INTF_WAIT", defaultIntfWait) +
-		3*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack
+		4*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack
 }
 
 // envSeconds reads a positive number of seconds from env, else returns def (the launcher
@@ -168,17 +168,19 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 
 // SaveConfig exports the RouterOS configuration over SSH (scrapligo has no RouterOS
 // platform, see clabnodes.ExportConfigOverSSH) and writes it as the node's startup config,
-// without the objects the launcher creates at every boot.
+// without the objects the launcher creates at every boot. Explicit discovery=static
+// and vrf=main settings retain user choices that compact export omits as defaults,
+// without adding unrelated verbose defaults that older RouterOS may not understand.
 func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	exported, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
-		// A normal export omits RouterOS defaults, including an explicit opt-in
-		// to discovery on "static". Append only that omitted setting: verbose
-		// exports also include newer defaults that older RouterOS cannot import.
 		`/export; :if ([/ip neighbor discovery-settings get discover-interface-list] = "static") `+
-			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}`,
+			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}; `+
+			`:foreach s in=[/ip service find where dynamic=no vrf=main] do={`+
+			`:put ("/ip service set [find where name=" . [/ip service get $s name] . " dynamic=no] vrf=main")}; `+
+			`:if ([/snmp get vrf] = "main") do={:put "/snmp set vrf=main"}`,
 	)
 	if err != nil {
 		return nil, err
@@ -189,11 +191,10 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 }
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
-// every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
-// its routes and rules, and the discovery lists), the ether1 ND entry and CHR's ether1
-// DHCP client. Importing these lines as a startup config duplicates objects the launcher
-// already created and
-// RouterOS stops the import at the first one; the management addressing also belongs to
+// every object tagged clab-mgmt (the ether1 management addresses, the mgmt VRF,
+// its default routes and the discovery lists), the ether1 ND entry and CHR's ether1
+// DHCP client. Imported again as a startup config, these lines duplicate objects the
+// launcher already created and RouterOS stops the import at the first one; management addressing belongs to
 // the deployment, not the lab. Continuation lines (an unescaped trailing backslash) are joined
 // before matching.
 func filterLauncherConfig(config string) string {

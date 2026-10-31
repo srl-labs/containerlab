@@ -6,6 +6,9 @@ name: clabernetes-tests
       py_ver:
         required: true
         type: string
+      go_ver:
+        required: true
+        type: string
 
 jobs:
   clabernetes-tests:
@@ -16,6 +19,12 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      # the suite runs the Go library tests of node access (go test ./core/)
+      # against the cluster
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ inputs.go_ver }}
 
       - uses: actions/download-artifact@v7
         with:
@@ -66,8 +75,22 @@ jobs:
           kind create cluster --name c9s --config /tmp/c9s-kind-config.yaml
           kubectl wait --for=condition=Ready nodes --all --timeout=120s
 
+      # node stats come from the resource metrics API (metrics.k8s.io), which
+      # kind does not serve on its own. kind kubelets use self-signed serving
+      # certificates, hence --kubelet-insecure-tls.
+      - name: Install metrics-server
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
+          kubectl -n kube-system patch deployment metrics-server --type=json \
+            -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+          kubectl -n kube-system rollout status deploy/metrics-server --timeout=180s
+          kubectl wait --for=condition=Available apiservice/v1beta1.metrics.k8s.io --timeout=180s
+
       - name: Install Clabernetes
         run: |
+          # create the mounted directories as the runner user, otherwise docker
+          # creates them (and ~/.cache, which holds the Go build cache) as root
+          mkdir -p "${HOME}/.kube" "${HOME}/.helm" "${HOME}/.config/helm" "${HOME}/.cache/helm"
           docker run --network host --rm \
             -v "${HOME}/.kube:/root/.kube" \
             -v "${HOME}/.helm:/root/.helm" \

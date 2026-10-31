@@ -417,6 +417,78 @@ func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
 	}
 }
 
+type applyFakeBridgeLinkNode struct {
+	applyFakeLinkNode
+}
+
+func (*applyFakeBridgeLinkNode) GetLinkEndpointType() clablinks.LinkEndpointType {
+	return clablinks.LinkEndpointTypeBridge
+}
+
+func TestApplyPlanLinkNeedsDeployChecksMgmtNetBridge(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		bridge string
+		master string
+		want   bool
+	}{
+		{
+			name:   "attached to the resolved bridge",
+			bridge: "br-lab",
+			master: "br-lab",
+			want:   false,
+		},
+		{
+			name:   "moved to another management network",
+			bridge: "br-oob",
+			master: "br-lab",
+			want:   true,
+		},
+		{
+			name:   "unresolved bridge",
+			bridge: "",
+			master: "br-lab",
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mgmt := &applyFakeBridgeLinkNode{applyFakeLinkNode{name: tt.bridge}}
+			n1 := &applyFakeLinkNode{name: "n1"}
+			link := clablinks.NewLinkVEth()
+			brEp := clablinks.NewEndpointBridge(
+				clablinks.NewEndpointGeneric(mgmt, "n1-eth1", link),
+				true,
+			)
+			nodeEp := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth1", link))
+			link.Endpoints = []clablinks.Endpoint{brEp, nodeEp}
+
+			brKey := applyEndpointKey{node: "mgmt-net", iface: "n1-eth1"}
+			nodeKey := applyEndpointKey{node: "n1", iface: "eth1"}
+			plan := newApplyPlan(nil, nil)
+			plan.liveEndpointSet = map[applyEndpointKey]struct{}{brKey: {}, nodeKey: {}}
+			plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+				brKey: {
+					Name:       "n1-eth1",
+					Index:      11,
+					PeerIndex:  21,
+					MasterName: tt.master,
+				},
+				nodeKey: {Name: "eth1", Index: 21, PeerIndex: 11},
+			}
+
+			if got := plan.linkNeedsDeploy(link); got != tt.want {
+				t.Fatalf("linkNeedsDeploy() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 

@@ -36,6 +36,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		graphCmd,
 		eventsCmd,
 		inspectCmd,
+		logsCmd,
 		redeployCmd,
 		saveCmd,
 		toolsCmd,
@@ -213,8 +214,16 @@ func commandSkipsRoot(name string) bool {
 // labRuntimeUnsupportedCommands operate on local containers or host networking
 // and have no lab runtime equivalent.
 var labRuntimeUnsupportedCommands = map[string]struct{}{
-	"graph": {},
 	"tools": {},
+}
+
+// graphTopologyFileFlags select graph modes that render from the topology file alone, without
+// running containers. Lab runtimes support only these modes.
+var graphTopologyFileFlags = []string{ //nolint:gochecknoglobals
+	"dot",
+	"mermaid",
+	"drawio",
+	"offline",
 }
 
 // labRuntimeUnsupportedFlags is the explicit CLI compatibility contract for controller-driven
@@ -227,6 +236,9 @@ var labRuntimeUnsupportedFlags = map[string][]string{ //nolint:gochecknoglobals
 	},
 	"destroy": {
 		"graceful", "keep-mgmt-net", "node-filter",
+	},
+	"graph": {
+		"node-filter",
 	},
 	"redeploy": {
 		"graceful", "graph", "ipv4-subnet", "ipv6-subnet", "keep-mgmt-net",
@@ -244,6 +256,13 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 			return fmt.Errorf("the %q command is not supported with lab runtime %q",
 				cmd.Name(), runtimeName)
 		}
+	}
+
+	if getCommandPath(cobraCmd) == "graph" && !graphRendersFromTopologyFile(cobraCmd) {
+		return fmt.Errorf(
+			"the %q command needs running containers with lab runtime %q unless it renders "+
+				"from the topology file alone; use --offline, --dot, --mermaid or --drawio",
+			"graph", runtimeName)
 	}
 
 	if getCommandPath(cobraCmd) == "inspect.interfaces" {
@@ -269,6 +288,18 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 	}
 
 	return nil
+}
+
+func graphRendersFromTopologyFile(cobraCmd *cobra.Command) bool {
+	for _, flagName := range graphTopologyFileFlags {
+		flag := cobraCmd.Flag(flagName)
+		if flag != nil && flag.Value.String() == "true" &&
+			labRuntimeFlagWasSet(cobraCmd, flagName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func labRuntimeFlagWasSet(cobraCmd *cobra.Command, flagName string) bool {
@@ -309,6 +340,7 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		cobraCmd.Name() != "save" &&
 		cobraCmd.Name() != "graph" &&
 		cobraCmd.Name() != "validate" &&
+		cobraCmd.Name() != "logs" &&
 		cobraCmd.Name() != "interfaces" {
 		return nil
 	}

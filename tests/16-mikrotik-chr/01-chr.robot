@@ -89,6 +89,8 @@ Save a custom discovery policy without the launcher's management objects
     Should Be Equal As Strings    ${output.strip()}    clab-discovery
     SSHLibrary.Execute Command    /interface list add name="data ports" include=static
     SSHLibrary.Execute Command    /ip neighbor discovery-settings set discover-interface-list="data ports"
+    SSHLibrary.Execute Command    /ip vrf add name="user vrf" interfaces=none
+    SSHLibrary.Execute Command    /ip service set winbox vrf="user vrf"
     SSHLibrary.Close Connection
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r2
@@ -103,19 +105,32 @@ Save a custom discovery policy without the launcher's management objects
     Should Contain    ${f}    discover-interface-list="data ports"
     Should Not Contain    ${f}    dying-gasp=
 
-Ensure discovery overrides survive save and clean redeploy
+Ensure discovery and VRF overrides survive save and clean redeploy
     Login via SSH with username and password
     ...    address=clab-${lab-name}-r1
     ...    username=admin
     ...    password=admin
     ...    try_for=30
     SSHLibrary.Execute Command    /ip neighbor discovery-settings set discover-interface-list=static
+    SSHLibrary.Execute Command    /ip service set winbox vrf=main
+    SSHLibrary.Execute Command    /ip service set api-ssl vrf=main disabled=yes
+    SSHLibrary.Execute Command    /snmp set vrf=main
+    SSHLibrary.Execute Command    /snmp community add name=save-check addresses=10.0.0.0/30
     SSHLibrary.Close Connection
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/r1/ftpboot/config.auto.rsc
+    Log    ${f}
+    Should Contain    ${f}    10.0.0.1/30
+    Should Not Contain    ${f}    routing-table=mgmt
+    Should Not Contain    ${f}    name=mgmt
+    Should Not Contain    ${f}    comment=clab-mgmt
+    Should Not Contain    ${f}    available-from=
+    Should Not Contain    ${f}    clab-service-defaults
+    Should Contain    ${f}    /ip service set [find where name=winbox dynamic=no] vrf=main
+    Should Contain    ${f}    /snmp set vrf=main
     Should Contain    ${f}    /ip neighbor discovery-settings set discover-interface-list=static
     Should Not Contain    ${f}    dying-gasp=
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -130,6 +145,7 @@ Ensure discovery overrides survive save and clean redeploy
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    300s    5s    Node is healthy    r1
+    Wait Until Keyword Succeeds    300s    5s    Node is healthy    r2
     Login via SSH with username and password
     ...    address=clab-${lab-name}-r1
     ...    username=admin
@@ -143,8 +159,21 @@ Ensure discovery overrides survive save and clean redeploy
     Should Be Equal As Strings    ${output.strip()}    1
     ${output} =    SSHLibrary.Execute Command    /ip address print terse where interface=ether2
     Should Contain    ${output}    address=10.0.0.1/30
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get winbox vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get api-ssl vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get api-ssl disabled]
+    Should Be Equal As Strings    ${output.strip()}    true
+    ${output} =    SSHLibrary.Execute Command    :put [/snmp get vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    /snmp community print count-only where name=save-check
+    Should Be Equal As Strings    ${output.strip()}    1
+    ${output} =    SSHLibrary.Execute Command    /ip vrf print count-only where name=mgmt
+    Should Be Equal As Strings    ${output.strip()}    1
+    ${output} =    SSHLibrary.Execute Command    /ping 10.0.0.2 count=3
+    Should Contain    ${output}    received=3
     SSHLibrary.Close Connection
-    Wait Until Keyword Succeeds    300s    5s    Node is healthy    r2
     Login via SSH with username and password
     ...    address=clab-${lab-name}-r2
     ...    username=netops
@@ -154,6 +183,10 @@ Ensure discovery overrides survive save and clean redeploy
     Should Be Equal As Strings    ${output.strip()}    data ports
     ${output} =    SSHLibrary.Execute Command    /ping 10.0.0.1 count=3
     Should Contain    ${output}    received=3
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get winbox vrf]
+    Should Be Equal As Strings    ${output.strip()}    user vrf
+    ${output} =    SSHLibrary.Execute Command    /ip vrf print count-only where name="user vrf"
+    Should Be Equal As Strings    ${output.strip()}    1
     SSHLibrary.Close Connection
 
 
