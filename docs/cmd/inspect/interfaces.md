@@ -5,6 +5,8 @@
 The `inspect interfaces` subcommand provides information about the network interfaces of deployed nodes of a deployed lab.
 The subcommand gathers information directly from deployed containers, and displays information about their operational state, network interface type, and if applicable, the applied network interface alias.
 
+With the [c9s runtime](../../manual/clabernetes/runtime.md#packet-capture), the listing covers the lab link interfaces of each running node, the ones [`capture`](../capture.md) accepts, with the alias the topology used, and the MAC address, index, MTU and operational state read in the node's device container. The node names follow `inspect` (`<lab>-<node>`), and the JSON fields are the same as with Docker.
+
 ### Usage
 
 `containerlab [global-flags] inspect interfaces [local-flags]`

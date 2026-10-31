@@ -291,18 +291,21 @@ func TestCheckLabRuntimeFlagAndNestedCommandSupport(t *testing.T) {
 		})
 	}
 
-	t.Run("inspect interfaces rejected", func(t *testing.T) {
+	t.Run("inspect interfaces and capture accepted", func(t *testing.T) {
 		root := &cobra.Command{Use: "containerlab"}
 		inspect := &cobra.Command{Use: "inspect"}
 		interfaces := &cobra.Command{Use: "interfaces"}
-		root.AddCommand(inspect)
+		capture := &cobra.Command{Use: "capture"}
+		root.AddCommand(inspect, capture)
 		inspect.AddCommand(interfaces)
 
-		if err := checkLabRuntimeCommandSupport(
-			interfaces,
-			clablabruntime.ClabernetesRuntimeName,
-		); err == nil {
-			t.Fatal("inspect interfaces was accepted for clabernetes")
+		for _, cmd := range []*cobra.Command{interfaces, capture} {
+			if err := checkLabRuntimeCommandSupport(
+				cmd,
+				clablabruntime.ClabernetesRuntimeName,
+			); err != nil {
+				t.Fatalf("%s rejected for clabernetes: %v", cmd.Name(), err)
+			}
 		}
 	})
 }

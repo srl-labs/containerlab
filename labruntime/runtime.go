@@ -389,6 +389,76 @@ type NodePortForwarder interface {
 	DialPort(ctx context.Context, req NodeRequest, port int) (net.Conn, error)
 }
 
+// CaptureInterface is a lab link interface packet capture accepts, with the far end of its link.
+type CaptureInterface struct {
+	// Node is the node name as the topology spells it.
+	Node string `json:"node"`
+	// Interface is the interface name inside the node, which capture output carries.
+	Interface string `json:"interface"`
+	// Alias is the name the topology used for the interface when the node kind maps it (for
+	// example ethernet-1/1 for SR Linux e1-1). Capture targets accept either name.
+	Alias string `json:"alias,omitempty"`
+	// PeerNode is the node at the other end of the link, "host" for a host endpoint, or empty
+	// when the runtime cannot name it.
+	PeerNode string `json:"peer_node"`
+	// PeerInterface is the peer's interface as the topology wrote it.
+	PeerInterface string `json:"peer_interface"`
+}
+
+// CaptureTarget is one interface of one node to capture. Node takes the name the topology or
+// the runtime uses, Interface the interface name or its alias.
+type CaptureTarget struct {
+	Node      string
+	Interface string
+}
+
+// CaptureRequest selects what Capture streams.
+type CaptureRequest struct {
+	// Name is the lab name.
+	Name      string
+	Namespace string
+	Targets   []CaptureTarget
+	// Duration ends the capture; zero captures until the context ends.
+	Duration time.Duration
+	// PacketLimit ends the capture after that many packets across all targets; zero means no
+	// limit.
+	PacketLimit int
+	// SnapLength is the number of bytes kept of each packet; zero uses the runtime default.
+	SnapLength int
+	// OnGap is called when the capture missed traffic, for example because a chained capture
+	// did not start in time. Without it, gaps are logged as warnings.
+	OnGap    func(CaptureGap)
+	Identity Identity
+}
+
+// CaptureGap is a time span a capture has no packets for, although it was running.
+type CaptureGap struct {
+	Node       string
+	Interfaces []string
+	// From and To bound the gap on the node's clock; To is zero when it is unknown.
+	From   time.Time
+	To     time.Time
+	Reason string
+}
+
+// PacketCapturer streams pcapng from lab link interfaces. Capture writes one section with one
+// Interface Description Block per target, named <node>:<interface>, before any packet. It
+// returns when Duration passed, PacketLimit packets were written, or the context ended (which
+// is not an error); the output is a valid capture whenever it stops.
+type PacketCapturer interface {
+	CaptureInterfaces(ctx context.Context, req NodeRequest) ([]CaptureInterface, error)
+	Capture(ctx context.Context, req CaptureRequest, w io.Writer) error
+}
+
+// InterfaceInspector lists the link interfaces of a lab's nodes with their current state, in the
+// shape of `inspect interfaces`.
+type InterfaceInspector interface {
+	InspectInterfaces(
+		ctx context.Context,
+		req NodeRequest,
+	) ([]*clabtypes.ContainerInterfaces, error)
+}
+
 // NodeStatsSampler reports the resource usage of a lab's nodes. It returns an error wrapping
 // ErrMetricsUnavailable when the cluster serves no resource metrics.
 type NodeStatsSampler interface {

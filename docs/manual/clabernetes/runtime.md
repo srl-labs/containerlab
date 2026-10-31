@@ -112,6 +112,9 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `restart` | requests a Pod replacement with a `c9s.run/restart-requested` token |
 | `save` | runs the node's save lifecycle inside its device container |
 | `events` | watches Clabernetes resources and pods |
+| `logs` | streams the device container log |
+| `capture` | captures lab link interfaces through the `clabwire` sidecar into one pcapng stream |
+| `inspect interfaces` | lists the capturable link interfaces with their sysfs state |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, NodeProfile, Link, and Node resources without changing them |
 | `deploy --emit-crs` | prints the Namespace, ConfigMap, and Topology (or NodeProfile, Link, and Node) manifests deploy would create, without contacting the cluster |
@@ -143,7 +146,7 @@ Containerlab needs a clabernetes release that has:
   `Stopped` condition, and restart requests through the
   `c9s.run/restart-requested` annotation
 - the clabwire packet capture contract: `--nodeName`, repeated `--interface`,
-  `--format pcapng` and `--list-interfaces`
+  `--format pcapng`, `--list-interfaces` and `--stop-on-stdin-close`
 - the namespace-bindable `clabernetes-lab-viewer` and `clabernetes-lab-editor`
   roles
 
@@ -159,6 +162,17 @@ an older release every other command fails like this:
 the clabernetes release on this cluster is not supported: nodes.c9s.run has no
 spec.runState (Node run state); the c9s runtime needs clabernetes with Node run
 state and the clabwire capture contract (0.11 or newer)
+```
+
+A cluster that passes this check but runs a `clabwire` without
+`--stop-on-stdin-close` (a development build between the two features) fails
+the first capture with the same kind of error, naming the pod:
+
+```text
+the clabernetes release on this cluster is not supported: clabwire in pod
+<namespace>/<pod> does not accept packet-capture --stop-on-stdin-close; the c9s
+runtime needs clabernetes with Node run state and the clabwire capture contract
+(0.11 or newer)
 ```
 
 Library users can run the check up front with
@@ -581,6 +595,78 @@ It reads the `pods/log` subresource of the node's pod, so RBAC must allow
 `get` on `pods/log`. Kubernetes returns stdout and stderr as one stream. See
 the [`logs` command](../../cmd/logs.md) for the flags.
 
+## Packet capture
+
+[`containerlab capture`](../../cmd/capture.md) captures lab link interfaces of
+one or more nodes into one pcapng stream. Each node's pod runs the `clabwire`
+sidecar, which realized the node's links; containerlab execs its capture
+command (`/clabernetes/manager node-runtime packet-capture`) in the sidecar.
+No capture service runs in the cluster, and nothing is captured outside the
+lab's planned link interfaces.
+
+```bash
+# both ends of a link, for 30 seconds
+containerlab -r c9s capture -t clos.clab.yml \
+  --target srl1:e1-1 --target srl2:e1-1 --duration 30s -w srl.pcapng
+
+# live in Wireshark until Wireshark or Ctrl+C ends it
+containerlab -r c9s capture --name clos --target srl1:e1-1,e1-2 -w - | wireshark -k -i -
+
+# what can be captured, with the peer of each link
+containerlab -r c9s capture --name clos --list
+```
+
+How it works:
+
+- containerlab locates each target node's pod and runs one `clabwire` capture
+  per node, with `--nodeName`, every requested interface of that node,
+  `--format pcapng` and `--stop-on-stdin-close`, with stdin attached.
+- The streams are merged into one section: one Interface Description Block per
+  target named `<node>:<interface>` (the node as the topology spells it),
+  written before the first packet, and the packets of every target with their
+  interface IDs remapped.
+- Packets are written in timestamp order. Each node's stream arrives over its
+  own exec stream, so the merged stream holds every packet for 250 ms and
+  writes the held packets ordered by timestamp. A packet that arrives later
+  than that, stamped before a packet already written, is written as it comes;
+  the number of such packets goes to the debug log.
+- `clabwire` limits one capture to one hour. Longer captures, and captures
+  without `--duration`, chain captures with a few seconds of overlap and switch
+  in the middle of it; packets near the switch are matched by content so each
+  is written once. A follow-up that does not start in time is reported as a
+  gap, with its time span.
+- `clabwire` audit records (JSON on its stderr, schema
+  `c9s.direct-packet-capture-audit/v1alpha1`) with status `Denied` or `Failed`
+  end the command with their reason. `Started` and `Succeeded` go to the debug
+  log.
+
+Interface names are the names inside the node; targets may also use the alias
+the topology used for an interface:
+
+| Kind | Interface | Alias |
+| ---- | --------- | ----- |
+| linux | `eth1` | |
+| SR Linux | `e1-1` | `ethernet-1/1` |
+| vr-sros / nokia_sros | `eth3` | `1/1/3` |
+
+The management interface and the pod's `c9s0` interface cannot be captured.
+
+Ctrl+C or SIGTERM ends a capture cleanly: the output stays a valid pcapng
+file and the command exits with code 0. Kubernetes does not stop a command
+when its exec stream closes, but it closes the command's stdin. containerlab
+closes the stdin of every `clabwire` capture when the capture ends for any
+reason (the duration or packet limit, Ctrl+C, an error, a failed write of the
+output such as a closed Wireshark, or a newer segment taking over), and
+`clabwire` then ends the capture within milliseconds. If the process does not
+end within three seconds, containerlab cuts the exec stream. A killed
+containerlab drops the connection, which closes stdin as well.
+
+Capturing needs `get` and `create` on `pods/exec` in the lab namespace, which
+`clabernetes-lab-editor` grants. `inspect interfaces -r c9s` lists the same
+interfaces, with the MAC address, index, MTU and operational state read from
+sysfs in the device container (type `veth`, which is how `clabwire` realizes
+lab links).
+
 ## Start, stop, and restart
 
 Node lifecycle commands ask the clabernetes controllers for a run state; they
@@ -865,12 +951,18 @@ implemented by the c9s runtime:
 | `NodeLogStreamer` | `StreamLogs(ctx, LogRequest, io.Writer) error` | the device container log, with tail, follow and timestamps |
 | `NodePortForwarder` | `DialPort(ctx, NodeRequest, port) (net.Conn, error)` | a connection to a TCP port of the node's pod through `pods/portforward` (SSH, web UIs) |
 | `NodeStatsSampler` | `SampleStats(ctx, InspectRequest) ([]NodeStats, error)` | CPU and memory per node from `metrics.k8s.io` PodMetrics, summing the node's device containers; without the metrics API the error wraps `labruntime.ErrMetricsUnavailable` |
+| `PacketCapturer` | `CaptureInterfaces(ctx, NodeRequest) ([]CaptureInterface, error)` | the capturable link interfaces of nodes, with alias, peer node and peer interface |
+| `PacketCapturer` | `Capture(ctx, CaptureRequest, io.Writer) error` | one pcapng stream of the request's targets, for `Duration` (0: until ctx ends), `PacketLimit` and `SnapLength`; gaps go to `OnGap` |
+| `InterfaceInspector` | `InspectInterfaces(ctx, NodeRequest) ([]*types.ContainerInterfaces, error)` | the `inspect interfaces` view of the link interfaces |
+| `SupportChecker` | `CheckSupport(ctx, Identity) error` | the clabernetes release check |
 
 The `core` package wraps them per lab and node name, accepting the node name
 as the topology file spells it or as it was sanitized:
 `CLab.LocateLabRuntimeNodes`, `CLab.AttachLabRuntimeNode`,
-`CLab.DialLabRuntimeNodePort`, `CLab.SampleLabRuntimeNodeStats` and
-`CLab.NodeLogs`, which also serves Docker and Podman.
+`CLab.DialLabRuntimeNodePort`, `CLab.SampleLabRuntimeNodeStats`,
+`CLab.CaptureInterfaces`, `CLab.Capture`, `CLab.LabRuntimeInterfaces`,
+`CLab.CheckLabRuntimeSupport` and `CLab.NodeLogs`, which also serves Docker and
+Podman.
 
 ```go
 c, err := clabcore.NewContainerLab(
@@ -886,6 +978,14 @@ if err != nil {
 }
 
 conn, err := c.DialLabRuntimeNodePort(ctx, "srl1", 22)
+
+// stream pcapng to a websocket, a file or Wireshark until ctx ends
+err = c.Capture(ctx, clablabruntime.CaptureRequest{
+	Targets: []clablabruntime.CaptureTarget{
+		{Node: "srl1", Interface: "ethernet-1/1"},
+		{Node: "srl2", Interface: "e1-1"},
+	},
+}, w)
 ```
 
 ### Acting as a user
@@ -938,7 +1038,8 @@ to:
   must remain manageable
 - list and watch Pods
 - create, get, list, update, and delete ConfigMaps used for local files
-- exec into device Pods with `pods/exec`
+- exec into device Pods with `pods/exec`, also for `capture` and `inspect
+  interfaces` (in the `clabwire` and device containers)
 - list and delete PersistentVolumeClaims for `destroy --cleanup`
 - read container logs with `pods/log` for `logs`
 - port-forward with `pods/portforward` for `NodePortForwarder`
@@ -1154,8 +1255,10 @@ Known command differences:
   also deletes the lab's persistent claims (saved device state) and removes
   the local lab directory; a plain destroy keeps the claims.
 - Local Docker commands on the outer host are not authoritative for c9s labs.
-- `inspect interfaces` is rejected. Host-side `tc` or netem operations do not
-  have the same local namespace access they have with Docker labs.
+- `inspect interfaces` lists only the lab link interfaces (those `capture`
+  accepts), not the management or pod interfaces. Host-side `tc` or netem
+  operations do not have the same local namespace access they have with Docker
+  labs.
 - `graph` renders from the topology file only: `--mermaid`, `--dot`, `--drawio`
   and `--offline` work, the default mode that reads running containers is
   rejected, and so is `--node-filter`. `--drawio` runs the clab-io-draw

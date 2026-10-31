@@ -53,6 +53,16 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 		options := GetOptions()
 
+		if options.Global.FinishOnCancel.Load() {
+			log.Info("Stopping, press Ctrl+C again to abort")
+
+			sig = <-sigs
+
+			log.Errorf("received signal %q while stopping, exiting", sig)
+
+			os.Exit(1)
+		}
+
 		if !options.Global.CleanOnCancel.Load() {
 			log.Debug("clean on cancel is not true, exiting")
 
