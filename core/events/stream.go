@@ -115,7 +115,7 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 
 	runtimeEvents, runtimeErrs, err := clab.LabRuntime.StreamEvents(
 		ctx,
-		labRuntimeEventStreamRequest(clab.Config.Name, opts),
+		labRuntimeEventStreamRequest(clab.Config.Name, clab.LabRuntimeIdentity(), opts),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to stream events for lab runtime %q: %w", opts.Runtime, err)
@@ -155,9 +155,14 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 // --name) limits the stream to that lab in its namespace. Without one the stream covers every
 // namespace, unless a namespace override (--namespace, CLAB_KUBE_NAMESPACE) limits it to that
 // namespace; the runtime applies the override.
-func labRuntimeEventStreamRequest(labName string, opts Options) clablabruntime.EventStreamRequest {
+func labRuntimeEventStreamRequest(
+	labName string,
+	identity clablabruntime.Identity,
+	opts Options,
+) clablabruntime.EventStreamRequest {
 	return clablabruntime.EventStreamRequest{
 		Name:                  labName,
+		Identity:              identity,
 		AllNamespaces:         labName == "",
 		IncludeInitialState:   opts.IncludeInitialState,
 		IncludeInterfaceStats: opts.IncludeInterfaceStats,

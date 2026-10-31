@@ -25,7 +25,7 @@ func (r *Runtime) Exec(
 	ctx context.Context,
 	req clablabruntime.ExecRequest,
 ) (*clabexec.ExecResult, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -308,9 +308,9 @@ func (r *Runtime) execInPod(
 			TTY:       false,
 		}, scheme.ParameterCodec)
 
-	executor, err := remotecommand.NewSPDYExecutor(r.restConfig, "POST", req.URL())
+	executor, err := r.newExecutor(req.URL())
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("failed to create Kubernetes exec executor: %w", err)
+		return nil, nil, 0, err
 	}
 
 	var stdout bytes.Buffer

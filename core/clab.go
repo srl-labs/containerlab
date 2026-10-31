@@ -68,6 +68,8 @@ type CLab struct {
 	checkMgmtNetLinks bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
+	// labRuntimeIdentity is the Kubernetes identity lab runtime calls act as.
+	labRuntimeIdentity clablabruntime.Identity
 	// managementNetworkOverridden reports whether a management network setting was
 	// explicitly overridden through a ClabOption rather than read from the topology.
 	managementNetworkOverridden bool

@@ -15,7 +15,7 @@ import (
 )
 
 func (r *Runtime) Start(ctx context.Context, req clablabruntime.NodeRequest) error {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return connErr
 	}
@@ -24,7 +24,7 @@ func (r *Runtime) Start(ctx context.Context, req clablabruntime.NodeRequest) err
 }
 
 func (r *Runtime) Stop(ctx context.Context, req clablabruntime.NodeRequest) error {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return connErr
 	}
@@ -33,7 +33,7 @@ func (r *Runtime) Stop(ctx context.Context, req clablabruntime.NodeRequest) erro
 }
 
 func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) error {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return connErr
 	}

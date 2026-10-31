@@ -3961,6 +3961,7 @@ func newTestRuntimeWithKubeObjects(
 				nodeGVR:        "NodeList",
 				linkGVR:        "LinkList",
 				nodeProfileGVR: "NodeProfileList",
+				podMetricsGVR:  "PodMetricsList",
 			},
 			runtimeObjects...,
 		),

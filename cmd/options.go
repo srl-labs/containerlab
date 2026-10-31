@@ -52,6 +52,9 @@ func GetOptions() *Options {
 				Format:           "table",
 				InterfacesFormat: "table",
 			},
+			Logs: &LogsOptions{
+				Tail: -1,
+			},
 			Graph: &GraphOptions{
 				Server:           "0.0.0.0:50080",
 				MermaidDirection: "TD",
@@ -140,6 +143,7 @@ type Options struct {
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
 	Events         *EventsOptions
+	Logs           *LogsOptions
 	ToolsAPI       *ToolsApiOptions
 	ToolsCert      *ToolsCertOptions
 	ToolsTxOffload *ToolsDisableTxOffloadOptions
@@ -387,6 +391,13 @@ type SaveOptions struct {
 type ExecOptions struct {
 	Format   string
 	Commands []string
+}
+
+type LogsOptions struct {
+	Node       string
+	Tail       int64
+	Follow     bool
+	Timestamps bool
 }
 
 type InspectOptions struct {

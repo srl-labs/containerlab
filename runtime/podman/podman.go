@@ -725,6 +725,69 @@ func (*PodmanRuntime) StreamLogs(ctx context.Context, containerName string) (io.
 	return nil, fmt.Errorf("StreamLogs not implemented for Podman runtime")
 }
 
+// WriteContainerLogs writes a container's log through the Podman API.
+func (r *PodmanRuntime) WriteContainerLogs(
+	ctx context.Context,
+	containerName string,
+	opts runtime.ContainerLogOptions,
+	stdout, stderr io.Writer,
+) error {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	stdoutCh := make(chan string)
+	stderrCh := make(chan string)
+	done := make(chan error, 1)
+
+	go func() {
+		logOpts := new(containers.LogOptions).
+			WithStdout(true).
+			WithStderr(true).
+			WithFollow(opts.Follow).
+			WithTimestamps(opts.Timestamps).
+			WithTail(runtime.LogTail(opts.Tail))
+		done <- containers.Logs(ctx, containerName, logOpts, stdoutCh, stderrCh)
+	}()
+
+	// the bindings send on the channels without watching the context; keep draining them
+	// after an early return so the sender can finish
+	drain := func() {
+		go func() {
+			for {
+				select {
+				case <-stdoutCh:
+				case <-stderrCh:
+				case <-done:
+					return
+				}
+			}
+		}()
+	}
+
+	for {
+		select {
+		case line := <-stdoutCh:
+			if _, err := io.WriteString(stdout, line); err != nil {
+				drain()
+				return err
+			}
+		case line := <-stderrCh:
+			if _, err := io.WriteString(stderr, line); err != nil {
+				drain()
+				return err
+			}
+		case err := <-done:
+			if err != nil && ctx.Err() == nil {
+				return fmt.Errorf("failed to get container logs: %w", err)
+			}
+
+			return nil
+		}
+	}
+}
+
 func (*PodmanRuntime) StreamEvents(
 	context.Context,
 	runtime.EventStreamOptions,
