@@ -371,7 +371,7 @@ func TestFilterLauncherConfigDefaultKeymatProvider(t *testing.T) {
 		{
 			name:  "empty factory placeholder",
 			entry: placeholder,
-			want:  "/system keymat-provider",
+			want:  "",
 		},
 		{
 			name:  "custom provider",

@@ -197,6 +197,7 @@ func filterLauncherConfig(config string) string {
 
 	section := ""
 	pending := ""
+	keymatHeader := ""
 	for line := range strings.SplitSeq(strings.ReplaceAll(config, "\r\n", "\n"), "\n") {
 		if pending != "" {
 			line = pending + "\n" + line
@@ -210,6 +211,13 @@ func filterLauncherConfig(config string) string {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "/") {
 			section = trimmed
+			keymatHeader = ""
+			// Older RouterOS releases reject even an empty keymat menu. Emit
+			// its header only if a command remains after filtering below.
+			if section == "/system keymat-provider" {
+				keymatHeader = line
+				continue
+			}
 		}
 		if launcherOwned(section, trimmed) {
 			continue
@@ -222,9 +230,16 @@ func filterLauncherConfig(config string) string {
 				"add disabled=yes key-size=0 name=default qkd-cache-size=0 qkd-certificate=*0 type=qkd" {
 			continue
 		}
+		if keymatHeader != "" && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+			out = append(out, keymatHeader)
+			keymatHeader = ""
+		}
 		out = append(out, line)
 	}
 	if pending != "" {
+		if keymatHeader != "" {
+			out = append(out, keymatHeader)
+		}
 		out = append(out, pending)
 	}
 
