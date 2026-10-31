@@ -40,7 +40,13 @@ func stateFromNodeResources(
 }
 
 func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabruntime.NodeState {
-	node := clablabruntime.NodeState{Name: nodeResource.GetName()}
+	node := clablabruntime.NodeState{
+		Name:    nodeResource.GetName(),
+		NodeUID: string(nodeResource.GetUID()),
+	}
+	node.ExposedPorts = nodeExposedPorts(nodeResource)
+	// The same container exec targets: the observed primary device container.
+	node.Container, _ = preferredDeviceContainerName(nodeResource, node.Name)
 	node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
 	node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
 	node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
@@ -65,6 +71,91 @@ func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabrunti
 	)
 
 	return node
+}
+
+// nodeExposedPorts reads the expose-port allocations the controller published on the Node.
+func nodeExposedPorts(nodeResource *unstructured.Unstructured) []clablabruntime.ExposedPort {
+	rawPorts, _, _ := unstructured.NestedSlice(
+		nodeResource.Object,
+		"status",
+		"exposedPorts",
+		"ports",
+	)
+
+	ports := make([]clablabruntime.ExposedPort, 0, len(rawPorts))
+	for _, raw := range rawPorts {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		port := clablabruntime.ExposedPort{
+			Port:       intField(entry["destinationPort"]),
+			ExposePort: intField(entry["exposePort"]),
+			Protocol:   strings.ToLower(fmt.Sprint(entry["protocol"])),
+		}
+		if port.Port == 0 {
+			continue
+		}
+		if port.Protocol == "" || port.Protocol == "<nil>" {
+			port.Protocol = "tcp"
+		}
+
+		ports = append(ports, port)
+	}
+
+	if len(ports) == 0 {
+		return nil
+	}
+
+	sort.Slice(ports, func(i, j int) bool {
+		if ports[i].Port == ports[j].Port {
+			return ports[i].Protocol < ports[j].Protocol
+		}
+
+		return ports[i].Port < ports[j].Port
+	})
+
+	return ports
+}
+
+func intField(value any) int {
+	switch v := value.(type) {
+	case int64:
+		return int(v)
+	case int:
+		return v
+	case int32:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
+}
+
+// newestPod prefers a running pod and, among equals, the newest one: several pods can match a
+// node during a rolling update.
+func newestPod(current, candidate *corev1.Pod) *corev1.Pod {
+	if current == nil {
+		return candidate
+	}
+
+	currentRunning := current.Status.Phase == corev1.PodRunning
+	candidateRunning := candidate.Status.Phase == corev1.PodRunning
+	if currentRunning != candidateRunning {
+		if candidateRunning {
+			return candidate
+		}
+
+		return current
+	}
+
+	if candidate.CreationTimestamp.After(current.CreationTimestamp.Time) {
+		return candidate
+	}
+
+	return current
 }
 
 func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
@@ -111,13 +202,7 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		if nodeName == "" {
 			continue
 		}
-		if pods.Items[idx].Status.Phase == corev1.PodRunning {
-			podsByNode[nodeName] = &pods.Items[idx]
-			continue
-		}
-		if _, ok := podsByNode[nodeName]; !ok {
-			podsByNode[nodeName] = &pods.Items[idx]
-		}
+		podsByNode[nodeName] = newestPod(podsByNode[nodeName], &pods.Items[idx])
 	}
 
 	for idx := range deployments.Items {
@@ -169,6 +254,23 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 			node.Ready = deploymentReady
 			nodesByName[nodeName] = node
 		}
+	}
+
+	// Nodes grouped through network-mode container: share the pod of the group's primary
+	// node. Before the controller observed the device containers, the pod's default-container
+	// annotation names the primary node's container.
+	for nodeName, node := range nodesByName {
+		primary := resolvePrimaryNode(nodeName, networkModes)
+		pod := podsByNode[primary]
+		if pod == nil {
+			continue
+		}
+
+		node.Pod = pod.Name
+		if node.Container == "" && primary == nodeName {
+			node.Container = pod.Annotations[defaultContainerAnnotation]
+		}
+		nodesByName[nodeName] = node
 	}
 
 	nodeNames := make([]string, 0, len(nodesByName))
