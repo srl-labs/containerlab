@@ -268,15 +268,22 @@ func (n *frr) installConfigSaveWrapper(ctx context.Context) error {
 		return err
 	}
 
-	// Keep the original binary across repeated PostDeploy calls, and replace
-	// the wrapper atomically so active sessions can continue using it.
+	// CHANGE: FRR can execute vtysh during PostDeploy. Keep its path available
+	// while preparing the original backup and atomically publishing the wrapper.
+	// Preserve the original backup across sequential PostDeploy calls.
 	script := `set -e
+backup_tmp=''
+wrapper_tmp=''
+trap 'rm -f -- "$backup_tmp" "$wrapper_tmp"' EXIT
 if [ ! -f "/usr/bin/vtysh.containerlab" ]; then
-    mv "/usr/bin/vtysh" "/usr/bin/vtysh.containerlab"
+    backup_tmp=$(mktemp "/usr/bin/vtysh.containerlab.XXXXXX")
+    cp -p "/usr/bin/vtysh" "$backup_tmp"
+    mv -f -- "$backup_tmp" "/usr/bin/vtysh.containerlab"
 fi
-printf '%s\n' "$1" > "/usr/bin/vtysh.containerlab.tmp"
-chmod 755 "/usr/bin/vtysh.containerlab.tmp"
-mv -f "/usr/bin/vtysh.containerlab.tmp" "/usr/bin/vtysh"`
+wrapper_tmp=$(mktemp "/usr/bin/vtysh.wrapper.XXXXXX")
+printf '%s\n' "$1" > "$wrapper_tmp"
+chmod 755 "$wrapper_tmp"
+mv -f -- "$wrapper_tmp" "/usr/bin/vtysh"`
 
 	wrapper := fmt.Sprintf(configSaveWrapper, uid, gid, clabconstants.PermissionsFileDefault)
 	cmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-c", script, "--", wrapper})
