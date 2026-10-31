@@ -159,7 +159,7 @@ func (r *Runtime) Plan(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.DeployPlan, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}

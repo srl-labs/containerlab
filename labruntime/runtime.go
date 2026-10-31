@@ -354,6 +354,18 @@ type NodeStats struct {
 // example one without metrics-server.
 var ErrMetricsUnavailable = errors.New("metrics API (metrics.k8s.io) not available")
 
+// ErrUnsupportedRuntimeVersion reports a cluster whose controller release lacks the contract a
+// lab runtime needs. The error that wraps it names the required release.
+var ErrUnsupportedRuntimeVersion = errors.New("unsupported lab runtime controller version")
+
+// SupportChecker checks that the cluster behind a lab runtime runs a controller release with
+// the contract the runtime needs. Lab runtimes run the check on their own before the first
+// cluster call of an operation; servers call it to fail early, for example at startup. It returns
+// an error wrapping ErrUnsupportedRuntimeVersion when the release is too old.
+type SupportChecker interface {
+	CheckSupport(ctx context.Context, identity Identity) error
+}
+
 // NodeLocator resolves lab nodes to the workloads that run them. Empty NodeRequest.Nodes
 // locates every node of the lab.
 type NodeLocator interface {

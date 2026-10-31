@@ -32,9 +32,7 @@ const (
 	labelTopologyOwner    = "c9s.run/topologyOwner"
 	labelTopologyNode     = "c9s.run/topologyNode"
 	labelOriginalNodeName = "c9s.run/originalNodeName"
-	labelIgnoreReconcile  = "c9s.run/ignoreReconcile"
 	clabernetesAppValue   = "clabernetes"
-	restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
 	// persistenceReclaimRetain keeps a node's persistent claim when its Node is deleted.
 	persistenceReclaimRetain = "Retain"
 	// defaultContainerAnnotation names the primary device container of a c9s pod.
@@ -86,6 +84,12 @@ type Runtime struct {
 	// identity is the configured identity of calls without one; in a connected view it is the
 	// identity the clients impersonate.
 	identity clablabruntime.Identity
+	// pollInterval overrides how often waits poll the cluster (tests).
+	pollInterval time.Duration
+	// support checks once per runtime instance, before the first cluster call, that the
+	// cluster runs a clabernetes release with the contract this runtime needs. Every view
+	// shares it. It is nil when the clients were injected (tests).
+	support *supportCheck
 }
 
 // kubeClients is the set of Kubernetes clients a runtime view operates with.
@@ -182,8 +186,12 @@ func identityKey(identity clablabruntime.Identity) string {
 
 // connect returns a view of the runtime with the Kubernetes clients of an identity populated,
 // loading the kubeconfig on first use. A zero identity uses the runtime's configured identity.
-// Every operation that reads or changes cluster state calls it first.
-func (r *Runtime) connect(identity clablabruntime.Identity) (*Runtime, error) {
+// Every operation that reads or changes cluster state calls it first, so it also runs the
+// clabernetes version check once per runtime instance, before the first cluster call.
+func (r *Runtime) connect(
+	ctx context.Context,
+	identity clablabruntime.Identity,
+) (*Runtime, error) {
 	if identity.IsZero() {
 		identity = r.identity
 	}
@@ -192,6 +200,10 @@ func (r *Runtime) connect(identity clablabruntime.Identity) (*Runtime, error) {
 	}
 	if r.clients == nil {
 		// clients were injected (tests); they act as the identity they were built with
+		if err := r.support.ensure(ctx, r); err != nil {
+			return nil, err
+		}
+
 		return r, nil
 	}
 
@@ -209,6 +221,10 @@ func (r *Runtime) connect(identity clablabruntime.Identity) (*Runtime, error) {
 	}
 	view.identity = identity
 	view.connected = true
+
+	if err := r.support.ensure(ctx, &view); err != nil {
+		return nil, err
+	}
 
 	return &view, nil
 }
@@ -238,5 +254,6 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		kindLinkApplyMode:    cfg.KindLinkApplyMode,
 		identity:             cfg.Identity,
 		clients:              newClientLoader(),
+		support:              &supportCheck{},
 	}, nil
 }

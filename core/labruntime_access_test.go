@@ -25,6 +25,13 @@ type accessLabRuntime struct {
 	logRequest    clablabruntime.LogRequest
 	statsRequest  clablabruntime.InspectRequest
 	port          int
+	checkIdentity clablabruntime.Identity
+}
+
+func (r *accessLabRuntime) CheckSupport(_ context.Context, identity clablabruntime.Identity) error {
+	r.checkIdentity = identity
+
+	return nil
 }
 
 func (r *accessLabRuntime) LocateNode(
@@ -142,6 +149,11 @@ func TestLabRuntimeAccessHelpersFillLabAndIdentity(t *testing.T) {
 		t.Fatalf("stats = %+v, %v, request %+v", stats, err, lr.statsRequest)
 	}
 
+	if err := c.CheckLabRuntimeSupport(ctx); err != nil ||
+		!lr.checkIdentity.Equal(testIdentity) {
+		t.Fatalf("CheckLabRuntimeSupport() = %v as %+v", err, lr.checkIdentity)
+	}
+
 	tail := int64(10)
 	var out strings.Builder
 	if err := c.NodeLogs(ctx, NodeLogOptions{
@@ -166,6 +178,11 @@ func TestLabRuntimeAccessHelpersReportMissingSupport(t *testing.T) {
 	if _, err := unsupported.LocateLabRuntimeNodes(ctx); err == nil ||
 		!strings.Contains(err.Error(), "does not support locating nodes") {
 		t.Fatalf("unsupported lab runtime error = %v", err)
+	}
+
+	if err := unsupported.CheckLabRuntimeSupport(ctx); err == nil ||
+		!strings.Contains(err.Error(), "does not support checking the lab runtime version") {
+		t.Fatalf("unsupported version check error = %v", err)
 	}
 
 	local := &CLab{Config: &Config{Name: "lab1"}}

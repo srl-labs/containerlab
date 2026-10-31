@@ -334,15 +334,15 @@ func TestIdentityImpersonatesOnEveryTransport(t *testing.T) {
 		Groups: []string{"clab:users", "clab:admins"},
 	}
 
-	view, err := r.connect(alice)
+	view, err := r.connect(context.Background(), alice)
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, err := r.connect(alice)
+	again, err := r.connect(context.Background(), alice)
 	if err != nil || again.kubeClient != view.kubeClient {
 		t.Fatal("clients of one identity were not cached")
 	}
-	defaultView, err := r.connect(clablabruntime.Identity{})
+	defaultView, err := r.connect(context.Background(), clablabruntime.Identity{})
 	if err != nil || defaultView.kubeClient == view.kubeClient {
 		t.Fatal("the configured identity shares the clients of another identity")
 	}
