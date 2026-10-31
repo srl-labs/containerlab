@@ -11,6 +11,7 @@ Suite Teardown      Run Keyword    Cleanup
 ${lab-name}         16-01-chr
 ${lab-file-name}    01-chr.clab.yml
 ${runtime}          docker
+${redeploy_image}   %{CHR_REDEPLOY_IMAGE=}
 
 
 *** Test Cases ***
@@ -74,9 +75,27 @@ Ensure the rejected startup config of r3 is reported and r3 never becomes health
     ...    sudo -E ${runtime} inspect -f '{{.State.Health.Status}}' clab-${lab-name}-r3
     Should Not Be Equal As Strings    ${status}    healthy
 
-Save the configuration without the launcher's management objects
+Save overrides and redeploy without the launcher's management objects
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r1
+    ...    username=admin
+    ...    password=admin
+    ...    try_for=30
+    SSHLibrary.Execute Command    /ip service set winbox vrf=main
+    SSHLibrary.Execute Command    /ip service set api-ssl vrf=main disabled=yes
+    SSHLibrary.Execute Command    /snmp set vrf=main
+    SSHLibrary.Execute Command    /snmp community add name=save-check addresses=10.0.0.0/30
+    SSHLibrary.Close Connection
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r2
+    ...    username=netops
+    ...    password=chr pass#1
+    ...    try_for=30
+    SSHLibrary.Execute Command    /ip vrf add name="user vrf" interfaces=none
+    SSHLibrary.Execute Command    /ip service set winbox vrf="user vrf"
+    SSHLibrary.Close Connection
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r1
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --node-filter r1,r2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/r1/ftpboot/config.auto.rsc
@@ -84,6 +103,54 @@ Save the configuration without the launcher's management objects
     Should Contain    ${f}    10.0.0.1/30
     Should Not Contain    ${f}    routing-table=mgmt
     Should Not Contain    ${f}    name=mgmt
+    Should Not Contain    ${f}    comment=clab-mgmt
+    Should Not Contain    ${f}    available-from=
+    Should Not Contain    ${f}    clab-service-defaults
+    Should Contain    ${f}    /ip service set [find where name=winbox dynamic=no] vrf=main
+    Should Contain    ${f}    /snmp set vrf=main
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    IF    $redeploy_image
+        Set Environment Variable    CHR_IMAGE    ${redeploy_image}
+    END
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Wait Until Keyword Succeeds    300s    5s    Node is healthy    r1
+    Wait Until Keyword Succeeds    300s    5s    Node is healthy    r2
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r1
+    ...    username=admin
+    ...    password=admin
+    ...    try_for=30
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get winbox vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get api-ssl vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get api-ssl disabled]
+    Should Be Equal As Strings    ${output.strip()}    true
+    ${output} =    SSHLibrary.Execute Command    :put [/snmp get vrf]
+    Should Be Equal As Strings    ${output.strip()}    main
+    ${output} =    SSHLibrary.Execute Command    /snmp community print count-only where name=save-check
+    Should Be Equal As Strings    ${output.strip()}    1
+    ${output} =    SSHLibrary.Execute Command    /ip vrf print count-only where name=mgmt
+    Should Be Equal As Strings    ${output.strip()}    1
+    ${output} =    SSHLibrary.Execute Command    /ping 10.0.0.2 count=3
+    Should Contain    ${output}    received=3
+    SSHLibrary.Close Connection
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r2
+    ...    username=netops
+    ...    password=chr pass#1
+    ...    try_for=30
+    ${output} =    SSHLibrary.Execute Command    :put [/ip service get winbox vrf]
+    Should Be Equal As Strings    ${output.strip()}    user vrf
+    ${output} =    SSHLibrary.Execute Command    /ip vrf print count-only where name="user vrf"
+    Should Be Equal As Strings    ${output.strip()}    1
+    SSHLibrary.Close Connection
 
 
 *** Keywords ***
