@@ -226,6 +226,34 @@ func (d *DockerRuntime) MgmtNetworkExists(ctx context.Context) (bool, error) {
 	}
 }
 
+// ResolveMgmtBridge sets the bridge of the bound management network if it exists.
+var _ clabruntime.MgmtBridgeResolver = (*DockerRuntime)(nil)
+
+func (d *DockerRuntime) ResolveMgmtBridge(ctx context.Context) error {
+	if d.mgmt.Bridge != "" {
+		return nil
+	}
+
+	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancel()
+
+	netRes, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	switch {
+	case cerrdefs.IsNotFound(err):
+		return nil
+	case err != nil:
+		return err
+	}
+
+	bridge, err := bridgeNameFromInspect(&netRes, d.mgmt.Network)
+	if err != nil {
+		return err
+	}
+	d.mgmt.Bridge = bridge
+
+	return nil
+}
+
 // NetworkAddresses returns occupied addresses in the requested subnets.
 // Only networks with overlapping IPAM pools are inspected.
 func (d *DockerRuntime) NetworkAddresses(ctx context.Context, subnets []netip.Prefix,

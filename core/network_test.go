@@ -14,8 +14,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -744,6 +746,37 @@ func TestMgmtNetworkListUnsupportedRuntime(t *testing.T) {
 	}
 }
 
+// apply reports that a mgmt-net link selects a network the runtime cannot provide
+// instead of failing later on the unresolved bridge.
+func TestResolveMgmtNetLinkNetworksUnsupportedRuntime(t *testing.T) {
+	c, err := NewContainerLab()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Config.MgmtNetworks = clabtypes.MgmtNetworks{
+		c.Config.Mgmt, {Network: "oob"},
+	}
+	c.Config.Topology.Links = []*clablinks.LinkDefinition{{
+		Type: string(clablinks.LinkTypeMgmtNet),
+		Link: &clablinks.LinkMgmtNetRaw{
+			HostInterface: "n1-eth1",
+			Endpoint:      clablinks.NewEndpointRaw("n1", "eth1", ""),
+			Network:       "oob",
+		},
+	}}
+	c.globalRuntimeName = "podman"
+	c.Runtimes["podman"] = clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+
+	err = c.resolveMgmtNetLinkNetworks(context.Background())
+	if err == nil ||
+		!strings.Contains(
+			err.Error(),
+			`runtime "podman" does not support multiple management networks`,
+		) {
+		t.Fatalf("error = %v; want unsupported runtime", err)
+	}
+}
+
 func TestSingleEntryMgmtNetworkListDefaultsNodes(t *testing.T) {
 	path := writeTopo(t, `
 name: single-list
@@ -948,5 +981,315 @@ func TestInitNodeBindsRuntimeToNodeMgmtNetwork(t *testing.T) {
 	}
 	if c.Nodes["on-default"].GetRuntime() != c.Runtimes["docker"] {
 		t.Fatal("node on the default network did not get the base runtime")
+	}
+}
+
+const mgmtNetLinkTopo = `
+name: mgmtnet-select
+mgmt:
+  - network: mgmtnet-select-oob
+    ipv4-subnet: 172.31.10.0/24
+    bridge: br-sel-oob
+  - network: mgmtnet-select-lab
+    ipv4-subnet: 172.31.20.0/24
+    bridge: br-sel-lab
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine
+      mgmt-net: mgmtnet-select-oob
+  links:
+    - type: mgmt-net
+      endpoint:
+        node: r1
+        interface: eth1
+      host-interface: r1-eth1
+    - type: mgmt-net
+      network: mgmtnet-select-oob
+      endpoint:
+        node: r1
+        interface: eth2
+      host-interface: r1-eth2
+    - type: mgmt-net
+      network: mgmtnet-select-lab
+      endpoint:
+        node: r1
+        interface: eth3
+      host-interface: r1-eth3
+    - endpoints: ["r1:eth4", "mgmt-net:r1-eth4"]
+`
+
+// mgmt-net links attach to the bridge of the management network they select,
+// and to the default network when they select none.
+func TestMgmtNetLinkSelectsNetwork(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTopo(t, mgmtNetLinkTopo), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.setMgmtNetLinkBridges(); err != nil {
+		t.Fatal(err)
+	}
+	// the mgmt-net link nodes are shared by the package, release their endpoints
+	t.Cleanup(c.resetResolvedLinks)
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{
+		"r1-eth1": "br-sel-oob",
+		"r1-eth2": "br-sel-oob",
+		"r1-eth3": "br-sel-lab",
+		"r1-eth4": "br-sel-oob",
+	}
+	got := map[string]string{}
+	for _, ep := range c.Endpoints {
+		if _, ok := want[ep.GetIfaceName()]; ok {
+			got[ep.GetIfaceName()] = ep.GetNode().GetShortName()
+		}
+	}
+	for iface, bridge := range want {
+		if got[iface] != bridge {
+			t.Errorf("mgmt-net link %s attached to %q; want %q", iface, got[iface], bridge)
+		}
+	}
+}
+
+// apply reconciles the mgmt-net endpoints of every management network under the
+// stable mgmt-net owner, independent of the bridge the endpoint attaches to.
+func TestMgmtNetLinkApplyEndpointKey(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath(writeTopo(t, mgmtNetLinkTopo), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.setMgmtNetLinkBridges(); err != nil {
+		t.Fatal(err)
+	}
+	// the mgmt-net link nodes are shared by the package, release their endpoints
+	t.Cleanup(c.resetResolvedLinks)
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]bool{"r1-eth1": true, "r1-eth2": true, "r1-eth3": true, "r1-eth4": true}
+	for _, ep := range c.Endpoints {
+		if !want[ep.GetIfaceName()] {
+			continue
+		}
+		delete(want, ep.GetIfaceName())
+
+		key := endpointKeyFromEndpoint(ep)
+		if key.node != "mgmt-net" || key.iface != ep.GetIfaceName() {
+			t.Errorf("mgmt-net endpoint %s keyed as %s; want mgmt-net:%s",
+				ep.GetIfaceName(), key.String(), ep.GetIfaceName())
+		}
+	}
+	for iface := range want {
+		t.Errorf("mgmt-net endpoint %s not resolved", iface)
+	}
+}
+
+func TestMgmtNetLinkNetworkValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		mgmt string
+		link string
+		want string
+	}{
+		{
+			name: "unknown network",
+			mgmt: "  - network: mgmtnet-val-a\n",
+			link: "      network: mgmtnet-val-missing\n",
+			want: `mgmt-net link: management network "mgmtnet-val-missing" is not defined`,
+		},
+		{
+			name: "macvlan network",
+			mgmt: "  - network: mgmtnet-val-a\n" +
+				"  - network: mgmtnet-val-mv\n    driver: macvlan\n    macvlan-parent: eth0\n",
+			link: "      network: mgmtnet-val-mv\n",
+			want: `cannot use management network "mgmtnet-val-mv" with driver "macvlan"`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeTopo(t, "name: mgmtnet-val\nmgmt:\n"+tc.mgmt+`topology:
+  defaults:
+    mgmt-net: mgmtnet-val-a
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+  links:
+    - type: mgmt-net
+`+tc.link+`      endpoint:
+        node: n1
+        interface: eth1
+      host-interface: n1-eth1
+`)
+			_, err := NewContainerLab(WithTopoPath(path, nil))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v; want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// A macvlan default network does not prevent mgmt-net links to a bridge network.
+func TestMgmtNetLinkBridgeNetworkWithMacvlanDefault(t *testing.T) {
+	path := writeTopo(t, `
+name: mgmtnet-mv-default
+mgmt:
+  - network: mgmtnet-mv-default-mv
+    driver: macvlan
+    macvlan-parent: eth0
+  - network: mgmtnet-mv-default-br
+topology:
+  defaults:
+    mgmt-net: mgmtnet-mv-default-mv
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+  links:
+    - type: mgmt-net
+      network: mgmtnet-mv-default-br
+      endpoint:
+        node: n1
+        interface: eth1
+      host-interface: n1-eth1
+`)
+	if _, err := NewContainerLab(WithTopoPath(path, nil)); err != nil {
+		t.Fatalf("mgmt-net link to a bridge network rejected: %v", err)
+	}
+}
+
+// A skip-when-unused network that only mgmt-net links attach to is still created.
+func TestSkipMgmtNetworkKeepsNetworkUsedByMgmtNetLink(t *testing.T) {
+	path := writeTopo(t, `
+name: mgmtnet-skip
+mgmt:
+  - network: mgmtnet-skip-main
+  - network: mgmtnet-skip-lab
+    skip-when-unused: true
+  - network: mgmtnet-skip-unused
+    skip-when-unused: true
+topology:
+  defaults:
+    mgmt-net: mgmtnet-skip-main
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+  links:
+    - type: mgmt-net
+      network: mgmtnet-skip-lab
+      endpoint:
+        node: n1
+        interface: eth1
+      host-interface: n1-eth1
+`)
+	c, err := NewContainerLab(WithTopoPath(path, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.skipMgmtNetwork(c.mgmtNetByNetwork("mgmtnet-skip-lab")) {
+		t.Error("network used by a mgmt-net link was skipped")
+	}
+	if !c.skipMgmtNetwork(c.mgmtNetByNetwork("mgmtnet-skip-unused")) {
+		t.Error("unused network was not skipped")
+	}
+}
+
+const mgmtNetLinkAutoBridgeTopo = `
+name: mgmtnet-autobr
+mgmt:
+  - network: mgmtnet-autobr-oob
+    ipv4-subnet: 172.31.30.0/24
+  - network: mgmtnet-autobr-lab
+    ipv4-subnet: 172.31.40.0/24
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine
+      mgmt-net: mgmtnet-autobr-oob
+  links:
+    - type: mgmt-net
+      network: mgmtnet-autobr-lab
+      endpoint:
+        node: r1
+        interface: eth1
+      host-interface: r1-eth1
+`
+
+// apply against a deployed lab learns the bridge of a non-default management network
+// that a mgmt-net link selects from the runtime, as the topology does not name it.
+func TestResolveMgmtNetLinkNetworksAutoBridge(t *testing.T) {
+	registerMgmtResolveRuntime()
+
+	for _, tc := range []struct {
+		name          string
+		networkExists bool
+		wantBridge    string
+	}{
+		{name: "existing network is resolved", networkExists: true, wantBridge: "br-fake"},
+		{name: "missing network is not created", networkExists: false, wantBridge: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// a CreateNet call would change host state, e.g. during a dry run
+			setMgmtResolveBehavior(t, &mgmtResolveBehavior{
+				checkable:     true,
+				networkExists: tc.networkExists,
+				failCreateNet: true,
+			})
+
+			c, err := NewContainerLab(
+				WithTimeout(time.Minute),
+				WithTopoPath(writeTopo(t, mgmtNetLinkAutoBridgeTopo), nil),
+				WithRuntime("mgmtresolvetest", &clabruntime.RuntimeConfig{}),
+				WithSkippedBindsPathsCheck(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := c.resolveMgmtNetLinkNetworks(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if err := c.setMgmtNetLinkBridges(); err != nil {
+				t.Fatal(err)
+			}
+			// the mgmt-net link nodes are shared by the package, release their endpoints
+			t.Cleanup(c.resetResolvedLinks)
+			if err := c.ResolveLinks(); err != nil {
+				t.Fatal(err)
+			}
+
+			stats := mgmtResolveRuntimeStatsPtr.Load()
+			if got := stats.resolveCalls.Load(); got != 1 {
+				t.Fatalf("ResolveMgmtBridge calls = %d, want 1", got)
+			}
+			if got := stats.createNetCalls.Load(); got != 0 {
+				t.Fatalf("CreateNet calls = %d, want 0", got)
+			}
+
+			var got string
+			for _, ep := range c.Endpoints {
+				if ep.GetIfaceName() == "r1-eth1" {
+					got = ep.GetNode().GetShortName()
+				}
+			}
+			if got != tc.wantBridge {
+				t.Fatalf("mgmt-net link attached to %q; want %q", got, tc.wantBridge)
+			}
+
+			// apply verifies the links before it creates the missing network
+			if !tc.networkExists {
+				params := clablinks.NewVerifyLinkParams()
+				params.AllowExistingEndpoint = true
+				if err := c.verifyLinks(context.Background(), params); err != nil {
+					t.Fatalf("verifyLinks() = %v, want nil", err)
+				}
+			}
+		})
 	}
 }

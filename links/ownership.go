@@ -30,7 +30,7 @@ func DiscoverOwnedInterfaces(
 	node Node,
 	knownIfaceNames map[string]struct{},
 ) ([]OwnedInterface, error) {
-	return DiscoverOwnedInterfacesFor(ctx, node, node.GetShortName(), knownIfaceNames)
+	return DiscoverOwnedInterfacesFor(ctx, node, ownershipName(node), knownIfaceNames)
 }
 
 // DiscoverOwnedInterfacesFor discovers interfaces in node's namespace that
@@ -60,7 +60,7 @@ func DiscoverOwnedInterfacesFor(
 					continue
 				}
 			}
-			if !HasOwnershipAltNameFor(link, ownerName, name) {
+			if !isOwnedBy(link, node, ownerName, name) {
 				continue
 			}
 
@@ -131,7 +131,7 @@ func DiscoverOwnedInterfaceNames(
 // ValidateOwnedInterface returns an error when an existing interface is not
 // owned by the requested logical endpoint. Missing interfaces are valid.
 func ValidateOwnedInterface(ctx context.Context, node Node, ifaceName string) error {
-	return ValidateOwnedInterfaceFor(ctx, node, node.GetShortName(), ifaceName)
+	return ValidateOwnedInterfaceFor(ctx, node, ownershipName(node), ifaceName)
 }
 
 // ValidateOwnedInterfaceFor validates an interface in node's namespace against
@@ -151,7 +151,7 @@ func ValidateOwnedInterfaceFor(
 		if err != nil {
 			return err
 		}
-		if HasOwnershipAltNameFor(link, ownerName, ifaceName) {
+		if isOwnedBy(link, node, ownerName, ifaceName) {
 			return nil
 		}
 		return fmt.Errorf(
@@ -175,7 +175,7 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 		if err != nil {
 			return err
 		}
-		if !HasOwnershipAltNameFor(link, node.GetShortName(), ifaceName) {
+		if !isOwnedBy(link, node, ownershipName(node), ifaceName) {
 			return fmt.Errorf(
 				"%w: interface %q on node %q",
 				ErrInterfaceUnowned,
@@ -186,4 +186,20 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 
 		return netlink.LinkDel(link)
 	})
+}
+
+// isOwnedBy reports whether link carries the ownership marker of the logical
+// endpoint ownerName:ifaceName. Interfaces of mgmt-net links deployed by earlier
+// releases carry a marker for the bridge name of the mgmt-net link node instead
+// of the stable mgmt-net owner name, and are accepted as well.
+func isOwnedBy(link netlink.Link, node Node, ownerName, ifaceName string) bool {
+	if HasOwnershipAltNameFor(link, ownerName, ifaceName) {
+		return true
+	}
+
+	if _, ok := node.(*mgmtBridgeLinkNode); ok && ownerName == mgmtNetOwnerName {
+		return HasOwnershipAltNameFor(link, node.GetShortName(), ifaceName)
+	}
+
+	return false
 }

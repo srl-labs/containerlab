@@ -276,6 +276,7 @@ The following also should be taken into consideration:
 - Nodes using `network-mode` ignore the `mgmt-net` key.
 - The `--network`, `--ipv4/6-subnet` flag is not supported.
 - [`skip-when-unused`](#skipping-the-management-network) is evaluated per network: a network with the flag set is not created when every node attached to it runs with `network-mode: none`.
+- [`mgmt-net` links](#additional-connections-to-management-network) attach to the first management network unless the extended link definition selects another one with the `network` key.
 - When a management network is dropped from the `mgmt` list, the next `destroy` removes it together with the networks the topology still defines.
 
 ### Drivers
@@ -728,6 +729,33 @@ topology:
 In the above example the node `n1` connects with its `e1-1` interface to the management network. This is done by specifying the endpoint with a reserved name `mgmt-net` and defining the name of the interface that should be used in that bridge (`n1-e1-1`).
 
 By specifying `mgmt-net` name of the node in the endpoint definition we tell containerlab to find out which bridge is used by the management network of our lab and use this bridge as the attachment point for our veth pair.
+
+With [multiple management networks](#multiple-management-networks) the brief form attaches to the first network in the `mgmt` list. To attach to a different network, use the [extended `mgmt-net` link](topo-def-file.md#mgmt-net) definition and set the `network` key to the name of the management network:
+
+```yaml
+name: multi
+mgmt:
+  - network: oob
+    ipv4-subnet: 172.31.10.0/24
+  - network: lab
+    ipv4-subnet: 172.31.20.0/24
+    bridge: br-lab
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine
+      mgmt-net: oob
+  links:
+    - type: mgmt-net
+      network: lab
+      endpoint:
+        node: r1
+        interface: eth1
+      host-interface: r1-eth1
+```
+
+The referenced network must be defined in the `mgmt` list and use the `bridge` driver.
 
 This is best illustrated with the following diagram:
 

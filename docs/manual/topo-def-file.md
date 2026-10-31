@@ -313,12 +313,15 @@ The mgmt-net link type represents a veth pair that is connected to a container n
       interface: <NodeA-Interface-Name>     # mandatory
       mac: <NodeA-Interface-Mac>            # optional
     host-interface: <interface-name>        # mandatory
+    network: <mgmt-network-name>            # optional
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
 
 The `host-interface` is the desired interface name that will be attached to the management network in the host namespace.
+
+The `network` selects one of the [multiple management networks](network.md#multiple-management-networks) by its name. When omitted, the link attaches to the first management network. The selected network must use the `bridge` driver.
 
 ###### macvlan
 

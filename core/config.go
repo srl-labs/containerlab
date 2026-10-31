@@ -109,6 +109,17 @@ func (c *CLab) parseTopology() error {
 	for nodeName, topologyNode := range c.Config.Topology.Nodes {
 		// this case is when runtime was overridden at the node level
 		if r := c.Config.Topology.GetNodeRuntime(nodeName); r != "" {
+			log.Warn(
+				"Deprecation notice",
+				"notice",
+				"Per-node runtime is deprecated and will be removed in a future release. "+
+					"Set the lab runtime with the --runtime flag or CLAB_RUNTIME env var instead",
+				"node",
+				nodeName,
+				"runtime",
+				r,
+			)
+
 			nodeRuntimes[nodeName] = r
 			continue
 		}
@@ -597,10 +608,10 @@ func (c *CLab) verifyRootNetNSLinks() error {
 	}
 
 	// we also need to take the two special nodes host and mgmt-br into account
-	for _, n := range []clablinks.Node{
-		clablinks.GetHostLinkNode(),
-		clablinks.GetMgmtBrLinkNode(),
-	} {
+	for _, n := range append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	) {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
