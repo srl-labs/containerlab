@@ -174,7 +174,11 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
-		"/export",
+		// A normal export omits RouterOS defaults, including an explicit opt-in
+		// to discovery on "static". Append only that omitted setting: verbose
+		// exports also include newer defaults that older RouterOS cannot import.
+		`/export; :if ([/ip neighbor discovery-settings get discover-interface-list] = "static") `+
+			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}`,
 	)
 	if err != nil {
 		return nil, err
@@ -186,12 +190,12 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
 // every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
-// its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again
-// as a startup config, these lines duplicate objects the launcher already created and
+// its routes and rules, and the discovery lists), the ether1 ND entry and CHR's ether1
+// DHCP client. Importing these lines as a startup config duplicates objects the launcher
+// already created and
 // RouterOS stops the import at the first one; the management addressing also belongs to
 // the deployment, not the lab. Continuation lines (an unescaped trailing backslash) are joined
-// before
-// matching.
+// before matching.
 func filterLauncherConfig(config string) string {
 	var out []string
 

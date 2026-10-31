@@ -198,8 +198,8 @@ func TestInterfaceParsing(t *testing.T) {
 	}
 }
 
-// exportedConfig is a verbatim RouterOS 7.24.5 /export of a node this kind deployed
-// (transparent management, IPv4 + IPv6, a lab default route in main).
+// exportedConfig represents a node's compact export with the explicit discovery
+// default appended by SaveConfig, including launcher-owned and user interface lists.
 const exportedConfig = `# 2026-10-16 21:56:34 by RouterOS 7.24.5
 # system id = db75dropC8O
 #
@@ -237,8 +237,15 @@ add action=lookup-only-in-table comment=clab-mgmt src-address=172.20.20.4/32 \
     table=mgmt
 add action=lookup-only-in-table comment=clab-mgmt src-address=\
     3fff:172:20:20::4/128 table=mgmt
+/interface list
+add comment=clab-mgmt name=clab-management
+add comment=clab-mgmt exclude=clab-management include=static name=clab-discovery
+add include=static name="data ports"
+/interface list member
+add comment=clab-mgmt interface=ether1 list=clab-management
 /system identity
-set name=r2`
+set name=r2
+/ip neighbor discovery-settings set discover-interface-list=static`
 
 func TestFilterLauncherConfig(t *testing.T) {
 	got := filterLauncherConfig(exportedConfig)
@@ -264,6 +271,8 @@ func TestFilterLauncherConfig(t *testing.T) {
 		"add name=lo0",
 		"set name=r2",
 		"/routing table",
+		`add include=static name="data ports"`,
+		"/ip neighbor discovery-settings set discover-interface-list=static",
 	} {
 		if !strings.Contains(got, kept) {
 			t.Errorf("filtered config lost user line %q:\n%s", kept, got)
