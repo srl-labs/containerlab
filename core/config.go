@@ -590,10 +590,10 @@ func (c *CLab) verifyRootNetNSLinks() error {
 	}
 
 	// we also need to take the two special nodes host and mgmt-br into account
-	for _, n := range []clablinks.Node{
-		clablinks.GetHostLinkNode(),
-		clablinks.GetMgmtBrLinkNode(),
-	} {
+	for _, n := range append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	) {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
