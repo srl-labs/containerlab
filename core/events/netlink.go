@@ -536,13 +536,15 @@ func (w *netlinkWatcher) processUpdate(
 
 	switch update.Header.Type {
 	case unix.RTM_DELLINK:
-		if exists {
-			snapshot = previous
+		// A link that is not tracked was never reported, or its deletion was
+		// already reported when the links were listed again after a resubscribe.
+		if !exists {
+			return
 		}
 
 		delete(states, snapshot.Index)
 		delete(statsSamples, snapshot.Index)
-		registry.emitInterfaceEvent(w.container, "delete", snapshot)
+		registry.emitInterfaceEvent(w.container, "delete", previous)
 	case unix.RTM_NEWLINK:
 		// Query netem info for this interface
 		snapshot = withNetem(snapshot, netemQuery.Query())

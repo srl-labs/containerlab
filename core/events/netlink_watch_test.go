@@ -16,6 +16,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"go.uber.org/mock/gomock"
+	"golang.org/x/sys/unix"
 )
 
 // eventLog collects the interface events of a registry by interface name.
@@ -336,5 +337,39 @@ func TestProcessExistingAfterResubscribe(t *testing.T) {
 				t.Fatalf("state MTU = %d, want 1500", states[7].MTU)
 			}
 		})
+	}
+}
+
+// TestProcessUpdateDeleteOnlyTrackedLinks checks that a deletion is reported
+// once, also when its notification arrives after a resubscribe has already
+// reported it.
+func TestProcessUpdateDeleteOnlyTrackedLinks(t *testing.T) {
+	link := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Index: 7, Name: "eth1", MTU: 1500}}
+	update := netlink.LinkUpdate{Link: link}
+	update.Header.Type = unix.RTM_DELLINK
+
+	events := make(chan aggregatedEvent, 8)
+	registry := newNetlinkRegistry(t.Context(), events, false, false, 0)
+	watcher := &netlinkWatcher{
+		container: &clabruntime.GenericContainer{Names: []string{"n1"}},
+	}
+
+	states := map[int]ifaceSnapshot{7: snapshotFromLink(link)}
+
+	watcher.processUpdate(states, nil, update, registry, nil)
+	watcher.processUpdate(states, nil, update, registry, nil)
+	close(events)
+
+	var got []string
+	for ev := range events {
+		got = append(got, ev.Action)
+	}
+
+	if want := []string{"delete"}; !slices.Equal(got, want) {
+		t.Fatalf("actions = %v, want %v", got, want)
+	}
+
+	if _, ok := states[7]; ok {
+		t.Fatal("deleted link is still tracked")
 	}
 }
