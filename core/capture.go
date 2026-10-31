@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -10,12 +9,17 @@ import (
 )
 
 // CaptureInterfaces lists the lab link interfaces Capture accepts for the given nodes, or for
-// every running node, with the peer at the other end of each link. Only lab runtimes with a
-// packet capturer (c9s) support it for now.
+// every running node, with the peer at the other end of each link. With Docker and Podman, the
+// interfaces come from the topology's links; lab runtimes list them through their packet
+// capturer.
 func (c *CLab) CaptureInterfaces(
 	ctx context.Context,
 	nodeNames ...string,
 ) ([]clablabruntime.CaptureInterface, error) {
+	if c.LabRuntime == nil {
+		return c.localCaptureInterfacesOf(ctx, nodeNames)
+	}
+
 	capturer, err := c.packetCapturer()
 	if err != nil {
 		return nil, err
@@ -30,9 +34,14 @@ func (c *CLab) CaptureInterfaces(
 
 // Capture streams pcapng from lab link interfaces to w until req.Duration passed,
 // req.PacketLimit packets were written or ctx ends; an ended ctx is not an error. The lab name
-// and identity default to the CLab's. Only lab runtimes with a packet capturer (c9s) support it
-// for now.
+// and identity default to the CLab's. With Docker and Podman, containerlab reads the interfaces
+// itself through packet sockets in the nodes' network namespaces, which needs root; lab
+// runtimes capture through their packet capturer.
 func (c *CLab) Capture(ctx context.Context, req clablabruntime.CaptureRequest, w io.Writer) error {
+	if c.LabRuntime == nil {
+		return c.captureLocal(ctx, req, w)
+	}
+
 	capturer, err := c.packetCapturer()
 	if err != nil {
 		return err
@@ -72,17 +81,6 @@ func (c *CLab) LabRuntimeInterfaces(
 }
 
 func (c *CLab) packetCapturer() (clablabruntime.PacketCapturer, error) {
-	if c.LabRuntime == nil {
-		runtimeName := c.globalRuntimeName
-		if runtimeName == "" {
-			runtimeName = "docker"
-		}
-
-		return nil, fmt.Errorf("packet capture is not supported by runtime %q yet; "+
-			"it is available with the %q lab runtime", runtimeName,
-			clablabruntime.ClabernetesRuntimeName)
-	}
-
 	capturer, err := labRuntimeCapability[clablabruntime.PacketCapturer](c, "packet capture")
 	if err != nil {
 		return nil, err
