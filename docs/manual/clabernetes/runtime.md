@@ -23,6 +23,11 @@ installation, concepts, guides, and CRD reference, see the
 ///
 
 /// warning | c9s version compatibility
+The c9s runtime needs clabernetes with Node run state and the clabwire capture
+contract (0.11 or newer). Containerlab checks this before its first cluster call
+and fails with an error that names the required release; there is no fallback
+for older clabernetes releases. See [Required clabernetes release](#required-clabernetes-release).
+
 This guide describes containerlab 0.80+ with the direct-runtime API introduced
 in c9s 0.9. It does not apply to launcher-based c9s 0.8 and older releases.
 c9s 0.9 cannot upgrade an older installation in place; follow the
@@ -100,11 +105,11 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | ------- | ------------ |
 | `deploy` | creates the `Topology` resource and waits for readiness; `--no-topology-cr` creates `NodeProfile`, `Link`, and `Node` resources directly instead |
 | `destroy` | deletes the lab's resources and its containerlab-managed namespace |
-| `inspect` | reads Node, Deployment, Pod, and service status |
+| `inspect` | reads Node, Pod, and service status |
 | `exec` | execs directly into the node's device container |
-| `start` | scales node Deployments to `1` |
-| `stop` | scales node Deployments to `0` and pauses reconciliation |
-| `restart` | restarts node Deployments |
+| `start` | sets the node's `spec.runState` to `Running` |
+| `stop` | sets the node's `spec.runState` to `Stopped` |
+| `restart` | requests a Pod replacement with a `c9s.run/restart-requested` token |
 | `save` | runs the node's save lifecycle inside its device container |
 | `events` | watches Clabernetes resources and pods |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
@@ -117,7 +122,8 @@ The c9s runtime expects:
 
 - a reachable kubernetes cluster
 - kubernetes 1.31 or newer
-- c9s 0.9 direct-runtime CRDs installed in the cluster
+- clabernetes with Node run state and the clabwire capture contract (0.11 or
+  newer) installed in the cluster
 - the Clabernetes manager running and watching all lab namespaces
 - kubernetes RBAC allowing containerlab to manage the required resources
 - permission for lab namespaces to run the privileged c9s connectivity
@@ -128,6 +134,37 @@ Containerlab creates a dedicated namespace for each c9s lab. The kube identity
 therefore needs cluster-scoped permission to get, create, and delete namespaces
 unless you select an existing namespace with `CLAB_KUBE_NAMESPACE`.
 ///
+
+### Required clabernetes release
+
+Containerlab needs a clabernetes release that has:
+
+- Node run state: `nodes.c9s.run` `spec.runState` (`Running` | `Stopped`), the
+  `Stopped` condition, and restart requests through the
+  `c9s.run/restart-requested` annotation
+- the clabwire packet capture contract: `--nodeName`, repeated `--interface`,
+  `--format pcapng` and `--list-interfaces`
+- the namespace-bindable `clabernetes-lab-viewer` and `clabernetes-lab-editor`
+  roles
+
+Both features ship in the same release, so containerlab checks one field: the
+published OpenAPI schema of `nodes.c9s.run` (`/openapi/v3/apis/c9s.run/v1alpha1`)
+must have `spec.runState`. Every authenticated user may read that document, so
+the check needs no extra RBAC. It runs once per command (once per runtime
+instance for library users) before the first cluster call. Commands that do not
+contact the cluster (`validate`, `deploy --emit-crs`, `graph`) skip it. Against
+an older release every other command fails like this:
+
+```text
+the clabernetes release on this cluster is not supported: nodes.c9s.run has no
+spec.runState (Node run state); the c9s runtime needs clabernetes with Node run
+state and the clabwire capture contract (0.11 or newer)
+```
+
+Library users can run the check up front with
+`(*core.CLab).CheckLabRuntimeSupport(ctx)` or the optional
+`labruntime.SupportChecker` interface; the error wraps
+`labruntime.ErrUnsupportedRuntimeVersion`.
 
 See the
 [c9s cluster requirements](https://c9s.run/docs/installation#cluster-requirements)
@@ -546,36 +583,52 @@ the [`logs` command](../../cmd/logs.md) for the flags.
 
 ## Start, stop, and restart
 
-Node lifecycle commands operate on the kubernetes Deployments created by
-Clabernetes.
+Node lifecycle commands ask the clabernetes controllers for a run state; they
+never touch Deployments or Pods.
 
 ```bash
-containerlab --runtime c9s stop -t topo.clab.yml
-containerlab --runtime c9s start -t topo.clab.yml
+containerlab --runtime c9s stop -t topo.clab.yml -n srl1
+containerlab --runtime c9s start -t topo.clab.yml -n srl1
 containerlab --runtime c9s restart -t topo.clab.yml
 ```
 
-`stop` sets the Clabernetes ignore-reconcile label on the selected `Node`
-resources, then scales their Deployments to `0`:
+`stop` and `start` send a merge patch to the node's `Node` resource:
 
-```text
-c9s.run/ignoreReconcile=true
+```json
+{"spec": {"runState": "Stopped"}}
 ```
 
-The label prevents the Clabernetes manager from immediately reconciling the
-nodes back to the running state. A stopped node's links go carrier-down on
-every peer, exactly like unplugging a cable.
+(`"Running"` for `start`). `stop` returns once the controller reports the
+`Stopped` condition as `True`, which it does when no Pod of the node remains.
+`start` returns once the condition is `False` for the patched generation and
+the node's readiness is `ready`. Both wait at most `--timeout`.
 
-`start` scales the selected Deployments back to `1` and clears the
-corresponding Node labels. A grouped secondary shares lifecycle with its
-primary node's Deployment.
+`restart` sets a new token in the `c9s.run/restart-requested` annotation of the
+node. The controller replaces the Pod once per new token, and `restart` returns
+when `status.observedRestartToken` equals the token and the node is ready. A
+stopped node is started by the same patch.
 
-`restart` patches each selected Deployment with a restart annotation and waits
-for it to become ready:
+What a stopped node keeps and loses:
 
-```text
-kubectl.kubernetes.io/restartedAt=<utc timestamp>
-```
+- The `Node`, its Services, PersistentVolumeClaims and Links stay. Saved
+  configuration survives a stop and start.
+- Its links go carrier-down on every peer, like an unplugged cable;
+  `events` reports them as interface `down` events.
+- `inspect` shows the node as `stopped` (`stopping` while its Pod terminates).
+- clabernetes keeps a running peer of a stopped node `notready`: its
+  connectivity sidecar waits for the far end of the wire. Deploy, apply, start
+  and restart treat such a node as settled when its containers are ready, and
+  log `link peers stopped: <nodes>` instead of waiting for it.
+
+Nodes that share a Pod (`network-mode: container:<node>`) follow the run state
+of their primary node. Stopping, starting or restarting any node of the group
+acts on the primary, once.
+
+The controllers keep reconciling while nodes are stopped. A `deploy` that
+changes a stopped node updates its `Node`; the node stays stopped and boots the
+new definition on its next `start`. Containerlab never sends `spec.runState`
+during deploy, and with `--no-topology-cr` it carries the run state of existing
+Nodes over, so an apply never starts a stopped node.
 
 ## Save
 
@@ -856,15 +909,34 @@ groups it acts as.
 
 ## RBAC requirements
 
-The kube identity used by the outer containerlab process must be able to:
+clabernetes ships two ClusterRoles meant to be bound per lab namespace with a
+RoleBinding: `clabernetes-lab-viewer` (read) and `clabernetes-lab-editor`
+(read, write c9s resources and ConfigMaps, delete PersistentVolumeClaims,
+`pods/exec` and `pods/portforward`). Users who work with labs in existing
+namespaces need only `clabernetes-lab-editor` there; it has no write access to
+Deployments or Pods, and containerlab needs none:
+
+```bash
+kubectl create rolebinding alice-lab-editor -n <namespace> \
+  --clusterrole clabernetes-lab-editor --user alice
+containerlab --runtime c9s --namespace <namespace> deploy -t topo.clab.yml
+```
+
+`inspect`, `events` and `logs` work with `clabernetes-lab-viewer`. Creating the
+per-lab namespace is a cluster-scoped right the lab roles do not include; select
+a precreated namespace with `--namespace` or `CLAB_KUBE_NAMESPACE`, or grant
+namespace rights separately.
+
+In detail, the kube identity used by the outer containerlab process must be able
+to:
 
 - get, create, and delete namespaces when using automatic per-lab namespaces
-- create, get, list, watch, update, and delete c9s `Node` resources
+- create, get, list, watch, update, patch, and delete c9s `Node` resources
+  (`patch` for `start`, `stop` and `restart`)
 - create, get, list, watch, and delete c9s `Link` and `NodeProfile` resources
 - get, list, watch, and delete `Topology` resources when Topology-based labs
   must remain manageable
 - list and watch Pods
-- list, get, and update Deployments
 - create, get, list, update, and delete ConfigMaps used for local files
 - exec into device Pods with `pods/exec`
 - list and delete PersistentVolumeClaims for `destroy --cleanup`
@@ -881,6 +953,7 @@ kubectl auth can-i delete namespaces
 kubectl auth can-i create nodes.c9s.run -n <namespace>
 kubectl auth can-i list nodes.c9s.run -n <namespace>
 kubectl auth can-i update nodes.c9s.run -n <namespace>
+kubectl auth can-i patch nodes.c9s.run -n <namespace>
 kubectl auth can-i delete nodes.c9s.run -n <namespace>
 kubectl auth can-i create links.c9s.run -n <namespace>
 kubectl auth can-i delete links.c9s.run -n <namespace>
@@ -888,8 +961,7 @@ kubectl auth can-i create nodeprofiles.c9s.run -n <namespace>
 kubectl auth can-i delete nodeprofiles.c9s.run -n <namespace>
 kubectl auth can-i list pods -n <namespace>
 kubectl auth can-i watch pods -A
-kubectl auth can-i create pods/exec -n <namespace>
-kubectl auth can-i update deployments -n <namespace>
+kubectl auth can-i create pods --subresource exec -n <namespace>
 ```
 
 ## Troubleshooting
@@ -969,7 +1041,9 @@ kubectl api-resources | grep -i c9s
 kubectl get crd nodes.c9s.run links.c9s.run nodeprofiles.c9s.run
 ```
 
-Install Clabernetes and its CRDs before using `--runtime c9s`.
+Install Clabernetes and its CRDs before using `--runtime c9s`. A cluster
+without the c9s API fails the version check with `the c9s.run/v1alpha1 API is
+not served (is clabernetes installed?)`.
 
 ### Manager is not reconciling
 

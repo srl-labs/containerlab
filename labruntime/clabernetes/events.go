@@ -21,7 +21,7 @@ func (r *Runtime) StreamEvents(
 	ctx context.Context,
 	req clablabruntime.EventStreamRequest,
 ) (<-chan clablabruntime.Event, <-chan error, error) {
-	r, connErr := r.connect(req.Identity)
+	r, connErr := r.connect(ctx, req.Identity)
 	if connErr != nil {
 		return nil, nil, connErr
 	}

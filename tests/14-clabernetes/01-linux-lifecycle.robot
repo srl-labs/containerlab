@@ -15,6 +15,7 @@ ${runtime}              c9s
 ${lab-name}             c9s-linux-lifecycle
 ${lab-file}             01-linux-lifecycle.clab.yml
 ${topo}                 ${CURDIR}/${lab-file}
+${applied-topo}         ${CURDIR}/01-linux-lifecycle-applied.clab.yml
 ${lab-namespace}        c9s-${lab-name}
 ${client-label}         clab-node-name\=client
 ${events-log}           /tmp/clab-c9s-events.log
@@ -191,17 +192,61 @@ Stop server and verify dataplane interruption
     ${output} =    Run Clab Command    stop -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
 
+    # stop is a run state patch on the Node; the controller removes the Pod
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+    ${stopped} =    Node Field    server    {.status.conditions[?(@.type=="Stopped")].status}
+    Should Be Equal    ${stopped}    True
+    ${pods} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get pods -l c9s.run/topologyNode\=server -o name
+    ...    shell=True
+    Should Be Empty    ${pods.stdout}
+    ${inspect} =    Run Clab Command    inspect -t ${topo} --format json
+    Should Contain    ${inspect.stdout}    "state": "stopped"
+
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Fail
+
+Apply while server is stopped keeps it stopped
+    ${output} =    Run Clab Command    deploy -t ${applied-topo}
+    Should Be Equal As Integers    ${output.rc}    0
+    # the wait settles on the stopped node instead of waiting for it
+    Should Contain    ${output.stderr}    C9s lab is ready apart from stopped nodes
+    Should Contain    ${output.stderr}    server (stopped)
+
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+    ${env} =    Node Field    server    {.spec.env.CLAB_APPLY_MARK}
+    Should Be Equal    ${env}    applied-while-stopped
 
 Start server by lab name and verify dataplane restore
     ${output} =    Run Clab Command    start --name ${lab-name} --node server
     Should Be Equal As Integers    ${output.rc}    0
 
+    ${run_state} =    Node Field    server    {.spec.runState}
+    Should Be Equal    ${run_state}    Running
+    ${readiness} =    Node Field    server    {.status.readiness}
+    Should Be Equal    ${readiness}    ready
+
+    # the server boots the definition applied while it was stopped
+    ${mark} =    Run Clab Command
+    ...    exec -t ${applied-topo} --label clab-node-name\=server --cmd 'printenv CLAB_APPLY_MARK'
+    ${mark_output} =    Catenate    SEPARATOR=\n    ${mark.stdout}    ${mark.stderr}
+    Should Be Equal As Integers    ${mark.rc}    0
+    Should Contain    ${mark_output}    applied-while-stopped
+
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
 Restart server and keep dataplane working
+    ${before} =    Server Pod Name
     ${output} =    Run Clab Command    restart -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
+
+    ${after} =    Server Pod Name
+    Should Not Be Equal    ${before}    ${after}
+    ${token} =    Node Field    server    {.metadata.annotations.c9s\\.run/restart-requested}
+    ${observed} =    Node Field    server    {.status.observedRestartToken}
+    Should Not Be Empty    ${token}
+    Should Be Equal    ${token}    ${observed}
 
     Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
 
@@ -315,6 +360,25 @@ Deploy c9s linux lab without a Topology resource
     Should Contain    ${nodes.stdout}    node.c9s.run/client
     Should Contain    ${nodes.stdout}    node.c9s.run/server
 
+Apply without a Topology resource keeps a stopped node stopped
+    ${output} =    Run Clab Command    stop -t ${topo} --node client
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${plan} =    Run Clab Command    deploy -t ${applied-topo} --no-topology-cr --dry-run --format json
+    Should Be Equal As Integers    ${plan.rc}    0
+    ${changes} =    Evaluate    [c["kind"] + "/" + c["name"] for c in json.loads($plan.stdout)["changes"]]    modules=json
+    Should Contain    ${changes}    Node/server
+    Should Not Contain    ${changes}    Node/client
+
+    ${output} =    Run Clab Command    deploy -t ${applied-topo} --no-topology-cr
+    Should Be Equal As Integers    ${output.rc}    0
+    ${run_state} =    Node Field    client    {.spec.runState}
+    Should Be Equal    ${run_state}    Stopped
+
+    ${output} =    Run Clab Command    start -t ${topo} --node client
+    Should Be Equal As Integers    ${output.rc}    0
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Ping From Client Should Succeed
+
 Destroy c9s linux lab deployed without a Topology resource
     ${output} =    Run Clab Command    destroy -t ${topo} --cleanup
     Should Be Equal As Integers    ${output.rc}    0
@@ -424,6 +488,21 @@ Persistent Claim Volumes
     Should Be Equal As Integers    ${claims.rc}    0
     ${volumes} =    Strip String    ${claims.stdout}
     RETURN    ${volumes}
+
+Node Field
+    [Arguments]    ${node}    ${jsonpath}
+    ${result} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get nodes.c9s.run ${node} -o jsonpath\='${jsonpath}'
+    ...    shell=True
+    Should Be Equal As Integers    ${result.rc}    0    ${result.stderr}
+    RETURN    ${result.stdout}
+
+Server Pod Name
+    ${result} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} get pods -l c9s.run/topologyNode\=server --field-selector status.phase\=Running -o jsonpath\='{.items[*].metadata.name}'
+    ...    shell=True
+    Should Be Equal As Integers    ${result.rc}    0
+    RETURN    ${result.stdout}
 
 Remove File If Exists
     [Arguments]    ${path}
