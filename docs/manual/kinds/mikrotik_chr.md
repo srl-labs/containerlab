@@ -97,7 +97,7 @@ and the node does not become ready.
 
 ### Saving configuration
 
-[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses. Service settings include their defaults so an explicit VRF override back to `main` survives the next deployment.
+[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses. Saving explicitly retains service and SNMP VRF overrides back to `main`, which RouterOS normally omits as its default, so they survive the next deployment.
 
 ### Node readiness
 

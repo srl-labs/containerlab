@@ -168,14 +168,17 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 
 // SaveConfig exports the RouterOS configuration over SSH (scrapligo has no RouterOS
 // platform, see clabnodes.ExportConfigOverSSH) and writes it as the node's startup config,
-// without the objects the launcher creates at every boot. Verbose service settings
-// retain a user override back to main, which compact export omits as a RouterOS default.
+// without the objects the launcher creates at every boot. Explicit vrf=main settings
+// retain user overrides that compact export omits as RouterOS defaults, without adding
+// unrelated verbose defaults that older RouterOS versions may not understand.
 func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	exported, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
-		`/export; :put "# clab-service-defaults"; /ip service export verbose; /snmp export verbose`,
+		`/export; :foreach s in=[/ip service find where dynamic=no vrf=main] do={`+
+			`:put ("/ip service set [find where name=" . [/ip service get $s name] . " dynamic=no] vrf=main")}; `+
+			`:if ([/snmp get vrf] = "main") do={:put "/snmp set vrf=main"}`,
 	)
 	if err != nil {
 		return nil, err
@@ -198,7 +201,6 @@ func filterLauncherConfig(config string) string {
 
 	section := ""
 	pending := ""
-	serviceDefaults := false
 	for line := range strings.SplitSeq(strings.ReplaceAll(config, "\r\n", "\n"), "\n") {
 		if pending != "" {
 			line = pending + "\n" + line
@@ -210,17 +212,8 @@ func filterLauncherConfig(config string) string {
 		}
 
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "# clab-service-defaults" {
-			serviceDefaults = true
-			continue
-		}
 		if strings.HasPrefix(trimmed, "/") {
 			section = trimmed
-		}
-		// The verbose tail supplies service defaults only. In particular, SNMP
-		// communities were already exported: adding them twice would fail import.
-		if serviceDefaults && section != "/ip service" && section != "/snmp" {
-			continue
 		}
 		if launcherOwned(section, trimmed) {
 			continue

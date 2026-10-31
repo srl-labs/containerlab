@@ -2,7 +2,7 @@ name: 16-01-chr
 topology:
   kinds:
     mikrotik_chr:
-      image: mikrotik/chr:7.24.5
+      image: ${CHR_IMAGE:=mikrotik/chr:7.24.5}
   nodes:
     r1:
       kind: mikrotik_chr
