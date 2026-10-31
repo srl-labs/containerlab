@@ -116,3 +116,48 @@ func TestCheckConnectivitySkipsLocalRuntimesForLabRuntimes(t *testing.T) {
 		t.Fatalf("CheckConnectivity() = %v, want nil for a lab runtime", err)
 	}
 }
+
+// TestContainerFromLabNodeReportsTheTopologyNode checks the labels a lab runtime node reports
+// without its topology file: the node name the topology spells, the type and group the
+// topology set, the recorded topology file, and its ports as unpublished container ports.
+func TestContainerFromLabNodeReportsTheTopologyNode(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{Config: &Config{Name: "lab1"}, TopoPaths: &clabtypes.TopoPaths{}}
+	container := c.containerFromLabNode(
+		&clablabruntime.LabState{
+			Name: "lab1", Namespace: "c9s-lab1", TopologyPath: "/home/alice/lab1.clab.yml",
+		},
+		clablabruntime.NodeState{
+			Name: "r1", TopologyName: "R1", Kind: "nokia_srlinux", Type: "ixr-h2",
+			Group: "spines", ContainerState: "running", Health: "healthy",
+			ExposedPorts: []clablabruntime.ExposedPort{
+				{Port: 57400, ExposePort: 57400, Protocol: "tcp"},
+			},
+		},
+	)
+
+	want := map[string]string{
+		"clab-node-name":     "R1",
+		"clab-node-longname": "lab1-r1",
+		"clab-node-kind":     "nokia_srlinux",
+		"clab-node-type":     "ixr-h2",
+		"clab-node-group":    "spines",
+		"clab-topo-file":     "/home/alice/lab1.clab.yml",
+		"containerlab":       "lab1",
+	}
+	for key, value := range want {
+		if container.Labels[key] != value {
+			t.Fatalf("label %s = %q, want %q (%v)", key, container.Labels[key], value,
+				container.Labels)
+		}
+	}
+	if container.State != "running" || container.Status != "healthy" ||
+		container.Names[0] != "lab1-r1" {
+		t.Fatalf("container = %s %s %v", container.State, container.Status, container.Names)
+	}
+	if len(container.Ports) != 1 || container.Ports[0].ContainerPort != 57400 ||
+		container.Ports[0].HostPort != 0 || container.Ports[0].Protocol != "tcp" {
+		t.Fatalf("ports = %+v", container.Ports)
+	}
+}

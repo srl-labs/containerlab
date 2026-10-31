@@ -130,7 +130,7 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 				continue
 			}
 
-			if err := printer(aggregatedEventFromLabRuntimeEvent(ev)); err != nil {
+			if err := printer(aggregatedEventFromLabRuntimeEvent(clab, ev)); err != nil {
 				log.Debugf("failed to write event: %v", err)
 			}
 		case err, ok := <-runtimeErrs:
@@ -170,10 +170,45 @@ func labRuntimeEventStreamRequest(
 	}
 }
 
-func aggregatedEventFromLabRuntimeEvent(ev clablabruntime.Event) aggregatedEvent {
+// aggregatedEventFromLabRuntimeEvent reports a lab runtime event with the attributes the
+// container runtimes' events have. A container event describes its node with the container
+// record inspect reports for it, the way a Docker event carries the container's labels: as a
+// snapshot like the snapshots of local containers, otherwise with the labels, image,
+// management addresses and ports a Docker event and its enrichment carry. An interface event
+// carries the attributes of the netlink interface events. The runtime's own attributes come on
+// top.
+func aggregatedEventFromLabRuntimeEvent(
+	clab *clabcore.CLab,
+	ev clablabruntime.Event,
+) aggregatedEvent {
 	ts := ev.Timestamp
 	if ts.IsZero() {
 		ts = time.Now()
+	}
+
+	var attributes map[string]string
+	switch {
+	case ev.Type == clablabruntime.EventTypeContainer && ev.Lab != nil && ev.Node != nil &&
+		clab != nil:
+		container := clab.LabRuntimeContainer(ev.Lab, *ev.Node)
+		if ev.Attributes["origin"] == clablabruntime.EventOriginSnapshot {
+			attributes = aggregatedEventFromContainerSnapshot(&container).Attributes
+		} else {
+			attributes = containerAttributes(&container)
+		}
+	case ev.Type == clablabruntime.EventTypeInterface && ev.Interface != nil:
+		lab := ev.Attributes["lab"]
+		if ev.Lab != nil {
+			lab = ev.Lab.Name
+		}
+		attributes = labRuntimeInterfaceAttributes(lab, ev.ActorName, ev.Interface)
+	}
+
+	for key, value := range ev.Attributes {
+		if attributes == nil {
+			attributes = make(map[string]string, len(ev.Attributes))
+		}
+		attributes[key] = value
 	}
 
 	return aggregatedEvent{
@@ -183,8 +218,36 @@ func aggregatedEventFromLabRuntimeEvent(ev clablabruntime.Event) aggregatedEvent
 		ActorID:     ev.ActorID,
 		ActorName:   ev.ActorName,
 		ActorFullID: ev.ActorFullID,
-		Attributes:  cloneStringMap(ev.Attributes),
+		Attributes:  attributes,
 	}
+}
+
+// containerAttributes are the attributes a container event reports for a container: its labels
+// and image, which Docker puts on every container event, and the management addresses and
+// ports the events command adds.
+func containerAttributes(container *clabruntime.GenericContainer) map[string]string {
+	attributes := cloneStringMap(container.Labels)
+	if attributes == nil {
+		attributes = make(map[string]string)
+	}
+
+	if container.Image != "" {
+		attributes["image"] = container.Image
+	}
+
+	if container.NetworkSettings.IPv4addr != "" {
+		attributes["mgmt_ipv4"] = container.GetContainerIPv4()
+	}
+
+	if container.NetworkSettings.IPv6addr != "" {
+		attributes["mgmt_ipv6"] = container.GetContainerIPv6()
+	}
+
+	if ports := exposedPortsAttributeValue(container.Ports); ports != "" {
+		attributes["ports"] = ports
+	}
+
+	return attributes
 }
 
 func forwardRuntimeEvents(
@@ -439,17 +502,10 @@ func aggregatedEventFromContainerSnapshot(
 		short = clabutils.ShortID(container.ID)
 	}
 
-	attributes := cloneStringMap(container.Labels)
-	if attributes == nil {
-		attributes = make(map[string]string)
-	}
+	attributes := containerAttributes(container)
 
 	if _, ok := attributes["origin"]; !ok {
 		attributes["origin"] = "snapshot"
-	}
-
-	if container.Image != "" {
-		attributes["image"] = container.Image
 	}
 
 	if container.Status != "" {
@@ -462,18 +518,6 @@ func aggregatedEventFromContainerSnapshot(
 
 	if container.NetworkName != "" {
 		attributes["network"] = container.NetworkName
-	}
-
-	if container.NetworkSettings.IPv4addr != "" {
-		attributes["mgmt_ipv4"] = container.GetContainerIPv4()
-	}
-
-	if container.NetworkSettings.IPv6addr != "" {
-		attributes["mgmt_ipv6"] = container.GetContainerIPv6()
-	}
-
-	if ports := exposedPortsAttributeValue(container.Ports); ports != "" {
-		attributes["ports"] = ports
 	}
 
 	if len(attributes) == 0 {

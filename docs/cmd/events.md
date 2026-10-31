@@ -77,17 +77,23 @@ Currently supported runtimes:
 - `c9s`
 
 With `--runtime c9s`, events are backed by kubernetes watches for Clabernetes
-`Topology` and `Node` resources and labeled Pods. Interface state (`interface up`
-and `interface down` events) and statistics are sampled inside the device
-containers, not through local host netlink. The stream covers every namespace by
-default; `--namespace` (or `CLAB_KUBE_NAMESPACE`) limits it to one namespace,
-and `-t`/`--name` to one lab. With Docker and Podman the lab selection is ignored
-and every lab is streamed.
+`Topology` and `Node` resources and labeled Pods. They use the actions and
+attributes of the Docker runtime: a node is a container (`create`, `start`,
+`kill`, `stop`, `die`, `destroy`, `health_status: …`) described by the same
+labels, and the interface events (`snapshot`, `create`, `update`, `delete`,
+`stats`) report the node's lab link interfaces, `eth0` and `lo` under the names
+a Docker container of the node has. Interface state and statistics are sampled
+inside the device containers, not through local host netlink. The stream covers
+every namespace by default; `--namespace` (or `CLAB_KUBE_NAMESPACE`) limits it
+to one namespace, and `-t`/`--name` to one lab. With Docker and Podman the lab
+selection is ignored and every lab is streamed. The
+[c9s runtime manual](../manual/clabernetes/runtime.md#events) lists the
+attributes and the few Docker attributes c9s has no equivalent for.
 
 Runtimes that do not implement the `events` API, or are not yet supported by Containerlab, will exit with an explanatory error.
 
 ## See also
 
 - [`inspect interfaces`](inspect/interfaces.md) – produces a point-in-time view of the same interface details that `events` reports continuously.
-- [Clabernetes containerlab runtime](../manual/clabernetes/runtime.md) - explains how c9s events differ from Docker events.
+- [Clabernetes containerlab runtime](../manual/clabernetes/runtime.md#events) - describes c9s events and how they map onto Docker events.
 - `docker events` – the raw runtime feed that Containerlab builds upon.

@@ -3736,7 +3736,7 @@ func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
 	if !r.forwardPodWatch(
 		context.Background(),
 		watcher,
-		make(chan clablabruntime.Event, 1),
+		make(chan labRef, 1),
 		make(chan error, 1),
 	) {
 		t.Fatal("expected closed pod watch to request reconnect")
@@ -3754,6 +3754,7 @@ func TestForwardTopologyWatchReconnectsOnClosedChannel(t *testing.T) {
 		context.Background(),
 		"default",
 		watcher,
+		make(chan labRef, 1),
 		make(chan clablabruntime.Event, 1),
 		make(chan error, 1),
 	) {
@@ -3761,11 +3762,11 @@ func TestForwardTopologyWatchReconnectsOnClosedChannel(t *testing.T) {
 	}
 }
 
-func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
+func TestForwardPodWatchReportsTheLabOfAPod(t *testing.T) {
 	t.Parallel()
 
 	watcher := watch.NewFake()
-	events := make(chan clablabruntime.Event, 1)
+	changed := make(chan labRef, 1)
 	errs := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -3773,11 +3774,12 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	r := &Runtime{}
 	done := make(chan bool, 1)
 	go func() {
-		done <- r.forwardPodWatch(ctx, watcher, events, errs)
+		done <- r.forwardPodWatch(ctx, watcher, changed, errs)
 	}()
 
+	// a pod without the lab label is not a lab's pod
 	watcher.Add(&corev1.Pod{})
-	watcher.Add(&corev1.Pod{
+	watcher.Modify(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod1",
 			Namespace: "lab-ns",
@@ -3786,19 +3788,11 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 				labelTopologyNode:  "node1",
 			},
 		},
-		Status: corev1.PodStatus{
-			Phase: corev1.PodRunning,
-			PodIP: "10.0.0.1",
-		},
+		Status: corev1.PodStatus{Phase: corev1.PodRunning},
 	})
 
-	got := <-events
-	if got.ActorID != "lab-ns/lab1/node1" ||
-		got.ActorName != "lab1-node1" ||
-		got.ActorFullID != "pod1" ||
-		got.Attributes["phase"] != string(corev1.PodRunning) ||
-		got.Attributes["pod_ip"] != "10.0.0.1" {
-		t.Fatalf("unexpected pod event: %+v", got)
+	if got := <-changed; got != (labRef{namespace: "lab-ns", lab: "lab1"}) {
+		t.Fatalf("changed lab = %+v", got)
 	}
 
 	cancel()

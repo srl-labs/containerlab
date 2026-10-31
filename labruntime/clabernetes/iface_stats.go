@@ -3,6 +3,7 @@ package clabernetes
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,12 +31,27 @@ const (
 	// interfaceSampleWorkers bounds the concurrent execs of one sampling round.
 	interfaceSampleWorkers = 16
 
-	// interfaceStateNotPresent is the operational state reported for an interface that
-	// disappeared, or whose node stopped running (RFC 2863 "notPresent").
-	interfaceStateNotPresent = "notpresent"
+	// managementInterface is a node's management interface in its pod, the interface the
+	// clabernetes planner gives the management address by default. It has the name the
+	// management interface has in a container of the local runtimes.
+	managementInterface = "eth0"
+	// loopbackInterface is reported like the local runtimes report it.
+	loopbackInterface = "lo"
+	// clabernetesAliasPrefix starts the interface aliases clabernetes marks its own interfaces
+	// and the lab links it wires with. They are not the topology's names, so they are not
+	// reported.
+	clabernetesAliasPrefix = "c9s:"
+	// zeroMAC is the hardware address sysfs reports for interfaces without one (loopback).
+	zeroMAC = "00:00:00:00:00:00"
 
-	// iffUp is the IFF_UP bit of /sys/class/net/<if>/flags.
-	iffUp = 0x1
+	// Interface event actions and link types, as the local runtimes report them.
+	interfaceActionSnapshot = "snapshot"
+	interfaceActionCreate   = "create"
+	interfaceActionUpdate   = "update"
+	interfaceActionDelete   = "delete"
+	interfaceActionStats    = "stats"
+	interfaceTypeVeth       = "veth"
+	interfaceTypeDevice     = "device"
 
 	// shell exit codes of a command that cannot be found or executed.
 	exitCommandNotExecutable = 126
@@ -72,31 +88,12 @@ type c9sIfaceState struct {
 	Alias     string
 }
 
-// action maps the interface state onto the up/down action of interface state events. An
-// "unknown" operational state (loopback, tunnels) counts as up when the interface is
-// administratively up.
-func (s c9sIfaceState) action() string {
-	if s.OperState == "up" || (s.OperState == "unknown" && s.Flags&iffUp != 0) {
-		return "up"
-	}
-
-	return "down"
-}
-
-// trackedIface is the last reported state of an interface.
-type trackedIface struct {
-	state  c9sIfaceState
-	action string
-}
-
-// trackedNode remembers the interfaces last reported for a node, so their removal can be
-// reported when the node stops running.
+// trackedNode remembers the interfaces last reported for a node, so their changes and their
+// removal can be reported, also when the node stops running.
 type trackedNode struct {
-	namespace string
-	lab       string
-	node      string
-	pod       string
-	ifaces    map[string]trackedIface
+	lab    *clablabruntime.LabState
+	node   clablabruntime.NodeState
+	ifaces map[string]clablabruntime.InterfaceEventData
 }
 
 type interfaceSampleTarget struct {
@@ -110,12 +107,24 @@ type interfaceSample struct {
 	stats     []c9sIfaceStats
 	ifaces    []c9sIfaceState
 	hasStates bool
+	// links are the node's lab link interfaces as clabwire lists them.
+	links     []clabwireInterface
 	timestamp time.Time
 	err       error
 }
 
+// podInterfaceListing is the clabwire interface listing of a pod, per node. It is listed again
+// when the pod's interfaces change.
+type podInterfaceListing struct {
+	names  string
+	byNode map[string][]clabwireInterface
+}
+
 // interfacePoller samples the interfaces of every running node in an event scope and turns the
-// samples into interface state and statistics events.
+// samples into interface events. It reports the interfaces a container of the local runtimes
+// has for the same node: the node's lab link interfaces, with the names and aliases clabwire
+// lists for them, the management interface and loopback. The pod's own interfaces (the pod
+// network, clabernetes' interposition and link transport interfaces) are not reported.
 type interfacePoller struct {
 	r     *Runtime
 	scope eventScope
@@ -130,6 +139,10 @@ type interfacePoller struct {
 	// plain cat of /proc/net/dev and report statistics without interface state.
 	noShell map[string]bool
 
+	listingsMu sync.Mutex
+	// listings holds the clabwire interface listing per pod (namespace/pod).
+	listings map[string]*podInterfaceListing
+
 	firstRound bool
 }
 
@@ -143,17 +156,7 @@ func (r *Runtime) pollInterfaces(
 		opts.interval = time.Second
 	}
 
-	poller := &interfacePoller{
-		r:            r,
-		scope:        scope,
-		opts:         opts,
-		sink:         eventSink,
-		statsSamples: map[string]c9sIfaceStatsSample{},
-		nodes:        map[string]*trackedNode{},
-		noShell:      map[string]bool{},
-		firstRound:   true,
-	}
-
+	poller := newInterfacePoller(r, scope, opts, eventSink)
 	poller.round(ctx)
 
 	ticker := time.NewTicker(opts.interval)
@@ -169,6 +172,25 @@ func (r *Runtime) pollInterfaces(
 	}
 }
 
+func newInterfacePoller(
+	r *Runtime,
+	scope eventScope,
+	opts interfacePollOptions,
+	eventSink chan<- clablabruntime.Event,
+) *interfacePoller {
+	return &interfacePoller{
+		r:            r,
+		scope:        scope,
+		opts:         opts,
+		sink:         eventSink,
+		statsSamples: map[string]c9sIfaceStatsSample{},
+		nodes:        map[string]*trackedNode{},
+		noShell:      map[string]bool{},
+		listings:     map[string]*podInterfaceListing{},
+		firstRound:   true,
+	}
+}
+
 func (p *interfacePoller) round(ctx context.Context) {
 	defer func() { p.firstRound = false }()
 
@@ -179,14 +201,17 @@ func (p *interfacePoller) round(ctx context.Context) {
 	}
 
 	running := map[string]bool{}
+	pods := map[string]bool{}
 	var targets []interfaceSampleTarget
 	for _, state := range states {
 		for _, node := range state.Nodes {
-			if !node.Ready || node.Pod == "" || node.Container == "" {
+			if node.ContainerState != clablabruntime.ContainerStateRunning || node.Pod == "" ||
+				node.Container == "" {
 				continue
 			}
 
 			running[c9sNodeKey(state.Namespace, state.Name, node.Name)] = true
+			pods[state.Namespace+"/"+node.Pod] = true
 			targets = append(targets, interfaceSampleTarget{
 				state: state,
 				node:  node,
@@ -217,22 +242,34 @@ func (p *interfacePoller) round(ctx context.Context) {
 	}
 
 	p.retireStoppedNodes(ctx, running)
+	p.forgetListings(pods)
 }
 
 // retireStoppedNodes reports the interfaces of nodes that stopped running, or were removed, as
-// down: they are gone with the node's pod.
+// deleted: they are gone with the node's pod.
 func (p *interfacePoller) retireStoppedNodes(ctx context.Context, running map[string]bool) {
 	for key, tracked := range p.nodes {
 		if running[key] {
 			continue
 		}
 
-		for name, iface := range tracked.ifaces {
-			iface.state.OperState = interfaceStateNotPresent
-			p.emitState(ctx, tracked, iface.state, time.Now())
+		for _, name := range sortedInterfaceNames(tracked.ifaces) {
+			p.emit(ctx, tracked, interfaceActionDelete, tracked.ifaces[name], time.Now())
 			p.forgetStats(tracked, name)
 		}
 		delete(p.nodes, key)
+	}
+}
+
+// forgetListings drops the interface listings of pods that are gone.
+func (p *interfacePoller) forgetListings(pods map[string]bool) {
+	p.listingsMu.Lock()
+	defer p.listingsMu.Unlock()
+
+	for key := range p.listings {
+		if !pods[key] {
+			delete(p.listings, key)
+		}
 	}
 }
 
@@ -300,8 +337,70 @@ func (p *interfacePoller) sample(
 	default:
 		sample.stats, sample.ifaces, sample.hasStates, sample.err = parseInterfaceSample(stdout)
 	}
+	if sample.err != nil {
+		return sample
+	}
+
+	sample.links, sample.err = p.nodeLinks(ctx, target, sampledInterfaceNames(sample))
 
 	return sample
+}
+
+// sampledInterfaceNames lists the interface names a sample saw, sorted and comma-joined.
+func sampledInterfaceNames(sample interfaceSample) string {
+	names := make([]string, 0, len(sample.stats)+len(sample.ifaces))
+	seen := map[string]bool{}
+	for _, iface := range sample.ifaces {
+		if !seen[iface.Name] {
+			seen[iface.Name] = true
+			names = append(names, iface.Name)
+		}
+	}
+	for _, stat := range sample.stats {
+		if !seen[stat.Name] {
+			seen[stat.Name] = true
+			names = append(names, stat.Name)
+		}
+	}
+	sort.Strings(names)
+
+	return strings.Join(names, ",")
+}
+
+// nodeLinks returns the lab link interfaces of a node from its pod's clabwire listing. A pod is
+// listed once, and again when its interfaces change (a pod gets its link interfaces as clabwire
+// wires them).
+func (p *interfacePoller) nodeLinks(
+	ctx context.Context,
+	target interfaceSampleTarget,
+	names string,
+) ([]clabwireInterface, error) {
+	key := target.pod.Namespace + "/" + target.pod.Name
+
+	p.listingsMu.Lock()
+	listing := p.listings[key]
+	p.listingsMu.Unlock()
+
+	if listing == nil || listing.names != names {
+		entries, err := p.r.listPodInterfaces(ctx, target.pod.Namespace, target.pod.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		listing = &podInterfaceListing{
+			names:  names,
+			byNode: map[string][]clabwireInterface{},
+		}
+		for _, entry := range entries {
+			listing.byNode[entry.Node] = append(listing.byNode[entry.Node], entry)
+		}
+
+		p.listingsMu.Lock()
+		p.listings[key] = listing
+		p.listingsMu.Unlock()
+	}
+
+	return listing.byNode[target.node.Name], nil
 }
 
 // commandNotExecutable reports an exec that failed because the command does not exist in the
@@ -314,6 +413,65 @@ func commandNotExecutable(rc int, err error) bool {
 	return err != nil && strings.Contains(err.Error(), "executable file not found")
 }
 
+// reportedInterfaces are the interfaces reported for a node, by name, with the alias the
+// topology gave them: its lab link interfaces, the management interface and loopback.
+func reportedInterfaces(links []clabwireInterface) map[string]string {
+	reported := map[string]string{
+		loopbackInterface:   "",
+		managementInterface: "",
+	}
+	for _, link := range links {
+		reported[link.Interface] = link.Alias
+	}
+
+	return reported
+}
+
+// interfaceEventData describes an interface the way the local runtimes' netlink events do: the
+// alias is the topology's name for the interface (an alias clabernetes set for its own use is
+// not reported), the operational state uses netlink's names, lab link and management
+// interfaces are veth pairs, loopback a device, and loopback has no hardware address.
+func interfaceEventData(iface c9sIfaceState, alias string) clablabruntime.InterfaceEventData {
+	if alias == "" && !strings.HasPrefix(iface.Alias, clabernetesAliasPrefix) {
+		alias = iface.Alias
+	}
+
+	mac := iface.MAC
+	if mac == zeroMAC {
+		mac = ""
+	}
+
+	linkType := interfaceTypeVeth
+	if iface.Name == loopbackInterface {
+		linkType = interfaceTypeDevice
+	}
+
+	return clablabruntime.InterfaceEventData{
+		Name:      iface.Name,
+		Alias:     alias,
+		Index:     iface.Index,
+		MTU:       iface.MTU,
+		MAC:       mac,
+		OperState: netlinkOperState(iface.OperState),
+		Type:      linkType,
+	}
+}
+
+// netlinkOperState names an operational state from sysfs (RFC 2863, as in
+// /sys/class/net/<if>/operstate) the way netlink, and so the local runtimes' events, name it.
+func netlinkOperState(operState string) string {
+	switch operState {
+	case "notpresent":
+		return "not-present"
+	case "lowerlayerdown":
+		return "lower-layer-down"
+	case "":
+		return "unknown"
+	default:
+		return operState
+	}
+}
+
 func (p *interfacePoller) processSample(ctx context.Context, sample interfaceSample) {
 	state := sample.target.state
 	node := sample.target.node
@@ -321,127 +479,172 @@ func (p *interfacePoller) processSample(ctx context.Context, sample interfaceSam
 
 	tracked, known := p.nodes[key]
 	if !known {
-		tracked = &trackedNode{
-			namespace: state.Namespace,
-			lab:       state.Name,
-			node:      node.Name,
-			ifaces:    map[string]trackedIface{},
-		}
+		tracked = &trackedNode{ifaces: map[string]clablabruntime.InterfaceEventData{}}
 		p.nodes[key] = tracked
 	}
-	tracked.pod = node.Pod
+	tracked.lab = state
+	tracked.node = node
 
-	if p.opts.includeStats {
-		for _, stat := range sample.stats {
-			statsKey := c9sIfaceStatsKey(state.Namespace, state.Name, node.Name, stat.Name)
-			current := c9sIfaceStatsSample{Stats: stat, Timestamp: sample.timestamp}
+	reported := reportedInterfaces(sample.links)
 
-			if previous, ok := p.statsSamples[statsKey]; ok {
-				p.r.sendEvent(ctx, p.sink,
-					c9sIfaceStatsEvent(state, node, sample.target.pod, stat, previous, current))
-			}
-
-			p.statsSamples[statsKey] = current
-		}
+	if sample.hasStates {
+		p.processStates(ctx, tracked, reported, sample)
 	}
 
-	if !sample.hasStates {
+	if !p.opts.includeStats {
 		return
 	}
-
-	present := make(map[string]bool, len(sample.ifaces))
-	for _, iface := range sample.ifaces {
-		present[iface.Name] = true
-
-		action := iface.action()
-		previous, seen := tracked.ifaces[iface.Name]
-		tracked.ifaces[iface.Name] = trackedIface{state: iface, action: action}
-
-		switch {
-		case seen && previous.action == action &&
-			previous.state.OperState == iface.OperState:
-			continue
-		case !seen && p.firstRound && !p.opts.includeInitialState:
-			// Interfaces that exist when the stream starts are only reported with
-			// --initial-state; later changes are always reported.
+	for _, stat := range sample.stats {
+		alias, ok := reported[stat.Name]
+		if !ok {
 			continue
 		}
 
-		p.emitState(ctx, tracked, iface, sample.timestamp)
+		statsKey := c9sIfaceStatsKey(state.Namespace, state.Name, node.Name, stat.Name)
+		current := c9sIfaceStatsSample{Stats: stat, Timestamp: sample.timestamp}
+		if previous, ok := p.statsSamples[statsKey]; ok {
+			data, ok := tracked.ifaces[stat.Name]
+			if !ok {
+				data = interfaceEventData(c9sIfaceState{Name: stat.Name}, alias)
+				data.OperState = ""
+			}
+			data.Stats = c9sIfaceStatsData(previous, current)
+			p.emit(ctx, tracked, interfaceActionStats, data, current.Timestamp)
+		}
+
+		p.statsSamples[statsKey] = current
+	}
+}
+
+// processStates reports the interfaces that appeared (snapshot in the first round with
+// --initial-state, create later), changed (update) or disappeared (delete) since the last
+// sample, like the netlink events of the local runtimes.
+func (p *interfacePoller) processStates(
+	ctx context.Context,
+	tracked *trackedNode,
+	reported map[string]string,
+	sample interfaceSample,
+) {
+	present := map[string]bool{}
+	for _, iface := range sample.ifaces {
+		alias, ok := reported[iface.Name]
+		if !ok {
+			continue
+		}
+
+		data := interfaceEventData(iface, alias)
+		present[iface.Name] = true
+		previous, seen := tracked.ifaces[iface.Name]
+		tracked.ifaces[iface.Name] = data
+
+		switch {
+		case seen && previous == data:
+		case !seen && p.firstRound:
+			// Interfaces that exist when the stream starts are only reported with
+			// --initial-state; later changes are always reported.
+			if p.opts.includeInitialState {
+				p.emit(ctx, tracked, interfaceActionSnapshot, data, sample.timestamp)
+			}
+		case !seen:
+			p.emit(ctx, tracked, interfaceActionCreate, data, sample.timestamp)
+		default:
+			p.emit(ctx, tracked, interfaceActionUpdate, data, sample.timestamp)
+		}
 	}
 
-	for name, iface := range tracked.ifaces {
+	for _, name := range sortedInterfaceNames(tracked.ifaces) {
 		if present[name] {
 			continue
 		}
 
-		iface.state.OperState = interfaceStateNotPresent
-		p.emitState(ctx, tracked, iface.state, sample.timestamp)
+		p.emit(ctx, tracked, interfaceActionDelete, tracked.ifaces[name], sample.timestamp)
 		p.forgetStats(tracked, name)
 		delete(tracked.ifaces, name)
 	}
 }
 
-func (p *interfacePoller) forgetStats(tracked *trackedNode, ifName string) {
-	delete(p.statsSamples, c9sIfaceStatsKey(tracked.namespace, tracked.lab, tracked.node, ifName))
+func sortedInterfaceNames(ifaces map[string]clablabruntime.InterfaceEventData) []string {
+	names := make([]string, 0, len(ifaces))
+	for name := range ifaces {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
 }
 
-func (p *interfacePoller) emitState(
+func (p *interfacePoller) forgetStats(tracked *trackedNode, ifName string) {
+	delete(p.statsSamples,
+		c9sIfaceStatsKey(tracked.lab.Namespace, tracked.lab.Name, tracked.node.Name, ifName))
+}
+
+func (p *interfacePoller) emit(
 	ctx context.Context,
 	tracked *trackedNode,
-	iface c9sIfaceState,
+	action string,
+	data clablabruntime.InterfaceEventData,
 	timestamp time.Time,
 ) {
-	p.r.sendEvent(ctx, p.sink, c9sIfaceStateEvent(tracked, iface, timestamp))
+	p.r.sendEvent(ctx, p.sink, c9sInterfaceEvent(tracked, action, data, timestamp))
 }
 
-// c9sIfaceStateEvent reports the operational state of an interface. The actor is the node, as
-// for the container events of the lab and the interface events of the local runtimes.
-func c9sIfaceStateEvent(
+// c9sInterfaceEvent is an interface event of a node. The actor is the node, as for its container
+// events. The interface itself is in Interface; the events command reports it with the
+// attributes of the local runtimes' interface events.
+func c9sInterfaceEvent(
 	tracked *trackedNode,
-	iface c9sIfaceState,
+	action string,
+	data clablabruntime.InterfaceEventData,
 	timestamp time.Time,
 ) clablabruntime.Event {
-	actorName := fmt.Sprintf("%s-%s", tracked.lab, tracked.node)
+	key := c9sNodeKey(tracked.lab.Namespace, tracked.lab.Name, tracked.node.Name)
 
 	attributes := map[string]string{
-		"namespace": tracked.namespace,
-		"lab":       tracked.lab,
-		"node":      tracked.node,
-		"name":      actorName,
-		"ifname":    iface.Name,
-		"state":     iface.OperState,
-		"origin":    "clabernetes",
+		"namespace": tracked.lab.Namespace,
+		"lab":       tracked.lab.Name,
+		"node":      tracked.node.Name,
+		"origin":    clabernetesAppValue,
 	}
-	if tracked.pod != "" {
-		attributes["pod"] = tracked.pod
-	}
-	if iface.Index > 0 {
-		attributes["index"] = strconv.Itoa(iface.Index)
-	}
-	if iface.MTU > 0 {
-		attributes["mtu"] = strconv.Itoa(iface.MTU)
-	}
-	if iface.MAC != "" {
-		attributes["mac"] = iface.MAC
-	}
-	if iface.Alias != "" {
-		attributes["alias"] = iface.Alias
+	if tracked.node.Pod != "" {
+		attributes["pod"] = tracked.node.Pod
 	}
 
-	action := iface.action()
-	if iface.OperState == interfaceStateNotPresent {
-		action = "down"
-	}
+	node := tracked.node
 
 	return clablabruntime.Event{
 		Timestamp:   timestamp,
-		Type:        "interface",
+		Type:        clablabruntime.EventTypeInterface,
 		Action:      action,
-		ActorID:     c9sNodeKey(tracked.namespace, tracked.lab, tracked.node),
-		ActorName:   actorName,
-		ActorFullID: tracked.pod,
+		ActorID:     key,
+		ActorName:   fmt.Sprintf("%s-%s", tracked.lab.Name, tracked.node.Name),
+		ActorFullID: key,
 		Attributes:  attributes,
+		Lab:         tracked.lab,
+		Node:        &node,
+		Interface:   &data,
+	}
+}
+
+// c9sIfaceStatsData computes the counters and rates of a stats event from two samples.
+func c9sIfaceStatsData(previous, current c9sIfaceStatsSample) *clablabruntime.InterfaceStats {
+	interval := current.Timestamp.Sub(previous.Timestamp)
+	if interval <= 0 {
+		interval = time.Second
+	}
+
+	seconds := interval.Seconds()
+	stat := current.Stats
+
+	return &clablabruntime.InterfaceStats{
+		RxBytes:   stat.RxBytes,
+		TxBytes:   stat.TxBytes,
+		RxPackets: stat.RxPackets,
+		TxPackets: stat.TxPackets,
+		RxBps:     float64(counterDelta(stat.RxBytes, previous.Stats.RxBytes)*8) / seconds,
+		TxBps:     float64(counterDelta(stat.TxBytes, previous.Stats.TxBytes)*8) / seconds,
+		RxPps:     float64(counterDelta(stat.RxPackets, previous.Stats.RxPackets)) / seconds,
+		TxPps:     float64(counterDelta(stat.TxPackets, previous.Stats.TxPackets)) / seconds,
+		Interval:  interval,
 	}
 }
 
@@ -559,59 +762,6 @@ func c9sNodeKey(namespace, lab, node string) string {
 
 func c9sIfaceStatsKey(namespace, lab, node, ifName string) string {
 	return c9sNodeKey(namespace, lab, node) + "/" + ifName
-}
-
-func c9sIfaceStatsEvent(
-	state *clablabruntime.LabState,
-	node clablabruntime.NodeState,
-	pod *corev1.Pod,
-	stat c9sIfaceStats,
-	previous,
-	current c9sIfaceStatsSample,
-) clablabruntime.Event {
-	interval := current.Timestamp.Sub(previous.Timestamp)
-	if interval <= 0 {
-		interval = time.Second
-	}
-
-	seconds := interval.Seconds()
-	rxBytesDelta := counterDelta(stat.RxBytes, previous.Stats.RxBytes)
-	txBytesDelta := counterDelta(stat.TxBytes, previous.Stats.TxBytes)
-	rxPacketsDelta := counterDelta(stat.RxPackets, previous.Stats.RxPackets)
-	txPacketsDelta := counterDelta(stat.TxPackets, previous.Stats.TxPackets)
-
-	actorName := fmt.Sprintf("%s-%s", state.Name, node.Name)
-	podName := ""
-	if pod != nil {
-		podName = pod.Name
-	}
-
-	return clablabruntime.Event{
-		Timestamp:   current.Timestamp,
-		Type:        "interface",
-		Action:      "stats",
-		ActorID:     c9sNodeKey(state.Namespace, state.Name, node.Name),
-		ActorName:   actorName,
-		ActorFullID: podName,
-		Attributes: map[string]string{
-			"namespace":        state.Namespace,
-			"lab":              state.Name,
-			"node":             node.Name,
-			"name":             actorName,
-			"pod":              podName,
-			"ifname":           stat.Name,
-			"origin":           "clabernetes",
-			"rx_bytes":         strconv.FormatUint(stat.RxBytes, 10),
-			"tx_bytes":         strconv.FormatUint(stat.TxBytes, 10),
-			"rx_packets":       strconv.FormatUint(stat.RxPackets, 10),
-			"tx_packets":       strconv.FormatUint(stat.TxPackets, 10),
-			"rx_bps":           strconv.FormatFloat(float64(rxBytesDelta*8)/seconds, 'f', -1, 64),
-			"tx_bps":           strconv.FormatFloat(float64(txBytesDelta*8)/seconds, 'f', -1, 64),
-			"rx_pps":           strconv.FormatFloat(float64(rxPacketsDelta)/seconds, 'f', -1, 64),
-			"tx_pps":           strconv.FormatFloat(float64(txPacketsDelta)/seconds, 'f', -1, 64),
-			"interval_seconds": strconv.FormatFloat(seconds, 'f', -1, 64),
-		},
-	}
 }
 
 func counterDelta(current, previous uint64) uint64 {

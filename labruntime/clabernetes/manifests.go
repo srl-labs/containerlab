@@ -40,6 +40,15 @@ func (r *Runtime) Manifests(
 		return nil, err
 	}
 
+	// The manifests are applied by other means than this deploy, so they do not carry the path
+	// of the topology file on this machine; such a lab reports where its definition lives.
+	removeTopologySourceFile(prepared.topology)
+	for _, group := range prepared.primitives.groups() {
+		for _, obj := range group.objects {
+			removeTopologySourceFile(obj)
+		}
+	}
+
 	manifests := []clablabruntime.Manifest{}
 
 	// A namespace override must already exist, matching the deploy contract; only the
