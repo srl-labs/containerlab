@@ -63,6 +63,9 @@ type CLab struct {
 	// checkBindsPaths toggle enables or disables binds paths checks
 	// when set to true, bind sources are verified to exist on the host.
 	checkBindsPaths bool
+	// checkMgmtNetLinks toggle enables or disables the mgmt-net link checks
+	// when set to true, mgmt-net links must select a defined bridge management network.
+	checkMgmtNetLinks bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
 	// labRuntimeIdentity is the Kubernetes identity lab runtime calls act as.
@@ -92,6 +95,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Runtimes:          make(map[string]clabruntime.ContainerRuntime),
 		Cert:              &clabcert.Cert{},
 		checkBindsPaths:   true,
+		checkMgmtNetLinks: true,
 		dependencyManager: clabcoredependency_manager.NewDependencyManager(),
 	}
 
@@ -363,8 +367,10 @@ func (c *CLab) initMgmtNetwork() error {
 		bridges[m.Bridge] = m.Network
 	}
 
-	if err := c.validateManagementLinks(); err != nil {
-		return err
+	if c.checkMgmtNetLinks {
+		if err := c.validateManagementLinks(); err != nil {
+			return err
+		}
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
@@ -901,10 +907,10 @@ func (c *CLab) ResolveLinks() error {
 	c.resetResolvedLinks()
 
 	resolveParams := &clablinks.ResolveParams{
-		Nodes:          c.getLinkNodes(),
-		MgmtBridgeName: c.Config.Mgmt.Bridge,
-		NodesFilter:    c.nodeFilter,
-		LabName:        c.Config.Name,
+		Nodes:              c.getLinkNodes(),
+		DefaultMgmtNetwork: c.Config.Mgmt.Network,
+		NodesFilter:        c.nodeFilter,
+		LabName:            c.Config.Name,
 	}
 
 	for i, l := range c.Config.Topology.Links {
