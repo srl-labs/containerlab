@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	clabcapture "github.com/srl-labs/containerlab/capture"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -236,9 +237,9 @@ func (f *fakeClabwire) capture(
 		return nil
 	}
 
-	writer := newPCAPNGWriter(stdout)
+	writer := clabcapture.NewWriter(stdout)
 	f.audit(stderr, captureAuditStarted, node, interfaces, "")
-	if err := writer.WriteHeader(interfaces, DefaultCaptureSnapLength); err != nil {
+	if err := writer.WriteHeader(interfaces, clabcapture.DefaultSnapLength); err != nil {
 		return err
 	}
 
@@ -272,7 +273,7 @@ func (f *fakeClabwire) capture(
 			data := make([]byte, 64)
 			binary.BigEndian.PutUint64(data[0:], uint64(next))
 			copy(data[8:], node+":"+interfaces[id])
-			if err := writer.WritePacket(uint32(id), &pcapngPacket{ //nolint:gosec // small
+			if err := writer.WritePacket(uint32(id), &clabcapture.Packet{ //nolint:gosec // small
 				Timestamp: at.Add(jitter - skew).UnixNano(), OriginalLength: 64, Data: data,
 			}); err != nil {
 				return err
@@ -326,13 +327,13 @@ func captureTestRuntime(t *testing.T, tick time.Duration) (*Runtime, *fakeClabwi
 type parsedCapture struct {
 	sections   int
 	interfaces []string
-	packets    []pcapngPacket
+	packets    []clabcapture.Packet
 }
 
 func parseCapture(t *testing.T, data []byte) parsedCapture {
 	t.Helper()
 
-	reader := newPCAPNGReader(bytes.NewReader(data))
+	reader := clabcapture.NewReader(bytes.NewReader(data))
 	var parsed parsedCapture
 	for {
 		event, err := reader.Next()
@@ -346,7 +347,7 @@ func parseCapture(t *testing.T, data []byte) parsedCapture {
 			if len(parsed.packets) != 0 {
 				t.Fatal("interface description after the first packet")
 			}
-			if event.Interface.TSResol != pcapngNanoseconds {
+			if event.Interface.TSResol != 9 /* nanoseconds */ {
 				t.Fatalf("interface %s tsresol = %d", event.Interface.Name, event.Interface.TSResol)
 			}
 			parsed.interfaces = append(parsed.interfaces, event.Interface.Name)
@@ -355,16 +356,16 @@ func parseCapture(t *testing.T, data []byte) parsedCapture {
 			parsed.packets = append(parsed.packets, *event.Packet)
 		}
 	}
-	parsed.sections = reader.sections
+	parsed.sections = reader.Sections()
 
 	return parsed
 }
 
-func packetSequence(packet pcapngPacket) uint64 {
+func packetSequence(packet clabcapture.Packet) uint64 {
 	return binary.BigEndian.Uint64(packet.Data[0:8])
 }
 
-func packetOrigin(packet pcapngPacket) string {
+func packetOrigin(packet clabcapture.Packet) string {
 	return strings.TrimRight(string(packet.Data[8:]), "\x00")
 }
 
@@ -827,7 +828,7 @@ func TestCaptureRejectsAClabwireWithoutStopOnStdinClose(t *testing.T) {
 }
 
 // requireTimeOrdered checks that the merged stream's timestamps never decrease.
-func requireTimeOrdered(t *testing.T, packets []pcapngPacket) {
+func requireTimeOrdered(t *testing.T, packets []clabcapture.Packet) {
 	t.Helper()
 
 	for idx := 1; idx < len(packets); idx++ {
@@ -869,7 +870,7 @@ func TestCaptureMergesNodesInTimestampOrder(t *testing.T) {
 			}
 
 			packets := parseCapture(t, out.Bytes()).packets
-			ordered := slices.IsSortedFunc(packets, func(a, b pcapngPacket) int {
+			ordered := slices.IsSortedFunc(packets, func(a, b clabcapture.Packet) int {
 				return int(a.Timestamp - b.Timestamp)
 			})
 			if reorder {
@@ -940,6 +941,22 @@ func TestCaptureChainsSeveralNodesInOrderWithoutDuplicates(t *testing.T) {
 		if clabwire.processes[node] < 4 || clabwire.stdinClosed[node] == 0 {
 			t.Fatalf("%s: %d processes, %d stopped through stdin at a switch", node,
 				clabwire.processes[node], clabwire.stdinClosed[node])
+		}
+	}
+}
+
+func TestCaptureReorderWindowKnob(t *testing.T) {
+	cases := map[string]time.Duration{
+		"":      250 * time.Millisecond,
+		"0":     0,
+		"75ms":  75 * time.Millisecond,
+		"bogus": 250 * time.Millisecond,
+	}
+	for value, want := range cases {
+		t.Setenv(envCaptureReorderWindow, value)
+		r := &Runtime{captureReorderWindow: captureReorderWindowFromEnv()}
+		if got := r.captureReorderWindowLength(); got != want {
+			t.Errorf("%s=%q: window %s, want %s", envCaptureReorderWindow, value, got, want)
 		}
 	}
 }

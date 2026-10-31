@@ -1,4 +1,4 @@
-package clabernetes
+package capture
 
 import (
 	"container/heap"
@@ -9,25 +9,24 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// maxCaptureReorderBytes bounds the packet data the reorder buffer holds. Past it, the oldest
-// packets are written early, which can put them out of order.
-const maxCaptureReorderBytes = 64 << 20
+// maxReorderBytes bounds the packet data the reorder buffer holds. Past it, the oldest packets
+// are written early, which can put them out of order.
+const maxReorderBytes = 64 << 20
 
-// captureReorder writes the packets of a capture's chains in timestamp order.
+// Reorder writes the packets of several capture sources in timestamp order.
 //
-// Each node's clabwire stream arrives over its own exec stream, so packets of different nodes
-// reach containerlab with different delays. The buffer holds every packet for `window` after
-// it arrived and writes the held packets in timestamp order, so a packet that was stamped
-// earlier but delivered up to `window` later still goes out first. A packet stamped before the
-// last packet written arrived too late to be ordered: it is written as it comes and counted,
-// and the count goes to the debug log when the capture ends.
+// Each source (a node's capture stream, or a local interface socket) delivers its packets with
+// its own delay. The buffer holds every packet for `window` after it arrived and writes the held
+// packets in timestamp order, so a packet that was stamped earlier but delivered up to `window`
+// later still goes out first. A packet stamped before the last packet written arrived too late
+// to be ordered: it is written as it comes and counted, and the count goes to the debug log when
+// the capture ends.
 //
-// A chain that switches segments holds packets back until the old segment ended (see
-// captureChain); while it does, it places a hold at the earliest timestamp it may still write,
-// and packets stamped after a hold wait for it to be released. Holds last about a second per
-// switch, once per segment.
-type captureReorder struct {
-	write  func(id uint32, packet *pcapngPacket) error
+// A source can place a hold at the earliest timestamp it may still write (Hold); packets stamped
+// after a hold wait for it to be released (Release). The c9s runtime holds while it switches
+// between chained capture segments.
+type Reorder struct {
+	write  func(id uint32, packet *Packet) error
 	onFail func()
 	window time.Duration
 	now    func() time.Time
@@ -52,7 +51,7 @@ type reorderStats struct {
 // reorderedPacket is a packet waiting in the buffer.
 type reorderedPacket struct {
 	id      uint32
-	packet  *pcapngPacket
+	packet  *Packet
 	arrived time.Time
 	seq     uint64
 }
@@ -86,21 +85,21 @@ func (q *reorderQueue) Pop() any {
 	return item
 }
 
-// newCaptureReorder returns a buffer that writes through write; onFail is called once a write
-// failed. A window of zero writes every packet as it arrives.
-func newCaptureReorder(
+// NewReorder returns a buffer that writes through write; onFail is called once a write
+// failed. A window of zero or less writes every packet as it arrives.
+func NewReorder(
 	window time.Duration,
-	write func(id uint32, packet *pcapngPacket) error,
+	write func(id uint32, packet *Packet) error,
 	onFail func(),
-) *captureReorder {
-	return &captureReorder{
+) *Reorder {
+	return &Reorder{
 		write: write, onFail: onFail, window: window, now: time.Now,
 		holds: map[any]int64{}, wake: make(chan struct{}, 1),
 	}
 }
 
 // push hands a packet to the buffer. It returns the error of a failed write.
-func (q *captureReorder) push(id uint32, packet *pcapngPacket) error {
+func (q *Reorder) Push(id uint32, packet *Packet) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -124,7 +123,7 @@ func (q *captureReorder) push(id uint32, packet *pcapngPacket) error {
 	q.seq++
 	heap.Push(&q.queue, reorderedPacket{id: id, packet: packet, arrived: q.now(), seq: q.seq})
 	q.bytes += len(packet.Data)
-	for q.bytes > maxCaptureReorderBytes && q.queue.Len() > 0 {
+	for q.bytes > maxReorderBytes && q.queue.Len() > 0 {
 		q.stats.forced++
 		if err := q.popLocked(); err != nil {
 			return err
@@ -140,7 +139,7 @@ func (q *captureReorder) push(id uint32, packet *pcapngPacket) error {
 }
 
 // hold keeps packets stamped after timestamp in the buffer until release(key).
-func (q *captureReorder) hold(key any, timestamp int64) {
+func (q *Reorder) Hold(key any, timestamp int64) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -148,7 +147,7 @@ func (q *captureReorder) hold(key any, timestamp int64) {
 }
 
 // release removes the hold of key.
-func (q *captureReorder) release(key any) {
+func (q *Reorder) Release(key any) {
 	q.mu.Lock()
 	_, held := q.holds[key]
 	delete(q.holds, key)
@@ -163,7 +162,7 @@ func (q *captureReorder) release(key any) {
 }
 
 // run writes due packets until ctx ends.
-func (q *captureReorder) run(ctx context.Context) {
+func (q *Reorder) Run(ctx context.Context) {
 	if q.window <= 0 {
 		return
 	}
@@ -191,7 +190,7 @@ func (q *captureReorder) run(ctx context.Context) {
 // writeDue writes the packets that waited for the window and are not behind a hold, in
 // timestamp order. It returns when the next packet is due, or zero when that depends on a new
 // packet or a released hold.
-func (q *captureReorder) writeDue() time.Time {
+func (q *Reorder) writeDue() time.Time {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -220,7 +219,7 @@ func (q *captureReorder) writeDue() time.Time {
 }
 
 // flush writes every remaining packet in timestamp order and logs what could not be ordered.
-func (q *captureReorder) flush() {
+func (q *Reorder) Flush() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -238,7 +237,7 @@ func (q *captureReorder) flush() {
 	}
 }
 
-func (q *captureReorder) popLocked() error {
+func (q *Reorder) popLocked() error {
 	item := heap.Pop(&q.queue).(reorderedPacket) //nolint:forcetypeassert // heap contract
 	q.bytes -= len(item.packet.Data)
 	q.cursor = max(q.cursor, item.packet.Timestamp)
@@ -246,7 +245,7 @@ func (q *captureReorder) popLocked() error {
 	return q.writeLocked(item.id, item.packet)
 }
 
-func (q *captureReorder) writeLocked(id uint32, packet *pcapngPacket) error {
+func (q *Reorder) writeLocked(id uint32, packet *Packet) error {
 	if err := q.write(id, packet); err != nil {
 		if q.err == nil {
 			q.err = err
@@ -259,4 +258,14 @@ func (q *captureReorder) writeLocked(id uint32, packet *pcapngPacket) error {
 	}
 
 	return nil
+}
+
+func resetTimer(timer *time.Timer, d time.Duration) {
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	timer.Reset(d)
 }

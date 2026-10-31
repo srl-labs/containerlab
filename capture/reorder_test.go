@@ -1,4 +1,4 @@
-package clabernetes
+package capture
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type reorderSink struct {
 	failAt  int
 }
 
-func (s *reorderSink) write(id uint32, packet *pcapngPacket) error {
+func (s *reorderSink) write(id uint32, packet *Packet) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.failAt > 0 && len(s.written) == s.failAt {
@@ -39,7 +39,7 @@ func (s *reorderSink) timestamps() []int64 {
 // interleavedStreams pushes two synthetic streams of ticks, interleaved in time: stream 0 is
 // delivered at once, stream 1 `delay` after its packets were stamped. Both stamp a packet every
 // 2 ms, offset by 1 ms.
-func interleavedStreams(t *testing.T, q *captureReorder, ticks int, delay time.Duration) {
+func interleavedStreams(t *testing.T, q *Reorder, ticks int, delay time.Duration) {
 	t.Helper()
 
 	start := time.Now()
@@ -62,35 +62,35 @@ func interleavedStreams(t *testing.T, q *captureReorder, ticks int, delay time.D
 
 	for _, next := range deliveries {
 		time.Sleep(time.Until(next.at))
-		if err := q.push(
+		if err := q.Push(
 			next.id,
-			&pcapngPacket{InterfaceID: next.id, Timestamp: next.ts},
+			&Packet{InterfaceID: next.id, Timestamp: next.ts},
 		); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
 
-func runReorder(q *captureReorder) func() {
+func runReorder(q *Reorder) func() {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		q.run(ctx)
+		q.Run(ctx)
 	}()
 
 	return func() {
 		cancel()
 		<-done
-		q.flush()
+		q.Flush()
 	}
 }
 
-func TestCaptureReorderOrdersStreamsWithinTheWindow(t *testing.T) {
+func TestReorderOrdersStreamsWithinTheWindow(t *testing.T) {
 	t.Parallel()
 
 	sink := &reorderSink{}
-	q := newCaptureReorder(100*time.Millisecond, sink.write, nil)
+	q := NewReorder(100*time.Millisecond, sink.write, nil)
 	stop := runReorder(q)
 	interleavedStreams(t, q, 60, 40*time.Millisecond)
 
@@ -110,11 +110,11 @@ func TestCaptureReorderOrdersStreamsWithinTheWindow(t *testing.T) {
 	}
 }
 
-func TestCaptureReorderWritesLatePacketsAsTheyCome(t *testing.T) {
+func TestReorderWritesLatePacketsAsTheyCome(t *testing.T) {
 	t.Parallel()
 
 	sink := &reorderSink{}
-	q := newCaptureReorder(20*time.Millisecond, sink.write, nil)
+	q := NewReorder(20*time.Millisecond, sink.write, nil)
 	stop := runReorder(q)
 	// stream 1 arrives 80 ms after its stamps, far beyond the 20 ms window
 	interleavedStreams(t, q, 60, 80*time.Millisecond)
@@ -130,18 +130,18 @@ func TestCaptureReorderWritesLatePacketsAsTheyCome(t *testing.T) {
 	}
 }
 
-func TestCaptureReorderHoldsPacketsAfterAHold(t *testing.T) {
+func TestReorderHoldsPacketsAfterAHold(t *testing.T) {
 	t.Parallel()
 
 	sink := &reorderSink{}
-	q := newCaptureReorder(time.Millisecond, sink.write, nil)
+	q := NewReorder(time.Millisecond, sink.write, nil)
 	stop := runReorder(q)
 	defer stop()
 
-	chain := &captureChain{}
-	q.hold(chain, 100)
+	chain := &struct{ name string }{"chain"}
+	q.Hold(chain, 100)
 	for _, ts := range []int64{50, 150, 100, 200} {
-		if err := q.push(0, &pcapngPacket{Timestamp: ts}); err != nil {
+		if err := q.Push(0, &Packet{Timestamp: ts}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -151,27 +151,27 @@ func TestCaptureReorderHoldsPacketsAfterAHold(t *testing.T) {
 	}
 
 	// the chain writes what it held back, then releases
-	if err := q.push(1, &pcapngPacket{Timestamp: 120}); err != nil {
+	if err := q.Push(1, &Packet{Timestamp: 120}); err != nil {
 		t.Fatal(err)
 	}
-	q.release(chain)
+	q.Release(chain)
 	time.Sleep(30 * time.Millisecond)
 	if got := sink.timestamps(); !slices.Equal(got, []int64{50, 100, 120, 150, 200}) {
 		t.Fatalf("written after the release = %v", got)
 	}
 }
 
-func TestCaptureReorderStopsAtTheFirstWriteError(t *testing.T) {
+func TestReorderStopsAtTheFirstWriteError(t *testing.T) {
 	t.Parallel()
 
 	sink := &reorderSink{failAt: 2}
 	failed := 0
-	q := newCaptureReorder(time.Millisecond, sink.write, func() { failed++ })
+	q := NewReorder(time.Millisecond, sink.write, func() { failed++ })
 	stop := runReorder(q)
 
 	var err error
 	for ts := int64(1); ts < 50 && err == nil; ts++ {
-		err = q.push(0, &pcapngPacket{Timestamp: ts})
+		err = q.Push(0, &Packet{Timestamp: ts})
 		time.Sleep(2 * time.Millisecond)
 	}
 	stop()
@@ -186,33 +186,17 @@ func TestCaptureReorderStopsAtTheFirstWriteError(t *testing.T) {
 	}
 }
 
-func TestCaptureReorderWithoutWindowWritesThrough(t *testing.T) {
+func TestReorderWithoutWindowWritesThrough(t *testing.T) {
 	t.Parallel()
 
 	sink := &reorderSink{}
-	q := newCaptureReorder(0, sink.write, nil)
+	q := NewReorder(0, sink.write, nil)
 	for _, ts := range []int64{30, 10, 20} {
-		if err := q.push(0, &pcapngPacket{Timestamp: ts}); err != nil {
+		if err := q.Push(0, &Packet{Timestamp: ts}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if got := sink.timestamps(); !slices.Equal(got, []int64{30, 10, 20}) {
 		t.Fatalf("written = %v, want arrival order", got)
-	}
-}
-
-func TestCaptureReorderWindowKnob(t *testing.T) {
-	cases := map[string]time.Duration{
-		"":      250 * time.Millisecond,
-		"0":     0,
-		"75ms":  75 * time.Millisecond,
-		"bogus": 250 * time.Millisecond,
-	}
-	for value, want := range cases {
-		t.Setenv(envCaptureReorderWindow, value)
-		r := &Runtime{captureReorderWindow: captureReorderWindowFromEnv()}
-		if got := r.captureReorderWindowLength(); got != want {
-			t.Errorf("%s=%q: window %s, want %s", envCaptureReorderWindow, value, got, want)
-		}
 	}
 }

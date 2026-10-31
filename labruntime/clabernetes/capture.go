@@ -13,10 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabcapture "github.com/srl-labs/containerlab/capture"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	"golang.org/x/sync/errgroup"
 )
@@ -33,10 +33,6 @@ const (
 	captureAuditFailed    = "Failed"
 	captureAuditDenied    = "Denied"
 
-	// DefaultCaptureSnapLength is clabwire's default snap length.
-	DefaultCaptureSnapLength = 256 << 10
-	minCaptureSnapLength     = 64
-	maxCaptureSnapLength     = 1 << 20
 	// maxCaptureSegment is the longest single clabwire capture; longer captures are chained.
 	maxCaptureSegment = time.Hour
 	// maxClabwirePackets is the packet limit of a single clabwire capture.
@@ -448,36 +444,6 @@ func describeCaptureInterfaces(entries []clabwireInterface) string {
 	return strings.Join(names, ", ")
 }
 
-// validateCaptureRequest checks the request bounds and fills the default snap length.
-func validateCaptureRequest(req *clablabruntime.CaptureRequest) error {
-	if req.Name == "" {
-		return fmt.Errorf("topology name is required")
-	}
-	if len(req.Targets) == 0 {
-		return fmt.Errorf("at least one capture target (node and interface) is required")
-	}
-	for _, target := range req.Targets {
-		if target.Node == "" || target.Interface == "" {
-			return fmt.Errorf("capture target %+v needs a node and an interface", target)
-		}
-	}
-	if req.Duration < 0 {
-		return fmt.Errorf("capture duration must not be negative")
-	}
-	if req.PacketLimit < 0 {
-		return fmt.Errorf("capture packet limit must not be negative")
-	}
-	if req.SnapLength == 0 {
-		req.SnapLength = DefaultCaptureSnapLength
-	}
-	if req.SnapLength < minCaptureSnapLength || req.SnapLength > maxCaptureSnapLength {
-		return fmt.Errorf("capture snap length %d is outside %d to %d bytes", req.SnapLength,
-			minCaptureSnapLength, maxCaptureSnapLength)
-	}
-
-	return nil
-}
-
 // Capture streams pcapng from lab link interfaces to w: one section, one Interface Description
 // Block per target in request order named <node>:<interface>, then the packets of every target.
 //
@@ -501,7 +467,7 @@ func (r *Runtime) Capture(
 	req clablabruntime.CaptureRequest,
 	w io.Writer,
 ) error {
-	if err := validateCaptureRequest(&req); err != nil {
+	if err := clabcapture.ValidateRequest(&req); err != nil {
 		return err
 	}
 
@@ -515,26 +481,21 @@ func (r *Runtime) Capture(
 		return err
 	}
 
-	writer := newPCAPNGWriter(w)
-	if err := writer.WriteHeader(
-		resolved.names,
-		uint32(req.SnapLength),
-	); err != nil { //nolint:gosec // validated
-		return err
-	}
-
 	captureCtx, stop := context.WithCancel(ctx)
 	defer stop()
 
-	run := &captureRun{
-		r:        r,
-		req:      req,
-		writer:   writer,
-		stop:     stop,
-		segment:  r.captureSegmentLength(),
-		deadline: time.Time{},
+	out, err := clabcapture.NewOutput(w, resolved.names, req.SnapLength, req.PacketLimit,
+		r.captureReorderWindowLength(), stop)
+	if err != nil {
+		return err
 	}
-	run.reorder = newCaptureReorder(r.captureReorderWindowLength(), writer.WritePacket, stop)
+
+	run := &captureRun{
+		r:       r,
+		req:     req,
+		out:     out,
+		segment: r.captureSegmentLength(),
+	}
 	if req.Duration > 0 {
 		run.deadline = time.Now().Add(req.Duration)
 	}
@@ -549,13 +510,6 @@ func (r *Runtime) Capture(
 		defer cancelTimeout()
 	}
 
-	reorderCtx, stopReorder := context.WithCancel(context.WithoutCancel(ctx))
-	reorderDone := make(chan struct{})
-	go func() {
-		defer close(reorderDone)
-		run.reorder.run(reorderCtx)
-	}()
-
 	group, groupCtx := errgroup.WithContext(captureCtx)
 	for _, captureGroup := range resolved.groups {
 		chain := &captureChain{capture: run, group: captureGroup}
@@ -565,10 +519,7 @@ func (r *Runtime) Capture(
 	}
 
 	err = group.Wait()
-	stopReorder()
-	<-reorderDone
-	run.reorder.flush()
-	if writeErr := writer.err; writeErr != nil {
+	if writeErr := out.Close(); writeErr != nil {
 		return writeErr
 	}
 	if err != nil && !(errors.Is(err, context.Canceled) && captureCtx.Err() != nil) {
@@ -580,15 +531,11 @@ func (r *Runtime) Capture(
 
 // captureRun is the state a capture's chains share.
 type captureRun struct {
-	r      *Runtime
-	req    clablabruntime.CaptureRequest
-	writer *pcapngWriter
-	// reorder writes the packets of every chain in timestamp order.
-	reorder *captureReorder
-	// stop ends every chain, once the packet limit is reached.
-	stop context.CancelFunc
-	// written counts the packets written to the stream.
-	written atomic.Int64
+	r   *Runtime
+	req clablabruntime.CaptureRequest
+	// out is the merged stream; it writes the packets of every chain in timestamp order and
+	// stops every chain once the packet limit is reached.
+	out *clabcapture.Output
 
 	segment  time.Duration
 	overlap  time.Duration
@@ -598,38 +545,12 @@ type captureRun struct {
 
 // emit writes a packet under its merged interface ID. It reports false once the packet limit is
 // reached and the capture stops.
-func (run *captureRun) emit(id uint32, packet *pcapngPacket) (bool, error) {
-	if run.req.PacketLimit > 0 {
-		count := run.written.Add(1)
-		if count > int64(run.req.PacketLimit) {
-			run.stop()
-			return false, nil
-		}
-		if err := run.reorder.push(id, packet); err != nil {
-			return false, err
-		}
-		if count == int64(run.req.PacketLimit) {
-			run.stop()
-			return false, nil
-		}
-
-		return true, nil
-	}
-
-	run.written.Add(1)
-
-	return true, run.reorder.push(id, packet)
+func (run *captureRun) emit(id uint32, packet *clabcapture.Packet) (bool, error) {
+	return run.out.Emit(id, packet)
 }
 
 func (run *captureRun) reportGap(gap clablabruntime.CaptureGap) {
-	if run.req.OnGap != nil {
-		run.req.OnGap(gap)
-		return
-	}
-
-	log.Warn("Capture has a gap", "node", gap.Node, "interfaces", strings.Join(gap.Interfaces, ","),
-		"from", gap.From.Format(time.RFC3339Nano), "to", gap.To.Format(time.RFC3339Nano),
-		"reason", gap.Reason)
+	clabcapture.ReportGap(run.req.OnGap, gap)
 }
 
 // captureSegment is one clabwire capture process of a chain.
@@ -656,7 +577,7 @@ func (s *captureSegment) plannedEnd() time.Time {
 // segmentEvent is something a segment reported: a packet, an audit record, or its end.
 type segmentEvent struct {
 	segment *captureSegment
-	packet  *pcapngPacket
+	packet  *clabcapture.Packet
 	audit   *captureAudit
 	done    bool
 	err     error
@@ -701,7 +622,7 @@ type captureChain struct {
 	// emitted remembers the content of the packets active wrote while next runs.
 	emitted map[uint64]int
 	// held are the packets of next until active ends.
-	held     []*pcapngPacket
+	held     []*clabcapture.Packet
 	segments int
 	retries  int
 	// final is set once no further segment is due.
@@ -714,7 +635,7 @@ func (c *captureChain) run(ctx context.Context) error {
 	defer func() {
 		cancel()
 		c.drain()
-		c.capture.reorder.release(c)
+		c.capture.out.Release(c)
 	}()
 
 	c.active = c.start(ctx, c.segmentDuration(time.Now()))
@@ -881,7 +802,7 @@ func (c *captureChain) setCut() {
 	window := c.capture.window.Nanoseconds()
 	// Packets the next segment holds back are stamped from T-W on: other chains' packets after
 	// that wait in the reorder buffer until the switch, so the merged stream stays in order.
-	c.capture.reorder.hold(c, c.cut-window)
+	c.capture.out.Hold(c, c.cut-window)
 
 	// The active segment only matters for packets stamped before T. Once the pod clock passed
 	// T+W, it is closed: packets it read until then are still delivered, and the ones it reads
@@ -893,7 +814,10 @@ func (c *captureChain) setCut() {
 		time.Duration(c.cut-c.next.started.UnixNano()+window), active.closeStdin)
 }
 
-func (c *captureChain) handlePacket(segment *captureSegment, packet *pcapngPacket) (bool, error) {
+func (c *captureChain) handlePacket(
+	segment *captureSegment,
+	packet *clabcapture.Packet,
+) (bool, error) {
 	switch segment {
 	case c.active:
 		if c.cut != 0 && packet.Timestamp >= c.cut {
@@ -911,7 +835,7 @@ func (c *captureChain) handlePacket(segment *captureSegment, packet *pcapngPacke
 	return false, nil
 }
 
-func (c *captureChain) emit(packet *pcapngPacket) (bool, error) {
+func (c *captureChain) emit(packet *clabcapture.Packet) (bool, error) {
 	if int(packet.InterfaceID) >= len(c.group.ids) {
 		return true, fmt.Errorf("clabwire wrote a packet for interface %d of %d",
 			packet.InterfaceID, len(c.group.ids))
@@ -925,7 +849,7 @@ func (c *captureChain) emit(packet *pcapngPacket) (bool, error) {
 // held packets of the next one that the active one did not write.
 func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (bool, error) {
 	// the held packets are in the reorder buffer once this returns
-	defer c.capture.reorder.release(c)
+	defer c.capture.out.Release(c)
 
 	ended := c.active
 	if c.final && c.next == nil {
@@ -1006,7 +930,7 @@ func resetTimer(timer *time.Timer, d time.Duration) {
 }
 
 // packetKey identifies a packet by its interface and content.
-func packetKey(packet *pcapngPacket) uint64 {
+func packetKey(packet *clabcapture.Packet) uint64 {
 	hash := fnv.New64a()
 	var id [4]byte
 	id[0] = byte(packet.InterfaceID)
@@ -1039,7 +963,7 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 		command = append(command, "--interface", name)
 	}
 	if c.capture.req.PacketLimit > 0 {
-		remaining := int64(c.capture.req.PacketLimit) - c.capture.written.Load()
+		remaining := int64(c.capture.req.PacketLimit) - c.capture.out.Written()
 		command = append(command, "--packetLimit",
 			strconv.FormatInt(min(max(remaining, 1), maxClabwirePackets), 10))
 	}
@@ -1066,7 +990,7 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 	readDone := make(chan error, 1)
 	go func() {
 		defer c.wg.Done()
-		readDone <- c.readSegment(stdoutReader, func(packet *pcapngPacket) {
+		readDone <- c.readSegment(stdoutReader, func(packet *clabcapture.Packet) {
 			send(segmentEvent{packet: packet})
 		})
 		_, _ = io.Copy(io.Discard, stdoutReader)
@@ -1136,8 +1060,8 @@ func unsupportedClabwire(location clablabruntime.NodeLocation, stderr string) er
 
 // readSegment checks that a segment's interfaces are the requested ones and passes its packets
 // on with the segment's interface index.
-func (c *captureChain) readSegment(stdout io.Reader, packet func(*pcapngPacket)) error {
-	reader := newPCAPNGReader(stdout)
+func (c *captureChain) readSegment(stdout io.Reader, packet func(*clabcapture.Packet)) error {
+	reader := clabcapture.NewReader(stdout)
 	interfaces := 0
 	for {
 		event, err := reader.Next()
