@@ -37,6 +37,7 @@ func (c *CLab) deployWithLabRuntime(
 		// --reconfigure regenerates the lab from scratch, like removing a local lab
 		// directory, so it also deletes the persistent node storage.
 		err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+			Identity:   c.labRuntimeIdentity,
 			Name:       c.Config.Name,
 			Wait:       true,
 			Timeout:    c.timeout,
@@ -79,6 +80,7 @@ func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	}
 
 	return clablabruntime.DeployRequest{
+		Identity:           c.labRuntimeIdentity,
 		Name:               c.Config.Name,
 		Owner:              c.labOwner(),
 		TopologyFile:       topologyFile,
@@ -169,6 +171,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 	}
 
 	err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+		Identity:   c.labRuntimeIdentity,
 		Name:       c.Config.Name,
 		Wait:       true,
 		Timeout:    c.timeout,
@@ -212,7 +215,10 @@ func (c *CLab) cleanupLabRuntimeLabDir() error {
 }
 
 func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
-	states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
+	states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{
+		AllNamespaces: true,
+		Identity:      c.labRuntimeIdentity,
+	})
 	if err != nil {
 		return err
 	}
@@ -236,6 +242,7 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 	var errs []error
 	for _, state := range states {
 		if err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+			Identity:   c.labRuntimeIdentity,
 			Name:       state.Name,
 			Namespace:  state.Namespace,
 			Wait:       true,
@@ -266,7 +273,10 @@ func (c *CLab) ListLabRuntimeContainers(
 	}
 
 	if all || c.Config.Name == "" {
-		states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
+		states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{
+			AllNamespaces: true,
+			Identity:      c.labRuntimeIdentity,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +289,10 @@ func (c *CLab) ListLabRuntimeContainers(
 		return filterLabRuntimeContainers(containers, opts.ToFilters()), nil
 	}
 
-	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})
+	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{
+		Name:     c.Config.Name,
+		Identity: c.labRuntimeIdentity,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +335,7 @@ func (c *CLab) execWithLabRuntime(
 
 		for _, execCmd := range execCmds {
 			result, err := c.LabRuntime.Exec(ctx, clablabruntime.ExecRequest{
+				Identity:  c.labRuntimeIdentity,
 				Name:      labName,
 				Namespace: namespace,
 				NodeName:  nodeName,
@@ -350,25 +364,28 @@ func (c *CLab) execWithLabRuntime(
 
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Start(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
 func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Stop(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
 func (c *CLab) restartNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Restart(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
@@ -382,9 +399,10 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 	}
 
 	result, err := c.LabRuntime.Save(ctx, clablabruntime.SaveRequest{
-		Name:  c.Config.Name,
-		Nodes: c.nodeFilter,
-		Copy:  opts.copyDst != "",
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    c.nodeFilter,
+		Copy:     opts.copyDst != "",
 	})
 	if err != nil {
 		return err

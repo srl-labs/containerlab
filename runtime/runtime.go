@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/netip"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -99,6 +100,37 @@ type ContainerRuntime interface {
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
 	// SyncMgmtHostRoutes reconciles host routes to current management endpoints.
 	SyncMgmtHostRoutes(context.Context) error
+}
+
+// ContainerLogOptions selects the part of a container log WriteContainerLogs writes.
+type ContainerLogOptions struct {
+	// Tail limits the output to the last lines of the log; nil writes the whole log.
+	Tail *int64
+	// Follow keeps writing new log lines until the context ends.
+	Follow bool
+	// Timestamps prefixes every line with its timestamp.
+	Timestamps bool
+}
+
+// ContainerLogWriter is implemented by container runtimes that can write a container's log.
+type ContainerLogWriter interface {
+	// WriteContainerLogs writes the container's stdout and stderr to the given writers. A
+	// container with a TTY has one combined stream, written to stdout.
+	WriteContainerLogs(
+		ctx context.Context,
+		containerName string,
+		opts ContainerLogOptions,
+		stdout, stderr io.Writer,
+	) error
+}
+
+// LogTail renders a log tail for container runtime APIs: "all" or the number of lines.
+func LogTail(tail *int64) string {
+	if tail == nil || *tail < 0 {
+		return "all"
+	}
+
+	return strconv.FormatInt(*tail, 10)
 }
 
 // MgmtNetBinder is implemented by runtimes that support multiple management networks.

@@ -23,7 +23,7 @@ func (r *Runtime) Deploy(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.LabState, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -207,7 +207,7 @@ func (r *Runtime) Deploy(
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return connErr
 	}
@@ -446,7 +446,7 @@ func (r *Runtime) Inspect(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (*clablabruntime.LabState, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -501,7 +501,7 @@ func (r *Runtime) LabExists(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (bool, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return false, connErr
 	}
@@ -531,7 +531,7 @@ func (r *Runtime) List(
 	ctx context.Context,
 	req clablabruntime.ListRequest,
 ) ([]*clablabruntime.LabState, error) {
-	r, connErr := r.connect()
+	r, connErr := r.connect(req.Identity)
 	if connErr != nil {
 		return nil, connErr
 	}

@@ -3,6 +3,7 @@ package clabernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -82,6 +83,9 @@ type Runtime struct {
 	clients *clientLoader
 	// connected marks a runtime view whose client fields are populated.
 	connected bool
+	// identity is the configured identity of calls without one; in a connected view it is the
+	// identity the clients impersonate.
+	identity clablabruntime.Identity
 }
 
 // kubeClients is the set of Kubernetes clients a runtime view operates with.
@@ -91,15 +95,19 @@ type kubeClients struct {
 	restConfig *rest.Config
 }
 
-// clientLoader loads the kubeconfig once and builds the Kubernetes clients from it.
+// clientLoader loads the kubeconfig once and builds, and caches, the Kubernetes clients of
+// every identity from it.
 type clientLoader struct {
 	loadConfig func() (*rest.Config, string, error)
 	newClients func(*rest.Config) (*kubeClients, error)
 
 	once      sync.Once
-	clients   *kubeClients
+	base      *rest.Config
 	namespace string
 	err       error
+
+	mu         sync.Mutex
+	byIdentity map[string]*kubeClients
 }
 
 func newClientLoader() *clientLoader {
@@ -123,32 +131,71 @@ func newKubeClients(restConfig *rest.Config) (*kubeClients, error) {
 	return &kubeClients{dynamic: client, kube: kubeClient, restConfig: restConfig}, nil
 }
 
-func (l *clientLoader) load() (*kubeClients, string, error) {
+// load returns the clients of an identity. The impersonation is part of the rest config, so it
+// applies to every transport built from it: REST calls, watches, log streams, and the SPDY and
+// websocket upgrades of exec, attach and port-forward.
+func (l *clientLoader) load(
+	identity clablabruntime.Identity,
+) (*kubeClients, string, error) {
 	l.once.Do(func() {
-		restConfig, namespace, err := l.loadConfig()
-		if err != nil {
-			l.err = err
-			return
+		l.base, l.namespace, l.err = l.loadConfig()
+		if l.namespace == "" {
+			l.namespace = defaultNamespace
 		}
-		if namespace == "" {
-			namespace = defaultNamespace
-		}
-
-		l.clients, l.err = l.newClients(restConfig)
-		l.namespace = namespace
 	})
+	if l.err != nil {
+		return nil, "", l.err
+	}
 
-	return l.clients, l.namespace, l.err
+	key := identityKey(identity)
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if clients, ok := l.byIdentity[key]; ok {
+		return clients, l.namespace, nil
+	}
+
+	restConfig := rest.CopyConfig(l.base)
+	if !identity.IsZero() {
+		restConfig.Impersonate = rest.ImpersonationConfig{
+			UserName: identity.User,
+			Groups:   slices.Clone(identity.Groups),
+		}
+	}
+
+	clients, err := l.newClients(restConfig)
+	if err != nil {
+		return nil, "", err
+	}
+	if l.byIdentity == nil {
+		l.byIdentity = map[string]*kubeClients{}
+	}
+	l.byIdentity[key] = clients
+
+	return clients, l.namespace, nil
 }
 
-// connect returns a view of the runtime with its Kubernetes clients populated, loading the
-// kubeconfig on first use. Every operation that reads or changes cluster state calls it first.
-func (r *Runtime) connect() (*Runtime, error) {
-	if r.connected || r.clients == nil {
+func identityKey(identity clablabruntime.Identity) string {
+	return identity.User + "\x00" + strings.Join(identity.Groups, "\x00")
+}
+
+// connect returns a view of the runtime with the Kubernetes clients of an identity populated,
+// loading the kubeconfig on first use. A zero identity uses the runtime's configured identity.
+// Every operation that reads or changes cluster state calls it first.
+func (r *Runtime) connect(identity clablabruntime.Identity) (*Runtime, error) {
+	if identity.IsZero() {
+		identity = r.identity
+	}
+	if r.connected && identity.Equal(r.identity) {
+		return r, nil
+	}
+	if r.clients == nil {
+		// clients were injected (tests); they act as the identity they were built with
 		return r, nil
 	}
 
-	clients, namespace, err := r.clients.load()
+	clients, namespace, err := r.clients.load(identity)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +207,7 @@ func (r *Runtime) connect() (*Runtime, error) {
 	if view.namespace == "" {
 		view.namespace = namespace
 	}
+	view.identity = identity
 	view.connected = true
 
 	return &view, nil
@@ -188,6 +236,7 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		labNamespaceOverride: configuredLabNamespace(cfg.Namespace),
 		timeout:              cfg.Timeout,
 		kindLinkApplyMode:    cfg.KindLinkApplyMode,
+		identity:             cfg.Identity,
 		clients:              newClientLoader(),
 	}, nil
 }

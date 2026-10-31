@@ -530,6 +530,20 @@ If any selected command returns nonzero, or pod exec itself fails, the outer
 were received are still printed, so automation can use both the output and the
 process exit status.
 
+## Logs
+
+`logs` shows the log of a node's primary device container, the same container
+`exec` uses:
+
+```bash
+containerlab --runtime c9s logs -t topo.clab.yml -n srl1
+containerlab --runtime c9s logs --name clos -n srl1 --tail 100 --follow --timestamps
+```
+
+It reads the `pods/log` subresource of the node's pod, so RBAC must allow
+`get` on `pods/log`. Kubernetes returns stdout and stderr as one stream. See
+the [`logs` command](../../cmd/logs.md) for the flags.
+
 ## Start, stop, and restart
 
 Node lifecycle commands operate on the kubernetes Deployments created by
@@ -784,6 +798,62 @@ kubectl -n <namespace> annotate node.c9s.run <node> \
   c9s.run/device-state-reset=$(date +%s) --overwrite
 ```
 
+## Node access from Go
+
+Programs that use containerlab as a Go library, such as clab-api-server, open
+terminals, follow logs, reach node ports and read resource usage through
+optional lab runtime interfaces in `github.com/srl-labs/containerlab/labruntime`,
+implemented by the c9s runtime:
+
+| Interface | Method | What it does |
+|---|---|---|
+| `NodeLocator` | `LocateNode(ctx, NodeRequest) ([]NodeLocation, error)` | the namespace, pod, primary device container, Node UID, exposed ports and LoadBalancer address of nodes |
+| `NodeAttacher` | `Attach(ctx, AttachRequest, AttachStreams) error` | an interactive exec with stdin, an optional TTY and a resize channel, in the device container or a chosen container |
+| `NodeLogStreamer` | `StreamLogs(ctx, LogRequest, io.Writer) error` | the device container log, with tail, follow and timestamps |
+| `NodePortForwarder` | `DialPort(ctx, NodeRequest, port) (net.Conn, error)` | a connection to a TCP port of the node's pod through `pods/portforward` (SSH, web UIs) |
+| `NodeStatsSampler` | `SampleStats(ctx, InspectRequest) ([]NodeStats, error)` | CPU and memory per node from `metrics.k8s.io` PodMetrics, summing the node's device containers; without the metrics API the error wraps `labruntime.ErrMetricsUnavailable` |
+
+The `core` package wraps them per lab and node name, accepting the node name
+as the topology file spells it or as it was sanitized:
+`CLab.LocateLabRuntimeNodes`, `CLab.AttachLabRuntimeNode`,
+`CLab.DialLabRuntimeNodePort`, `CLab.SampleLabRuntimeNodeStats` and
+`CLab.NodeLogs`, which also serves Docker and Podman.
+
+```go
+c, err := clabcore.NewContainerLab(
+	clabcore.WithRuntime("c9s", nil),
+	clabcore.WithTopologyName("clos"),
+	clabcore.WithLabRuntimeIdentity(clablabruntime.Identity{
+		User:   "clab:alice",
+		Groups: []string{"clab:users"},
+	}),
+)
+if err != nil {
+	return err
+}
+
+conn, err := c.DialLabRuntimeNodePort(ctx, "srl1", 22)
+```
+
+### Acting as a user
+
+A server that runs labs for many users acts as each user, so the cluster's RBAC
+decides what a user may do and its audit log names the user:
+
+- `labruntime.Identity{User, Groups}` is Kubernetes user impersonation.
+  `labruntime.Config.Identity` sets it for a runtime, every request type has an
+  `Identity` field that overrides it per call, and
+  `clabcore.WithLabRuntimeIdentity` sets it for every call of a `CLab`.
+- The c9s runtime builds one set of Kubernetes clients per identity from the
+  kubeconfig and caches them. The impersonation applies to every transport:
+  REST calls, watches, log streams, and the websocket and SPDY connections of
+  exec, attach and port-forward.
+- Without an identity, the kubeconfig is used as it is. The CLI has no
+  impersonation flags: a CLI user acts with their own kubeconfig rights.
+
+The kubeconfig identity then needs the `impersonate` verb on the users and
+groups it acts as.
+
 ## RBAC requirements
 
 The kube identity used by the outer containerlab process must be able to:
@@ -798,6 +868,9 @@ The kube identity used by the outer containerlab process must be able to:
 - create, get, list, update, and delete ConfigMaps used for local files
 - exec into device Pods with `pods/exec`
 - list and delete PersistentVolumeClaims for `destroy --cleanup`
+- read container logs with `pods/log` for `logs`
+- port-forward with `pods/portforward` for `NodePortForwarder`
+- list `pods.metrics.k8s.io` for `NodeStatsSampler`
 
 Useful checks:
 

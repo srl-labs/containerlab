@@ -131,6 +131,62 @@ Exec into client and verify dataplane
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Client Eth1 Should Be Visible
     Wait Until Keyword Succeeds    60s    ${retry-interval}    Ping From Client Should Succeed
 
+Logs shows the device container log
+    ${result} =    Run Clab Command    logs -t ${topo} -n client --tail 2 --timestamps
+    Should Be Equal As Integers    ${result.rc}    0
+    ${lines} =    Split To Lines    ${result.stdout}
+    ${count} =    Get Length    ${lines}
+    Should Be True    0 < ${count} <= 2
+    Should Match Regexp    ${lines}[0]    ^\\d{4}-\\d{2}-\\d{2}T\\S+\\s
+
+    # the node name is accepted as the topology spells it or as Kubernetes carries it
+    ${by_name} =    Run Clab Command    logs --name ${lab-name} -n CLIENT --tail 1
+    Should Be Equal As Integers    ${by_name.rc}    0
+
+    ${missing} =    Run Clab Command    logs --name ${lab-name} -n missing
+    Should Not Be Equal As Integers    ${missing.rc}    0
+    Should Contain    ${missing.stderr}    missing
+
+Logs follow streams new device log lines
+    Remove File If Exists    ${events-log}
+    TRY
+        Start Process    ${CLAB_BIN} --runtime ${runtime} logs --name ${lab-name} -n client --tail 0 --follow
+        ...    shell=True
+        ...    alias=c9s_logs
+        ...    stdout=${events-log}
+        ...    stderr=${events-err}
+        Sleep    3s
+        # nginx in the multitool image logs every request
+        Run Clab Command    exec -t ${topo} --label ${client-label} --cmd 'curl -s -o /dev/null http://127.0.0.1/clab-follow-marker'
+        Wait Until Keyword Succeeds    30s    1s    Log File Should Contain    ${events-log}    clab-follow-marker
+    FINALLY
+        Run Keyword And Ignore Error    Terminate Process    c9s_logs    kill=True
+        Remove File If Exists    ${events-log}
+        Remove File If Exists    ${events-err}
+    END
+
+Library attaches, port-forwards, streams logs and samples stats as an impersonated user
+    ${rbac} =    Process.Run Process
+    ...    kubectl -n ${lab-namespace} create role c9s-lab-reader --verb\=get,list,watch --resource\=topologies.c9s.run,nodes.c9s.run,links.c9s.run,nodeprofiles.c9s.run,pods.metrics.k8s.io && kubectl -n ${lab-namespace} create rolebinding clab-alice-reader --role\=c9s-lab-reader --user\=clab:alice && kubectl -n ${lab-namespace} create rolebinding clab-alice-admin --clusterrole\=admin --user\=clab:alice
+    ...    shell=True
+    Log    ${rbac.stdout}${\n}${rbac.stderr}
+    Should Be Equal As Integers    ${rbac.rc}    0
+
+    ${result} =    Process.Run Process
+    ...    go test ./core/ -run TestC9sClusterNodeAccess -count\=1 -v
+    ...    shell=True
+    ...    cwd=${CURDIR}/../..
+    ...    env:CLAB_C9S_TEST_LAB=${lab-name}
+    ...    env:CLAB_C9S_TEST_USER=clab:alice
+    ...    env:CLAB_C9S_TEST_FORBIDDEN_USER=clab:mallory
+    Log    ${result.stdout}${\n}${result.stderr}    console=${True}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/attach_with_a_terminal
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/port-forward
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/stats
+    Should Contain    ${result.stdout}    --- PASS: TestC9sClusterNodeAccess/forbidden_identity
+    Should Not Contain    ${result.stdout}    SKIP
+
 Stop server and verify dataplane interruption
     ${output} =    Run Clab Command    stop -t ${topo} --node server
     Should Be Equal As Integers    ${output.rc}    0
@@ -355,6 +411,11 @@ Interface Event Should Be Logged
     ...    ($action, $actor, $ifname) in [(e.get("action"), e.get("actor_id"), e.get("attributes", {}).get("ifname")) for e in map(json.loads, filter(str.strip, $contents.splitlines())) if e.get("type") == "interface"]
     ...    modules=json
     Should Be True    ${found}    no interface ${action} event for ${node}:${ifname}
+
+Log File Should Contain
+    [Arguments]    ${path}    ${text}
+    ${contents} =    Get File    ${path}
+    Should Contain    ${contents}    ${text}
 
 Persistent Claim Volumes
     ${claims} =    Process.Run Process

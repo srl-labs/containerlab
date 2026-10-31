@@ -61,6 +61,7 @@ require (
 	k8s.io/api v0.36.4
 	k8s.io/client-go v0.36.4
 	k8s.io/klog/v2 v2.140.0
+	k8s.io/streaming v0.36.4
 	sigs.k8s.io/kind v0.33.0
 )
 
@@ -194,7 +195,6 @@ require (
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	k8s.io/apiextensions-apiserver v0.36.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/streaming v0.36.4 // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.1 // indirect
