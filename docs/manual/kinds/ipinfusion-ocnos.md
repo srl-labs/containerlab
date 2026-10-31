@@ -11,9 +11,10 @@ It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/
 
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
-!!!note
-    OcNOS 7.0.0-262 (`OcNOS-SP-PLUS-x86-7.0.0-262-GA.qcow2`) builds and boots with `make docker-image` without modification.
-    Older images such as 6.0.2 needed a GRUB change for the serial console, as shown [here](https://github.com/srl-labs/vrnetlab/pull/99).
+/// note
+OcNOS 7.0.0-262 (`OcNOS-SP-PLUS-x86-7.0.0-262-GA.qcow2`) builds and boots with `make docker-image` without modification.
+Older images such as 6.0.2 needed a GRUB change for the serial console, as shown [here](https://github.com/srl-labs/vrnetlab/pull/99).
+///
 
 ## Getting the image
 
