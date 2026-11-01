@@ -16,7 +16,7 @@ To get the vAOS image, contact your ALE representative or ask for it on the [Spa
     `ssh admin@<container-name>`
     Password: `Switch@123`
 === "Serial console"
-    `docker exec -it <container-name> telnet 127.0.0.1 5000`
+    `telnet <container-name> 5000`
 
 ## Interface naming
 
