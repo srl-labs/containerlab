@@ -34,11 +34,15 @@ func (c *CLab) deployWithLabRuntime(
 	}
 
 	if options != nil && options.reconfigure {
+		// --reconfigure regenerates the lab from scratch, like removing a local lab
+		// directory, so it also deletes the persistent node storage.
 		err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+			Identity:   c.labRuntimeIdentity,
 			Name:       c.Config.Name,
 			Wait:       true,
 			Timeout:    c.timeout,
 			MaxWorkers: options.maxWorkers,
+			Cleanup:    true,
 		})
 		if err != nil {
 			return nil, err
@@ -76,6 +80,7 @@ func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	}
 
 	return clablabruntime.DeployRequest{
+		Identity:           c.labRuntimeIdentity,
 		Name:               c.Config.Name,
 		Owner:              c.labOwner(),
 		TopologyFile:       topologyFile,
@@ -166,10 +171,12 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 	}
 
 	err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+		Identity:   c.labRuntimeIdentity,
 		Name:       c.Config.Name,
 		Wait:       true,
 		Timeout:    c.timeout,
 		MaxWorkers: opts.maxWorkers,
+		Cleanup:    opts.cleanup,
 	})
 	if err != nil {
 		return err
@@ -208,7 +215,10 @@ func (c *CLab) cleanupLabRuntimeLabDir() error {
 }
 
 func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
-	states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
+	states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{
+		AllNamespaces: true,
+		Identity:      c.labRuntimeIdentity,
+	})
 	if err != nil {
 		return err
 	}
@@ -232,11 +242,13 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 	var errs []error
 	for _, state := range states {
 		if err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
+			Identity:   c.labRuntimeIdentity,
 			Name:       state.Name,
 			Namespace:  state.Namespace,
 			Wait:       true,
 			Timeout:    c.timeout,
 			MaxWorkers: opts.maxWorkers,
+			Cleanup:    opts.cleanup,
 		}); err != nil {
 			errs = append(errs, err)
 		}
@@ -261,7 +273,10 @@ func (c *CLab) ListLabRuntimeContainers(
 	}
 
 	if all || c.Config.Name == "" {
-		states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
+		states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{
+			AllNamespaces: true,
+			Identity:      c.labRuntimeIdentity,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +289,10 @@ func (c *CLab) ListLabRuntimeContainers(
 		return filterLabRuntimeContainers(containers, opts.ToFilters()), nil
 	}
 
-	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})
+	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{
+		Name:     c.Config.Name,
+		Identity: c.labRuntimeIdentity,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +335,7 @@ func (c *CLab) execWithLabRuntime(
 
 		for _, execCmd := range execCmds {
 			result, err := c.LabRuntime.Exec(ctx, clablabruntime.ExecRequest{
+				Identity:  c.labRuntimeIdentity,
 				Name:      labName,
 				Namespace: namespace,
 				NodeName:  nodeName,
@@ -345,25 +364,28 @@ func (c *CLab) execWithLabRuntime(
 
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Start(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
 func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Stop(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
 func (c *CLab) restartNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
 	return c.LabRuntime.Restart(ctx, clablabruntime.NodeRequest{
-		Name:    c.Config.Name,
-		Nodes:   nodeNames,
-		Timeout: c.timeout,
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    nodeNames,
+		Timeout:  c.timeout,
 	})
 }
 
@@ -377,9 +399,10 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 	}
 
 	result, err := c.LabRuntime.Save(ctx, clablabruntime.SaveRequest{
-		Name:  c.Config.Name,
-		Nodes: c.nodeFilter,
-		Copy:  opts.copyDst != "",
+		Identity: c.labRuntimeIdentity,
+		Name:     c.Config.Name,
+		Nodes:    c.nodeFilter,
+		Copy:     opts.copyDst != "",
 	})
 	if err != nil {
 		return err
@@ -427,37 +450,41 @@ func (c *CLab) containersFromLabState(
 	return containers
 }
 
+// LabRuntimeContainer describes a lab runtime node as a container record, the way inspect
+// reports it. The events command describes lab runtime nodes with it too.
+func (c *CLab) LabRuntimeContainer(
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
+) clabruntime.GenericContainer {
+	return c.containerFromLabNode(state, node)
+}
+
 func (c *CLab) containerFromLabNode(
 	state *clablabruntime.LabState,
 	node clablabruntime.NodeState,
 ) clabruntime.GenericContainer {
 	nodeName := fmt.Sprintf("%s-%s", state.Name, node.Name)
-	containerState := node.State
-	containerStatus := node.State
-	if containerState == "" {
-		containerState = state.State
+	containerState, containerStatus := labRuntimeContainerState(state, node)
+
+	topologyNode := node.Name
+	if node.TopologyName != "" {
+		topologyNode = node.TopologyName
 	}
-	if node.Ready {
-		containerState = "running"
-		containerStatus = "healthy"
+	if c.Config.Topology != nil {
+		topologyNode = c.topologyNodeName(topologyNode)
 	}
 
 	labels := map[string]string{
 		clabconstants.Containerlab: state.Name,
-		clabconstants.NodeName:     node.Name,
+		clabconstants.NodeName:     topologyNode,
 		clabconstants.LongName:     nodeName,
 		clabconstants.TopoFile:     labRuntimeTopologyPath(c, state),
 	}
 
 	var image string
 	if c.Config.Topology != nil {
-		topologyNode := c.topologyNodeName(node.Name)
 		labels[clabconstants.NodeKind] = c.Config.Topology.GetNodeKind(topologyNode)
 		image = c.Config.Topology.GetNodeImage(topologyNode)
-
-		if group := c.Config.Topology.GetNodeGroup(topologyNode); group != "" {
-			labels[clabconstants.NodeGroup] = group
-		}
 	}
 	if node.Kind != "" {
 		labels[clabconstants.NodeKind] = node.Kind
@@ -466,23 +493,106 @@ func (c *CLab) containerFromLabNode(
 		image = node.Image
 	}
 
+	// The node's type and group: from the loaded topology's node, with the kind's defaults the
+	// local runtimes report too, otherwise as the topology set them on the runtime's node.
+	nodeType, group := node.Type, node.Group
+	if topologyNodeConfig, ok := c.Nodes[topologyNode]; ok {
+		nodeType, group = topologyNodeConfig.Config().NodeType, topologyNodeConfig.Config().Group
+	} else if c.Config.Topology != nil && group == "" {
+		group = c.Config.Topology.GetNodeGroup(topologyNode)
+	}
+	if nodeType != "" {
+		labels[clabconstants.NodeType] = nodeType
+	}
+	if group != "" {
+		labels[clabconstants.NodeGroup] = group
+	}
+
 	if state.Owner != "" {
 		labels[clabconstants.Owner] = state.Owner
 	} else if c.customOwner != "" {
 		labels[clabconstants.Owner] = c.customOwner
 	}
 
+	// The ID names the node uniquely across namespaces and labs. It is also the short ID, so
+	// inspect reports it as container_id and it matches the events actor ID.
+	id := labRuntimeContainerID(state.Namespace, state.Name, node.Name)
+
 	return clabruntime.GenericContainer{
 		Names:           []string{nodeName},
-		ID:              fmt.Sprintf("%s/%s/%s", state.Namespace, state.Name, node.Name),
-		ShortID:         "c9s",
+		ID:              id,
+		ShortID:         id,
 		Image:           image,
 		State:           containerState,
 		Status:          containerStatus,
 		Labels:          labels,
 		NetworkName:     state.Namespace,
 		NetworkSettings: managementAddress(node),
+		Ports:           labRuntimePorts(node.ExposedPorts),
+		Workload: &clabtypes.LabRuntimeWorkload{
+			Namespace:           state.Namespace,
+			Pod:                 node.Pod,
+			Container:           node.Container,
+			NodeUID:             node.NodeUID,
+			ExposedPorts:        node.ExposedPorts,
+			LoadBalancerAddress: node.LoadBalancerAddress,
+		},
 	}
+}
+
+// labRuntimeContainerState is a lab runtime node's state and status in the vocabulary of the
+// container runtimes: state created, running or exited; status healthy or "health: starting"
+// for a running node, as inspect shortens a Docker status line with a healthcheck, Created or
+// Exited otherwise. A runtime that reports no container state keeps its own state.
+func labRuntimeContainerState(
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
+) (string, string) {
+	switch node.ContainerState {
+	case clablabruntime.ContainerStateRunning:
+		if node.Health == clablabruntime.ContainerHealthHealthy {
+			return node.ContainerState, "healthy"
+		}
+
+		return node.ContainerState, "health: starting"
+	case clablabruntime.ContainerStateCreated:
+		return node.ContainerState, "Created"
+	case clablabruntime.ContainerStateExited:
+		return node.ContainerState, "Exited"
+	}
+
+	if node.Ready {
+		return clablabruntime.ContainerStateRunning, "healthy"
+	}
+	if node.State == "" {
+		return state.State, ""
+	}
+
+	return node.State, node.State
+}
+
+// labRuntimePorts reports the ports a lab runtime exposes for a node as the ports a container
+// exposes without publishing them on the host: the node is reached through the runtime (a
+// Service, a port-forward), never on a port of this machine.
+func labRuntimePorts(ports []clablabruntime.ExposedPort) []*clabtypes.GenericPortBinding {
+	if len(ports) == 0 {
+		return nil
+	}
+
+	bindings := make([]*clabtypes.GenericPortBinding, 0, len(ports))
+	for _, port := range ports {
+		bindings = append(bindings, &clabtypes.GenericPortBinding{
+			ContainerPort: port.Port,
+			Protocol:      port.Protocol,
+		})
+	}
+
+	return bindings
+}
+
+// labRuntimeContainerID is the ID of a lab runtime node: <namespace>/<lab>/<node>.
+func labRuntimeContainerID(namespace, lab, node string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, lab, node)
 }
 
 // topologyNodeName maps a node name a lab runtime reports back onto the topology node it belongs

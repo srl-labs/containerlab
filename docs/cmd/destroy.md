@@ -30,6 +30,8 @@ The local `--cleanup | -c` flag instructs containerlab to remove the lab directo
 
 Without this flag present, containerlab will keep the lab directory and all files inside of it.
 
+With `--runtime c9s`, `--cleanup` also deletes the lab's persistent node storage (the PersistentVolumeClaims holding saved device configuration) and then the lab namespace. A plain destroy keeps the claims, so the next deploy of the lab boots from the saved configuration. See [device state persistence](../manual/clabernetes/runtime.md#device-state-persistence).
+
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
 #### graceful

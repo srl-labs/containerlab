@@ -317,7 +317,7 @@ func (c *CLab) prepareLabManagementNetwork(
 		return err
 	}
 
-	return clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	return c.setMgmtNetLinkBridges()
 }
 
 func (c *CLab) allocateLabManagementIPs(

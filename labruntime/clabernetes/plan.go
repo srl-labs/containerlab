@@ -53,6 +53,7 @@ func prepareDesiredDeployment(
 		topologyWithExposeType(exposeType),
 		topologyWithPersistence(!req.NoPersistence),
 	)
+	setTopologySourceFile(desiredTopology, req.TopologyFile)
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
 	}
@@ -159,6 +160,11 @@ func (r *Runtime) Plan(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.DeployPlan, error) {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return nil, connErr
+	}
+
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}

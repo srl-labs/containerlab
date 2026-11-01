@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	gotc "github.com/florianl/go-tc"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -247,6 +249,13 @@ type netlinkWatcher struct {
 	nsHandle        netns.NsHandle
 }
 
+// Retry settings for a watcher that could not subscribe to link updates.
+var (
+	watchMaxAttempts   = 5
+	watchRetryDelay    = time.Second
+	watchMaxRetryDelay = 10 * time.Second
+)
+
 func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 	defer close(w.done)
 	if w.container == nil {
@@ -262,18 +271,80 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		return
 	}
 
-	nsPath, err := waitForNamespacePath(ctx, w.container.Runtime, w.container.ID)
-	if err != nil || nsPath == "" {
-		log.Debugf("failed to resolve netns for container %s: %v", containerName, err)
+	// The states outlive a subscription, so a resubscribe only reports what
+	// changed while no subscription was active.
+	states := make(map[int]ifaceSnapshot)
 
-		return
+	var statsSamples map[int]ifaceStatsSample
+	if w.includeStats {
+		statsSamples = make(map[int]ifaceStatsSample)
+	}
+
+	initial := true
+	failures := 0
+	delay := watchRetryDelay
+
+	for {
+		subscribed, err := w.watch(ctx, registry, states, statsSamples, initial)
+		if ctx.Err() != nil {
+			return
+		}
+
+		if subscribed {
+			initial = false
+			failures = 0
+			delay = watchRetryDelay
+
+			log.Warnf(
+				"netlink subscription for container %s ended, resubscribing: %v",
+				containerName,
+				err,
+			)
+		} else {
+			failures++
+			if failures >= watchMaxAttempts {
+				log.Warnf("stopped watching interfaces of container %s: %v", containerName, err)
+
+				return
+			}
+
+			log.Debugf(
+				"failed to watch interfaces of container %s, retrying in %s: %v",
+				containerName,
+				delay,
+				err,
+			)
+		}
+
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return
+		}
+
+		delay = min(delay*2, watchMaxRetryDelay)
+	}
+}
+
+// watch subscribes to link updates in the container's namespace and handles
+// them until ctx ends or the subscription fails. It reports whether it
+// subscribed. The subscription lists the existing links itself, so no change
+// between listing and subscribing is lost.
+func (w *netlinkWatcher) watch(
+	ctx context.Context,
+	registry *netlinkRegistry,
+	states map[int]ifaceSnapshot,
+	statsSamples map[int]ifaceStatsSample,
+	initial bool,
+) (bool, error) {
+	nsPath, err := waitForNamespacePath(ctx, w.container.Runtime, w.container.ID)
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve netns: %w", err)
 	}
 
 	nsHandle, err := netns.GetFromPath(nsPath)
 	if err != nil {
-		log.Debugf("failed to open netns for container %s: %v", containerName, err)
-
-		return
+		return false, fmt.Errorf("failed to open netns: %w", err)
 	}
 	defer nsHandle.Close()
 
@@ -281,54 +352,49 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 
 	netHandle, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
-		log.Debugf("failed to create netlink handle for container %s: %v", containerName, err)
-
-		return
+		return false, fmt.Errorf("failed to create netlink handle: %w", err)
 	}
 	defer netHandle.Close()
-
-	states, err := snapshotInterfaces(netHandle)
-	if err != nil {
-		log.Debugf("failed to snapshot interfaces for container %s: %v", containerName, err)
-		states = make(map[int]ifaceSnapshot)
-	}
 
 	netemQuery := newNetemQuerier(nsHandle)
 	defer netemQuery.Close()
 
-	// Query and apply netem info to snapshots
 	netemInfos := netemQuery.Query()
-	applyNetemToSnapshots(states, netemInfos)
-
-	var statsSamples map[int]ifaceStatsSample
-	if w.includeStats {
-		statsSamples = make(map[int]ifaceStatsSample, len(states))
-		now := time.Now()
-		for idx, snapshot := range states {
-			if sample, ok := newStatsSample(snapshot, now); ok {
-				statsSamples[idx] = sample
-			}
-		}
-	}
-
-	if w.includeSnapshot {
-		for _, snapshot := range states {
-			registry.emitInterfaceEvent(w.container, "snapshot", snapshot)
-		}
-	}
 
 	updates := make(chan netlink.LinkUpdate, 32)
 	done := make(chan struct{})
-	opts := netlink.LinkSubscribeOptions{Namespace: &nsHandle}
+	defer close(done)
+
+	var (
+		errMu     sync.Mutex
+		lastError error
+	)
+
+	opts := netlink.LinkSubscribeOptions{
+		Namespace:    &nsHandle,
+		ListExisting: true,
+		// An interrupted listing is reported here too. It needs no action:
+		// links that changed during the listing also arrive as updates.
+		ErrorCallback: func(err error) {
+			log.Debugf(
+				"netlink subscription for container %s: %v",
+				firstContainerName(w.container),
+				err,
+			)
+
+			errMu.Lock()
+			lastError = err
+			errMu.Unlock()
+		},
+	}
 
 	if err := netlink.LinkSubscribeWithOptions(updates, done, opts); err != nil {
-		log.Debugf(
-			"failed to subscribe to netlink updates for container %s: %v",
-			containerName,
-			err,
-		)
+		return false, fmt.Errorf("failed to subscribe to netlink updates: %w", err)
+	}
 
-		return
+	var vanished map[int]struct{}
+	if len(states) > 0 {
+		vanished = w.removeVanishedLinks(netHandle, states, statsSamples, registry)
 	}
 
 	// Set up netem polling interval (reuse stats interval or default to 1s).
@@ -356,17 +422,122 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		case <-netemTicker.C:
 			w.pollNetemChanges(states, registry, netemQuery)
 		case <-ctx.Done():
-			close(done)
-
-			return
+			return true, nil
 		case update, ok := <-updates:
 			if !ok {
-				return
+				errMu.Lock()
+				err := lastError
+				errMu.Unlock()
+
+				if err == nil {
+					err = errors.New("update channel closed")
+				}
+
+				return true, err
+			}
+
+			// Replies to the listing carry NLM_F_MULTI, notifications do not.
+			if update.Header.Flags&unix.NLM_F_MULTI != 0 {
+				w.processExisting(
+					states,
+					statsSamples,
+					update.Link,
+					netemInfos,
+					vanished,
+					registry,
+					initial,
+				)
+
+				continue
 			}
 
 			w.processUpdate(states, statsSamples, update, registry, netemQuery)
 		}
 	}
+}
+
+// processExisting records a link listed when the subscription started. On the
+// first subscription a new link is reported as a snapshot when requested; after
+// a resubscribe it is reported as created.
+//
+// The listing can be older than the check in removeVanishedLinks, so it can
+// still hold a link that check reported as deleted. Such a link is skipped; its
+// deletion notification follows and is ignored, as the link is not tracked.
+func (w *netlinkWatcher) processExisting(
+	states map[int]ifaceSnapshot,
+	statsSamples map[int]ifaceStatsSample,
+	link netlink.Link,
+	netemInfos map[int]netemInfo,
+	vanished map[int]struct{},
+	registry *netlinkRegistry,
+	initial bool,
+) {
+	if link == nil || link.Attrs() == nil {
+		return
+	}
+
+	if _, ok := vanished[link.Attrs().Index]; ok {
+		return
+	}
+
+	snapshot := withNetem(snapshotFromLink(link), netemInfos)
+	previous, exists := states[snapshot.Index]
+
+	if exists && snapshot.equal(previous) {
+		return
+	}
+
+	states[snapshot.Index] = snapshot
+	if statsSamples != nil {
+		if sample, ok := newStatsSample(snapshot, time.Now()); ok {
+			statsSamples[snapshot.Index] = sample
+		}
+	}
+
+	switch {
+	case exists:
+		registry.emitInterfaceEvent(w.container, "update", snapshot)
+	case !initial:
+		registry.emitInterfaceEvent(w.container, "create", snapshot)
+	case w.includeSnapshot:
+		registry.emitInterfaceEvent(w.container, "snapshot", snapshot)
+	}
+}
+
+// removeVanishedLinks reports the links that were deleted while no
+// subscription was active and returns their indexes.
+func (w *netlinkWatcher) removeVanishedLinks(
+	netHandle *netlink.Handle,
+	states map[int]ifaceSnapshot,
+	statsSamples map[int]ifaceStatsSample,
+	registry *netlinkRegistry,
+) map[int]struct{} {
+	current, err := snapshotInterfaces(netHandle)
+	if err != nil {
+		log.Debugf(
+			"failed to list interfaces of container %s: %v",
+			firstContainerName(w.container),
+			err,
+		)
+
+		return nil
+	}
+
+	vanished := map[int]struct{}{}
+
+	for idx, snapshot := range states {
+		if _, ok := current[idx]; ok {
+			continue
+		}
+
+		vanished[idx] = struct{}{}
+
+		delete(states, idx)
+		delete(statsSamples, idx)
+		registry.emitInterfaceEvent(w.container, "delete", snapshot)
+	}
+
+	return vanished
 }
 
 func (w *netlinkWatcher) processUpdate(
@@ -390,24 +561,18 @@ func (w *netlinkWatcher) processUpdate(
 
 	switch update.Header.Type {
 	case unix.RTM_DELLINK:
-		if exists {
-			snapshot = previous
+		// A link that is not tracked was never reported, or its deletion was
+		// already reported when the links were listed again after a resubscribe.
+		if !exists {
+			return
 		}
 
 		delete(states, snapshot.Index)
 		delete(statsSamples, snapshot.Index)
-		registry.emitInterfaceEvent(w.container, "delete", snapshot)
+		registry.emitInterfaceEvent(w.container, "delete", previous)
 	case unix.RTM_NEWLINK:
 		// Query netem info for this interface
-		netemInfos := netemQuery.Query()
-		if info, ok := netemInfos[snapshot.Index]; ok {
-			snapshot.HasNetem = true
-			snapshot.Delay = info.Delay
-			snapshot.Jitter = info.Jitter
-			snapshot.PacketLoss = info.PacketLoss
-			snapshot.Rate = info.Rate
-			snapshot.Corruption = info.Corruption
-		}
+		snapshot = withNetem(snapshot, netemQuery.Query())
 
 		if exists && snapshot.equal(previous) {
 			return
@@ -480,17 +645,15 @@ func containerLabel(container *clabruntime.GenericContainer) string {
 	return container.Labels[clabconstants.Containerlab]
 }
 
-func interfaceAttributes(
-	container *clabruntime.GenericContainer,
-	snapshot ifaceSnapshot,
-) map[string]string {
+// interfaceSnapshotAttributes are the attributes every interface event reports for the
+// interface itself.
+func interfaceSnapshotAttributes(snapshot ifaceSnapshot) map[string]string {
 	attributes := map[string]string{
 		"ifname": snapshot.Name,
 		"index":  strconv.Itoa(snapshot.Index),
 		"mtu":    strconv.Itoa(snapshot.MTU),
 		"state":  snapshot.OperState,
 		"type":   snapshot.Type,
-		"origin": "netlink",
 	}
 
 	if snapshot.Alias != "" {
@@ -500,6 +663,76 @@ func interfaceAttributes(
 	if snapshot.MAC != "" {
 		attributes["mac"] = snapshot.MAC
 	}
+
+	return attributes
+}
+
+// interfaceStatsAttributes adds the counters and rates of a stats event.
+func interfaceStatsAttributes(attributes map[string]string, metrics ifaceStatsMetrics) {
+	attributes["rx_bytes"] = strconv.FormatUint(metrics.RxBytes, 10)
+	attributes["tx_bytes"] = strconv.FormatUint(metrics.TxBytes, 10)
+	attributes["rx_packets"] = strconv.FormatUint(metrics.RxPackets, 10)
+	attributes["tx_packets"] = strconv.FormatUint(metrics.TxPackets, 10)
+	attributes["rx_bps"] = strconv.FormatFloat(metrics.RxBps, 'f', -1, 64)
+	attributes["tx_bps"] = strconv.FormatFloat(metrics.TxBps, 'f', -1, 64)
+	attributes["rx_pps"] = strconv.FormatFloat(metrics.RxPps, 'f', -1, 64)
+	attributes["tx_pps"] = strconv.FormatFloat(metrics.TxPps, 'f', -1, 64)
+	attributes["interval_seconds"] = strconv.FormatFloat(metrics.Interval.Seconds(), 'f', -1, 64)
+}
+
+// labRuntimeInterfaceAttributes are the attributes of a lab runtime's interface event: those
+// of the netlink interface events, for the node the runtime runs. Values the runtime could not
+// read (no index or MTU without a shell in the node) are left out rather than reported as 0.
+func labRuntimeInterfaceAttributes(
+	lab, name string,
+	iface *clablabruntime.InterfaceEventData,
+) map[string]string {
+	attributes := interfaceSnapshotAttributes(ifaceSnapshot{
+		Index:     iface.Index,
+		Name:      iface.Name,
+		Alias:     iface.Alias,
+		MTU:       iface.MTU,
+		MAC:       iface.MAC,
+		OperState: iface.OperState,
+		Type:      iface.Type,
+	})
+	if iface.Index <= 0 {
+		delete(attributes, "index")
+	}
+	if iface.MTU <= 0 {
+		delete(attributes, "mtu")
+	}
+
+	if lab != "" {
+		attributes["lab"] = lab
+	}
+	if name != "" {
+		attributes["name"] = name
+	}
+
+	if stats := iface.Stats; stats != nil {
+		interfaceStatsAttributes(attributes, ifaceStatsMetrics{
+			RxBytes:   stats.RxBytes,
+			TxBytes:   stats.TxBytes,
+			RxPackets: stats.RxPackets,
+			TxPackets: stats.TxPackets,
+			RxBps:     stats.RxBps,
+			TxBps:     stats.TxBps,
+			RxPps:     stats.RxPps,
+			TxPps:     stats.TxPps,
+			Interval:  stats.Interval,
+		})
+	}
+
+	return attributes
+}
+
+func interfaceAttributes(
+	container *clabruntime.GenericContainer,
+	snapshot ifaceSnapshot,
+) map[string]string {
+	attributes := interfaceSnapshotAttributes(snapshot)
+	attributes["origin"] = "netlink"
 
 	if lab := containerLabel(container); lab != "" {
 		attributes["lab"] = lab
@@ -649,15 +882,7 @@ func (r *netlinkRegistry) emitInterfaceStatsEvent(
 	}
 
 	attributes := interfaceAttributes(container, snapshot)
-	attributes["rx_bytes"] = strconv.FormatUint(metrics.RxBytes, 10)
-	attributes["tx_bytes"] = strconv.FormatUint(metrics.TxBytes, 10)
-	attributes["rx_packets"] = strconv.FormatUint(metrics.RxPackets, 10)
-	attributes["tx_packets"] = strconv.FormatUint(metrics.TxPackets, 10)
-	attributes["rx_bps"] = strconv.FormatFloat(metrics.RxBps, 'f', -1, 64)
-	attributes["tx_bps"] = strconv.FormatFloat(metrics.TxBps, 'f', -1, 64)
-	attributes["rx_pps"] = strconv.FormatFloat(metrics.RxPps, 'f', -1, 64)
-	attributes["tx_pps"] = strconv.FormatFloat(metrics.TxPps, 'f', -1, 64)
-	attributes["interval_seconds"] = strconv.FormatFloat(metrics.Interval.Seconds(), 'f', -1, 64)
+	interfaceStatsAttributes(attributes, metrics)
 
 	event := aggregatedEvent{
 		Timestamp:   metrics.Timestamp,
@@ -694,19 +919,18 @@ func snapshotInterfaces(netHandle *netlink.Handle) (map[int]ifaceSnapshot, error
 	return states, nil
 }
 
-// applyNetemToSnapshots applies netem information to interface snapshots.
-func applyNetemToSnapshots(states map[int]ifaceSnapshot, netemInfos map[int]netemInfo) {
-	for idx, info := range netemInfos {
-		if snapshot, ok := states[idx]; ok {
-			snapshot.HasNetem = true
-			snapshot.Delay = info.Delay
-			snapshot.Jitter = info.Jitter
-			snapshot.PacketLoss = info.PacketLoss
-			snapshot.Rate = info.Rate
-			snapshot.Corruption = info.Corruption
-			states[idx] = snapshot
-		}
+// withNetem returns the snapshot with the netem settings of its interface.
+func withNetem(snapshot ifaceSnapshot, netemInfos map[int]netemInfo) ifaceSnapshot {
+	if info, ok := netemInfos[snapshot.Index]; ok {
+		snapshot.HasNetem = true
+		snapshot.Delay = info.Delay
+		snapshot.Jitter = info.Jitter
+		snapshot.PacketLoss = info.PacketLoss
+		snapshot.Rate = info.Rate
+		snapshot.Corruption = info.Corruption
 	}
+
+	return snapshot
 }
 
 func snapshotFromLink(link netlink.Link) ifaceSnapshot {

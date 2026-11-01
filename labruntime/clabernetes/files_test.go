@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
@@ -116,5 +117,46 @@ func TestResolveNodeFileReferenceHonorsCancellation(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("canceled download succeeded")
+	}
+}
+
+func TestClabernetesBriefLinkMgmtNetNetwork(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name, mgmtNetwork, linkNetwork string
+		wantErr                        bool
+	}{
+		{"no network", "lab", "", false},
+		{"default network by name", "lab", "lab", false},
+		{"implicit default network by name", "", "clab", false},
+		{"non-default network", "lab", "oob", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var mgmt *clabtypes.MgmtNet
+			if tt.mgmtNetwork != "" {
+				mgmt = &clabtypes.MgmtNet{Network: tt.mgmtNetwork}
+			}
+			links := []*clablinks.LinkDefinition{{Link: &clablinks.LinkMgmtNetRaw{
+				HostInterface: "r1-eth1",
+				Endpoint:      clablinks.NewEndpointRaw("r1", "eth1", ""),
+				Network:       tt.linkNetwork,
+			}}}
+
+			brief, err := clabernetesBriefLinks(links, defaultMgmtNetwork(mgmt))
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("mgmt-net link to network %q rendered as %+v", tt.linkNetwork, brief)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []string{"r1:eth1", "mgmt-net:r1-eth1"}
+			if len(brief) != 1 || strings.Join(brief[0].Endpoints, ",") != strings.Join(want, ",") {
+				t.Fatalf("rendered links = %+v, want endpoints %v", brief, want)
+			}
+		})
 	}
 }

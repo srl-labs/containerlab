@@ -25,6 +25,8 @@ type GenericContainer struct {
 	Mounts          []ContainerMount
 	Runtime         ContainerRuntime
 	Ports           []*clabtypes.GenericPortBinding
+	// Workload locates the node's Kubernetes workload; it is only set by lab runtimes.
+	Workload *clabtypes.LabRuntimeWorkload `json:",omitempty"`
 }
 
 type ContainerMount struct {
