@@ -97,7 +97,11 @@ and the node does not become ready.
 
 ### Saving configuration
 
-[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses. Saving explicitly retains service and SNMP VRF overrides back to `main`, which RouterOS normally omits as its default, so they survive the next deployment.
+[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The save filter omits `add` entries tagged `clab-mgmt`, plus IPv4/IPv6 address, DHCP-client and IPv6 neighbor-discovery `add` entries for `ether1`, even without that tag. These management settings belong to the deployment and are recreated by the launcher; custom entries in those `ether1` sections are also omitted. Other interfaces and untagged configuration in other sections are preserved.
+
+Saving explicitly retains an intentional `discover-interface-list=static` choice, which RouterOS normally omits as its default, so it survives redeployment. The launcher-owned discovery lists are recreated before the saved configuration is imported.
+
+Saving also retains service and SNMP VRF overrides back to `main`, which RouterOS normally omits as its default.
 
 Repeated exports on RouterOS 7.24.5, 7.25, 7.25rc3 and 7.26beta4 can include an empty, disabled default `/system keymat-provider` entry that fails to import on a fresh router. Saving omits only that exact entry and leaves out the menu header if the section becomes empty, since RouterOS 7.23.8 does not recognize that menu. Configured default providers and custom providers are preserved. RouterOS 7.23.8 does not emit the entry.
 
@@ -146,13 +150,39 @@ On first boot, one RouterOS background job creates the VRF and binds SSH, HTTP/H
 
 A service's VRF binding also changes where it can be reached: these services no longer listen through data interfaces in `main` unless the startup config changes their binding. RouterOS FTP does not support VRF binding and is unavailable through the management VRF. Other router-originated services, such as DNS, NTP and logging, need their own VRF-aware configuration to use management egress. RouterOS applies its VRF interface matching to firewall rules; see the [RouterOS VRF documentation](https://manual.mikrotik.com/docs/user-guides/routing-and-networking-protocols/vrf/).
 
-VRF membership does not disable Layer 2 neighbor discovery. LLDP, CDP and MNDP follow `/ip neighbor discovery-settings`; use an explicit interface list excluding `ether1` when management discovery is unwanted.
+VRF membership does not disable Layer 2 neighbor discovery. The launcher sets an interface list that excludes `ether1` by default; see [Neighbor discovery](#neighbor-discovery) for overrides.
 
 RouterOS's router advertisements on `ether1` carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway. The container joins the management network only once this is in place. Management objects carry the comment `clab-mgmt` and are re-applied at boot when the container's addressing changed.
 
 /// warning
 Do not remove or change the `clab-mgmt` objects or the `mgmt` VRF: management of the node depends on them. This setup requires a fresh node container; it does not migrate a running node that uses the previous policy-only `mgmt` table. Export the user configuration before recreating such a node.
 ///
+
+### Neighbor discovery
+
+CHR routers sharing the management bridge can appear in each other's neighbor tables. LLDP, CDP and MNDP are disabled on management `ether1` by default; discovery stays enabled on the other static interfaces.
+
+On first boot, before joining the management network, the launcher creates:
+
+```routeros
+/interface list
+add name=clab-management comment=clab-mgmt
+add name=clab-discovery include=static exclude=clab-management comment=clab-mgmt
+/interface list member
+add list=clab-management interface=ether1 comment=clab-mgmt
+/ip neighbor discovery-settings
+set discover-interface-list=clab-discovery
+```
+
+These reserved lists belong to the launcher. To change discovery, select another list in your startup configuration or on the running router. For example, to enable discovery on all static interfaces, including management:
+
+```routeros
+/ip neighbor discovery-settings set discover-interface-list=static
+```
+
+Use `discover-interface-list=none` to disable discovery everywhere, or select your own interface list. Startup configuration is imported after this default is applied. Restarts preserve the selected policy, including on nodes created before this default was introduced. SSH, REST and other management services remain available. This setting does not control IPv6 address resolution or router advertisements under `/ipv6 nd`.
+
+As with RouterOS's normal discovery rules, including a bridge or bonding master enables discovery on its slave ports. If your configuration puts `ether1` into a bridge or bond, select a discovery list that excludes the master as well.
 
 ## Restarts
 

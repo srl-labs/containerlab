@@ -200,8 +200,8 @@ func TestInterfaceParsing(t *testing.T) {
 	}
 }
 
-// exportedConfig represents a native-VRF node's compact export with explicit
-// vrf=main overrides appended by SaveConfig, including user VRFs and a community.
+// exportedConfig represents a native-VRF node's compact export, including user
+// VRFs, discovery lists and a community, plus the omitted defaults added by SaveConfig.
 const exportedConfig = `# by RouterOS 7.25
 /interface bridge
 add name=lo0
@@ -229,6 +229,12 @@ add comment=clab-mgmt dst-address=::/0 gateway=3fff:172:20:20::1@mgmt \
 add address=3fff:172:20:20::4 advertise=no comment=clab-mgmt interface=ether1
 /ipv6 nd
 add interface=ether1 ra-lifetime=none
+/interface list
+add comment=clab-mgmt name=clab-management
+add comment=clab-mgmt exclude=clab-management include=static name=clab-discovery
+add include=static name="data ports"
+/interface list member
+add comment=clab-mgmt interface=ether1 list=clab-management
 /ip service
 set ssh vrf=mgmt
 set www vrf=mgmt
@@ -238,7 +244,8 @@ add addresses=10.0.0.0/30 name=save-check
 /system identity
 set name=r2
 /ip service set [find where name=winbox dynamic=no] vrf=main
-/snmp set vrf=main`
+/snmp set vrf=main
+/ip neighbor discovery-settings set discover-interface-list=static`
 
 func TestFilterLauncherConfig(t *testing.T) {
 	got := filterLauncherConfig(exportedConfig)
@@ -263,6 +270,8 @@ func TestFilterLauncherConfig(t *testing.T) {
 		"add dst-address=0.0.0.0/0 gateway=10.0.0.1",
 		"add name=lo0",
 		"set name=r2",
+		`add include=static name="data ports"`,
+		"/ip neighbor discovery-settings set discover-interface-list=static",
 		"/ip vrf",
 		`add interfaces=none name="user vrf"`,
 		"set ssh vrf=mgmt",

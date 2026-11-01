@@ -168,15 +168,17 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 
 // SaveConfig exports the RouterOS configuration over SSH (scrapligo has no RouterOS
 // platform, see clabnodes.ExportConfigOverSSH) and writes it as the node's startup config,
-// without the objects the launcher creates at every boot. Explicit vrf=main settings
-// retain user overrides that compact export omits as RouterOS defaults, without adding
-// unrelated verbose defaults that older RouterOS versions may not understand.
+// without the objects the launcher creates at every boot. Explicit discovery=static
+// and vrf=main settings retain user choices that compact export omits as defaults,
+// without adding unrelated verbose defaults that older RouterOS may not understand.
 func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	exported, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
-		`/export; :foreach s in=[/ip service find where dynamic=no vrf=main] do={`+
+		`/export; :if ([/ip neighbor discovery-settings get discover-interface-list] = "static") `+
+			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}; `+
+			`:foreach s in=[/ip service find where dynamic=no vrf=main] do={`+
 			`:put ("/ip service set [find where name=" . [/ip service get $s name] . " dynamic=no] vrf=main")}; `+
 			`:if ([/snmp get vrf] = "main") do={:put "/snmp set vrf=main"}`,
 	)
@@ -189,13 +191,13 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 }
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
-// every object tagged clab-mgmt (the ether1 management addresses, the mgmt VRF
-// and its default routes), the ether1 ND entry and CHR's ether1 DHCP client. Imported again
-// as a startup config, these lines duplicate objects the launcher already created and
-// RouterOS stops the import at the first one; the management addressing also belongs to
+// every object tagged clab-mgmt (the ether1 management addresses, the mgmt VRF,
+// its default routes and the discovery lists), the ether1 ND entry and CHR's ether1
+// DHCP client. Imported again as a startup config, these lines duplicate objects the
+// launcher already created and RouterOS stops the import at the first one; management addressing
+// belongs to
 // the deployment, not the lab. Continuation lines (an unescaped trailing backslash) are joined
-// before
-// matching.
+// before matching.
 func filterLauncherConfig(config string) string {
 	var out []string
 
