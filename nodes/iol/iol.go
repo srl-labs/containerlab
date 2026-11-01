@@ -155,6 +155,7 @@ func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if err := n.parseMgmtIntf(); err != nil {
 		return err
 	}
+	n.Cfg.Env["CLAB_IOL_MGMT_INTF"] = n.mgmtIntf
 
 	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
 
