@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -159,5 +160,28 @@ func (n *cienaSaos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployPa
 		}
 		n.Cfg.Env["SAOS_STARTUP_CONFIG_PATH"] = path.Join("/config", n.StartupCfgFName)
 	}
-	return n.VRNode.PreDeploy(ctx, params)
+	if err := n.VRNode.PreDeploy(ctx, params); err != nil {
+		return err
+	}
+	// license dir is only created here, after VRNode.PreDeploy has made <LabDir>/config.
+	if n.Cfg.License != "" {
+		dst := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, "license")
+		if err := clabutils.CopyFile(
+			ctx,
+			n.Cfg.License,
+			dst,
+			clabconstants.PermissionsFileDefault,
+		); err != nil {
+			return fmt.Errorf(
+				"failed to copy license file for ciena_saos node %q: %w",
+				n.Cfg.ShortName,
+				err,
+			)
+		}
+		if n.Cfg.Env == nil {
+			n.Cfg.Env = map[string]string{}
+		}
+		n.Cfg.Env["SAOS_LICENSE_PATH"] = path.Join("/config", "license")
+	}
+	return nil
 }
