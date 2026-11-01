@@ -58,6 +58,8 @@
 #                                      own reason, with the line number)
 #   "credential bootstrap FAILED: …"   the user/password step failed
 #   "management setup FAILED: …"       the ether1 address / mgmt VRF step failed
+#   "data NIC check FAILED: …"         RouterOS lacks an interface for a data NIC
+#                                      even after re-plugging it
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -108,6 +110,8 @@ log() { echo "chr-launch: $*"; }
 rm -f "$READY_FILE"
 
 FETCH_PORT=8080
+# QEMU's QMP monitor, inside the container only: re-plugs NICs RouterOS rejected at boot
+QMP_PORT=5001
 
 # ---- disk -----------------------------------------------------------------
 IMG=""
@@ -146,9 +150,11 @@ log "interfaces: $(count_intfs) of $INTFS expected after ${waited}s"
 case "$(uname -m)" in
     aarch64|arm64)
         QEMU="qemu-system-aarch64 -M virt -pflash /usr/share/qemu/edk2-aarch64-code.fd"
+        PCI_BRIDGES=0
         TCG_CPU="-cpu cortex-a57" ;;
     *)
         QEMU="qemu-system-x86_64"
+        PCI_BRIDGES=1
         TCG_CPU="" ;;
 esac
 if [ -e /dev/kvm ]; then
@@ -179,6 +185,51 @@ case "$node_id" in
         ;;
 esac
 NET="-netdev tap,id=mgmt,ifname=tap0,script=no,downscript=no -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
+nic_mac() { # nic_mac <index>: the data NIC's MAC, its index in the last octet
+    printf '52:54:00:%s:%02x' "$node_id" "$1"
+}
+
+check_nic_index() { # check_nic_index <max-index>: reject indices beyond the NIC layout
+    # 63 NICs behind bridges are tested. More run into the guest's interrupt
+    # vectors (about 100 NICs per vCPU) and SeaBIOS's PCI I/O space (8 bridges).
+    if [ "$PCI_BRIDGES" = 1 ] && [ "$1" -gt 63 ]; then
+        log "at most 63 data NICs are supported (eth63 / ether64); index $1 is beyond the tested limit"
+        return 1
+    fi
+    # Without bridges (arm64 virt) one bus holds the disk, management and 29 data NICs.
+    if [ "$PCI_BRIDGES" != 1 ] && [ "$1" -gt 29 ]; then
+        log "at most 29 data NICs fit without PCI bridges (eth29 / ether30); index $1 leaves no PCI slot for the disk"
+        return 1
+    fi
+}
+
+data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (also used to re-plug it)
+    case "$PCI_BRIDGES" in
+        1)
+            # The default PC has only 29 free PCI slots, including management.
+            # Keep management on the root bus and put data NICs behind bridges.
+            # Follow vrnetlab's conservative allocation of 25 NICs per bridge.
+            # Omit PXE ROMs to avoid exhausting SeaBIOS option-ROM space.
+            # Keep MSI-X, but share one vector between RX/TX queues (plus one
+            # for config) to reduce IRQ pressure.
+            # Disabling MSI-X entirely can leave NICs missing in RouterOS.
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2"
+            ;;
+        *)
+            # ARM64 uses the virt machine and keeps its existing NIC layout.
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2"
+            ;;
+    esac
+}
+
+qemu_data_nic() { # qemu_data_nic <index> <mac>: append-only QEMU arguments
+    # Each bridge comes right before its first NIC.
+    if [ "$PCI_BRIDGES" = 1 ] && [ $(( ($1 - 1) % 25 )) -eq 0 ]; then
+        _bridge=$(( ($1 - 1) / 25 + 1 ))
+        printf '%s ' "-device pci-bridge,id=chrpci$_bridge,chassis_nr=$_bridge,bus=pci.0"
+    fi
+    printf '%s' "-netdev tap,id=d$1,ifname=tap$1,script=no,downscript=no -device $(data_nic_device "$1" "$2")"
+}
 
 # ---- management: eth0 + tap0 on one bridge, eth0's addressing to the VM ----
 ip_global() { # ip_global <4|6> <dev>: the first global address/prefix
@@ -259,6 +310,7 @@ case "$prev" in *[!0-9]*|"") prev=0 ;; esac
 # the watcher bridges the late veths.
 case "$INTFS" in *[!0-9]*|"") INTFS=0 ;; esac
 [ "$INTFS" -gt "$max" ] && max="$INTFS"
+check_nic_index "$max" || exit 1
 [ "$max" -gt "$prev" ] && { printf '%s\n' "$max" > "$NICS_FILE" 2>/dev/null || true; }
 
 # RouterOS v7 memory ≈ 256 + 8·CPUS·(ifaces) MiB (MikroTik CHR system
@@ -314,13 +366,13 @@ while [ "$i" -le "$max" ]; do
     tunctl -t "$tap" >/dev/null 2>&1 || ip tuntap add dev "$tap" mode tap
     [ -e "$SYSNET/eth$i" ] && bridge_eth "$i"
     ip link set "$tap" up
-    mac="$(printf '52:54:00:%s:%02x' "$node_id" "$((i & 255))")"
-    NET="$NET -netdev tap,id=d$i,ifname=$tap,script=no,downscript=no -device virtio-net,netdev=d$i,mac=$mac"
+    NET="$NET $(qemu_data_nic "$i" "$(nic_mac "$i")")"
     i=$((i + 1))
 done
 
 # shellcheck disable=SC2086
 $QEMU $ACCEL -display none -monitor none \
+    -qmp "tcp:127.0.0.1:$QMP_PORT,server,nowait" \
     -m "$MEM" -smp "cpus=$CPUS" \
     -drive "file=$IMG,format=raw" \
     -serial telnet:0.0.0.0:5000,server,nowait \
@@ -406,6 +458,80 @@ while [ -z "$AUTH" ]; do
     fi
 done
 log "RouterOS answered after ${waited}s"
+
+# ---- data NICs: every one must be a RouterOS interface ----------------------
+# RouterOS's kernel can veto a virtio NIC that registers while RouterOS itself
+# starts up: the driver's probe fails with -1 and the interface never appears.
+# With more than about 33 NICs one or more are hit, and which one depends on
+# timing. The NIC itself is fine: plugged in again after boot it registers
+# normally, and RouterOS re-attaches the port's config, which it keys by MAC.
+# So wait until the interface list stops growing, then re-plug every NIC
+# RouterOS lacks, at the same PCI address.
+ros_macs() { # the orig-mac-address of every RouterOS ethernet interface, lower case
+    rest "$AUTH" interface/ethernet | tr '{' '\n' \
+        | sed -n 's/.*"orig-mac-address":"\([^"]*\)".*/\1/p' | tr 'A-F' 'a-f'
+}
+missing_nics() { # indices of the data NICs RouterOS has no interface for
+    _have="$(ros_macs)"
+    _i=1
+    while [ "$_i" -le "$max" ]; do
+        case "$_have" in *"$(nic_mac "$_i")"*) ;; *) printf '%s ' "$_i" ;; esac
+        _i=$((_i + 1))
+    done
+}
+ether_names() { # ether_names <index>...: the RouterOS names of data NICs
+    for _i; do printf 'ether%s ' $((_i + 1)); done
+}
+qmp() { # qmp <command>...: run QMP commands (one JSON object each), print the replies
+    { printf '%s\n' '{"execute":"qmp_capabilities"}' "$@"; sleep 1; } \
+        | timeout 5 nc 127.0.0.1 "$QMP_PORT" 2>/dev/null
+}
+replug_nic() { # replug_nic <index>: unplug data NIC <index>, plug it back at the same address
+    qmp "{\"execute\":\"device_del\",\"arguments\":{\"id\":\"nic$1\"}}" >/dev/null
+    # The guest ejects the device over ACPI hotplug; its id is free once it is gone.
+    _w=0
+    while qmp "{\"execute\":\"qom-get\",\"arguments\":{\"path\":\"/machine/peripheral/nic$1\",\"property\":\"type\"}}" \
+        | grep -q '"return": *"'; do
+        [ "$_w" -ge 20 ] && return 1
+        sleep 1
+        _w=$((_w + 1))
+    done
+    # human-monitor-command answers "" on success, the error text otherwise
+    qmp "{\"execute\":\"human-monitor-command\",\"arguments\":{\"command-line\":\"device_add $(data_nic_device "$1" "$(nic_mac "$1")")\"}}" \
+        | grep -q '"return": *""'
+}
+_n=-1; _same=0; _t=0
+while [ "$_same" -lt 3 ] && [ "$_t" -lt 60 ]; do
+    # grep -c, not wc -l: the REST reply ends without a newline
+    _c=$(ros_macs | grep -c .)
+    [ "$_c" -gt "$max" ] && break
+    if [ "$_c" -eq "$_n" ]; then _same=$((_same + 1)); else _same=0; _n=$_c; fi
+    sleep 2
+    _t=$((_t + 2))
+done
+miss="$(missing_nics)"
+_round=1
+while [ -n "$miss" ] && [ "$PCI_BRIDGES" = 1 ] && [ "$_round" -le 3 ]; do
+    # shellcheck disable=SC2086  # a list of indices
+    log "RouterOS has no interface for $(ether_names $miss)(attempt $_round): re-plugging"
+    for _i in $miss; do
+        replug_nic "$_i" || log "re-plug of ether$((_i + 1)) did not complete"
+    done
+    _t=0
+    while [ -n "$(missing_nics)" ] && [ "$_t" -lt 20 ]; do
+        sleep 2
+        _t=$((_t + 2))
+    done
+    miss="$(missing_nics)"
+    _round=$((_round + 1))
+done
+if [ -n "$miss" ]; then
+    # shellcheck disable=SC2086  # a list of indices
+    log "data NIC check FAILED: RouterOS has no interface for $(ether_names $miss)(of $max data NICs)"
+    wait "$QEMU_PID"
+    exit 0
+fi
+[ "$_round" -gt 1 ] && log "all $max data NICs are RouterOS interfaces after re-plugging"
 
 # Ready means a user can log in: RouterOS starts its SSH server well after REST
 # answers on a slow boot (about 40 s later under TCG on arm64), so when the
