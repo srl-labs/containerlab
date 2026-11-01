@@ -1,4 +1,8 @@
-package clabernetes
+// Package capture writes the pcapng streams of `containerlab capture`: one section with one
+// interface per capture target, packets merged across targets in timestamp order. The local
+// capturer reads lab link interfaces of Docker and Podman nodes through packet sockets; the c9s
+// lab runtime feeds the same writer from clabwire streams.
+package capture
 
 import (
 	"bufio"
@@ -33,8 +37,8 @@ const (
 
 var errPCAPNGByteOrder = errors.New("pcapng section is not little-endian")
 
-// pcapngInterface is an Interface Description Block.
-type pcapngInterface struct {
+// InterfaceDescription is an Interface Description Block.
+type InterfaceDescription struct {
 	LinkType   uint16
 	SnapLength uint32
 	Name       string
@@ -42,102 +46,116 @@ type pcapngInterface struct {
 	TSResol byte
 }
 
-// pcapngPacket is an Enhanced Packet Block with its timestamp in nanoseconds.
-type pcapngPacket struct {
+// Packet is an Enhanced Packet Block with its timestamp in nanoseconds.
+type Packet struct {
 	InterfaceID    uint32
 	Timestamp      int64
 	OriginalLength uint32
 	Data           []byte
 }
 
-// pcapngReader reads the blocks of a pcapng stream as clabwire writes it: one or more
+// Reader reads the blocks of a pcapng stream as clabwire writes it: one or more
 // little-endian sections, each with its Interface Description Blocks before its packets.
-type pcapngReader struct {
+type Reader struct {
 	r          *bufio.Reader
-	interfaces []pcapngInterface
+	interfaces []InterfaceDescription
 	// sections counts the Section Header Blocks read so far.
 	sections int
 }
 
-func newPCAPNGReader(r io.Reader) *pcapngReader {
-	return &pcapngReader{r: bufio.NewReaderSize(r, 64<<10)}
+// NewReader returns a reader of the pcapng stream r.
+func NewReader(r io.Reader) *Reader {
+	return &Reader{r: bufio.NewReaderSize(r, 64<<10)}
 }
 
-// pcapngEvent is one block of interest: a new interface or a packet.
-type pcapngEvent struct {
-	Interface *pcapngInterface
-	Packet    *pcapngPacket
+// Sections returns the number of Section Header Blocks read so far.
+func (p *Reader) Sections() int {
+	return p.sections
+}
+
+// Event is one block of interest: a new interface or a packet.
+type Event struct {
+	Interface *InterfaceDescription
+	Packet    *Packet
 }
 
 // Next returns the next interface or packet, skipping other block types. It returns io.EOF at
 // the clean end of the stream, and io.ErrUnexpectedEOF for a stream cut inside a block.
-func (p *pcapngReader) Next() (pcapngEvent, error) {
+func (p *Reader) Next() (Event, error) {
 	for {
 		var header [8]byte
 		if _, err := io.ReadFull(p.r, header[:]); err != nil {
 			if errors.Is(err, io.EOF) {
-				return pcapngEvent{}, io.EOF
+				return Event{}, io.EOF
 			}
 
-			return pcapngEvent{}, io.ErrUnexpectedEOF
+			return Event{}, io.ErrUnexpectedEOF
 		}
 
 		blockType := binary.LittleEndian.Uint32(header[0:4])
 		length := binary.LittleEndian.Uint32(header[4:8])
-		if blockType == pcapngSectionHeaderType && length > pcapngMaxBlockLength {
-			// a big-endian section header carries its length byte swapped
-			return pcapngEvent{}, errPCAPNGByteOrder
+		if blockType == pcapngSectionHeaderType {
+			// the byte-order magic tells a big-endian section apart before its length is
+			// trusted: that length reads byte swapped
+			magic, err := p.r.Peek(4)
+			if err != nil {
+				return Event{}, io.ErrUnexpectedEOF
+			}
+			if binary.BigEndian.Uint32(magic) == pcapngByteOrderMagic {
+				return Event{}, errPCAPNGByteOrder
+			}
 		}
 		if length < 12 || length%4 != 0 || length > pcapngMaxBlockLength {
-			return pcapngEvent{}, fmt.Errorf("invalid pcapng block length %d", length)
+			return Event{}, fmt.Errorf("invalid pcapng block length %d (at most %d)", length,
+				pcapngMaxBlockLength)
 		}
 
 		body := make([]byte, length-8)
 		if _, err := io.ReadFull(p.r, body); err != nil {
-			return pcapngEvent{}, io.ErrUnexpectedEOF
+			return Event{}, io.ErrUnexpectedEOF
 		}
 		if binary.LittleEndian.Uint32(body[len(body)-4:]) != length {
-			return pcapngEvent{}, fmt.Errorf("pcapng block lengths do not match")
+			return Event{}, fmt.Errorf("pcapng block lengths do not match")
 		}
 		body = body[:len(body)-4]
 
 		switch blockType {
 		case pcapngSectionHeaderType:
 			if len(body) < 16 {
-				return pcapngEvent{}, fmt.Errorf("short pcapng section header")
+				return Event{}, fmt.Errorf("short pcapng section header")
 			}
 			if binary.LittleEndian.Uint32(body[0:4]) != pcapngByteOrderMagic {
-				return pcapngEvent{}, errPCAPNGByteOrder
+				return Event{}, errPCAPNGByteOrder
 			}
 			p.sections++
 			p.interfaces = nil
 		case pcapngInterfaceType:
 			if p.sections == 0 {
-				return pcapngEvent{}, fmt.Errorf("pcapng interface before a section header")
+				return Event{}, fmt.Errorf("pcapng interface before a section header")
 			}
 			intf, err := parsePCAPNGInterface(body)
 			if err != nil {
-				return pcapngEvent{}, err
+				return Event{}, err
 			}
 			p.interfaces = append(p.interfaces, intf)
 
-			return pcapngEvent{Interface: &p.interfaces[len(p.interfaces)-1]}, nil
+			return Event{Interface: &p.interfaces[len(p.interfaces)-1]}, nil
 		case pcapngEnhancedPacketType:
 			packet, err := p.parsePacket(body)
 			if err != nil {
-				return pcapngEvent{}, err
+				return Event{}, err
 			}
 
-			return pcapngEvent{Packet: &packet}, nil
+			return Event{Packet: &packet}, nil
 		}
 	}
 }
 
-func parsePCAPNGInterface(body []byte) (pcapngInterface, error) {
+func parsePCAPNGInterface(body []byte) (InterfaceDescription, error) {
 	if len(body) < 8 {
-		return pcapngInterface{}, fmt.Errorf("short pcapng interface description")
+		return InterfaceDescription{}, fmt.Errorf("short pcapng interface description")
 	}
-	intf := pcapngInterface{
+	intf := InterfaceDescription{
 		LinkType:   binary.LittleEndian.Uint16(body[0:2]),
 		SnapLength: binary.LittleEndian.Uint32(body[4:8]),
 		TSResol:    6,
@@ -152,7 +170,7 @@ func parsePCAPNGInterface(body []byte) (pcapngInterface, error) {
 		}
 		padded := size + pcapngPadding(size)
 		if 4+padded > len(options) {
-			return pcapngInterface{}, fmt.Errorf("truncated pcapng interface option")
+			return InterfaceDescription{}, fmt.Errorf("truncated pcapng interface option")
 		}
 		value := options[4 : 4+size]
 		switch code {
@@ -169,21 +187,21 @@ func parsePCAPNGInterface(body []byte) (pcapngInterface, error) {
 	return intf, nil
 }
 
-func (p *pcapngReader) parsePacket(body []byte) (pcapngPacket, error) {
+func (p *Reader) parsePacket(body []byte) (Packet, error) {
 	if len(body) < 20 {
-		return pcapngPacket{}, fmt.Errorf("short pcapng enhanced packet")
+		return Packet{}, fmt.Errorf("short pcapng enhanced packet")
 	}
-	packet := pcapngPacket{
+	packet := Packet{
 		InterfaceID:    binary.LittleEndian.Uint32(body[0:4]),
 		OriginalLength: binary.LittleEndian.Uint32(body[16:20]),
 	}
 	if int(packet.InterfaceID) >= len(p.interfaces) {
-		return pcapngPacket{}, fmt.Errorf("pcapng packet for undeclared interface %d",
+		return Packet{}, fmt.Errorf("pcapng packet for undeclared interface %d",
 			packet.InterfaceID)
 	}
 	captured := binary.LittleEndian.Uint32(body[12:16])
 	if int(captured) > len(body)-20 {
-		return pcapngPacket{}, fmt.Errorf("pcapng packet data exceeds its block")
+		return Packet{}, fmt.Errorf("pcapng packet data exceeds its block")
 	}
 	packet.Data = body[20 : 20+captured]
 
@@ -191,7 +209,7 @@ func (p *pcapngReader) parsePacket(body []byte) (pcapngPacket, error) {
 		uint64(binary.LittleEndian.Uint32(body[8:12]))
 	timestamp, err := pcapngNanosecondsFrom(raw, p.interfaces[packet.InterfaceID].TSResol)
 	if err != nil {
-		return pcapngPacket{}, err
+		return Packet{}, err
 	}
 	packet.Timestamp = timestamp
 
@@ -215,22 +233,23 @@ func pcapngNanosecondsFrom(raw uint64, tsresol byte) (int64, error) {
 	return int64(raw * scale), nil //nolint:gosec // bounded above
 }
 
-// pcapngWriter writes one little-endian section with nanosecond timestamps. Every block goes out
+// Writer writes one little-endian section with nanosecond timestamps. Every block goes out
 // in one Write under a lock, so concurrent writers never interleave blocks and a stream cut
 // between writes is still a valid capture.
-type pcapngWriter struct {
+type Writer struct {
 	mu  sync.Mutex
 	w   io.Writer
 	err error
 }
 
-func newPCAPNGWriter(w io.Writer) *pcapngWriter {
-	return &pcapngWriter{w: w}
+// NewWriter returns a writer of one pcapng section to w.
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{w: w}
 }
 
 // WriteHeader writes the Section Header Block and one Interface Description Block per name, in
 // order; packets refer to the interfaces by that index.
-func (p *pcapngWriter) WriteHeader(names []string, snapLength uint32) error {
+func (p *Writer) WriteHeader(names []string, snapLength uint32) error {
 	section := make([]byte, 16)
 	binary.LittleEndian.PutUint32(section[0:], pcapngByteOrderMagic)
 	binary.LittleEndian.PutUint16(section[4:], 1)
@@ -255,7 +274,7 @@ func (p *pcapngWriter) WriteHeader(names []string, snapLength uint32) error {
 }
 
 // WritePacket writes an Enhanced Packet Block for the interface with the given index.
-func (p *pcapngWriter) WritePacket(interfaceID uint32, packet *pcapngPacket) error {
+func (p *Writer) WritePacket(interfaceID uint32, packet *Packet) error {
 	timestamp := uint64(packet.Timestamp) //nolint:gosec // capture timestamps are positive
 	body := make([]byte, 20, 20+len(packet.Data)+3)
 	binary.LittleEndian.PutUint32(body[0:], interfaceID)
@@ -269,7 +288,15 @@ func (p *pcapngWriter) WritePacket(interfaceID uint32, packet *pcapngPacket) err
 	return p.write(pcapngBlock(pcapngEnhancedPacketType, body))
 }
 
-func (p *pcapngWriter) write(block []byte) error {
+// Err returns the first write error, or nil.
+func (p *Writer) Err() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return p.err
+}
+
+func (p *Writer) write(block []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

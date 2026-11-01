@@ -49,7 +49,7 @@ docker exec -it <node-name> sh
 ```
 ///
 
-The node's management address is RouterOS's own `ether1` address ([transparent management](#management-connectivity)), so every service RouterOS runs answers on it directly, with nothing forwarded.
+The node's management address is RouterOS's own `ether1` address in the `mgmt` VRF ([transparent management](#management-connectivity)). Services bound to this VRF answer directly, with nothing forwarded.
 
 /// note
 Default credentials are `admin:admin`. With custom [`credentials`](../nodes.md#credentials) the kind creates that user in the `full` group and disables the factory `admin` account, which has a blank password on a fresh CHR disk.
@@ -97,7 +97,13 @@ and the node does not become ready.
 
 ### Saving configuration
 
-[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The management objects the launcher creates at every boot (everything tagged `clab-mgmt`, and the `ether1` DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses.
+[`containerlab save`](../../cmd/save.md) writes each node's `/export` to `ftpboot/config.auto.rsc` in its lab directory. The save filter omits `add` entries tagged `clab-mgmt`, plus IPv4/IPv6 address, DHCP-client and IPv6 neighbor-discovery `add` entries for `ether1`, even without that tag. These management settings belong to the deployment and are recreated by the launcher; custom entries in those `ether1` sections are also omitted. Other interfaces and untagged configuration in other sections are preserved.
+
+Saving explicitly retains an intentional `discover-interface-list=static` choice, which RouterOS normally omits as its default, so it survives redeployment. The launcher-owned discovery lists are recreated before the saved configuration is imported.
+
+Saving also retains service and SNMP VRF overrides back to `main`, which RouterOS normally omits as its default.
+
+Repeated exports on RouterOS 7.24.5, 7.25, 7.25rc3 and 7.26beta4 can include an empty, disabled default `/system keymat-provider` entry that fails to import on a fresh router. Saving omits only that exact entry and leaves out the menu header if the section becomes empty, since RouterOS 7.23.8 does not recognize that menu. Configured default providers and custom providers are preserved. RouterOS 7.23.8 does not emit the entry.
 
 ### Node readiness
 
@@ -107,7 +113,7 @@ The node is ready once RouterOS accepted the credentials and the startup config,
 chr-launch: RouterOS ready
 ```
 
-and the kind's default [healthcheck](../nodes.md#healthcheck) reports the container `healthy`, so [`stages`](../nodes.md#stages) with `wait-for` can depend on it. A node whose startup config was rejected never becomes healthy. The default healthcheck's start period follows the launcher's own deadlines (`CHR_INTF_WAIT` + 3 × `CHR_BOOT_WAIT` + 90 s, 1050 s with the defaults), so a slow boot never reports `unhealthy`. A `healthcheck` set in the topology replaces the default one.
+and the kind's default [healthcheck](../nodes.md#healthcheck) reports the container `healthy`, so [`stages`](../nodes.md#stages) with `wait-for` can depend on it. A node whose startup config was rejected never becomes healthy. The default healthcheck's start period follows the launcher's own deadlines (`CHR_INTF_WAIT` + 4 × `CHR_BOOT_WAIT` + 90 s, 1350 s with the defaults), so a slow boot never reports `unhealthy`. A `healthcheck` set in the topology replaces the default one.
 
 ### Resources
 
@@ -119,7 +125,7 @@ The kind reads the official image's own environment variables:
 | `CPUS` | `1` | VM vCPUs |
 | `DISK` | `128M` | minimum disk size (the disk only grows) |
 | `CHR_INTF_WAIT` | `60` | seconds to wait for the data interfaces containerlab attaches before the VM starts |
-| `CHR_BOOT_WAIT` | `300` | seconds to wait for RouterOS to answer, for the startup config import, and for SSH before the node is declared ready |
+| `CHR_BOOT_WAIT` | `300` | seconds to wait for RouterOS to answer, for the VRF handoff, for the startup config import, and for SSH before the node is declared ready |
 
 ```yaml
 r1:
@@ -134,15 +140,49 @@ KVM is used when `/dev/kvm` is available. Without it the image's QEMU runs under
 
 ## Management connectivity
 
-Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab gives the node's `eth0` are configured on RouterOS `ether1`, and the container's `eth0` is bridged to the VM's `ether1`. The router is the node's management address: SSH, the REST API, Winbox, SNMP and every other service answer on it, LLDP/MNDP work on the management network, and the address in the topology table is the one in the RouterOS configuration.
+Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab gives the node's `eth0` are configured on RouterOS `ether1`, and the container's `eth0` is bridged to the VM's `ether1`. The address in the topology table is the one in the RouterOS configuration.
 
 The image ships busybox only (no `tc`), so where vrnetlab's [transparent management](../vrnetlab.md#management-interface) redirects with tc-mirred, this kind uses a Linux bridge. The container itself has no address on the management network; it reaches RouterOS for bootstrap over IPv6 link-local on that bridge.
 
-The management return path lives in its own routing table, `mgmt`, selected by routing rules for the management addresses, and CHR's `ether1` DHCP client is disabled. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in `main` therefore does not cut SSH or REST access to the node. RouterOS's router advertisements on `ether1` carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway; the container joins the management network only once this is in place. The objects carry the comment `clab-mgmt` and are re-applied at boot when the container's addressing changed.
+The launcher places `ether1` in a native `mgmt` VRF before `main`. RouterOS creates its routing table and connected routes; the launcher adds IPv4 and IPv6 defaults that resolve their gateways in `mgmt`. No source-policy rules or route leaks are added. Data interfaces remain in `main`, so a lab default route does not take management replies away from `ether1`. CHR's `ether1` DHCP client is disabled.
+
+On first boot, one RouterOS background job creates the VRF and binds SSH, HTTP/HTTPS (including REST), API/API-SSL, Winbox, Telnet and SNMP to it. Their enabled/disabled state is preserved. The launcher waits for the native routing table and service bindings before configuring management addressing, joining the external management bridge and fetching the startup config through `mgmt`. On restart, startup-config service overrides are preserved. The launcher uses HTTP/REST with the topology credentials during container startup. SSH in `mgmt` provides user login access and is also used by `containerlab save`. Credential setup, service ports and access controls are unchanged.
+
+A service's VRF binding also changes where it can be reached: these services no longer listen through data interfaces in `main` unless the startup config changes their binding. RouterOS FTP does not support VRF binding and is unavailable through the management VRF. Other router-originated services, such as DNS, NTP and logging, need their own VRF-aware configuration to use management egress. RouterOS applies its VRF interface matching to firewall rules; see the [RouterOS VRF documentation](https://manual.mikrotik.com/docs/user-guides/routing-and-networking-protocols/vrf/).
+
+VRF membership does not disable Layer 2 neighbor discovery. The launcher sets an interface list that excludes `ether1` by default; see [Neighbor discovery](#neighbor-discovery) for overrides.
+
+RouterOS's router advertisements on `ether1` carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway. The container joins the management network only once this is in place. Management objects carry the comment `clab-mgmt` and are re-applied at boot when the container's addressing changed.
 
 /// warning
-Do not remove or change the `clab-mgmt` objects or the `mgmt` routing table: management of the node depends on them.
+Do not remove or change the `clab-mgmt` objects or the `mgmt` VRF: management of the node depends on them. This setup requires a fresh node container; it does not migrate a running node that uses the previous policy-only `mgmt` table. Export the user configuration before recreating such a node.
 ///
+
+### Neighbor discovery
+
+CHR routers sharing the management bridge can appear in each other's neighbor tables. LLDP, CDP and MNDP are disabled on management `ether1` by default; discovery stays enabled on the other static interfaces.
+
+On first boot, before joining the management network, the launcher creates:
+
+```routeros
+/interface list
+add name=clab-management comment=clab-mgmt
+add name=clab-discovery include=static exclude=clab-management comment=clab-mgmt
+/interface list member
+add list=clab-management interface=ether1 comment=clab-mgmt
+/ip neighbor discovery-settings
+set discover-interface-list=clab-discovery
+```
+
+These reserved lists belong to the launcher. To change discovery, select another list in your startup configuration or on the running router. For example, to enable discovery on all static interfaces, including management:
+
+```routeros
+/ip neighbor discovery-settings set discover-interface-list=static
+```
+
+Use `discover-interface-list=none` to disable discovery everywhere, or select your own interface list. Startup configuration is imported after this default is applied. Restarts preserve the selected policy, including on nodes created before this default was introduced. SSH, REST and other management services remain available. This setting does not control IPv6 address resolution or router advertisements under `/ipv6 nd`.
+
+As with RouterOS's normal discovery rules, including a bridge or bonding master enables discovery on its slave ports. If your configuration puts `ether1` into a bridge or bond, select a discovery list that excludes the master as well.
 
 ## Restarts
 

@@ -147,6 +147,14 @@ type MgmtNetworkChecker interface {
 	MgmtNetworkExists(context.Context) (bool, error)
 }
 
+// MgmtBridgeResolver is implemented by runtimes that can look up the bridge backing
+// their bound management network without creating the network or changing host state.
+type MgmtBridgeResolver interface {
+	// ResolveMgmtBridge sets the bridge of the bound management network when the
+	// network exists and the bridge is not set yet. A missing network is not an error.
+	ResolveMgmtBridge(context.Context) error
+}
+
 // NetworkAddress is a runtime-owned endpoint or infrastructure reservation.
 type NetworkAddress struct {
 	NetworkName string

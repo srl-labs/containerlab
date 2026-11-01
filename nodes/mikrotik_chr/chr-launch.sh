@@ -15,8 +15,8 @@
 #   1. waits for the CLAB_INTFS data interfaces containerlab attaches (eth1..N)
 #   2. management, transparent: the container's eth0 is bridged with the VM's
 #      ether1 tap, and eth0's addresses and default gateways move into RouterOS
-#      ether1. The router IS the node's management address: every service and
-#      LLDP reach it directly, nothing is port-forwarded. The image ships only
+#      ether1. The router IS the node's management address: management services
+#      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
 #      LLDP forwarded). NIC order in the VM follows the eth index, so container
@@ -24,7 +24,7 @@
 #   4. after boot, over IPv6 link-local on the management bridge (no address is
 #      added to the management network): sets the credentials and the identity,
 #      configures ether1 with the management addresses and keeps their return
-#      path in its own routing table (`mgmt`, below), then fetches
+#      path in its own VRF (`mgmt`, below), then fetches
 #      /ftpboot/config.auto.rsc (the containerlab startup-config, when present)
 #      from the launcher and `/import`s it
 #   5. prints the ready marker on the container log and waits on qemu
@@ -57,7 +57,7 @@
 #   "startup config import FAILED: …"  the router rejected the .rsc (RouterOS's
 #                                      own reason, with the line number)
 #   "credential bootstrap FAILED: …"   the user/password step failed
-#   "management setup FAILED: …"       the ether1 address / mgmt table step failed
+#   "management setup FAILED: …"       the ether1 address / mgmt VRF step failed
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -438,16 +438,10 @@ bootstrap_fail() {
     exit 0
 }
 
-# ---- management: ether1 addressing and its own routing table ----------------
-# ether1 gets the container's management addresses, and their return path lives
-# in a `mgmt` routing table selected by a rule on those source addresses: a
-# default route the lab adds to `main` (a static 0.0.0.0/0, a PPPoE client's
-# default route, a dual-WAN pair) would otherwise take SSH/REST replies away
-# from the management network while the data plane works. CHR's default ether1
-# DHCP client is disabled: the address is static. Everything is tagged
-# clab-mgmt and re-applied on every boot from the container's CURRENT addressing
-# (a restart can bring a new IP), while the bootstrap channel itself
-# (link-local) never depends on it.
+# ---- management: ether1 in its own VRF -------------------------------------
+# The VRF owns its routing table and connected routes. Services must bind to
+# it explicitly; source-policy rules are unnecessary. The link-local REST
+# channel survives the handoff once www and ether1 belong to the same VRF.
 mgmt_fail() {
     log "management setup FAILED: $1 (redeploy the node: containerlab deploy --reconfigure)"
     wait "$QEMU_PID"
@@ -471,18 +465,53 @@ rest_clear() { # rest_clear <menu>: remove its clab-mgmt objects
         | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | paste -sd, -)"
     [ -z "$_ids" ] || rest_add "remove old $1" "$1/remove" "{\".id\":\"$_ids\"}"
 }
+# A native VRF creates its routing table asynchronously. Move the interface
+# and services together in a router-local background job, then prove the
+# handoff before configuring addresses/routes or attaching external eth0.
+mgmt_vrf_ready() {
+    rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false" || return 1
+    rest_has "routing/table?name=$MGMT_TABLE&dynamic=true&invalid=false" || return 1
+    for _svc in ssh www www-ssl api api-ssl winbox telnet; do
+        rest_has "ip/service?name=$_svc&vrf=$MGMT_TABLE&dynamic=false" || return 1
+    done
+    case "$(rest "$AUTH" snmp)" in
+        *"\"vrf\":\"$MGMT_TABLE\""*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+mgmt_vrf() {
+    if rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false"; then
+        # User service overrides are applied by startup-config, after the
+        # first-boot defaults. Do not overwrite them on a restart.
+        [ -f "$DONE_MARKER" ] && return 0
+    else
+        if rest_has "routing/table?name=$MGMT_TABLE"; then
+            mgmt_fail "table $MGMT_TABLE already exists without the launcher's VRF; use a fresh container"
+        fi
+        _script=":delay 1s; /ip vrf add name=$MGMT_TABLE interfaces=ether1 place-before=0 comment=$MGMT_COMMENT; /ip service set ssh,www,www-ssl,api,api-ssl,winbox,telnet vrf=$MGMT_TABLE; /snmp set vrf=$MGMT_TABLE"
+        rest_add "start management VRF handoff" execute "{\"script\":\"$(json_str "$_script")\"}"
+    fi
+    _start=$(date +%s)
+    until mgmt_vrf_ready; do
+        [ $(( $(date +%s) - _start )) -lt "$BOOT_WAIT" ] \
+            || mgmt_fail "VRF handoff did not complete; inspect RouterOS script errors through the serial console"
+        sleep 1
+    done
+    log "management VRF $MGMT_TABLE: ether1, routing table and service bindings verified"
+}
 # The tagged objects already match the container's addressing (a restart with
 # the same IP): leave them alone, re-applying would only drop live sessions.
 mgmt_in_place() {
     _want=0
+    rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false" || return 1
     if [ -n "$M4" ]; then
         rest_has "ip/address?interface=ether1&address=$M4&comment=$MGMT_COMMENT" || return 1
-        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" || return 1
-        [ -z "$G4" ] || rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0&gateway=$G4" || return 1
+        [ -z "$G4" ] || rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0&gateway=$G4@$MGMT_TABLE" || return 1
         _want=$((_want + 1))
     fi
     if [ -n "$M6" ]; then
         rest_has "ipv6/address?interface=ether1&address=$M6&comment=$MGMT_COMMENT" || return 1
+        [ -z "$G6" ] || rest_has "ipv6/route?routing-table=$MGMT_TABLE&dst-address=::/0&gateway=$G6@$MGMT_TABLE" || return 1
         _want=$((_want + 1))
     fi
     [ "$(rest_count "ip/address?comment=$MGMT_COMMENT")$(rest_count "ipv6/address?comment=$MGMT_COMMENT")" \
@@ -491,35 +520,23 @@ mgmt_in_place() {
     [ "$_want" -gt 0 ]
 }
 mgmt_setup() {
+    mgmt_vrf
     if mgmt_in_place; then
         log "management on ether1 unchanged: ${M4:-no IPv4}${M6:+, $M6}"
         return 0
     fi
-    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
-    rest_has "routing/table?name=$MGMT_TABLE" \
-        || rest_add "routing table $MGMT_TABLE" routing/table/add \
-            "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\",\"comment\":\"$MGMT_COMMENT\"}"
+    for _m in ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
     _c="\"comment\":\"$MGMT_COMMENT\""
     if [ -n "$M4" ]; then
-        _net4="$(ipcalc -n "$M4" | sed -n 's/^NETWORK=//p')/${M4#*/}"
         rest_add "ether1 address $M4" ip/address/add "{\"address\":\"$M4\",\"interface\":\"ether1\",$_c}"
-        rest_add "route $_net4 in table $MGMT_TABLE" ip/route/add \
-            "{\"dst-address\":\"$_net4\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        [ -z "$G4" ] || rest_add "default via $G4 in table $MGMT_TABLE" ip/route/add \
-            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$G4\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        rest_add "routing rule for ${M4%/*}" routing/rule/add \
-            "{\"src-address\":\"${M4%/*}/32\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G4" ] || rest_add "default via $G4 in VRF $MGMT_TABLE" ip/route/add \
+            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$G4@$MGMT_TABLE\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
     fi
     if [ -n "$M6" ]; then
         rest_add "ether1 address $M6" ipv6/address/add \
             "{\"address\":\"$M6\",\"interface\":\"ether1\",\"advertise\":\"no\",$_c}"
-        # RouterOS normalizes the host bits of dst-address (::3/64 -> ::/64)
-        rest_add "IPv6 route $M6 in table $MGMT_TABLE" ipv6/route/add \
-            "{\"dst-address\":\"$M6\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        [ -z "$G6" ] || rest_add "IPv6 default via $G6 in table $MGMT_TABLE" ipv6/route/add \
-            "{\"dst-address\":\"::/0\",\"gateway\":\"$G6%ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        rest_add "routing rule for ${M6%/*}" routing/rule/add \
-            "{\"src-address\":\"${M6%/*}/128\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G6" ] || rest_add "IPv6 default via $G6 in VRF $MGMT_TABLE" ipv6/route/add \
+            "{\"dst-address\":\"::/0\",\"gateway\":\"$G6@$MGMT_TABLE\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
     fi
     _id="$(rest "$AUTH" "ip/dhcp-client?interface=ether1" | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | head -n1)"
     [ -z "$_id" ] || rest_add "disable the ether1 DHCP client" ip/dhcp-client/set \
@@ -542,10 +559,33 @@ mgmt_setup() {
     # an error by the set-contract).
     if [ -n "$M4" ]; then
         rest_has "ip/address?interface=ether1&address=$M4" || mgmt_fail "$M4 not on ether1"
-        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" \
-            || mgmt_fail "routing rule for ${M4%/*} not applied"
     fi
-    log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in routing table $MGMT_TABLE"
+    mgmt_in_place || mgmt_fail "management addressing or routes not applied"
+    log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in VRF $MGMT_TABLE"
+}
+# Keep discovery on static data interfaces, excluding management. Set this only
+# on first boot, before attaching eth0: startup-config and subsequent user changes
+# can select a different list, and restarts must preserve that choice.
+discovery_setup() {
+    rest_add "management interface list" interface/list/add \
+        "{\"name\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management interface list member" interface/list/member/add \
+        "{\"list\":\"clab-management\",\"interface\":\"ether1\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "discovery interface list" interface/list/add \
+        "{\"name\":\"clab-discovery\",\"include\":\"static\",\"exclude\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management discovery off" ip/neighbor/discovery-settings/set \
+        '{"discover-interface-list":"clab-discovery"}'
+    rest_has "interface/list?name=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list not applied"
+    rest_has "interface/list/member?list=clab-management&interface=ether1&disabled=false&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list member not applied"
+    rest_has "interface/list?name=clab-discovery&include=static&exclude=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "discovery interface list not applied"
+    case "$(rest "$AUTH" ip/neighbor/discovery-settings)" in
+        *'"discover-interface-list":"clab-discovery"'*) : ;;
+        *) mgmt_fail "management discovery policy not applied" ;;
+    esac
+    log "neighbor discovery: static interfaces except ether1 (clab-discovery)"
 }
 # Join the management network, then have the router reach its gateway from the
 # management address: proves the return path both ways, and the ARP/ND request
@@ -559,7 +599,7 @@ mgmt_attach() {
         set -- $_pair
         [ $# -eq 2 ] || continue
         _t0=$(date +%s)
-        until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\"}")" in
+        until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\",\"vrf\":\"$MGMT_TABLE\"}")" in
                 *'"received":"'[1-9]*) true ;; *) false ;; esac; do
             if [ $(( $(date +%s) - _t0 )) -ge 30 ]; then
                 log "gateway $1 does not answer from $2 after $(( $(date +%s) - _t0 ))s (continuing)"
@@ -622,6 +662,7 @@ case "$got" in
 esac
 
 mgmt_setup
+discovery_setup
 mgmt_attach
 
 # ---- startup config -------------------------------------------------------
@@ -637,7 +678,7 @@ if [ -s "$STARTUP_CFG" ]; then
     } | timeout 90 nc -l -s "$LL%$MGMT_BR" -p "$FETCH_PORT" >/dev/null 2>&1 &
     sleep 1
     fetch="$(rest "$AUTH" tool/fetch \
-        "{\"address\":\"$LL%ether1\",\"port\":\"$FETCH_PORT\",\"src-path\":\"/config.auto.rsc\",\"mode\":\"http\",\"dst-path\":\"config.auto.rsc\"}")"
+        "{\"address\":\"$LL%ether1@$MGMT_TABLE\",\"port\":\"$FETCH_PORT\",\"src-path\":\"/config.auto.rsc\",\"mode\":\"http\",\"dst-path\":\"config.auto.rsc\"}")"
     case "$fetch" in
         *'"status":"finished"'*)
             # /import answers only when it finishes: a large config gets

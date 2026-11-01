@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: capture
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      exec:
+        - ip addr add 10.0.0.1/24 dev eth1
+        - ip link add link eth1 name eth1.10 type vlan id 10
+        - ip addr add 10.10.0.1/24 dev eth1.10
+        - ip link set eth1.10 up
+    l2:
+      kind: linux
+      image: alpine:3
+      exec:
+        - ip addr add 10.0.0.2/24 dev eth1
+        - ip link add link eth1 name eth1.10 type vlan id 10
+        - ip addr add 10.10.0.2/24 dev eth1.10
+        - ip link set eth1.10 up
+
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]
+    - type: host
+      host-interface: capl2eth2
+      endpoint:
+        node: l2
+        interface: eth2

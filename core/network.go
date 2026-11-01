@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"slices"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -115,16 +116,103 @@ func (c *CLab) staticManagementAddresses(m *clabtypes.MgmtNet) []netip.Addr {
 	return addresses
 }
 
+// validateManagementLinks checks that every mgmt-net link references a defined
+// management network that is backed by a bridge.
 func (c *CLab) validateManagementLinks() error {
-	if c.Config.Mgmt.Driver != clabtypes.MgmtDriverMacvlan || c.Config.Topology == nil {
+	if c.Config.Topology == nil {
 		return nil
 	}
 	for _, link := range c.Config.Topology.Links {
-		if link.Link.GetType() == clablinks.LinkTypeMgmtNet {
+		if link == nil || link.Link == nil {
+			continue
+		}
+		mgmtNetLink, ok := link.Link.(*clablinks.LinkMgmtNetRaw)
+		if !ok {
+			continue
+		}
+		m, err := c.mgmtNetByName(mgmtNetLink.Network)
+		if err != nil {
+			return fmt.Errorf("mgmt-net link: %w", err)
+		}
+		if m.Driver == clabtypes.MgmtDriverMacvlan {
+			if mgmtNetLink.Network == "" {
+				return fmt.Errorf(
+					"mgmt-net links require a bridge management network and cannot be used with mgmt.driver %q",
+					m.Driver,
+				)
+			}
 			return fmt.Errorf(
-				"mgmt-net links require a bridge management network and cannot be used with mgmt.driver %q",
-				c.Config.Mgmt.Driver,
+				"mgmt-net links require a bridge management network and cannot use management network %q with driver %q",
+				m.Network,
+				m.Driver,
 			)
+		}
+	}
+	return nil
+}
+
+// mgmtNetLinkNetworks returns the management networks referenced by mgmt-net links.
+func (c *CLab) mgmtNetLinkNetworks() []*clabtypes.MgmtNet {
+	if c.Config.Topology == nil {
+		return nil
+	}
+	var networks []*clabtypes.MgmtNet
+	for _, link := range c.Config.Topology.Links {
+		if link == nil || link.Link == nil {
+			continue
+		}
+		mgmtNetLink, ok := link.Link.(*clablinks.LinkMgmtNetRaw)
+		if !ok {
+			continue
+		}
+		if m, err := c.mgmtNetByName(mgmtNetLink.Network); err == nil {
+			networks = append(networks, m)
+		}
+	}
+	return networks
+}
+
+// resolveMgmtNetLinkNetworks populates the bridge names of the non-default management
+// networks that mgmt-net links reference without an explicit bridge. The runtime names
+// such a bridge when it creates the network, so the bridge of an existing network is
+// looked up from the runtime. The lookup neither creates networks nor changes host
+// state, so it is safe for dry runs. Networks that do not exist yet are left unresolved
+// until they are created.
+func (c *CLab) resolveMgmtNetLinkNetworks(ctx context.Context) error {
+	var resolved clabtypes.MgmtNetworks
+	for _, m := range c.mgmtNetLinkNetworks() {
+		if m == c.Config.Mgmt || m.Bridge != "" || slices.Contains(resolved, m) {
+			continue
+		}
+		resolved = append(resolved, m)
+
+		rt, err := c.mgmtRuntime(c.globalRuntimeName, m)
+		if err != nil {
+			return fmt.Errorf("mgmt-net link selects network %q: %w", m.Network, err)
+		}
+		resolver, ok := rt.(clabruntime.MgmtBridgeResolver)
+		if !ok {
+			continue
+		}
+		if err := resolver.ResolveMgmtBridge(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// setMgmtNetLinkBridges points the mgmt-net link nodes of the management networks
+// that mgmt-net links select at the bridge of that network.
+func (c *CLab) setMgmtNetLinkBridges() error {
+	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
+		return err
+	}
+	for _, m := range c.mgmtNetLinkNetworks() {
+		if m == c.Config.Mgmt || m.Network == "" {
+			continue
+		}
+		if err := clablinks.SetMgmtNetworkUnderlyingBridge(m.Network, m.Bridge); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -163,6 +251,11 @@ func (c *CLab) skipMgmtNetwork(m *clabtypes.MgmtNet) bool {
 
 	topo := c.Config.Topology
 	if topo == nil || len(topo.Nodes) == 0 {
+		return false
+	}
+
+	// a network that mgmt-net links attach to is in use
+	if slices.Contains(c.mgmtNetLinkNetworks(), m) {
 		return false
 	}
 

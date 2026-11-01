@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	clabcapture "github.com/srl-labs/containerlab/capture"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	corev1 "k8s.io/api/core/v1"
@@ -105,6 +106,8 @@ type fakeClabwire struct {
 	stampSkew map[string]time.Duration
 	// stdinClosed counts the processes that ended because their stdin closed, per node.
 	stdinClosed map[string]int
+	// written counts the packets written to stdout, per node.
+	written map[string]int
 	// sysfs is the device container's interface sample.
 	sysfs string
 }
@@ -117,6 +120,7 @@ func newFakeClabwire(t *testing.T, tick time.Duration) *fakeClabwire {
 		startDelay: map[int]time.Duration{}, stampSkew: map[string]time.Duration{},
 		firstStartDelay: map[string]time.Duration{},
 		stdinClosed:     map[string]int{},
+		written:         map[string]int{},
 	}
 }
 
@@ -237,9 +241,9 @@ func (f *fakeClabwire) capture(
 		return nil
 	}
 
-	writer := newPCAPNGWriter(stdout)
+	writer := clabcapture.NewWriter(stdout)
 	f.audit(stderr, captureAuditStarted, node, interfaces, "")
-	if err := writer.WriteHeader(interfaces, DefaultCaptureSnapLength); err != nil {
+	if err := writer.WriteHeader(interfaces, clabcapture.DefaultSnapLength); err != nil {
 		return err
 	}
 
@@ -273,11 +277,14 @@ func (f *fakeClabwire) capture(
 			data := make([]byte, 64)
 			binary.BigEndian.PutUint64(data[0:], uint64(next))
 			copy(data[8:], node+":"+interfaces[id])
-			if err := writer.WritePacket(uint32(id), &pcapngPacket{ //nolint:gosec // small
+			if err := writer.WritePacket(uint32(id), &clabcapture.Packet{ //nolint:gosec // small
 				Timestamp: at.Add(jitter - skew).UnixNano(), OriginalLength: 64, Data: data,
 			}); err != nil {
 				return err
 			}
+			f.mu.Lock()
+			f.written[node]++
+			f.mu.Unlock()
 		}
 		next++
 	}
@@ -327,13 +334,13 @@ func captureTestRuntime(t *testing.T, tick time.Duration) (*Runtime, *fakeClabwi
 type parsedCapture struct {
 	sections   int
 	interfaces []string
-	packets    []pcapngPacket
+	packets    []clabcapture.Packet
 }
 
 func parseCapture(t *testing.T, data []byte) parsedCapture {
 	t.Helper()
 
-	reader := newPCAPNGReader(bytes.NewReader(data))
+	reader := clabcapture.NewReader(bytes.NewReader(data))
 	var parsed parsedCapture
 	for {
 		event, err := reader.Next()
@@ -347,7 +354,7 @@ func parseCapture(t *testing.T, data []byte) parsedCapture {
 			if len(parsed.packets) != 0 {
 				t.Fatal("interface description after the first packet")
 			}
-			if event.Interface.TSResol != pcapngNanoseconds {
+			if event.Interface.TSResol != 9 /* nanoseconds */ {
 				t.Fatalf("interface %s tsresol = %d", event.Interface.Name, event.Interface.TSResol)
 			}
 			parsed.interfaces = append(parsed.interfaces, event.Interface.Name)
@@ -356,16 +363,16 @@ func parseCapture(t *testing.T, data []byte) parsedCapture {
 			parsed.packets = append(parsed.packets, *event.Packet)
 		}
 	}
-	parsed.sections = reader.sections
+	parsed.sections = reader.Sections()
 
 	return parsed
 }
 
-func packetSequence(packet pcapngPacket) uint64 {
+func packetSequence(packet clabcapture.Packet) uint64 {
 	return binary.BigEndian.Uint64(packet.Data[0:8])
 }
 
-func packetOrigin(packet pcapngPacket) string {
+func packetOrigin(packet clabcapture.Packet) string {
 	return strings.TrimRight(string(packet.Data[8:]), "\x00")
 }
 
@@ -759,6 +766,88 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 
 // TestCaptureClosesStdinWhenItEnds ends every clabwire process through its stdin, whether the
 // caller cancels the capture or the output fails, so no capture is left running in the pod.
+// TestCaptureWritesWhatItReadWhenTheContextEnds stops a capture while the output is slow and
+// the chains have packets queued: every packet clabwire wrote before it ended is in the file.
+func TestCaptureWritesWhatItReadWhenTheContextEnds(t *testing.T) {
+	t.Parallel()
+
+	r, clabwire := captureTestRuntime(t, time.Millisecond)
+	// without a reorder window, a blocked output blocks the chains
+	r.captureReorderWindow = -1
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	out := &gatedWriter{open: make(chan struct{})}
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		out.block()
+		// the segments keep reading while the chains wait for the output
+		time.Sleep(400 * time.Millisecond)
+		cancel()
+		close(out.open)
+	}()
+
+	if err := r.Capture(ctx, clablabruntime.CaptureRequest{
+		Name: "lab1",
+		Targets: []clablabruntime.CaptureTarget{
+			{Node: "r1", Interface: "e1-1"},
+			{Node: "r2", Interface: "e1-1"},
+		},
+	}, out); err != nil {
+		t.Fatal(err)
+	}
+
+	parsed := parseCapture(t, out.bytes())
+	got := map[string]int{}
+	for _, packet := range parsed.packets {
+		node, _, _ := strings.Cut(packetOrigin(packet), ":")
+		got[node]++
+	}
+	clabwire.mu.Lock()
+	defer clabwire.mu.Unlock()
+	for _, node := range []string{"r1", "r2"} {
+		if clabwire.written[node] < 300 || got[node] != clabwire.written[node] {
+			t.Fatalf("%s: clabwire wrote %d packets, the capture has %d", node,
+				clabwire.written[node], got[node])
+		}
+	}
+}
+
+// gatedWriter collects writes; once blocked, writes wait until open is closed.
+type gatedWriter struct {
+	open chan struct{}
+
+	mu      sync.Mutex
+	blocked bool
+	data    bytes.Buffer
+}
+
+func (w *gatedWriter) block() {
+	w.mu.Lock()
+	w.blocked = true
+	w.mu.Unlock()
+}
+
+func (w *gatedWriter) Write(data []byte) (int, error) {
+	w.mu.Lock()
+	blocked := w.blocked
+	w.mu.Unlock()
+	if blocked {
+		<-w.open
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.data.Write(data)
+}
+
+func (w *gatedWriter) bytes() []byte {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.data.Bytes()
+}
+
 func TestCaptureClosesStdinWhenItEnds(t *testing.T) {
 	t.Parallel()
 
@@ -847,7 +936,7 @@ func TestCaptureRejectsAClabwireWithoutStopOnStdinClose(t *testing.T) {
 }
 
 // requireTimeOrdered checks that the merged stream's timestamps never decrease.
-func requireTimeOrdered(t *testing.T, packets []pcapngPacket) {
+func requireTimeOrdered(t *testing.T, packets []clabcapture.Packet) {
 	t.Helper()
 
 	for idx := 1; idx < len(packets); idx++ {
@@ -889,7 +978,7 @@ func TestCaptureMergesNodesInTimestampOrder(t *testing.T) {
 			}
 
 			packets := parseCapture(t, out.Bytes()).packets
-			ordered := slices.IsSortedFunc(packets, func(a, b pcapngPacket) int {
+			ordered := slices.IsSortedFunc(packets, func(a, b clabcapture.Packet) int {
 				return int(a.Timestamp - b.Timestamp)
 			})
 			if reorder {
@@ -960,6 +1049,22 @@ func TestCaptureChainsSeveralNodesInOrderWithoutDuplicates(t *testing.T) {
 		if clabwire.processes[node] < 4 || clabwire.stdinClosed[node] == 0 {
 			t.Fatalf("%s: %d processes, %d stopped through stdin at a switch", node,
 				clabwire.processes[node], clabwire.stdinClosed[node])
+		}
+	}
+}
+
+func TestCaptureReorderWindowKnob(t *testing.T) {
+	cases := map[string]time.Duration{
+		"":      250 * time.Millisecond,
+		"0":     0,
+		"75ms":  75 * time.Millisecond,
+		"bogus": 250 * time.Millisecond,
+	}
+	for value, want := range cases {
+		t.Setenv(envCaptureReorderWindow, value)
+		r := &Runtime{captureReorderWindow: captureReorderWindowFromEnv()}
+		if got := r.captureReorderWindowLength(); got != want {
+			t.Errorf("%s=%q: window %s, want %s", envCaptureReorderWindow, value, got, want)
 		}
 	}
 }

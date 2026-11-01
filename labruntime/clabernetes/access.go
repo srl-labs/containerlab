@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -384,7 +385,8 @@ func newPortForwardConn(streamConn httpstream.Connection, port int) (net.Conn, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the error stream: %w", err)
 	}
-	// the client sends nothing on the error stream
+	// the client sends nothing on the error stream; Close only half-closes it, so the API
+	// server can still report failures on it
 	_ = errorStream.Close()
 
 	headers.Set(corev1.StreamType, corev1.StreamTypeData)
@@ -408,6 +410,7 @@ func newPortForwardConn(streamConn httpstream.Connection, port int) (net.Conn, e
 		// the API server reports a failure to reach the port on the error stream
 		message, _ := io.ReadAll(errorStream)
 		if len(message) != 0 {
+			log.Warn("Port forward failed", "port", port, "error", string(message))
 			_ = remote.Close()
 		}
 	}()

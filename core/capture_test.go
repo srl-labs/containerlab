@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -84,20 +85,119 @@ func TestCaptureHelpersFillLabAndIdentity(t *testing.T) {
 	}
 }
 
-func TestCaptureIsNotSupportedByLocalRuntimesYet(t *testing.T) {
-	t.Parallel()
+// newLocalCaptureCLab loads the capture test topology. Its host and mgmt-net links register
+// endpoints on link nodes the whole process shares, so the tests using it do not run in
+// parallel and release the endpoints when they end.
+func newLocalCaptureCLab(t *testing.T) *CLab {
+	t.Helper()
 
-	for _, name := range []string{"docker", "podman"} {
-		c := &CLab{Config: &Config{Name: "lab1"}, globalRuntimeName: name}
-		err := c.Capture(context.Background(), clablabruntime.CaptureRequest{}, io.Discard)
-		if err == nil || !strings.Contains(err.Error(),
-			`packet capture is not supported by runtime "`+name+`" yet`) {
-			t.Fatalf("%s: error = %v", name, err)
+	c, err := NewContainerLab(WithTopoPath("test_data/capture.clab.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(c.resetResolvedLinks)
+
+	return c
+}
+
+func TestLocalCaptureInterfacesComeFromTheTopologyLinks(t *testing.T) {
+	c := newLocalCaptureCLab(t)
+
+	got, err := c.CaptureInterfaces(context.Background(), "srl1", "client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []clablabruntime.CaptureInterface{
+		{Node: "client", Interface: "eth1", PeerNode: "srl1", PeerInterface: "e1-2"},
+		{Node: "client", Interface: "eth2", PeerNode: "host", PeerInterface: "client-eth2"},
+		{Node: "client", Interface: "eth3", PeerNode: "mgmt-net", PeerInterface: "client-eth3"},
+		{
+			Node: "srl1", Interface: "e1-1", Alias: "ethernet-1/1",
+			PeerNode: "srl2", PeerInterface: "e1-1",
+		},
+		{Node: "srl1", Interface: "e1-2", PeerNode: "client", PeerInterface: "eth1"},
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("CaptureInterfaces() =\n%+v\nwant\n%+v", got, want)
+	}
+
+	if _, err := c.CaptureInterfaces(context.Background(), "r9"); err == nil ||
+		!strings.Contains(err.Error(), `node "r9" is not part of lab "capture"`) {
+		t.Fatalf("unknown node: error = %v", err)
+	}
+}
+
+func TestLocalCaptureTargetsResolveByNameOrAlias(t *testing.T) {
+	c := newLocalCaptureCLab(t)
+
+	targets, err := c.resolveLocalCaptureTargets([]clablabruntime.CaptureTarget{
+		{Node: "srl2", Interface: "e1-1"},
+		{Node: "srl1", Interface: "ethernet-1/1"},
+		{Node: "clab-capture-client", Interface: "eth2"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, target := range targets {
+		if target.Exec == nil {
+			t.Fatalf("target %s:%s has no namespace exec", target.Node, target.Interface)
 		}
-		if _, err := c.CaptureInterfaces(context.Background()); err == nil {
-			t.Fatalf("%s: CaptureInterfaces() succeeded", name)
+		got = append(got, target.Node+":"+target.Interface)
+	}
+	if want := []string{"srl2:e1-1", "srl1:e1-1", "client:eth2"}; !slices.Equal(got, want) {
+		t.Fatalf("targets = %v, want %v", got, want)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		targets []clablabruntime.CaptureTarget
+		want    string
+	}{
+		{
+			name:    "management interface",
+			targets: []clablabruntime.CaptureTarget{{Node: "client", Interface: "eth0"}},
+			want: `interface "eth0" of node "client" is not a capturable link interface; ` +
+				"capturable: eth1, eth2, eth3",
+		},
+		{
+			name: "same interface twice",
+			targets: []clablabruntime.CaptureTarget{
+				{Node: "srl1", Interface: "e1-1"}, {Node: "srl1", Interface: "ethernet-1/1"},
+			},
+			want: `interface "e1-1" of node "srl1" is requested more than once`,
+		},
+		{
+			name:    "unknown node",
+			targets: []clablabruntime.CaptureTarget{{Node: "r9", Interface: "eth1"}},
+			want:    `node "r9" is not part of lab "capture"`,
+		},
+	} {
+		if _, err := c.resolveLocalCaptureTargets(tc.targets); err == nil ||
+			!strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: error = %v, want %q", tc.name, err, tc.want)
 		}
 	}
+}
+
+func TestLocalCaptureNeedsTheTopology(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{Config: &Config{Name: "lab1"}, globalRuntimeName: "docker"}
+	err := c.Capture(context.Background(), clablabruntime.CaptureRequest{
+		Targets: []clablabruntime.CaptureTarget{{Node: "r1", Interface: "eth1"}},
+	}, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), `the topology of lab "lab1" is not available`) {
+		t.Fatalf("error = %v", err)
+	}
+	if err := c.Capture(context.Background(), clablabruntime.CaptureRequest{},
+		io.Discard); err == nil || !strings.Contains(err.Error(), "at least one capture target") {
+		t.Fatalf("no targets: error = %v", err)
+	}
+}
+
+func TestLabRuntimeWithoutCaptureFails(t *testing.T) {
+	t.Parallel()
 
 	unsupported := newAccessTestCLab(&recordingDestroyLabRuntime{})
 	if err := unsupported.Capture(

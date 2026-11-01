@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
@@ -39,6 +40,7 @@ func captureCmd(o *Options) (*cobra.Command, error) {
 				return nil
 			}
 
+			// Docker and Podman captures open packet sockets in the nodes' namespaces
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		SilenceUsage: true,
@@ -93,14 +95,17 @@ func captureCmd(o *Options) (*cobra.Command, error) {
 	)
 
 	c.Example = `# Capture e1-1 of srl1 and e1-1 of srl2 for 30 seconds into one file
-containerlab -r c9s capture -t srl.clab.yml --target srl1:e1-1 --target srl2:e1-1 \
+containerlab capture -t srl.clab.yml --target srl1:e1-1 --target srl2:e1-1 \
   --duration 30s -w srl.pcapng
 
 # Capture two interfaces of one node and watch them live in Wireshark
-containerlab -r c9s capture --name srl --target srl1:e1-1,e1-2 -w - | wireshark -k -i -
+containerlab capture --name srl --target srl1:e1-1,e1-2 -w - | wireshark -k -i -
 
 # List the interfaces capture accepts
-containerlab -r c9s capture --name srl --list -f json`
+containerlab capture --name srl --list -f json
+
+# Capture a lab running on the c9s runtime
+containerlab -r c9s capture --name srl --target srl1:e1-1 -w srl.pcapng`
 
 	return c, nil
 }
@@ -124,6 +129,11 @@ func captureFn(cmd *cobra.Command, o *Options) error {
 		return err
 	}
 
+	// An interrupt ends the capture; the command still finishes the file and exits cleanly.
+	// Armed before the file is created, so an interrupt never leaves it empty.
+	o.Global.FinishOnCancel.Store(true)
+	defer o.Global.FinishOnCancel.Store(false)
+
 	output := cmd.OutOrStdout()
 	if o.Capture.Write != "" && o.Capture.Write != "-" {
 		file, err := os.Create(o.Capture.Write)
@@ -132,11 +142,13 @@ func captureFn(cmd *cobra.Command, o *Options) error {
 		}
 		defer file.Close()
 		output = file
-	}
 
-	// An interrupt ends the capture; the command still finishes the file and exits cleanly.
-	o.Global.FinishOnCancel.Store(true)
-	defer o.Global.FinishOnCancel.Store(false)
+		// the file belongs to the user who ran the command, also through sudo or setuid
+		if err := clabutils.SetUIDAndGID(o.Capture.Write); err != nil {
+			log.Debug("Cannot hand the capture file to the user", "file", o.Capture.Write,
+				"error", err)
+		}
+	}
 
 	err = c.Capture(cmd.Context(), clablabruntime.CaptureRequest{
 		Targets:     targets,

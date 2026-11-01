@@ -256,6 +256,7 @@ Capture both ends of a link into one pcapng stream
 
 Stopping a capture leaves no capture process in clabwire
     Skip If    not shutil.which("docker")    docker is needed to list the processes of a KinD worker
+    Skip If    not shutil.which("capinfos")    capinfos is not installed
     Remove File If Exists    ${stop-file}
     Start Process    ${CLAB_BIN}    --runtime    ${runtime}    capture    -t    ${topo}
     ...    --target    client:eth1    --target    server:eth1    -w    ${stop-file}
