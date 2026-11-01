@@ -105,6 +105,8 @@ type fakeClabwire struct {
 	stampSkew map[string]time.Duration
 	// stdinClosed counts the processes that ended because their stdin closed, per node.
 	stdinClosed map[string]int
+	// written counts the packets written to stdout, per node.
+	written map[string]int
 	// sysfs is the device container's interface sample.
 	sysfs string
 }
@@ -117,6 +119,7 @@ func newFakeClabwire(t *testing.T, tick time.Duration) *fakeClabwire {
 		startDelay: map[int]time.Duration{}, stampSkew: map[string]time.Duration{},
 		firstStartDelay: map[string]time.Duration{},
 		stdinClosed:     map[string]int{},
+		written:         map[string]int{},
 	}
 }
 
@@ -278,6 +281,9 @@ func (f *fakeClabwire) capture(
 			}); err != nil {
 				return err
 			}
+			f.mu.Lock()
+			f.written[node]++
+			f.mu.Unlock()
 		}
 		next++
 	}
@@ -740,6 +746,88 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 
 // TestCaptureClosesStdinWhenItEnds ends every clabwire process through its stdin, whether the
 // caller cancels the capture or the output fails, so no capture is left running in the pod.
+// TestCaptureWritesWhatItReadWhenTheContextEnds stops a capture while the output is slow and
+// the chains have packets queued: every packet clabwire wrote before it ended is in the file.
+func TestCaptureWritesWhatItReadWhenTheContextEnds(t *testing.T) {
+	t.Parallel()
+
+	r, clabwire := captureTestRuntime(t, time.Millisecond)
+	// without a reorder window, a blocked output blocks the chains
+	r.captureReorderWindow = -1
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	out := &gatedWriter{open: make(chan struct{})}
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		out.block()
+		// the segments keep reading while the chains wait for the output
+		time.Sleep(400 * time.Millisecond)
+		cancel()
+		close(out.open)
+	}()
+
+	if err := r.Capture(ctx, clablabruntime.CaptureRequest{
+		Name: "lab1",
+		Targets: []clablabruntime.CaptureTarget{
+			{Node: "r1", Interface: "e1-1"},
+			{Node: "r2", Interface: "e1-1"},
+		},
+	}, out); err != nil {
+		t.Fatal(err)
+	}
+
+	parsed := parseCapture(t, out.bytes())
+	got := map[string]int{}
+	for _, packet := range parsed.packets {
+		node, _, _ := strings.Cut(packetOrigin(packet), ":")
+		got[node]++
+	}
+	clabwire.mu.Lock()
+	defer clabwire.mu.Unlock()
+	for _, node := range []string{"r1", "r2"} {
+		if clabwire.written[node] < 300 || got[node] != clabwire.written[node] {
+			t.Fatalf("%s: clabwire wrote %d packets, the capture has %d", node,
+				clabwire.written[node], got[node])
+		}
+	}
+}
+
+// gatedWriter collects writes; once blocked, writes wait until open is closed.
+type gatedWriter struct {
+	open chan struct{}
+
+	mu      sync.Mutex
+	blocked bool
+	data    bytes.Buffer
+}
+
+func (w *gatedWriter) block() {
+	w.mu.Lock()
+	w.blocked = true
+	w.mu.Unlock()
+}
+
+func (w *gatedWriter) Write(data []byte) (int, error) {
+	w.mu.Lock()
+	blocked := w.blocked
+	w.mu.Unlock()
+	if blocked {
+		<-w.open
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.data.Write(data)
+}
+
+func (w *gatedWriter) bytes() []byte {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.data.Bytes()
+}
+
 func TestCaptureClosesStdinWhenItEnds(t *testing.T) {
 	t.Parallel()
 

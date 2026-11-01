@@ -627,35 +627,63 @@ type captureChain struct {
 	retries  int
 	// final is set once no further segment is due.
 	final bool
+	// stopping is set once ctx ended: the segments are asked to end and what they still
+	// deliver is written.
+	stopping bool
 }
 
+// run runs the chain until its last segment ended. When ctx ends, it stops the segments and
+// keeps writing the packets they read until then; a segment that does not end within
+// captureStdinCloseGrace is cut.
 func (c *captureChain) run(ctx context.Context) error {
 	c.events = make(chan segmentEvent, 256)
-	ctx, cancel := context.WithCancel(ctx)
+	// the segments outlive ctx so they can deliver their last packets; segmentsCtx cuts them
+	segmentsCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	var abort *time.Timer
 	defer func() {
+		if abort != nil {
+			abort.Stop()
+		}
 		cancel()
 		c.drain()
 		c.capture.out.Release(c)
 	}()
 
-	c.active = c.start(ctx, c.segmentDuration(time.Now()))
+	c.active = c.start(segmentsCtx, c.segmentDuration(time.Now()))
 	timer := time.NewTimer(c.nextStartIn())
 	defer timer.Stop()
 
+	done := ctx.Done()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-done:
+			done = nil
+			c.stop(timer)
+			abort = time.AfterFunc(captureStdinCloseGrace, cancel)
+		case <-segmentsCtx.Done():
 			return nil
 		case <-timer.C:
 			if c.next == nil && !c.final {
-				c.startNext(ctx)
+				c.startNext(segmentsCtx)
 			}
 		case event := <-c.events:
-			stop, err := c.handle(ctx, event, timer)
+			stop, err := c.handle(segmentsCtx, event, timer)
 			if err != nil || stop {
 				return err
 			}
 		}
+	}
+}
+
+// stop ends the chain early, like a deadline would: no further segment starts and the running
+// ones are asked to end. The chain then writes what they deliver until they ended.
+func (c *captureChain) stop(timer *time.Timer) {
+	c.stopping = true
+	c.final = true
+	timer.Stop()
+	c.active.closeStdin()
+	if c.next != nil {
+		c.next.closeStdin()
 	}
 }
 
@@ -688,6 +716,10 @@ func (c *captureChain) segmentDuration(now time.Time) time.Duration {
 // nextStartIn is the time until the follow-up of the active segment is due. It marks the chain
 // final when none is due.
 func (c *captureChain) nextStartIn() time.Duration {
+	if c.stopping {
+		c.final = true
+		return maxCaptureSegment
+	}
 	activeEnd := c.active.localStart.Add(c.active.duration)
 	if !c.capture.deadline.IsZero() &&
 		!activeEnd.Before(c.capture.deadline.Add(-c.capture.window)) {
@@ -723,7 +755,7 @@ func (c *captureChain) handle(
 		if segment.stopTimer != nil {
 			segment.stopTimer.Stop()
 		}
-		if event.err != nil && ctx.Err() == nil {
+		if event.err != nil && !c.stopping {
 			if segment == c.next && segment.started.IsZero() && c.retries < captureStartRetries {
 				// the follow-up did not start; try again while the active one still runs
 				c.retries++
@@ -852,6 +884,10 @@ func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (b
 	defer c.capture.out.Release(c)
 
 	ended := c.active
+	if c.stopping && c.next != nil && c.next.started.IsZero() {
+		// the chain is stopping: a follow-up that has not started takes nothing over
+		c.next, c.held, c.emitted, c.cut = nil, nil, nil, 0
+	}
 	if c.final && c.next == nil {
 		return true, nil
 	}
@@ -871,7 +907,7 @@ func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (b
 		c.capture.reportGap(gap)
 	}
 
-	if c.next != nil && c.next.done {
+	if c.next != nil && c.next.done && !c.stopping {
 		// the follow-up already ended (it started too late to take over): keep what it
 		// captured and continue with a fresh segment
 		for _, packet := range c.held {
@@ -914,6 +950,10 @@ func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (b
 
 	c.active, c.next = c.next, nil
 	c.held, c.emitted, c.cut = nil, nil, 0
+	if c.active.done {
+		// the chain is stopping and the follow-up ended before the active one
+		return true, nil
+	}
 	resetTimer(timer, c.nextStartIn())
 
 	return false, nil

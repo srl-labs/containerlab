@@ -94,12 +94,20 @@ func (p *Reader) Next() (Event, error) {
 
 		blockType := binary.LittleEndian.Uint32(header[0:4])
 		length := binary.LittleEndian.Uint32(header[4:8])
-		if blockType == pcapngSectionHeaderType && length > pcapngMaxBlockLength {
-			// a big-endian section header carries its length byte swapped
-			return Event{}, errPCAPNGByteOrder
+		if blockType == pcapngSectionHeaderType {
+			// the byte-order magic tells a big-endian section apart before its length is
+			// trusted: that length reads byte swapped
+			magic, err := p.r.Peek(4)
+			if err != nil {
+				return Event{}, io.ErrUnexpectedEOF
+			}
+			if binary.BigEndian.Uint32(magic) == pcapngByteOrderMagic {
+				return Event{}, errPCAPNGByteOrder
+			}
 		}
 		if length < 12 || length%4 != 0 || length > pcapngMaxBlockLength {
-			return Event{}, fmt.Errorf("invalid pcapng block length %d", length)
+			return Event{}, fmt.Errorf("invalid pcapng block length %d (at most %d)", length,
+				pcapngMaxBlockLength)
 		}
 
 		body := make([]byte, length-8)

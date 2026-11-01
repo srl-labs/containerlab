@@ -129,6 +129,11 @@ func captureFn(cmd *cobra.Command, o *Options) error {
 		return err
 	}
 
+	// An interrupt ends the capture; the command still finishes the file and exits cleanly.
+	// Armed before the file is created, so an interrupt never leaves it empty.
+	o.Global.FinishOnCancel.Store(true)
+	defer o.Global.FinishOnCancel.Store(false)
+
 	output := cmd.OutOrStdout()
 	if o.Capture.Write != "" && o.Capture.Write != "-" {
 		file, err := os.Create(o.Capture.Write)
@@ -144,10 +149,6 @@ func captureFn(cmd *cobra.Command, o *Options) error {
 				"error", err)
 		}
 	}
-
-	// An interrupt ends the capture; the command still finishes the file and exits cleanly.
-	o.Global.FinishOnCancel.Store(true)
-	defer o.Global.FinishOnCancel.Store(false)
 
 	err = c.Capture(cmd.Context(), clablabruntime.CaptureRequest{
 		Targets:     targets,

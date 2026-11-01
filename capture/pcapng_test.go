@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 )
 
@@ -149,6 +150,14 @@ func TestPCAPNGReaderRejectsInvalidStreams(t *testing.T) {
 	binary.BigEndian.PutUint32(bigEndian[8:], pcapngByteOrderMagic)
 	if err := readAll(bigEndian); !errors.Is(err, errPCAPNGByteOrder) {
 		t.Fatalf("big-endian section: %v", err)
+	}
+
+	// a little-endian section header longer than the reader accepts is not a byte-order error
+	oversized := append([]byte(nil), valid.Bytes()...)
+	binary.LittleEndian.PutUint32(oversized[4:], 2<<20)
+	if err := readAll(oversized); err == nil || errors.Is(err, errPCAPNGByteOrder) ||
+		!strings.Contains(err.Error(), "invalid pcapng block length") {
+		t.Fatalf("oversized little-endian section: %v", err)
 	}
 
 	packetFirst := pcapngBlock(pcapngEnhancedPacketType, make([]byte, 20))
