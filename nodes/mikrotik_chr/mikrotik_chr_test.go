@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -356,6 +358,47 @@ func TestHealthcheckStartPeriod(t *testing.T) {
 			)
 			if got := n.Cfg.Healthcheck.StartPeriod; got != tc.want {
 				t.Errorf("StartPeriod = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFilterLauncherConfigDefaultKeymatProvider(t *testing.T) {
+	// Verbatim from a second /export on an otherwise unconfigured CHR 7.24.5.
+	placeholder := "add disabled=yes key-size=0 name=default qkd-cache-size=0 qkd-certificate=*0 \\\n    type=qkd"
+	userProvider := "add disabled=yes name=custom type=qkd"
+	configuredDefault := "add disabled=yes key-size=0 name=default qkd-address=192.0.2.1 qkd-cache-size=0 qkd-certificate=*0 type=qkd"
+	cases := []struct {
+		name  string
+		entry string
+		want  string
+	}{
+		{
+			name:  "empty factory placeholder",
+			entry: placeholder,
+			want:  "",
+		},
+		{
+			name:  "unfinished custom provider continuation",
+			entry: userProvider + ` \`,
+			want:  "/system keymat-provider\n" + userProvider + ` \`,
+		},
+		{
+			name:  "custom provider",
+			entry: userProvider,
+			want:  "/system keymat-provider\n" + userProvider,
+		},
+		{
+			name:  "configured default provider",
+			entry: configuredDefault,
+			want:  "/system keymat-provider\n" + configuredDefault,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := filterLauncherConfig("/system keymat-provider\n" + tc.entry)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("filterLauncherConfig() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
