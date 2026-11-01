@@ -75,11 +75,13 @@ On AMD64, data NICs are placed behind PCI bridges rather than sharing the defaul
     type: warning
 The highest interface depends on the architecture, and larger indices are rejected during deployment:
 
-* AMD64: `eth255` / `ether256`. The launcher's MAC-address scheme reserves index zero for management and uses one octet for the data-port index. This is an addressing limit, not a guarantee that every CHR version and host can run 256 interfaces.
+* AMD64: `eth63` / `ether64`, the highest port tested. More interfaces exhaust the guest's interrupt vectors (with the default single vCPU) and, from about 200, the virtual PC firmware's PCI address space, which stops the VM before RouterOS boots.
 * ARM64: `eth29` / `ether30`, the last data port that fits on the `virt` machine's PCI bus.
 
 The check uses the architecture of the containerlab binary, which matches the image's except in emulated setups.
 ///
+
+With more than about 30 data ports, RouterOS can reject a NIC while it boots, and the interface does not appear. The launcher checks that RouterOS has an interface for every data NIC and re-plugs the missing ones before the node reports ready; RouterOS keeps their configuration. If a NIC is still missing, the launcher logs `data NIC check FAILED` and the node never becomes healthy.
 
 Sparse interface numbering also consumes VM resources for the intervening ports; memory defaults scale with the highest index, not just the number of links.
 

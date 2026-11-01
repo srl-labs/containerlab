@@ -56,8 +56,9 @@ const (
 	// mgmtComment tags every management object the launcher creates in RouterOS.
 	mgmtComment = "clab-mgmt"
 
-	// The last MAC octet is the NIC index; zero is reserved for management.
-	maxDataNICIndex = 255
+	// amd64's tested PCI-bridge layout. Beyond it the guest runs out of interrupt
+	// vectors (about 100 NICs per vCPU) and SeaBIOS out of PCI I/O space (8 bridges).
+	maxDataNICIndex = 63
 	// arm64's virt machine gets no PCI bridges: its single bus holds the disk, the
 	// management NIC and at most 29 data NICs before QEMU runs out of slots.
 	maxDataNICIndexARM64 = 29
@@ -67,6 +68,8 @@ const (
 	defaultIntfWait  = 60
 	defaultBootWait  = 300
 	startPeriodSlack = 90
+	// the launcher's wait for the interface list to settle and its re-plug rounds, in seconds.
+	replugWait = 180
 
 	scrapliPlatformName = "mikrotik_routeros" //nolint: misspell
 )
@@ -148,8 +151,8 @@ func dataNICLimit(goarch string) int {
 	return maxDataNICIndex
 }
 
-// CheckInterfaceName rejects data NIC indices the launcher cannot create: beyond the
-// free PCI slots on arm64, or wrapping the launcher's MAC addresses.
+// CheckInterfaceName rejects data NIC indices the launcher does not create: beyond the
+// tested PCI-bridge layout on amd64, or the free PCI slots on arm64.
 func (n *mikrotikCHR) CheckInterfaceName() error {
 	if err := n.VRNode.CheckInterfaceName(); err != nil {
 		return err
@@ -174,7 +177,12 @@ func (n *mikrotikCHR) CheckInterfaceName() error {
 		if err != nil || index > limit {
 			return fmt.Errorf(
 				"node %q interface %s exceeds the maximum data NIC index %d on %s (eth%d / ether%d)",
-				n.Cfg.ShortName, shown, limit, n.goarch, limit, limit+1,
+				n.Cfg.ShortName,
+				shown,
+				limit,
+				n.goarch,
+				limit,
+				limit+1,
 			)
 		}
 	}
@@ -185,10 +193,11 @@ func (n *mikrotikCHR) CheckInterfaceName() error {
 // startPeriod is the healthcheck start period in seconds: the launcher's own worst case
 // before the ready file, so a slow boot (TCG) never reports unhealthy. It waits up to
 // CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the startup-config
-// import and the SSH banner, plus the config fetch and the gateway check.
+// import and the SSH banner, plus the config fetch, the gateway check and re-plugging NICs
+// RouterOS rejected.
 func startPeriod(env map[string]string) int {
 	return envSeconds(env, "CHR_INTF_WAIT", defaultIntfWait) +
-		3*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack
+		3*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack + replugWait
 }
 
 // envSeconds reads a positive number of seconds from env, else returns def (the launcher

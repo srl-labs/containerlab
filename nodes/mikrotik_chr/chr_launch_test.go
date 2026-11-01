@@ -93,11 +93,11 @@ func TestQEMUDataNIC(t *testing.T) {
 			bus:        "3",
 			addr:       "0x1",
 		},
-		"highest-unique-mac": {
+		"highest-port": {
 			pciBridges: 1,
-			index:      255,
-			bus:        "11",
-			addr:       "0x5",
+			index:      63,
+			bus:        "3",
+			addr:       "0xd",
 		},
 		"arm64-first-port": {
 			index: 1,
@@ -107,7 +107,8 @@ func TestQEMUDataNIC(t *testing.T) {
 		},
 	}
 
-	fn := launcherFunction(t, "qemu_data_nic")
+	// qemu_data_nic takes the -device value from data_nic_device, which also re-plugs NICs.
+	fn := launcherFunction(t, "data_nic_device") + launcherFunction(t, "qemu_data_nic")
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			mac := fmt.Sprintf("52:54:00:12:34:%02x", tc.index)
@@ -125,10 +126,16 @@ func TestQEMUDataNIC(t *testing.T) {
 				tc.index,
 			)
 			if tc.bus == "" {
-				want += fmt.Sprintf("-device virtio-net,netdev=d%d,mac=%s", tc.index, mac)
+				want += fmt.Sprintf(
+					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s",
+					tc.index,
+					tc.index,
+					mac,
+				)
 			} else {
 				want += fmt.Sprintf(
-					"-device virtio-net,netdev=d%d,mac=%s,bus=chrpci%s,addr=%s,romfile=,vectors=2",
+					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s,bus=chrpci%s,addr=%s,romfile=,vectors=2",
+					tc.index,
 					tc.index,
 					mac,
 					tc.bus,
@@ -155,20 +162,27 @@ func TestCheckNICIndex(t *testing.T) {
 		"bridges-zero":      {pciBridges: 1, index: 0},
 		"bridges-old-limit": {pciBridges: 1, index: 28},
 		"bridges-ether33":   {pciBridges: 1, index: 32},
-		"bridges-max":       {pciBridges: 1, index: 255},
-		"bridges-wrap":      {pciBridges: 1, index: 256, errText: "would reuse a NIC MAC"},
-		"bridges-wrap-511":  {pciBridges: 1, index: 511, errText: "would reuse a NIC MAC"},
+		"bridges-max":       {pciBridges: 1, index: 63},
+		"bridges-over":      {pciBridges: 1, index: 64, errText: "beyond the tested limit"},
+		"bridges-mac-wrap":  {pciBridges: 1, index: 256, errText: "beyond the tested limit"},
 		"no-bridges-max":    {pciBridges: 0, index: 29},
 		"no-bridges-full":   {pciBridges: 0, index: 30, errText: "no PCI slot for the disk"},
-		"no-bridges-wrap":   {pciBridges: 0, index: 256, errText: "would reuse a NIC MAC"},
+		"no-bridges-high":   {pciBridges: 0, index: 256, errText: "no PCI slot for the disk"},
 	}
 
 	fn := launcherFunction(t, "check_nic_index")
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c",
-				"log() { printf '%s\\n' \"$*\" >&2; }\n"+fn+"PCI_BRIDGES=\"$1\"; check_nic_index \"$2\"",
-				"chr-launch-test", fmt.Sprint(tc.pciBridges), fmt.Sprint(tc.index))
+			cmd := exec.CommandContext(
+				t.Context(),
+				"/bin/sh",
+				"-c",
+				"log() { printf '%s\\n' \"$*\" >&2; }\n"+fn+
+					"PCI_BRIDGES=\"$1\"; check_nic_index \"$2\"",
+				"chr-launch-test",
+				fmt.Sprint(tc.pciBridges),
+				fmt.Sprint(tc.index),
+			)
 			out, err := cmd.CombinedOutput()
 			if tc.errText == "" {
 				if err != nil {
@@ -177,7 +191,13 @@ func TestCheckNICIndex(t *testing.T) {
 				return
 			}
 			if err == nil || !strings.Contains(string(out), tc.errText) {
-				t.Errorf("index %d: want error containing %q, got %v: %s", tc.index, tc.errText, err, out)
+				t.Errorf(
+					"index %d: want error containing %q, got %v: %s",
+					tc.index,
+					tc.errText,
+					err,
+					out,
+				)
 			}
 		})
 	}
