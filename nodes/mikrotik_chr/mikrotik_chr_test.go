@@ -198,18 +198,17 @@ func TestInterfaceParsing(t *testing.T) {
 	}
 }
 
-// exportedConfig is a verbatim RouterOS 7.24.5 /export of a node this kind deployed
-// (transparent management, IPv4 + IPv6, a lab default route in main).
-const exportedConfig = `# 2026-10-16 21:56:34 by RouterOS 7.24.5
-# system id = db75dropC8O
-#
+// exportedConfig represents a native-VRF node's compact export with explicit
+// vrf=main overrides appended by SaveConfig, including user VRFs and a community.
+const exportedConfig = `# by RouterOS 7.25
 /interface bridge
 add name=lo0
 /interface ethernet
 set [ find default-name=ether1 ] disable-running-check=no
 set [ find default-name=ether2 ] disable-running-check=no
-/routing table
-add comment=clab-mgmt fib name=mgmt
+/ip vrf
+add comment=clab-mgmt interfaces=ether1 name=mgmt
+add interfaces=none name="user vrf"
 /ip address
 add address=172.20.20.4/24 comment=clab-mgmt interface=ether1 network=\
     172.20.20.0
@@ -218,27 +217,26 @@ add address=2.2.2.2 interface=lo0 network=2.2.2.2
 /ip dhcp-client
 add disabled=yes interface=ether1 name=client1
 /ip route
-add comment=clab-mgmt dst-address=172.20.20.0/24 gateway=ether1 \
-    routing-table=mgmt
-add comment=clab-mgmt dst-address=0.0.0.0/0 gateway=172.20.20.1 \
+add comment=clab-mgmt dst-address=0.0.0.0/0 gateway=172.20.20.1@mgmt \
     routing-table=mgmt
 add dst-address=0.0.0.0/0 gateway=10.0.0.1
 /ipv6 route
-add comment=clab-mgmt dst-address=3fff:172:20:20::4/64 gateway=ether1 \
-    routing-table=mgmt
-add comment=clab-mgmt dst-address=::/0 gateway=3fff:172:20:20::1%ether1 \
+add comment=clab-mgmt dst-address=::/0 gateway=3fff:172:20:20::1@mgmt \
     routing-table=mgmt
 /ipv6 address
 add address=3fff:172:20:20::4 advertise=no comment=clab-mgmt interface=ether1
 /ipv6 nd
 add interface=ether1 ra-lifetime=none
-/routing rule
-add action=lookup-only-in-table comment=clab-mgmt src-address=172.20.20.4/32 \
-    table=mgmt
-add action=lookup-only-in-table comment=clab-mgmt src-address=\
-    3fff:172:20:20::4/128 table=mgmt
+/ip service
+set ssh vrf=mgmt
+set www vrf=mgmt
+set api disabled=yes vrf="user vrf"
+/snmp community
+add addresses=10.0.0.0/30 name=save-check
 /system identity
-set name=r2`
+set name=r2
+/ip service set [find where name=winbox dynamic=no] vrf=main
+/snmp set vrf=main`
 
 func TestFilterLauncherConfig(t *testing.T) {
 	got := filterLauncherConfig(exportedConfig)
@@ -263,7 +261,14 @@ func TestFilterLauncherConfig(t *testing.T) {
 		"add dst-address=0.0.0.0/0 gateway=10.0.0.1",
 		"add name=lo0",
 		"set name=r2",
-		"/routing table",
+		"/ip vrf",
+		`add interfaces=none name="user vrf"`,
+		"set ssh vrf=mgmt",
+		"set www vrf=mgmt",
+		`set api disabled=yes vrf="user vrf"`,
+		"add addresses=10.0.0.0/30 name=save-check",
+		"/ip service set [find where name=winbox dynamic=no] vrf=main",
+		"/snmp set vrf=main",
 	} {
 		if !strings.Contains(got, kept) {
 			t.Errorf("filtered config lost user line %q:\n%s", kept, got)
@@ -332,14 +337,14 @@ func TestHealthcheckStartPeriod(t *testing.T) {
 		env  map[string]string
 		want int
 	}{
-		"defaults": {env: nil, want: 60 + 3*300 + 90},
+		"defaults": {env: nil, want: 60 + 4*300 + 90},
 		"overrides": {
 			env:  map[string]string{"CHR_INTF_WAIT": "10", "CHR_BOOT_WAIT": "100"},
-			want: 10 + 3*100 + 90,
+			want: 10 + 4*100 + 90,
 		},
 		"invalid": {
 			env:  map[string]string{"CHR_INTF_WAIT": "x", "CHR_BOOT_WAIT": "-5"},
-			want: 60 + 3*300 + 90,
+			want: 60 + 4*300 + 90,
 		},
 	}
 

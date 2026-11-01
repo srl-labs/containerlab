@@ -711,31 +711,25 @@ If you want to completely disable the networking stack on a container, you can u
 
 ### runtime
 
+/// warning | Deprecated
+The per-node `runtime` parameter is deprecated and will be removed in a future release. Mixing runtimes in one lab is not supported: the management network is created, and the lab is destroyed and inspected, with the lab-wide runtime only. Set the runtime for the whole lab with the global `--runtime` flag or the `CLAB_RUNTIME` environment variable instead.
+///
+
 By default containerlab nodes will be started by the `docker` container runtime. Besides that, containerlab has experimental support for the `podman` runtime.
 
-It is possible to specify a global local container runtime with the global `--runtime` flag, or set the runtime on a per-node basis:
+The runtime is selected for the whole lab with the global `--runtime` flag or the `CLAB_RUNTIME` environment variable:
 
-Options for the per-node `runtime` parameter are:
-
-- `docker`
-- `podman`
-
-The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable.
+```bash
+containerlab deploy -t mylab.clab.yml --runtime podman
+```
 
 /// note | Clabernetes lab runtime
 The global `--runtime` flag and `CLAB_RUNTIME` environment variable accept
 `c9s`. This is a whole-lab runtime that sends the topology to kubernetes as a
-Clabernetes `Topology` resource. It is not a valid per-node `runtime:` value.
+Clabernetes `Topology` resource.
 
 See [c9s runtime](clabernetes/runtime.md) for details.
 ///
-
-```yaml
-# example node definition with per-node runtime definition
-my-node:
-  image: alpine:3
-  runtime: podman
-```
 
 ### exec
 

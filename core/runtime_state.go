@@ -113,7 +113,10 @@ func (c *CLab) NeedsInitialDeploy(ctx context.Context) (bool, error) {
 				c.globalRuntimeName,
 			)
 		}
-		exists, err := checker.LabExists(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})
+		exists, err := checker.LabExists(ctx, clablabruntime.InspectRequest{
+			Name:     c.Config.Name,
+			Identity: c.labRuntimeIdentity,
+		})
 
 		return !exists, err
 	}

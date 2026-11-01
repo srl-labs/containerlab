@@ -25,6 +25,11 @@ func (r *Runtime) Exec(
 	ctx context.Context,
 	req clablabruntime.ExecRequest,
 ) (*clabexec.ExecResult, error) {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return nil, connErr
+	}
+
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}
@@ -102,7 +107,7 @@ func (r *Runtime) deviceContainerName(
 	// Before the plan is applied the Node has no container observations yet; the pod's
 	// default-container annotation still identifies the primary application container.
 	if pod != nil && pod.Labels[labelTopologyNode] == nodeName {
-		if fallback := pod.Annotations["kubectl.kubernetes.io/default-container"]; fallback != "" {
+		if fallback := pod.Annotations[defaultContainerAnnotation]; fallback != "" {
 			return fallback, nil
 		}
 	}
@@ -303,9 +308,9 @@ func (r *Runtime) execInPod(
 			TTY:       false,
 		}, scheme.ParameterCodec)
 
-	executor, err := remotecommand.NewSPDYExecutor(r.restConfig, "POST", req.URL())
+	executor, err := r.newExecutor(req.URL())
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("failed to create Kubernetes exec executor: %w", err)
+		return nil, nil, 0, err
 	}
 
 	var stdout bytes.Buffer
