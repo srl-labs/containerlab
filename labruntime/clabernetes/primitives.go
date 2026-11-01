@@ -220,6 +220,11 @@ func primitiveObject(
 		unstructured.RemoveNestedField(obj.Object, "spec", "labels")
 	}
 
+	if kind != "Node" {
+		// Only Nodes carry the lab's topology file, which inspect reads without a Topology.
+		removeTopologySourceFile(obj)
+	}
+
 	if owner := desiredTopology.GetAnnotations()[clabconstants.Owner]; owner != "" {
 		annotations := obj.GetAnnotations()
 		if annotations == nil {

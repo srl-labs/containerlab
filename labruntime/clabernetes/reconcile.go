@@ -197,8 +197,28 @@ func reconciledPrimitiveObject(
 	updated.SetAnnotations(
 		mergeDesiredMetadata(existing.GetAnnotations(), desired.GetAnnotations()),
 	)
+	carryOverNodeTopologyFile(existing, updated)
 
 	return updated
+}
+
+// carryOverNodeTopologyFile keeps the topology file an existing Node recorded, or its absence.
+// clabernetes copies a Node's annotations into its pod template, so changing the annotation
+// would replace the node's pod although nothing about the node changed. A Node therefore keeps
+// the file the lab was deployed from when the Node was created. The Topology resource has no
+// such effect and always records the file of the latest deploy.
+func carryOverNodeTopologyFile(existing, updated *unstructured.Unstructured) {
+	if existing.GetKind() != "Node" || existing.GetAPIVersion() != c9sAPIVersion {
+		return
+	}
+
+	path, found := existing.GetAnnotations()[annotationTopologyFile]
+	if !found {
+		removeTopologySourceFile(updated)
+		return
+	}
+
+	setTopologySourceFile(updated, path)
 }
 
 // carryOverNodeRunState keeps the run state of an existing Node. spec.runState is operational

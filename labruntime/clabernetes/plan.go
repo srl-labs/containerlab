@@ -53,6 +53,7 @@ func prepareDesiredDeployment(
 		topologyWithExposeType(exposeType),
 		topologyWithPersistence(!req.NoPersistence),
 	)
+	setTopologySourceFile(desiredTopology, req.TopologyFile)
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
 	}

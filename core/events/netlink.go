@@ -14,6 +14,7 @@ import (
 	gotc "github.com/florianl/go-tc"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -644,17 +645,15 @@ func containerLabel(container *clabruntime.GenericContainer) string {
 	return container.Labels[clabconstants.Containerlab]
 }
 
-func interfaceAttributes(
-	container *clabruntime.GenericContainer,
-	snapshot ifaceSnapshot,
-) map[string]string {
+// interfaceSnapshotAttributes are the attributes every interface event reports for the
+// interface itself.
+func interfaceSnapshotAttributes(snapshot ifaceSnapshot) map[string]string {
 	attributes := map[string]string{
 		"ifname": snapshot.Name,
 		"index":  strconv.Itoa(snapshot.Index),
 		"mtu":    strconv.Itoa(snapshot.MTU),
 		"state":  snapshot.OperState,
 		"type":   snapshot.Type,
-		"origin": "netlink",
 	}
 
 	if snapshot.Alias != "" {
@@ -664,6 +663,76 @@ func interfaceAttributes(
 	if snapshot.MAC != "" {
 		attributes["mac"] = snapshot.MAC
 	}
+
+	return attributes
+}
+
+// interfaceStatsAttributes adds the counters and rates of a stats event.
+func interfaceStatsAttributes(attributes map[string]string, metrics ifaceStatsMetrics) {
+	attributes["rx_bytes"] = strconv.FormatUint(metrics.RxBytes, 10)
+	attributes["tx_bytes"] = strconv.FormatUint(metrics.TxBytes, 10)
+	attributes["rx_packets"] = strconv.FormatUint(metrics.RxPackets, 10)
+	attributes["tx_packets"] = strconv.FormatUint(metrics.TxPackets, 10)
+	attributes["rx_bps"] = strconv.FormatFloat(metrics.RxBps, 'f', -1, 64)
+	attributes["tx_bps"] = strconv.FormatFloat(metrics.TxBps, 'f', -1, 64)
+	attributes["rx_pps"] = strconv.FormatFloat(metrics.RxPps, 'f', -1, 64)
+	attributes["tx_pps"] = strconv.FormatFloat(metrics.TxPps, 'f', -1, 64)
+	attributes["interval_seconds"] = strconv.FormatFloat(metrics.Interval.Seconds(), 'f', -1, 64)
+}
+
+// labRuntimeInterfaceAttributes are the attributes of a lab runtime's interface event: those
+// of the netlink interface events, for the node the runtime runs. Values the runtime could not
+// read (no index or MTU without a shell in the node) are left out rather than reported as 0.
+func labRuntimeInterfaceAttributes(
+	lab, name string,
+	iface *clablabruntime.InterfaceEventData,
+) map[string]string {
+	attributes := interfaceSnapshotAttributes(ifaceSnapshot{
+		Index:     iface.Index,
+		Name:      iface.Name,
+		Alias:     iface.Alias,
+		MTU:       iface.MTU,
+		MAC:       iface.MAC,
+		OperState: iface.OperState,
+		Type:      iface.Type,
+	})
+	if iface.Index <= 0 {
+		delete(attributes, "index")
+	}
+	if iface.MTU <= 0 {
+		delete(attributes, "mtu")
+	}
+
+	if lab != "" {
+		attributes["lab"] = lab
+	}
+	if name != "" {
+		attributes["name"] = name
+	}
+
+	if stats := iface.Stats; stats != nil {
+		interfaceStatsAttributes(attributes, ifaceStatsMetrics{
+			RxBytes:   stats.RxBytes,
+			TxBytes:   stats.TxBytes,
+			RxPackets: stats.RxPackets,
+			TxPackets: stats.TxPackets,
+			RxBps:     stats.RxBps,
+			TxBps:     stats.TxBps,
+			RxPps:     stats.RxPps,
+			TxPps:     stats.TxPps,
+			Interval:  stats.Interval,
+		})
+	}
+
+	return attributes
+}
+
+func interfaceAttributes(
+	container *clabruntime.GenericContainer,
+	snapshot ifaceSnapshot,
+) map[string]string {
+	attributes := interfaceSnapshotAttributes(snapshot)
+	attributes["origin"] = "netlink"
 
 	if lab := containerLabel(container); lab != "" {
 		attributes["lab"] = lab
@@ -813,15 +882,7 @@ func (r *netlinkRegistry) emitInterfaceStatsEvent(
 	}
 
 	attributes := interfaceAttributes(container, snapshot)
-	attributes["rx_bytes"] = strconv.FormatUint(metrics.RxBytes, 10)
-	attributes["tx_bytes"] = strconv.FormatUint(metrics.TxBytes, 10)
-	attributes["rx_packets"] = strconv.FormatUint(metrics.RxPackets, 10)
-	attributes["tx_packets"] = strconv.FormatUint(metrics.TxPackets, 10)
-	attributes["rx_bps"] = strconv.FormatFloat(metrics.RxBps, 'f', -1, 64)
-	attributes["tx_bps"] = strconv.FormatFloat(metrics.TxBps, 'f', -1, 64)
-	attributes["rx_pps"] = strconv.FormatFloat(metrics.RxPps, 'f', -1, 64)
-	attributes["tx_pps"] = strconv.FormatFloat(metrics.TxPps, 'f', -1, 64)
-	attributes["interval_seconds"] = strconv.FormatFloat(metrics.Interval.Seconds(), 'f', -1, 64)
+	interfaceStatsAttributes(attributes, metrics)
 
 	event := aggregatedEvent{
 		Timestamp:   metrics.Timestamp,

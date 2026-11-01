@@ -193,12 +193,38 @@ type SaveResult struct {
 	Files []SavedFile
 }
 
+// Container states and health in the vocabulary of container runtimes (Docker), which inspect
+// and events report for lab runtime nodes too.
+const (
+	ContainerStateCreated = "created"
+	ContainerStateRunning = "running"
+	ContainerStateExited  = "exited"
+
+	ContainerHealthHealthy   = "healthy"
+	ContainerHealthStarting  = "starting"
+	ContainerHealthUnhealthy = "unhealthy"
+)
+
 type NodeState struct {
-	Name  string
-	Kind  string
-	Image string
+	Name string
+	// TopologyName is the node name as the topology file spells it, when the runtime had to
+	// carry the node under another name (Name). Empty means Name.
+	TopologyName string
+	Kind         string
+	Image        string
+	// Type and Group are the node's type and group when the topology set them.
+	Type  string
+	Group string
+	// State is the runtime's own view of the node, such as the clabernetes Node readiness, or
+	// stopped.
 	State string
 	Ready bool
+	// ContainerState is the node's state in container runtime terms: created, running or
+	// exited (the ContainerState* constants). Empty when the runtime does not report one.
+	ContainerState string
+	// Health is the device health of a running node in container runtime terms: healthy or
+	// starting. Empty when the node does not run.
+	Health string
 	// MgmtIPv4Address and MgmtIPv6Address are the node's allocated management addresses in
 	// CIDR notation, when the runtime reports them.
 	MgmtIPv4Address     string
@@ -218,9 +244,12 @@ type NodeState struct {
 type ExposedPort = clabtypes.ExposedPort
 
 type LabState struct {
-	Name         string
-	Namespace    string
-	Owner        string
+	Name      string
+	Namespace string
+	Owner     string
+	// TopologyPath is the absolute path of the topology file the lab was deployed from, on the
+	// machine that deployed it. A lab the runtime did not deploy from a file reports where the
+	// runtime keeps its definition instead (for c9s k8s://<namespace>/topologies/<lab>).
 	TopologyPath string
 	State        string
 	Ready        bool
@@ -260,7 +289,57 @@ type Event struct {
 	ActorID     string
 	ActorName   string
 	ActorFullID string
-	Attributes  map[string]string
+	// Attributes are the runtime's own attributes. Event consumers add the attributes the
+	// container runtimes report from Lab, Node and Interface.
+	Attributes map[string]string
+	// Lab and Node are the lab node a container or interface event is about, as Inspect
+	// reports it. containerlab's events command describes the node from them the same way
+	// inspect does, so both agree and match what the container runtimes report.
+	Lab  *LabState
+	Node *NodeState
+	// Interface is the interface an interface event reports.
+	Interface *InterfaceEventData
+}
+
+// Event types and the origin attribute of lab runtime events.
+const (
+	EventTypeContainer = "container"
+	EventTypeInterface = "interface"
+	// EventOriginSnapshot marks the events of --initial-state, in the origin attribute.
+	EventOriginSnapshot = "snapshot"
+)
+
+// InterfaceEventData describes an interface of a node the way the container runtimes' interface
+// events do (netlink).
+type InterfaceEventData struct {
+	// Name is the interface name inside the node.
+	Name string
+	// Alias is the name the topology gave the interface when the node kind maps it (for
+	// example ethernet-1/1 for SR Linux e1-1).
+	Alias string
+	Index int
+	MTU   int
+	MAC   string
+	// OperState is the operational state in netlink's vocabulary: up, down, lower-layer-down,
+	// dormant, testing, not-present or unknown.
+	OperState string
+	// Type is the link type in netlink's vocabulary, such as veth or device (loopback).
+	Type string
+	// Stats are set on stats events.
+	Stats *InterfaceStats
+}
+
+// InterfaceStats are the counters and rates of an interface stats event.
+type InterfaceStats struct {
+	RxBytes   uint64
+	TxBytes   uint64
+	RxPackets uint64
+	TxPackets uint64
+	RxBps     float64
+	TxBps     float64
+	RxPps     float64
+	TxPps     float64
+	Interval  time.Duration
 }
 
 // NodeLocation is the workload that runs a lab node.

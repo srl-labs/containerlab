@@ -239,22 +239,11 @@ func (r *Runtime) listCaptureInterfaces(
 	result := map[string][]clabwireInterface{}
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.SetLimit(interfaceSampleWorkers)
-	exec := r.execInPodContainer()
 	for _, location := range pods {
 		group.Go(func() error {
-			var stdout, stderr bytes.Buffer
-			err := exec(groupCtx, location.Namespace, location.Pod, clabwireContainer,
-				[]string{clabwireManager, "node-runtime", "packet-capture", "--list-interfaces"},
-				nil, &stdout, &stderr)
+			entries, err := r.listPodInterfaces(groupCtx, location.Namespace, location.Pod)
 			if err != nil {
-				return fmt.Errorf("failed to list the capturable interfaces of pod %s/%s: %w%s",
-					location.Namespace, location.Pod, err, stderrSuffix(stderr.Bytes()))
-			}
-
-			var entries []clabwireInterface
-			if err := json.Unmarshal(stdout.Bytes(), &entries); err != nil {
-				return fmt.Errorf("failed to parse the capturable interfaces of pod %s/%s: %w",
-					location.Namespace, location.Pod, err)
+				return err
 			}
 
 			mu.Lock()
@@ -273,6 +262,30 @@ func (r *Runtime) listCaptureInterfaces(
 	}
 
 	return result, nil
+}
+
+// listPodInterfaces runs clabwire's --list-interfaces in a pod: the lab link interfaces of the
+// pod's nodes, with their aliases and peers.
+func (r *Runtime) listPodInterfaces(
+	ctx context.Context,
+	namespace, pod string,
+) ([]clabwireInterface, error) {
+	var stdout, stderr bytes.Buffer
+	err := r.execInPodContainer()(ctx, namespace, pod, clabwireContainer,
+		[]string{clabwireManager, "node-runtime", "packet-capture", "--list-interfaces"},
+		nil, &stdout, &stderr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list the capturable interfaces of pod %s/%s: %w%s",
+			namespace, pod, err, stderrSuffix(stderr.Bytes()))
+	}
+
+	var entries []clabwireInterface
+	if err := json.Unmarshal(stdout.Bytes(), &entries); err != nil {
+		return nil, fmt.Errorf("failed to parse the capturable interfaces of pod %s/%s: %w",
+			namespace, pod, err)
+	}
+
+	return entries, nil
 }
 
 func stderrSuffix(stderr []byte) string {

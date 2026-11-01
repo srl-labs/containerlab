@@ -37,6 +37,8 @@ const (
 	persistenceReclaimRetain = "Retain"
 	// defaultContainerAnnotation names the primary device container of a c9s pod.
 	defaultContainerAnnotation = "kubectl.kubernetes.io/default-container"
+	// annotationDirectNodeUID names the UID of the Node a c9s pod runs.
+	annotationDirectNodeUID = "c9s.run/direct-node-uid"
 )
 
 var topologyGVR = schema.GroupVersionResource{

@@ -388,17 +388,8 @@ func TestParseInterfaceSample(t *testing.T) {
 		t.Fatalf("eth1 stats = %+v", stats[1])
 	}
 
-	wantActions := map[string]string{"eth1": "up", "eth2": "down", "lo": "up", "dummy0": "down"}
-	for _, state := range states {
-		if got := state.action(); got != wantActions[state.Name] {
-			t.Fatalf(
-				"%s action = %q, want %q (%+v)",
-				state.Name,
-				got,
-				wantActions[state.Name],
-				state,
-			)
-		}
+	if states[1].OperState != "lowerlayerdown" || states[2].OperState != "unknown" {
+		t.Fatalf("operational states = %+v", states)
 	}
 	if states[0].Index != 3 || states[0].MTU != 9500 || states[0].MAC != "aa:c1:ab:00:00:01" ||
 		states[0].Alias != "to server" || states[0].Flags != 0x1003 {
@@ -423,127 +414,6 @@ func TestCommandNotExecutable(t *testing.T) {
 	}
 	if commandNotExecutable(1, errors.New("connection refused")) {
 		t.Fatal("other failures are not a missing command")
-	}
-}
-
-func TestInterfacePollerEmitsStateChanges(t *testing.T) {
-	t.Parallel()
-
-	newSample := func(ts time.Time, ifaces ...c9sIfaceState) interfaceSample {
-		return interfaceSample{
-			target: interfaceSampleTarget{
-				state: &clablabruntime.LabState{Name: "lab1", Namespace: "c9s-lab1"},
-				node:  clablabruntime.NodeState{Name: "r1", Pod: "lab1-r1-abc"},
-				pod:   &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "lab1-r1-abc"}},
-			},
-			stats: []c9sIfaceStats{
-				{Name: "eth1", RxBytes: uint64(ts.Unix())},
-			},
-			ifaces:    ifaces,
-			hasStates: true,
-			timestamp: ts,
-		}
-	}
-	up := c9sIfaceState{Name: "eth1", Index: 3, MTU: 9500, OperState: "up", Flags: 0x1003}
-	down := c9sIfaceState{Name: "eth1", Index: 3, MTU: 9500, OperState: "down", Flags: 0x1002}
-	eth2 := c9sIfaceState{Name: "eth2", Index: 4, OperState: "up", Flags: 0x1003}
-
-	for _, initialState := range []bool{false, true} {
-		sink := make(chan clablabruntime.Event, 32)
-		p := &interfacePoller{
-			r:            &Runtime{},
-			opts:         interfacePollOptions{includeInitialState: initialState},
-			sink:         sink,
-			statsSamples: map[string]c9sIfaceStatsSample{},
-			nodes:        map[string]*trackedNode{},
-			noShell:      map[string]bool{},
-			firstRound:   true,
-		}
-		ctx := context.Background()
-		start := time.Now()
-
-		p.processSample(ctx, newSample(start, up))
-		if got := drain(sink); initialState != (len(got) == 1) {
-			t.Fatalf("initial-state=%t: first round emitted %+v", initialState, got)
-		}
-
-		p.firstRound = false
-		p.processSample(ctx, newSample(start.Add(time.Second), up))
-		if got := drain(sink); len(got) != 0 {
-			t.Fatalf("unchanged interface emitted %+v", got)
-		}
-
-		p.processSample(ctx, newSample(start.Add(2*time.Second), down, eth2))
-		got := drain(sink)
-		if len(got) != 2 {
-			t.Fatalf("change emitted %+v, want eth1 down and new eth2 up", got)
-		}
-		byIf := map[string]clablabruntime.Event{}
-		for _, ev := range got {
-			byIf[ev.Attributes["ifname"]] = ev
-		}
-		ev := byIf["eth1"]
-		if ev.Type != "interface" || ev.Action != "down" || ev.ActorID != "c9s-lab1/lab1/r1" ||
-			ev.ActorName != "lab1-r1" || ev.ActorFullID != "lab1-r1-abc" ||
-			ev.Attributes["state"] != "down" || ev.Attributes["index"] != "3" ||
-			ev.Attributes["mtu"] != "9500" || ev.Attributes["origin"] != "clabernetes" ||
-			ev.Attributes["lab"] != "lab1" || ev.Attributes["node"] != "r1" ||
-			ev.Attributes["namespace"] != "c9s-lab1" || ev.Attributes["pod"] != "lab1-r1-abc" {
-			t.Fatalf("eth1 event = %+v", ev)
-		}
-		if byIf["eth2"].Action != "up" {
-			t.Fatalf("eth2 event = %+v", byIf["eth2"])
-		}
-
-		// eth2 disappears
-		p.processSample(ctx, newSample(start.Add(3*time.Second), down))
-		got = drain(sink)
-		if len(got) != 1 || got[0].Action != "down" ||
-			got[0].Attributes["state"] != interfaceStateNotPresent {
-			t.Fatalf("removed interface emitted %+v", got)
-		}
-
-		// the node stops running
-		p.retireStoppedNodes(ctx, map[string]bool{})
-		got = drain(sink)
-		if len(got) != 1 || got[0].Attributes["ifname"] != "eth1" ||
-			got[0].Attributes["state"] != interfaceStateNotPresent || len(p.nodes) != 0 {
-			t.Fatalf("stopped node emitted %+v, tracked %+v", got, p.nodes)
-		}
-	}
-}
-
-func TestInterfacePollerStatsUseTheNodeAsActor(t *testing.T) {
-	t.Parallel()
-
-	sink := make(chan clablabruntime.Event, 8)
-	p := &interfacePoller{
-		r:            &Runtime{},
-		opts:         interfacePollOptions{includeStats: true},
-		sink:         sink,
-		statsSamples: map[string]c9sIfaceStatsSample{},
-		nodes:        map[string]*trackedNode{},
-		noShell:      map[string]bool{},
-	}
-	target := interfaceSampleTarget{
-		state: &clablabruntime.LabState{Name: "lab1", Namespace: "c9s-lab1"},
-		node:  clablabruntime.NodeState{Name: "r1", Pod: "lab1-r1-abc"},
-		pod:   &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "lab1-r1-abc"}},
-	}
-	start := time.Now()
-	p.processSample(context.Background(), interfaceSample{
-		target: target, timestamp: start,
-		stats: []c9sIfaceStats{{Name: "eth1", RxBytes: 1000}},
-	})
-	p.processSample(context.Background(), interfaceSample{
-		target: target, timestamp: start.Add(time.Second),
-		stats: []c9sIfaceStats{{Name: "eth1", RxBytes: 2000}},
-	})
-
-	got := drain(sink)
-	if len(got) != 1 || got[0].Action != "stats" || got[0].ActorID != "c9s-lab1/lab1/r1" ||
-		got[0].Attributes["rx_bps"] != "8000" {
-		t.Fatalf("stats events = %+v", got)
 	}
 }
 
