@@ -59,6 +59,7 @@ import (
 	clabnodesvr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
 	clabnodesvr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
 	clabnodesvr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
+	clabnodesvr_vaos "github.com/srl-labs/containerlab/nodes/vr_vaos"
 	clabnodesvr_veos "github.com/srl-labs/containerlab/nodes/vr_veos"
 	clabnodesvr_vjunosevolved "github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
 	clabnodesvr_vjunosswitch "github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
@@ -93,6 +94,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodessrl.Register(c.Reg)
 	clabnodessros.Register(c.Reg)
 	clabnodesvr_aoscx.Register(c.Reg)
+	clabnodesvr_vaos.Register(c.Reg)
 	clabnodescisco_asav.Register(c.Reg)
 	clabnodesvr_csr.Register(c.Reg)
 	clabnodesvr_c8000v.Register(c.Reg)

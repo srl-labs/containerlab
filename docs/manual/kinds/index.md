@@ -66,6 +66,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco IOL**              | [`cisco_iol`](cisco_iol.md)                         | supported | container |
 | **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
 | **Nvidia Cumulus VX**      | [`nvidia_cumulusvx`](nvidia_cumulusvx.md)           | supported |    VM     |
+| **ALE OmniSwitch vAOS**     | [`ale_vaos`](vr-vaos.md)                            | supported |    VM     |
 | **Aruba ArubaOS-CX**       | [`aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
 | **SONiC (VS)**             | [`sonic-vs`](sonic-vs.md)                           | supported | container |
 | **SONiC VM**               | [`sonic-vm`](sonic-vm.md)                           | supported |    VM     |

@@ -38,6 +38,7 @@ nav:
           - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Juniper cJunosEvolved: manual/kinds/cjunosevolved.md
       - NVIDIA Cumulus VX: manual/kinds/nvidia_cumulusvx.md
+      - ALE OmniSwitch vAOS: manual/kinds/vr-vaos.md
       - Aruba AOS-CX: manual/kinds/vr-aoscx.md
       - SONiC:
           - Container: manual/kinds/sonic-vs.md
