@@ -72,6 +72,10 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 			"reference: https://containerlab.dev/cmd/inspect/interfaces/",
 		Aliases: []string{"int", "intf"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if commandSkipsRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {

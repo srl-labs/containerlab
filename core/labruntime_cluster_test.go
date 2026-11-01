@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"io"
 	"net"
@@ -176,4 +177,152 @@ func TestC9sClusterNodeAccess(t *testing.T) {
 			t.Fatalf("impersonated user without rights: error = %v, want forbidden", err)
 		}
 	})
+}
+
+// TestC9sClusterCapture captures through the library against a deployed c9s lab, as an identity
+// that holds only the clabernetes-lab-editor role in the lab namespace. It runs only when
+// CLAB_C9S_TEST_LAB names the lab and CLAB_C9S_TEST_CAPTURE_USER the identity (tests/14-clabernetes
+// sets both). The lab must have linux nodes "client" (10.10.10.1) and "server" (10.10.10.2)
+// linked by eth1. CLAB_C9S_TEST_FORBIDDEN_USER names an identity without a binding.
+func TestC9sClusterCapture(t *testing.T) {
+	lab := os.Getenv("CLAB_C9S_TEST_LAB")
+	user := os.Getenv("CLAB_C9S_TEST_CAPTURE_USER")
+	if lab == "" || user == "" {
+		t.Skip("CLAB_C9S_TEST_LAB or CLAB_C9S_TEST_CAPTURE_USER is not set")
+	}
+
+	newCLab := func(t *testing.T, user string) *CLab {
+		t.Helper()
+
+		c, err := NewContainerLab(
+			WithRuntime(clablabruntime.ClabernetesRuntimeName, nil),
+			WithTopologyName(lab),
+			WithLabRuntimeIdentity(clablabruntime.Identity{User: user}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return c
+	}
+	c := newCLab(t, user)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	t.Run("version check", func(t *testing.T) {
+		if err := c.CheckLabRuntimeSupport(ctx); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("capture interfaces", func(t *testing.T) {
+		interfaces, err := c.CaptureInterfaces(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []clablabruntime.CaptureInterface{
+			{Node: "client", Interface: "eth1", PeerNode: "server", PeerInterface: "eth1"},
+			{Node: "server", Interface: "eth1", PeerNode: "client", PeerInterface: "eth1"},
+		}
+		if len(interfaces) != 2 || interfaces[0] != want[0] || interfaces[1] != want[1] {
+			t.Fatalf("interfaces = %+v", interfaces)
+		}
+	})
+
+	t.Run("capture both ends of a link", func(t *testing.T) {
+		pinged := make(chan error, 1)
+		go func() {
+			time.Sleep(time.Second)
+			pinged <- c.AttachLabRuntimeNode(ctx, clablabruntime.AttachRequest{
+				NodeName: "client",
+				Command:  []string{"ping", "-c", "4", "-i", "0.3", "10.10.10.2"},
+			}, clablabruntime.AttachStreams{Stdout: io.Discard})
+		}()
+
+		var out bytes.Buffer
+		err := c.Capture(ctx, clablabruntime.CaptureRequest{
+			Targets: []clablabruntime.CaptureTarget{
+				{Node: "client", Interface: "eth1"}, {Node: "server", Interface: "eth1"},
+			},
+			Duration: 5 * time.Second,
+		}, &out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := <-pinged; err != nil {
+			t.Fatalf("ping: %v", err)
+		}
+
+		names, icmp := summarizePCAPNG(t, out.Bytes())
+		if len(names) != 2 || names[0] != "client:eth1" || names[1] != "server:eth1" {
+			t.Fatalf("interfaces = %v", names)
+		}
+		// every echo request and reply crosses both ends
+		if icmp[0] < 8 || icmp[1] < 8 {
+			t.Fatalf("ICMP packets per interface = %v, want at least 8 on each", icmp)
+		}
+	})
+
+	t.Run("restart as lab editor", func(t *testing.T) {
+		if err := c.RestartNodes(ctx, []string{"server"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("forbidden identity", func(t *testing.T) {
+		forbidden := os.Getenv("CLAB_C9S_TEST_FORBIDDEN_USER")
+		if forbidden == "" {
+			t.Skip("CLAB_C9S_TEST_FORBIDDEN_USER is not set")
+		}
+
+		err := newCLab(t, forbidden).Capture(ctx, clablabruntime.CaptureRequest{
+			Targets:  []clablabruntime.CaptureTarget{{Node: "client", Interface: "eth1"}},
+			Duration: time.Second,
+		}, io.Discard)
+		if err == nil || !strings.Contains(err.Error(), "forbidden") {
+			t.Fatalf("capture as %s = %v, want forbidden", forbidden, err)
+		}
+	})
+}
+
+// summarizePCAPNG returns the interface names of a little-endian pcapng stream and its IPv4 ICMP
+// packets per interface ID.
+func summarizePCAPNG(t *testing.T, data []byte) ([]string, map[uint32]int) {
+	t.Helper()
+
+	var names []string
+	icmp := map[uint32]int{}
+	for len(data) >= 12 {
+		blockType := binary.LittleEndian.Uint32(data[0:4])
+		length := int(binary.LittleEndian.Uint32(data[4:8]))
+		if length < 12 || length > len(data) {
+			t.Fatalf("invalid block length %d", length)
+		}
+		body := data[8 : length-4]
+		switch blockType {
+		case 1: // Interface Description Block
+			options := body[8:]
+			for len(options) >= 4 {
+				code := binary.LittleEndian.Uint16(options[0:2])
+				size := int(binary.LittleEndian.Uint16(options[2:4]))
+				if code == 0 {
+					break
+				}
+				if code == 2 {
+					names = append(names, string(options[4:4+size]))
+				}
+				options = options[4+size+(4-size%4)%4:]
+			}
+		case 6: // Enhanced Packet Block
+			id := binary.LittleEndian.Uint32(body[0:4])
+			frame := body[20 : 20+binary.LittleEndian.Uint32(body[12:16])]
+			if len(frame) > 23 && frame[12] == 0x08 && frame[13] == 0x00 && frame[23] == 1 {
+				icmp[id]++
+			}
+		}
+		data = data[length:]
+	}
+
+	return names, icmp
 }

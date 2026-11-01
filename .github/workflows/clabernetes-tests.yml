@@ -102,6 +102,11 @@ jobs:
 
           kubectl -n c9s rollout status deploy/clabernetes-manager --timeout=180s
 
+      - name: Install tshark
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+
       - name: Run Clabernetes Robot tests
         run: |
           bash ./tests/rf-run.sh c9s ./tests/14-clabernetes

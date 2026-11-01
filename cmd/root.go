@@ -37,6 +37,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		eventsCmd,
 		inspectCmd,
 		logsCmd,
+		captureCmd,
 		redeployCmd,
 		saveCmd,
 		toolsCmd,
@@ -265,11 +266,6 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 			"graph", runtimeName)
 	}
 
-	if getCommandPath(cobraCmd) == "inspect.interfaces" {
-		return fmt.Errorf("the %q command is not supported with lab runtime %q",
-			"inspect interfaces", runtimeName)
-	}
-
 	var unsupported []string
 	for _, flagName := range labRuntimeUnsupportedFlags[getCommandPath(cobraCmd)] {
 		if labRuntimeFlagWasSet(cobraCmd, flagName) {
@@ -341,6 +337,7 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		cobraCmd.Name() != "graph" &&
 		cobraCmd.Name() != "validate" &&
 		cobraCmd.Name() != "logs" &&
+		cobraCmd.Name() != "capture" &&
 		cobraCmd.Name() != "interfaces" {
 		return nil
 	}
