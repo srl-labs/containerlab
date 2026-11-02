@@ -18,10 +18,10 @@ import (
 
 var (
 	kindNames = []string{"ale_vaos"}
-	// default credentials of the vAOS image
+	// defaultCredentials are the default credentials of the vAOS image.
 	defaultCredentials = clabnodes.NewCredentials("admin", "Switch@123")
 
-	// front-panel ports 1/1/1 to 1/1/10 map to eth1 to eth10.
+	// InterfaceRegexp maps front-panel ports 1/1/1 to 1/1/10 to eth1 to eth10.
 	// 1/1/29A and 1/1/30A are only addressable as eth11 and eth12.
 	InterfaceRegexp = regexp.MustCompile(`^1/1/(?P<port>[1-9]|10)$`)
 	InterfaceOffset = 1
@@ -29,14 +29,15 @@ var (
 )
 
 const (
-	// not used: containerlab save is handled by the vrnetlab launcher (see SaveConfig)
+	// scrapliPlatformName is empty: the vrnetlab launcher handles containerlab save.
 	scrapliPlatformName = ""
 
 	// containerlab save handshake with the vrnetlab launcher, through the
-	// config dir mounted at /config in the container
+	// config dir mounted at /config in the container.
 	saveRequestFile = ".vaos-save-request"
 	saveDoneFile    = ".vaos-save-done"
 	saveTimeout     = 5 * time.Minute
+	savePollPeriod  = time.Second
 )
 
 // Register registers the node in the NodeRegistry.
@@ -105,37 +106,31 @@ func (n *vrVAOS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 }
 
 // SaveConfig asks the vrnetlab launcher to save the configuration. The launcher
-// runs "write memory flash-synchro" on the serial console and writes the output
-// of "show configuration snapshot" to the startup-config file of the node.
+// runs "write memory flash-synchro" on the serial console, writes the output of
+// "show configuration snapshot" to the startup-config file of the node, then
+// writes "ok" or the error in the done file.
 func (n *vrVAOS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cfgDir := filepath.Join(n.Cfg.LabDir, n.ConfigDirName)
 	reqFile := filepath.Join(cfgDir, saveRequestFile)
 	doneFile := filepath.Join(cfgDir, saveDoneFile)
 
 	_ = os.Remove(doneFile)
-	if err := os.WriteFile(reqFile, []byte("save\n"), 0o644); err != nil {
-		return nil, fmt.Errorf("%s: failed to request configuration save: %w", n.Cfg.ShortName, err)
+
+	err := os.WriteFile(reqFile, []byte("save\n"), 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to request configuration save: %w",
+			n.Cfg.ShortName, err)
 	}
 
-	deadline := time.Now().Add(saveTimeout)
-	for {
-		if b, err := os.ReadFile(doneFile); err == nil {
-			_ = os.Remove(doneFile)
-			if msg := strings.TrimSpace(string(b)); msg != "ok" {
-				return nil, fmt.Errorf("%s: configuration save failed: %s", n.Cfg.ShortName, msg)
-			}
-			break
-		}
-		if time.Now().After(deadline) {
-			_ = os.Remove(reqFile)
-			return nil, fmt.Errorf("%s: timeout waiting for the configuration save", n.Cfg.ShortName)
-		}
-		select {
-		case <-ctx.Done():
-			_ = os.Remove(reqFile)
-			return nil, ctx.Err()
-		case <-time.After(time.Second):
-		}
+	msg, err := waitSaveDone(ctx, doneFile, saveTimeout)
+	if err != nil {
+		_ = os.Remove(reqFile)
+
+		return nil, fmt.Errorf("%s: %w", n.Cfg.ShortName, err)
+	}
+
+	if msg != "ok" {
+		return nil, fmt.Errorf("%s: configuration save failed: %s", n.Cfg.ShortName, msg)
 	}
 
 	configPath := filepath.Join(cfgDir, n.StartupCfgFName)
@@ -144,4 +139,29 @@ func (n *vrVAOS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, e
 	return &clabnodes.SaveConfigResult{
 		ConfigPath: configPath,
 	}, nil
+}
+
+// waitSaveDone waits for the launcher to write its result in doneFile and
+// returns it. An empty file is still being written and is read again.
+func waitSaveDone(ctx context.Context, doneFile string, timeout time.Duration) (string, error) {
+	deadline := time.Now().Add(timeout)
+
+	for {
+		b, err := os.ReadFile(doneFile)
+		if msg := strings.TrimSpace(string(b)); err == nil && msg != "" {
+			_ = os.Remove(doneFile)
+
+			return msg, nil
+		}
+
+		if time.Now().After(deadline) {
+			return "", fmt.Errorf("timeout waiting for the configuration save")
+		}
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(savePollPeriod):
+		}
+	}
 }

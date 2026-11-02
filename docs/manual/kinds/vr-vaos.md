@@ -1,3 +1,9 @@
+---
+search:
+  boost: 4
+kind_code_name: ale_vaos
+kind_display_name: ALE OmniSwitch vAOS
+---
 # Alcatel-Lucent Enterprise OmniSwitch vAOS
 
 [ALE OmniSwitch](https://www.al-enterprise.com/en/products/switches) virtual AOS (vAOS) 8.x is identified with the `ale_vaos` kind in the [topology file](../topo-def-file.md). It is built using the [vrnetlab](../vrnetlab.md) project and essentially is a QEMU VM packaged in a docker container format.
