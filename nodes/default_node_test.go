@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -49,6 +50,70 @@ func TestDefaultNodeEndpointOwnership(t *testing.T) {
 
 	if got[0] != ep2 {
 		t.Fatalf("expected remaining endpoint to be ep2, got %#v", got[0])
+	}
+}
+
+func TestDefaultNodeEndpointsWithParked(t *testing.T) {
+	newNode := func() *DefaultNode {
+		return &DefaultNode{Cfg: &clabtypes.NodeConfig{ShortName: "node1", LongName: "clab-test-node1"}}
+	}
+	veth := func(n clablinks.Node, iface string) clablinks.Endpoint {
+		return clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n, iface, nil))
+	}
+
+	tests := []struct {
+		name   string
+		owned  []string
+		parked []string // nil means no parking node
+		want   []string
+	}{
+		{name: "no parking node", owned: []string{"eth1", "eth2"}, want: []string{"eth1", "eth2"}},
+		{name: "all parked for recreate", owned: nil, parked: []string{"eth1", "eth2"}, want: []string{"eth1", "eth2"}},
+		{
+			name:   "owned and parked split after a failed restore",
+			owned:  []string{"eth3"},
+			parked: []string{"eth1", "eth2"},
+			want:   []string{"eth3", "eth1", "eth2"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := newNode()
+			for _, iface := range tt.owned {
+				if err := d.AdoptEndpoint(veth(d, iface)); err != nil {
+					t.Fatalf("adopt %s: %v", iface, err)
+				}
+			}
+			if tt.parked != nil {
+				d.parkingNode = clablinks.NewParkingNode(d.Cfg.LongName, "/run/netns/test")
+				for _, iface := range tt.parked {
+					if err := d.parkingNode.AddEndpoint(veth(d.parkingNode, iface)); err != nil {
+						t.Fatalf("park %s: %v", iface, err)
+					}
+				}
+			}
+
+			// Spare capacity lets a missing clone show up as aliasing.
+			d.Endpoints = slices.Grow(d.Endpoints, 4)
+
+			got := d.EndpointsWithParked()
+			var names []string
+			for _, ep := range got {
+				names = append(names, ep.GetIfaceName())
+			}
+			if !slices.Equal(names, tt.want) {
+				t.Fatalf("got %v, want %v", names, tt.want)
+			}
+
+			// The result must not alias d.Endpoints when parked endpoints are added,
+			// or appending to it would corrupt the node's own list.
+			if tt.parked != nil && len(d.Endpoints) > 0 && &got[0] == &d.Endpoints[0] {
+				t.Fatal("result aliases d.Endpoints")
+			}
+			if len(d.Endpoints) != len(tt.owned) {
+				t.Fatalf("d.Endpoints changed: got %d, want %d", len(d.Endpoints), len(tt.owned))
+			}
+		})
 	}
 }
 
