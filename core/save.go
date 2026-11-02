@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,16 +38,19 @@ func (c *CLab) Save(
 	}
 
 	var wg sync.WaitGroup
-
-	wg.Add(len(c.Nodes))
+	errs := make([]error, 0, len(c.Nodes))
 
 	for _, node := range c.Nodes {
+		errs = append(errs, nil)
+		i := len(errs) - 1
+
+		wg.Add(1)
 		go func(node clabnodes.Node) {
 			defer wg.Done()
 
 			result, err := node.SaveConfig(ctx)
 			if err != nil {
-				log.Errorf("node %q save failed: %v", node.GetShortName(), err)
+				errs[i] = fmt.Errorf("node %q save failed: %w", node.GetShortName(), err)
 				return
 			}
 
@@ -55,14 +59,14 @@ func (c *CLab) Save(
 			}
 
 			if err := c.copySavedConfig(ctx, result, node, opts.copyDst); err != nil {
-				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
+				errs[i] = fmt.Errorf("node %q save copy failed: %w", node.GetShortName(), err)
 			}
 		}(node)
 	}
 
 	wg.Wait()
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *CLab) resolveCopyOutDst(dst string) (string, error) {
