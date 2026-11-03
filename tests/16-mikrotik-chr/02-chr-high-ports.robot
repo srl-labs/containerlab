@@ -48,6 +48,21 @@ Ensure restarting r1 preserves the high port and its configuration
     Wait Until Keyword Succeeds    300s    5s    Node is healthy    r1
     High port forwards traffic
 
+Ensure a reboot from inside RouterOS keeps all interfaces
+    # RouterOS can reject a NIC on every boot, also when it reboots itself
+    # while the container keeps running; the launcher re-plugs it then too.
+    Login via SSH with username and password
+    ...    address=clab-${lab-name}-r1
+    ...    username=admin
+    ...    password=admin
+    ...    try_for=30
+    SSHLibrary.Start Command    /system reboot
+    SSHLibrary.Close Connection
+    # Before the reboot starts, the old interfaces would still answer.
+    Sleep    20s
+    Wait Until Keyword Succeeds    300s    10s    High port forwards traffic
+    Node is healthy    r1
+
 
 *** Keywords ***
 Require AMD64

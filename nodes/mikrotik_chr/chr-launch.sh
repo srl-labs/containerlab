@@ -59,7 +59,8 @@
 #   "credential bootstrap FAILED: …"   the user/password step failed
 #   "management setup FAILED: …"       the ether1 address / mgmt VRF step failed
 #   "data NIC check FAILED: …"         RouterOS lacks an interface for a data NIC
-#                                      even after re-plugging it
+#                                      even after re-plugging it (also checked
+#                                      after a reboot from inside RouterOS)
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -110,8 +111,10 @@ log() { echo "chr-launch: $*"; }
 rm -f "$READY_FILE"
 
 FETCH_PORT=8080
-# QEMU's QMP monitor, inside the container only: re-plugs NICs RouterOS rejected at boot
+# QEMU's QMP monitors, inside the container only: one re-plugs NICs RouterOS
+# rejected at boot, the other reports guest reboots
 QMP_PORT=5001
+QMP_EVENT_PORT=5002
 
 # ---- disk -----------------------------------------------------------------
 IMG=""
@@ -373,6 +376,7 @@ done
 # shellcheck disable=SC2086
 $QEMU $ACCEL -display none -monitor none \
     -qmp "tcp:127.0.0.1:$QMP_PORT,server,nowait" \
+    -qmp "tcp:127.0.0.1:$QMP_EVENT_PORT,server,nowait" \
     -m "$MEM" -smp "cpus=$CPUS" \
     -drive "file=$IMG,format=raw" \
     -serial telnet:0.0.0.0:5000,server,nowait \
@@ -466,7 +470,8 @@ log "RouterOS answered after ${waited}s"
 # timing. The NIC itself is fine: plugged in again after boot it registers
 # normally, and RouterOS re-attaches the port's config, which it keys by MAC.
 # So wait until the interface list stops growing, then re-plug every NIC
-# RouterOS lacks, at the same PCI address.
+# RouterOS lacks, at the same PCI address. The same happens on every boot of
+# RouterOS, so this runs again after a reboot from inside RouterOS (below).
 ros_macs() { # the orig-mac-address of every RouterOS ethernet interface, lower case
     rest "$AUTH" interface/ethernet | tr '{' '\n' \
         | sed -n 's/.*"orig-mac-address":"\([^"]*\)".*/\1/p' | tr 'A-F' 'a-f'
@@ -500,38 +505,42 @@ replug_nic() { # replug_nic <index>: unplug data NIC <index>, plug it back at th
     qmp "{\"execute\":\"human-monitor-command\",\"arguments\":{\"command-line\":\"device_add $(data_nic_device "$1" "$(nic_mac "$1")")\"}}" \
         | grep -q '"return": *""'
 }
-_n=-1; _same=0; _t=0
-while [ "$_same" -lt 3 ] && [ "$_t" -lt 60 ]; do
-    # grep -c, not wc -l: the REST reply ends without a newline
-    _c=$(ros_macs | grep -c .)
-    [ "$_c" -gt "$max" ] && break
-    if [ "$_c" -eq "$_n" ]; then _same=$((_same + 1)); else _same=0; _n=$_c; fi
-    sleep 2
-    _t=$((_t + 2))
-done
-miss="$(missing_nics)"
-_round=1
-while [ -n "$miss" ] && [ "$PCI_BRIDGES" = 1 ] && [ "$_round" -le 3 ]; do
-    # shellcheck disable=SC2086  # a list of indices
-    log "RouterOS has no interface for $(ether_names $miss)(attempt $_round): re-plugging"
-    for _i in $miss; do
-        replug_nic "$_i" || log "re-plug of ether$((_i + 1)) did not complete"
-    done
-    _t=0
-    while [ -n "$(missing_nics)" ] && [ "$_t" -lt 20 ]; do
+check_data_nics() { # re-plug the data NICs RouterOS lacks; fails with $miss still missing
+    _n=-1; _same=0; _t=0
+    while [ "$_same" -lt 3 ] && [ "$_t" -lt 60 ]; do
+        # grep -c, not wc -l: the REST reply ends without a newline
+        _c=$(ros_macs | grep -c .)
+        [ "$_c" -gt "$max" ] && break
+        if [ "$_c" -eq "$_n" ]; then _same=$((_same + 1)); else _same=0; _n=$_c; fi
         sleep 2
         _t=$((_t + 2))
     done
     miss="$(missing_nics)"
-    _round=$((_round + 1))
-done
-if [ -n "$miss" ]; then
+    _round=1
+    while [ -n "$miss" ] && [ "$PCI_BRIDGES" = 1 ] && [ "$_round" -le 3 ]; do
+        # shellcheck disable=SC2086  # a list of indices
+        log "RouterOS has no interface for $(ether_names $miss)(attempt $_round): re-plugging"
+        for _i in $miss; do
+            replug_nic "$_i" || log "re-plug of ether$((_i + 1)) did not complete"
+        done
+        _t=0
+        while [ -n "$(missing_nics)" ] && [ "$_t" -lt 20 ]; do
+            sleep 2
+            _t=$((_t + 2))
+        done
+        miss="$(missing_nics)"
+        _round=$((_round + 1))
+    done
+    [ -z "$miss" ] || return 1
+    [ "$_round" -gt 1 ] && log "all $max data NICs are RouterOS interfaces after re-plugging"
+    return 0
+}
+if ! check_data_nics; then
     # shellcheck disable=SC2086  # a list of indices
     log "data NIC check FAILED: RouterOS has no interface for $(ether_names $miss)(of $max data NICs)"
     wait "$QEMU_PID"
     exit 0
 fi
-[ "$_round" -gt 1 ] && log "all $max data NICs are RouterOS interfaces after re-plugging"
 
 # Ready means a user can log in: RouterOS starts its SSH server well after REST
 # answers on a slow boot (about 40 s later under TCG on arm64), so when the
@@ -736,6 +745,51 @@ mgmt_attach() {
     done
 }
 
+# ---- reboots from inside RouterOS -----------------------------------------
+# /system reboot restarts RouterOS but not qemu or this container, and RouterOS
+# can reject a NIC again on its way up. QEMU reports the reset as a RESET event
+# on its second QMP monitor: check the data NICs again once RouterOS answers.
+# The node stays ready during the reboot, as before; it loses the ready marker
+# only when a NIC is still missing afterwards.
+qmp_events() { # print QEMU's QMP events, one per line, while qemu runs
+    # busybox nc exits when its stdin closes: hold it open for qemu's lifetime
+    {
+        printf '%s\n' '{"execute":"qmp_capabilities"}'
+        while kill -0 "$QEMU_PID" 2>/dev/null; do sleep 5; done
+    } | nc 127.0.0.1 "$QMP_EVENT_PORT" 2>/dev/null
+}
+after_reboot() { # wait for RouterOS to answer, then check the data NICs again
+    log "RouterOS rebooted: checking the data NICs again"
+    sleep 5
+    _t0=$(date +%s)
+    until rest "$AUTH" system/resource >/dev/null 2>&1; do
+        if [ $(( $(date +%s) - _t0 )) -ge "$BOOT_WAIT" ]; then
+            log "RouterOS did not answer within ${BOOT_WAIT}s after the reboot: data NICs not checked"
+            return
+        fi
+        sleep 2
+    done
+    if check_data_nics; then
+        touch "$READY_FILE" 2>/dev/null || true
+        log "data NICs after the reboot: all $max are RouterOS interfaces"
+    else
+        rm -f "$READY_FILE"
+        # shellcheck disable=SC2086  # a list of indices
+        log "data NIC check FAILED after a reboot: RouterOS has no interface for $(ether_names $miss)(of $max data NICs)"
+    fi
+}
+watch_reboots() { # in the background: check the data NICs after every reboot
+    _last=0
+    qmp_events | while read -r _ev; do
+        case "$_ev" in *'"event": "RESET"'*) ;; *) continue ;; esac
+        # One reboot resets the guest twice, milliseconds apart: handle it once.
+        _ts=$(printf '%s' "$_ev" | sed -n 's/.*"seconds": *\([0-9]*\).*/\1/p')
+        [ "${_ts:-0}" -gt $((_last + 10)) ] || continue
+        _last=$_ts
+        after_reboot
+    done &
+}
+
 # Bootstrap + startup-config import happen ONCE per container lifetime. On a
 # restart the CHR disk keeps its config and the marker (in the container rw
 # layer) survives, so the bootstrap (which could wait forever if the config
@@ -747,6 +801,7 @@ if [ -f "$DONE_MARKER" ]; then
     mgmt_setup
     mgmt_attach
     ready
+    watch_reboots
     wait "$QEMU_PID"
     exit 0
 fi
@@ -834,4 +889,5 @@ fi
 
 touch "$DONE_MARKER" 2>/dev/null || true
 ready
+watch_reboots
 wait "$QEMU_PID"
