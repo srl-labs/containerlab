@@ -161,6 +161,7 @@ func TestGetContainersReturnsNetnsNodeWhenNodeIsMissing(t *testing.T) {
 	n := newSRLTestNode(t, newSRLTestConfig(t), rt)
 
 	holder := clabruntime.GenericContainer{Names: []string{testNetnsName}}
+
 	rt.EXPECT().ListContainers(ctx, []*clabtypes.GenericFilter{
 		{FilterType: "name", Match: testNodeName},
 	}).Return(nil, nil)

@@ -352,17 +352,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
 
-	if n.usesNetnsNode() {
-		n.netnsNode = new(namespaceNode)
-		if err := n.netnsNode.Init(
-			n.newNetnsConfig(),
-			clabnodes.WithRuntime(n.GetRuntime()),
-		); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return n.initNetnsNode()
 }
 
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {

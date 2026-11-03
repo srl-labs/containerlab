@@ -41,6 +41,16 @@ func (n *srl) usesNetnsNode() bool {
 	return n.Cfg.NetworkMode == "" && !n.Cfg.IsRootNamespaceBased
 }
 
+func (n *srl) initNetnsNode() error {
+	if !n.usesNetnsNode() {
+		return nil
+	}
+
+	n.netnsNode = new(namespaceNode)
+
+	return n.netnsNode.Init(n.newNetnsConfig(), clabnodes.WithRuntime(n.GetRuntime()))
+}
+
 func (n *srl) newNetnsConfig() *clabtypes.NodeConfig {
 	labels := maps.Clone(n.Cfg.Labels)
 
@@ -232,6 +242,7 @@ func (n *srl) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer
 		if errors.Is(err, clabnodes.ErrContainersNotFound) {
 			return n.netnsNode.GetContainers(ctx)
 		}
+
 		return nil, err
 	}
 
@@ -240,6 +251,7 @@ func (n *srl) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer
 		if errors.Is(err, clabnodes.ErrContainersNotFound) {
 			return cnts, nil
 		}
+
 		return nil, err
 	}
 
