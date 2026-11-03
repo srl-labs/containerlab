@@ -55,7 +55,9 @@ func TestDefaultNodeEndpointOwnership(t *testing.T) {
 
 func TestDefaultNodeEndpointsWithParked(t *testing.T) {
 	newNode := func() *DefaultNode {
-		return &DefaultNode{Cfg: &clabtypes.NodeConfig{ShortName: "node1", LongName: "clab-test-node1"}}
+		return &DefaultNode{
+			Cfg: &clabtypes.NodeConfig{ShortName: "node1", LongName: "clab-test-node1"},
+		}
 	}
 	veth := func(n clablinks.Node, iface string) clablinks.Endpoint {
 		return clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n, iface, nil))
@@ -68,7 +70,12 @@ func TestDefaultNodeEndpointsWithParked(t *testing.T) {
 		want   []string
 	}{
 		{name: "no parking node", owned: []string{"eth1", "eth2"}, want: []string{"eth1", "eth2"}},
-		{name: "all parked for recreate", owned: nil, parked: []string{"eth1", "eth2"}, want: []string{"eth1", "eth2"}},
+		{
+			name:   "all parked for recreate",
+			owned:  nil,
+			parked: []string{"eth1", "eth2"},
+			want:   []string{"eth1", "eth2"},
+		},
 		{
 			name:   "owned and parked split after a failed restore",
 			owned:  []string{"eth3"},
