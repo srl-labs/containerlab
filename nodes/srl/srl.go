@@ -232,6 +232,8 @@ type srl struct {
 	swVersion *SrlVersion
 	// indicates if the node supports OpenConfig server
 	supportsOpenconfig bool
+	// holder of the node's network namespace
+	netnsNode *namespaceNode
 }
 
 func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
@@ -310,6 +312,13 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		n.Cfg.User = "0:0"
 	}
 
+	// restart the node when it is rebooted from within.
+	// unless-stopped is used, as some images exit with code 0 on reboot;
+	// on-failure is enough once all supported images exit with a non-zero code.
+	if n.Cfg.RestartPolicy == "" {
+		n.Cfg.RestartPolicy = "unless-stopped"
+	}
+
 	maps.Copy(n.Cfg.Sysctls, srlSysctl)
 
 	if n.Cfg.License != "" {
@@ -342,6 +351,16 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
+
+	if n.usesNetnsNode() {
+		n.netnsNode = new(namespaceNode)
+		if err := n.netnsNode.Init(
+			n.newNetnsConfig(),
+			clabnodes.WithRuntime(n.GetRuntime()),
+		); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
