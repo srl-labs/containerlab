@@ -36,7 +36,7 @@ require (
 	github.com/jlaffaye/ftp v0.2.4
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
-	github.com/klauspost/cpuid/v2 v2.4.0
+	github.com/klauspost/cpuid/v2 v2.4.1
 	github.com/mackerelio/go-osstat v0.2.8
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/opencontainers/runtime-spec v1.3.0
