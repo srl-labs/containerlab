@@ -38,6 +38,11 @@ Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get 
 
 To make containerlab attempt a graceful shutdown of the running containers, add the `--graceful` flag to destroy cmd. Without it, containers will be removed forcefully without even attempting to stop them.
 
+#### max-workers
+
+The local `--max-workers` flag limits how many nodes containerlab deletes
+concurrently. By default, containerlab uses one worker per node being deleted.
+
 #### keep-mgmt-net
 
 Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
