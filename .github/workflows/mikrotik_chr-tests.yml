@@ -21,6 +21,7 @@ jobs:
       matrix:
         test-suite:
           - "01*.robot"
+          - "02*.robot"
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ inputs.runtime == 'podman' }}
     steps:

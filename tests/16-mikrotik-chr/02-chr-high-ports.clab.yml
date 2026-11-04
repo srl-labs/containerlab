@@ -1,0 +1,19 @@
+name: 16-02-chr-high-ports
+topology:
+  kinds:
+    mikrotik_chr:
+      image: mikrotik/chr:7.24.5
+  nodes:
+    r1:
+      kind: mikrotik_chr
+      startup-config: |
+        /ip address add address=10.0.1.1/30 interface=ether64
+    r2:
+      kind: mikrotik_chr
+      startup-config: |
+        /ip address add address=10.0.1.2/30 interface=ether64
+  links:
+    # The highest supported port, sparse: the intervening NICs are created too, so
+    # ether64 needs 63 data NICs on three PCI bridges (AMD64 only). At this count
+    # RouterOS usually rejects a NIC at boot, which the launcher re-plugs.
+    - endpoints: ["r1:ether64", "r2:ether64"]

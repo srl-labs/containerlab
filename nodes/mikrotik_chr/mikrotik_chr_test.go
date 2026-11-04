@@ -148,21 +148,65 @@ func TestPreDeployWritesLauncherAndStartupConfig(t *testing.T) {
 
 func TestInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
+		goarch  string // defaults to amd64, so the result doesn't depend on the test host
 		ifaces  []string
 		want    []string
 		wantErr bool
+		errText string // when set, the error must contain it
 	}{
 		"routeros-names": {
-			ifaces: []string{"ether2", "ether5", "ether13"},
-			want:   []string{"eth1", "eth4", "eth12"},
+			ifaces: []string{"ether2", "ether5", "ether13", "ether30", "ether33", "ether64"},
+			want:   []string{"eth1", "eth4", "eth12", "eth29", "eth32", "eth63"},
 		},
-		"eth-names":   {ifaces: []string{"eth1", "eth3"}, want: []string{"eth1", "eth3"}},
+		"eth-names": {
+			ifaces: []string{"eth1", "eth3", "eth63"},
+			want:   []string{"eth1", "eth3", "eth63"},
+		},
 		"mgmt-ether1": {ifaces: []string{"ether1"}, wantErr: true},
+		"ether-overflow": {
+			ifaces:  []string{"ether65"},
+			wantErr: true,
+			errText: `interface "ether65" (eth64) exceeds the maximum data NIC index 63 on amd64 (eth63 / ether64)`,
+		},
+		"ether300": {ifaces: []string{"ether300"}, wantErr: true, errText: "exceeds the maximum"},
+		"eth-overflow": {
+			ifaces:  []string{"eth64"},
+			wantErr: true,
+			errText: `interface "eth64" exceeds the maximum`,
+		},
+		"eth300": {ifaces: []string{"eth300"}, wantErr: true, errText: "exceeds the maximum"},
+		"integer-overflow": {
+			ifaces:  []string{"eth999999999999999999999999"},
+			wantErr: true,
+			errText: "exceeds the maximum",
+		},
+		// VMInterfaceRegexp is not anchored at the start, so this passes the parent check.
+		"malformed": {
+			ifaces:  []string{"xeth5"},
+			wantErr: true,
+			errText: "cannot parse interface index",
+		},
+		"duplicate": {ifaces: []string{"eth1", "eth1"}, wantErr: true},
+		"arm64-limit": {
+			goarch: "arm64",
+			ifaces: []string{"ether2", "ether30"},
+			want:   []string{"eth1", "eth29"},
+		},
+		"arm64-overflow": {
+			goarch:  "arm64",
+			ifaces:  []string{"ether31"},
+			wantErr: true,
+			errText: `interface "ether31" (eth30) exceeds the maximum data NIC index 29 on arm64 (eth29 / ether30)`,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			n := newInitialized(t, &clabtypes.NodeConfig{ShortName: "r1", LabDir: t.TempDir()})
+			n.goarch = "amd64"
+			if tc.goarch != "" {
+				n.goarch = tc.goarch
+			}
 
 			var err error
 			for _, ifName := range tc.ifaces {
@@ -180,6 +224,14 @@ func TestInterfaceParsing(t *testing.T) {
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("interfaces %v: want an error, got none", tc.ifaces)
+				}
+				if !strings.Contains(err.Error(), tc.errText) {
+					t.Errorf(
+						"interfaces %v: error %q, want it to contain %q",
+						tc.ifaces,
+						err,
+						tc.errText,
+					)
 				}
 				return
 			}
@@ -348,14 +400,14 @@ func TestHealthcheckStartPeriod(t *testing.T) {
 		env  map[string]string
 		want int
 	}{
-		"defaults": {env: nil, want: 60 + 4*300 + 90},
+		"defaults": {env: nil, want: 60 + 4*300 + 90 + 180},
 		"overrides": {
 			env:  map[string]string{"CHR_INTF_WAIT": "10", "CHR_BOOT_WAIT": "100"},
-			want: 10 + 4*100 + 90,
+			want: 10 + 4*100 + 90 + 180,
 		},
 		"invalid": {
 			env:  map[string]string{"CHR_INTF_WAIT": "x", "CHR_BOOT_WAIT": "-5"},
-			want: 60 + 4*300 + 90,
+			want: 60 + 4*300 + 90 + 180,
 		},
 	}
 
