@@ -5,6 +5,7 @@ Documentation       SR-SIM nodes on separate management networks.
 ...                 when the SR OS management route points to the right gateway.
 Library             OperatingSystem
 Resource            ../common.robot
+Resource            ../srsim.robot
 Resource            mgmt.resource
 
 Suite Setup         Setup
@@ -24,6 +25,9 @@ ${main-gw}          10.78.150.1
 *** Test Cases ***
 Deploy SR-SIM nodes on three management networks
     Command Should Succeed    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo} --vars ${initial-vars}
+
+Check SR-SIM license
+    Check SR-SIM License    ${topo}    ${runtime}
 
 Integrated node is attached to its management network
     ${ip} =    Node Address    clab-sr13-sr-int    sr13-int
