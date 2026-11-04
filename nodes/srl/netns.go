@@ -3,35 +3,15 @@ package srl
 import (
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const netnsNodeType = "srl-netns"
-
-// namespaceNode owns the network namespace of an SR Linux node, so that the dataplane links and
-// the management address survive a restart of the SR Linux container.
-type namespaceNode struct {
-	clabnodes.DefaultNode
-}
-
-func (n *namespaceNode) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
-	n.DefaultNode = *clabnodes.NewDefaultNode(n)
-	n.Cfg = cfg
-	n.StopSignal = clabtypes.SIGTERM
-
-	for _, o := range opts {
-		o(n)
-	}
-
-	return nil
-}
 
 // usesNetnsNode reports whether the node runs in the network namespace of a holder container.
 // Nodes with a user-defined network mode keep the network namespace of their own container.
@@ -44,7 +24,7 @@ func (n *srl) initNetnsNode() error {
 		return nil
 	}
 
-	n.netnsNode = new(namespaceNode)
+	n.netnsNode = new(clabnodes.NetnsHolder)
 
 	return n.netnsNode.Init(n.newNetnsConfig(), clabnodes.WithRuntime(n.GetRuntime()))
 }
@@ -120,32 +100,6 @@ func (n *srl) containerConfig() *clabtypes.NodeConfig {
 	cfg.PortSet = nil
 
 	return &cfg
-}
-
-func (n *srl) ensureNetnsRunning(ctx context.Context) error {
-	switch status := n.netnsNode.GetContainerStatus(ctx); status {
-	case clabruntime.Running:
-	case clabruntime.Created, clabruntime.Stopped:
-		if err := n.netnsNode.Start(ctx); err != nil {
-			return fmt.Errorf("node %q network namespace container start error: %w",
-				n.Cfg.ShortName, err)
-		}
-	case clabruntime.Paused:
-		if err := n.Runtime.UnpauseContainer(ctx, n.netnsNode.Config().LongName); err != nil {
-			return fmt.Errorf("node %q network namespace container unpause error: %w",
-				n.Cfg.ShortName, err)
-		}
-	case clabruntime.NotFound:
-		return fmt.Errorf(
-			"node %q network namespace container %q not found; recreate the node",
-			n.Cfg.ShortName, n.netnsNode.Config().LongName,
-		)
-	default:
-		return fmt.Errorf("node %q network namespace container %q is %s",
-			n.Cfg.ShortName, n.netnsNode.Config().LongName, status)
-	}
-
-	return nil
 }
 
 // linkNetns points the node's netns symlink to the holder, as the namespace path of the

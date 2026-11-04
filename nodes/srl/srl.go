@@ -236,7 +236,7 @@ type srl struct {
 	// indicates if the node supports OpenConfig server
 	supportsOpenconfig bool
 	// holder of the node's network namespace
-	netnsNode *namespaceNode
+	netnsNode *clabnodes.NetnsHolder
 }
 
 func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
@@ -422,7 +422,7 @@ func (n *srl) Start(ctx context.Context) error {
 		return n.DefaultNode.Start(ctx)
 	}
 
-	if err := n.ensureNetnsRunning(ctx); err != nil {
+	if err := n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName); err != nil {
 		return err
 	}
 

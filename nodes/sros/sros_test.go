@@ -852,7 +852,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 		runtime.EXPECT().GetContainerStatus(ctx, n.netnsNode.Config().LongName).
 			Return(clabruntime.Running)
 
-		require.NoError(t, n.ensureNetnsRunning(ctx))
+		require.NoError(t, n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName))
 	})
 
 	t.Run("starts stopped holder", func(t *testing.T) {
@@ -868,7 +868,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 			StartContainer(ctx, n.netnsNode.Config().LongName, gomock.Any()).
 			Return(nil, nil)
 
-		require.NoError(t, n.ensureNetnsRunning(ctx))
+		require.NoError(t, n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName))
 	})
 
 	t.Run("missing holder requires recreate", func(t *testing.T) {
@@ -881,7 +881,7 @@ func TestEnsureNetnsRunning(t *testing.T) {
 		runtime.EXPECT().GetContainerStatus(ctx, n.netnsNode.Config().LongName).
 			Return(clabruntime.NotFound)
 
-		err := n.ensureNetnsRunning(ctx)
+		err := n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "recreate the node")
 	})
@@ -1051,7 +1051,7 @@ func TestNamespaceNodeUsesDefaultLifecycle(t *testing.T) {
 	require.NoError(t, n.Init(n.Cfg, clabnodes.WithRuntime(mockRuntime)))
 
 	holder := n.netnsNode
-	require.IsType(t, &namespaceNode{}, holder)
+	require.IsType(t, &clabnodes.NetnsHolder{}, holder)
 	require.Same(t, mockRuntime, holder.GetRuntime())
 	mockRuntime.EXPECT().CreateContainer(ctx, holder.Config()).Return("holder-id", nil)
 	mockRuntime.EXPECT().StartContainer(ctx, "holder-id", gomock.Any()).Return(nil, nil)
