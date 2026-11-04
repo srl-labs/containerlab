@@ -35,6 +35,12 @@ func TestOVSDeviceMissing(t *testing.T) {
 	if got := ovsMapValue("has space"); got != `"has space"` {
 		t.Fatalf("ovsMapValue() = %q", got)
 	}
+	if !ovsRowMissing(`ovs-vsctl: no row "clab-deadbeef" in table Interface`) {
+		t.Fatal("expected a missing OVS row to be detected")
+	}
+	if ovsRowMissing("database connection failed") {
+		t.Fatal("a database failure is not a missing row")
+	}
 }
 
 func TestOVSEndpointPortDoesNotAccumulate(t *testing.T) {
@@ -58,9 +64,10 @@ func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
 	t.Helper()
 
 	bridge := "br-ovs-leak"
-	_ = goOvs.New().VSwitch.DeleteBridge(bridge)
-	if err := goOvs.New().VSwitch.AddBridge(bridge); err != nil {
-		t.Fatalf("add bridge: %v", err)
+	c := goOvs.New()
+	_ = c.VSwitch.DeleteBridge(bridge)
+	if err := c.VSwitch.AddBridge(bridge); err != nil {
+		t.Skipf("ovsdb is not available: %v", err)
 	}
 	t.Cleanup(func() {
 		_ = goOvs.New().VSwitch.DeleteBridge(bridge)

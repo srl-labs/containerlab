@@ -86,7 +86,7 @@ func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]s
 
 func (n *ovs) Delete(_ context.Context) error {
 	for _, ep := range n.GetEndpoints() {
-		if err := n.DeleteBridgePort(ep.GetIfaceName()); err != nil {
+		if err := n.removeEndpointPorts(ep.GetIfaceName()); err != nil {
 			log.Errorf(
 				"Could not remove OVS port %q from bridge %q: %v",
 				ep.GetIfaceName(),
@@ -96,8 +96,8 @@ func (n *ovs) Delete(_ context.Context) error {
 		}
 	}
 
-	// Ports created before they were tagged, or whose netdev disappeared with the container,
-	// are not named after the topology interface. Drop those leftovers too.
+	// One sweep for ports created before they were tagged. Per-endpoint deletion already
+	// removes ports this version tagged at attach time.
 	if err := n.removeMissingAutoPorts(); err != nil {
 		log.Errorf(
 			"Could not remove stale OVS ports from bridge %q: %v",
@@ -109,15 +109,11 @@ func (n *ovs) Delete(_ context.Context) error {
 	return nil
 }
 
-// DeleteBridgePort removes the OVS port for a topology interface. The port name matches the
-// topology name only when that name is a valid Linux interface name. Otherwise Open vSwitch keeps
-// the random clab-* netdev name, which has to be found via the tag recorded at attach time.
+// DeleteBridgePort removes the OVS port for one topology interface. Callers that attach a new
+// link use removeEndpointPorts directly and fail on error. Link removal treats this as
+// best-effort.
 func (n *ovs) DeleteBridgePort(endpoint string) error {
-	if err := n.removeEndpointPorts(endpoint); err != nil {
-		return err
-	}
-
-	return n.removeMissingAutoPorts()
+	return n.removeEndpointPorts(endpoint)
 }
 
 func (*ovs) DeleteNetnsSymlink() (err error) { return nil }
@@ -165,8 +161,9 @@ func (n *ovs) AddLinkToContainer(
 
 	logical := n.logicalEndpointName(link)
 	// A previous attach of this same topology interface may still be registered under the random
-	// netdev name. Remove it before adding the new one so redeploy does not accumulate ports.
-	if err := n.DeleteBridgePort(logical); err != nil {
+	// netdev name. Remove that tagged port before adding the new one. The full stale-port sweep
+	// runs once from Delete, not on every attach.
+	if err := n.removeEndpointPorts(logical); err != nil {
 		return err
 	}
 
@@ -345,6 +342,10 @@ func ovsInterfaceDeviceMissing(iface string) (bool, error) {
 		"error",
 	).CombinedOutput()
 	if err != nil {
+		// The port disappeared between ListPorts and this get. Nothing left to delete.
+		if ovsRowMissing(string(out)) {
+			return false, nil
+		}
 		return false, fmt.Errorf("get OVS interface %q error: %w (%s)", iface, err, out)
 	}
 
@@ -357,6 +358,10 @@ func ovsDeviceMissing(errorColumn string) bool {
 	errorColumn = strings.TrimSpace(errorColumn)
 
 	return strings.Contains(errorColumn, "could not open network device")
+}
+
+func ovsRowMissing(output string) bool {
+	return strings.Contains(strings.ToLower(output), "no row")
 }
 
 func ovsMapValue(value string) string {

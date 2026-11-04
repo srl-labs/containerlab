@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
 )
@@ -209,7 +210,18 @@ func removeBridgePort(node Node, ifaceName string) error {
 		return nil
 	}
 
-	return cleaner.DeleteBridgePort(ifaceName)
+	// Best-effort, matching ovs.Delete. A missing bridge or a down ovsdb must not abort
+	// destroy or reconcile and leave the container running.
+	if err := cleaner.DeleteBridgePort(ifaceName); err != nil {
+		log.Errorf(
+			"Could not remove bridge port %q on node %q: %v",
+			ifaceName,
+			node.GetShortName(),
+			err,
+		)
+	}
+
+	return nil
 }
 
 // isOwnedBy reports whether link carries the ownership marker of the logical
