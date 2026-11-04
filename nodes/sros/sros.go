@@ -45,7 +45,7 @@ import (
 const (
 	SrosDefaultType = "SR-1" // default sros node type
 
-	readyTimeout   = time.Minute * 1 // max wait time for node to boot
+	readyTimeout   = time.Minute * 3 // max wait time for node to boot
 	tcpDialTimeout = time.Second * 1
 
 	generateable     = true
