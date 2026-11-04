@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -26,6 +27,8 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -232,6 +235,8 @@ type srl struct {
 	swVersion *SrlVersion
 	// indicates if the node supports OpenConfig server
 	supportsOpenconfig bool
+	// holder of the node's network namespace
+	netnsNode *clabnodes.NetnsHolder
 }
 
 func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
@@ -310,6 +315,13 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		n.Cfg.User = "0:0"
 	}
 
+	// restart the node when it is rebooted from within.
+	// unless-stopped is used, as some images exit with code 0 on reboot;
+	// on-failure is enough once all supported images exit with a non-zero code.
+	if n.Cfg.RestartPolicy == "" {
+		n.Cfg.RestartPolicy = "unless-stopped"
+	}
+
 	maps.Copy(n.Cfg.Sysctls, srlSysctl)
 
 	if n.Cfg.License != "" {
@@ -343,7 +355,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
 
-	return nil
+	return n.initNetnsNode()
 }
 
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
@@ -372,6 +384,107 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	}
 
 	return n.createSRLFiles()
+}
+
+func (n *srl) Deploy(ctx context.Context, params *clabnodes.DeployParams) error {
+	if n.netnsNode == nil {
+		return n.DefaultNode.Deploy(ctx, params)
+	}
+
+	// network settings are finalized after Init, so the holder config is rebuilt here.
+	*n.netnsNode.Config() = *n.newNetnsConfig()
+	if err := n.netnsNode.Deploy(ctx, params); err != nil {
+		return fmt.Errorf("deploy network namespace node %q: %w", n.netnsNode.GetShortName(), err)
+	}
+
+	n.Cfg.Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(n.GetEndpoints()))
+
+	cID, err := n.Runtime.CreateContainer(ctx, n.containerConfig())
+	if err != nil {
+		return err
+	}
+
+	if _, err := n.Runtime.StartContainer(ctx, cID, n); err != nil {
+		return err
+	}
+
+	if err := n.linkNetns(ctx); err != nil {
+		return err
+	}
+
+	n.SetState(clabnodesstate.Deployed)
+
+	return nil
+}
+
+func (n *srl) Start(ctx context.Context) error {
+	if n.netnsNode == nil {
+		return n.DefaultNode.Start(ctx)
+	}
+
+	if err := n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName); err != nil {
+		return err
+	}
+
+	if err := n.DefaultNode.Start(ctx); err != nil {
+		return err
+	}
+
+	return n.linkNetns(ctx)
+}
+
+// Stop also stops the holder, so that the next start gets a fresh network namespace without
+// interfaces left behind by the stopped SR Linux container.
+func (n *srl) Stop(ctx context.Context) error {
+	if err := n.DefaultNode.Stop(ctx); err != nil || n.netnsNode == nil {
+		return err
+	}
+
+	if n.netnsNode.GetContainerStatus(ctx) != clabruntime.Running {
+		return nil
+	}
+
+	return n.Runtime.StopContainer(ctx, n.netnsNode.Config().LongName, n.netnsNode.StopSignal)
+}
+
+func (n *srl) Delete(ctx context.Context) error {
+	if n.netnsNode == nil {
+		return n.DefaultNode.Delete(ctx)
+	}
+
+	return errors.Join(n.DefaultNode.Delete(ctx), n.netnsNode.Delete(ctx))
+}
+
+// GetContainers returns the SR Linux container with the network settings of the holder.
+// When only the holder exists, it is returned so that it is not orphaned on destroy.
+func (n *srl) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
+	cnts, err := n.DefaultNode.GetContainers(ctx)
+	if n.netnsNode == nil {
+		return cnts, err
+	}
+
+	if err != nil {
+		if errors.Is(err, clabnodes.ErrContainersNotFound) {
+			return n.netnsNode.GetContainers(ctx)
+		}
+
+		return nil, err
+	}
+
+	holder, err := n.netnsNode.GetContainers(ctx)
+	if err != nil {
+		if errors.Is(err, clabnodes.ErrContainersNotFound) {
+			return cnts, nil
+		}
+
+		return nil, err
+	}
+
+	cnts[0].NetworkName = holder[0].NetworkName
+	cnts[0].NetworkSettings = holder[0].NetworkSettings
+	cnts[0].Ports = holder[0].Ports
+
+	return cnts, nil
 }
 
 func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {

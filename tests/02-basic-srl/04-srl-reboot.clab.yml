@@ -1,0 +1,22 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 02-04-srl-reboot
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      startup-config: srl1-startup.cli
+    srl2:
+      kind: nokia_srlinux
+      env:
+        SRL_LOCATION: test123
+      startup-config: srl2-startup.cli
+
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
