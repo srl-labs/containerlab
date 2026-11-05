@@ -8,6 +8,7 @@ import (
 
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	"go.uber.org/mock/gomock"
 )
 
@@ -71,5 +72,26 @@ func TestSaveReturnsNodeErrors(t *testing.T) {
 				t.Errorf("error reports %d failures, want %d: %q", got, len(tt.wantErr), err)
 			}
 		})
+	}
+}
+
+func TestSaveReturnsCopyErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	n := clabmocksmocknodes.NewMockNode(ctrl)
+	n.EXPECT().GetShortName().Return("r1").AnyTimes()
+	n.EXPECT().SaveConfig(gomock.Any()).
+		Return(&clabnodes.SaveConfigResult{ConfigPath: "/startup-config"}, nil)
+	n.EXPECT().Config().Return(nil)
+	c := &CLab{
+		Nodes:     map[string]clabnodes.Node{"r1": n},
+		Config:    &Config{Name: "test"},
+		TopoPaths: &clabtypes.TopoPaths{},
+	}
+
+	err := c.Save(context.Background(), WithCopyOut(t.TempDir()))
+
+	want := `node "r1" save copy failed: node config missing`
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("got error %v, want it to contain %q", err, want)
 	}
 }

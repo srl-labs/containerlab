@@ -38,14 +38,12 @@ func (c *CLab) Save(
 	}
 
 	var wg sync.WaitGroup
-	errs := make([]error, 0, len(c.Nodes))
+	errs := make([]error, len(c.Nodes))
+	i := 0
 
 	for _, node := range c.Nodes {
-		errs = append(errs, nil)
-		i := len(errs) - 1
-
 		wg.Add(1)
-		go func(node clabnodes.Node) {
+		go func(i int, node clabnodes.Node) {
 			defer wg.Done()
 
 			result, err := node.SaveConfig(ctx)
@@ -61,7 +59,8 @@ func (c *CLab) Save(
 			if err := c.copySavedConfig(ctx, result, node, opts.copyDst); err != nil {
 				errs[i] = fmt.Errorf("node %q save copy failed: %w", node.GetShortName(), err)
 			}
-		}(node)
+		}(i, node)
+		i++
 	}
 
 	wg.Wait()
