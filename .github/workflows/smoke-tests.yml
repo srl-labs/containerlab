@@ -17,9 +17,6 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
     strategy:
       fail-fast: false
       matrix:

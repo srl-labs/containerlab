@@ -11,8 +11,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -497,6 +500,171 @@ func TestParseS3URL(t *testing.T) {
 			}
 			if gotKey != tt.wantKey {
 				t.Errorf("ParseS3URL() gotKey = %v, want %v", gotKey, tt.wantKey)
+			}
+		})
+	}
+}
+
+func TestS3ClientConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		s3Endpoint  string
+		endpointURL string
+		want        string
+		wantSecure  bool
+		wantErr     bool
+	}{
+		{
+			name:       "No override set - default AWS endpoint",
+			want:       "s3.amazonaws.com",
+			wantSecure: true,
+		},
+		{
+			name:        "AWS_ENDPOINT_URL with http endpoint",
+			endpointURL: "http://localhost:9000",
+			want:        "localhost:9000",
+			wantSecure:  false,
+		},
+		{
+			name:        "AWS_ENDPOINT_URL with https endpoint",
+			endpointURL: "https://s3.example.com",
+			want:        "s3.example.com",
+			wantSecure:  true,
+		},
+		{
+			name:        "AWS_ENDPOINT_URL with trailing slash",
+			endpointURL: "http://localhost:9000/",
+			want:        "localhost:9000",
+			wantSecure:  false,
+		},
+		{
+			name:        "AWS_ENDPOINT_URL_S3 takes precedence",
+			s3Endpoint:  "http://minio.svc:9000",
+			endpointURL: "http://localhost:9000",
+			want:        "minio.svc:9000",
+			wantSecure:  false,
+		},
+		{
+			name:        "Schemeless value is an error",
+			endpointURL: "localhost:9000",
+			wantErr:     true,
+		},
+		{
+			name:        "Missing host is an error",
+			endpointURL: "http://",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("AWS_ENDPOINT_URL_S3", tt.s3Endpoint)
+			t.Setenv("AWS_ENDPOINT_URL", tt.endpointURL)
+
+			gotEndpoint, gotSecure, err := s3ClientConfig()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("s3ClientConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotEndpoint != tt.want {
+				t.Errorf("s3ClientConfig() endpoint = %v, want %v", gotEndpoint, tt.want)
+			}
+			if gotSecure != tt.wantSecure {
+				t.Errorf("s3ClientConfig() secure = %v, want %v", gotSecure, tt.wantSecure)
+			}
+		})
+	}
+}
+
+// TestCopyFileContentsS3FromEndpointOverride covers the S3 fetch path of
+// CopyFileContents against a stubbed S3-compatible endpoint.
+func TestCopyFileContentsS3FromEndpointOverride(t *testing.T) {
+	const (
+		bucket  = "clab-mock"
+		key     = "s3-mock.clab.yml"
+		content = "name: s3mock\n\ntopology:\n  nodes:\n    l1:\n      kind: linux\n      image: alpine:3\n"
+	)
+
+	t.Setenv("AWS_ENDPOINT_URL_S3", "")
+	t.Setenv("AWS_ENDPOINT_URL", "")
+	t.Setenv("AWS_ACCESS_KEY_ID", "minioadmin")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "minioadmin")
+
+	cases := []struct {
+		name    string
+		object  string
+		wantErr bool
+	}{
+		{
+			name:   "object is fetched from the overridden endpoint",
+			object: content,
+		},
+		{
+			name:    "missing object yields an error",
+			object:  "",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var fetched atomic.Bool
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// path-style addressing puts bucket and key in the URL path
+				if r.URL.Path != "/"+bucket+"/"+key {
+					http.Error(w, "not found", http.StatusNotFound)
+					return
+				}
+
+				fetched.Store(true)
+
+				if tc.object == "" {
+					http.Error(w, `<?xml version="1.0"?><Error><Code>NoSuchKey</Code></Error>`, http.StatusNotFound)
+					return
+				}
+
+				// the request must be signed with credentials from the environment
+				if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256") {
+					http.Error(w, "unsigned request", http.StatusBadRequest)
+					return
+				}
+
+				w.Header().Set("ETag", `"d41d8cd98f00b204e9800998ecf8427e"`)
+				w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Length", strconv.Itoa(len(tc.object)))
+				_, _ = w.Write([]byte(tc.object))
+			}))
+			defer srv.Close()
+
+			t.Setenv("AWS_ENDPOINT_URL", srv.URL)
+
+			dst, err := os.CreateTemp(t.TempDir(), "s3-mock-*.clab.yml")
+			if err != nil {
+				t.Fatalf("os.CreateTemp() error = %v", err)
+			}
+			defer dst.Close()
+
+			err = CopyFileContents(context.Background(), "s3://"+bucket+"/"+key, dst)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("CopyFileContents() error = %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if !fetched.Load() {
+				t.Fatal("CopyFileContents() did not reach the endpoint")
+			}
+
+			if tc.wantErr {
+				return
+			}
+
+			got, err := os.ReadFile(dst.Name())
+			if err != nil {
+				t.Fatalf("os.ReadFile() error = %v", err)
+			}
+
+			if got := string(got); got != content {
+				t.Errorf("CopyFileContents() content = %q, want %q", got, content)
 			}
 		})
 	}

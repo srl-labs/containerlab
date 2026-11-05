@@ -226,9 +226,14 @@ func copyFileContentsS3(src string) (io.ReadCloser, error) {
 	}
 
 	// Create MinIO client with chained credentials
-	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+	endpoint, secure, err := s3ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewChainCredentials(credProviders),
-		Secure: true,
+		Secure: secure,
 		Region: region,
 	})
 	if err != nil {
@@ -254,6 +259,33 @@ func copyFileContentsS3(src string) (io.ReadCloser, error) {
 	}
 
 	return object, nil
+}
+
+// s3ClientConfig resolves the S3 endpoint and TLS setting. It defaults to the
+// AWS S3 endpoint, but can be overridden with the AWS_ENDPOINT_URL_S3 or
+// AWS_ENDPOINT_URL environment variables to address S3-compatible services
+// such as MinIO, following the AWS SDK endpoint configuration conventions.
+func s3ClientConfig() (endpoint string, secure bool, err error) {
+	for _, envVar := range []string{"AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT_URL"} {
+		endpointURL := strings.TrimSpace(os.Getenv(envVar))
+		if endpointURL == "" {
+			continue
+		}
+
+		u, parseErr := url.Parse(endpointURL)
+		if parseErr != nil {
+			return "", false, fmt.Errorf("invalid %s value: %w", envVar, parseErr)
+		}
+
+		if u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+			return "", false, fmt.Errorf("%s must be a valid http(s) endpoint URL, got %q", envVar, endpointURL)
+		}
+
+		// the endpoint host is passed to the S3 client, the scheme selects TLS
+		return u.Host, u.Scheme == "https", nil
+	}
+
+	return "s3.amazonaws.com", true, nil
 }
 
 type removeOnCloseFile struct {
