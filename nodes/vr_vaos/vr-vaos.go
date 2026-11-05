@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ var (
 	// 1/1/29A and 1/1/30A are only addressable as eth11 and eth12.
 	InterfaceRegexp = regexp.MustCompile(`^1/1/(?P<port>[1-9]|10)$`)
 	InterfaceOffset = 1
-	InterfaceHelp   = "1/1/X (where 1 <= X <= 10) or ethX (where 1 <= X <= 12)"
+	InterfaceHelp   = "1/1/X (where 1 <= X <= 10) or ethX (where X >= 1)"
 )
 
 const (
@@ -105,24 +106,30 @@ func (n *vrVAOS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	return nil
 }
 
-// SaveConfig asks the vrnetlab launcher to save the configuration. The launcher
-// runs "write memory flash-synchro" on the serial console, writes the output of
-// "show configuration snapshot" to the startup-config file of the node, then
-// writes "ok" or the error in the done file.
+// SaveConfig asks the vrnetlab launcher to save the configuration. The request
+// file holds a token. The launcher runs "write memory flash-synchro" on the
+// serial console, writes the output of "show configuration snapshot" to the
+// startup-config file of the node, then writes "<token> ok" or "<token> <error>"
+// in the done file.
 func (n *vrVAOS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cfgDir := filepath.Join(n.Cfg.LabDir, n.ConfigDirName)
 	reqFile := filepath.Join(cfgDir, saveRequestFile)
 	doneFile := filepath.Join(cfgDir, saveDoneFile)
 
-	_ = os.Remove(doneFile)
+	token := strconv.FormatInt(time.Now().UnixNano(), 10)
 
-	err := os.WriteFile(reqFile, []byte("save\n"), 0o644)
+	// write then rename, so the launcher never reads a partial request
+	err := os.WriteFile(reqFile+".tmp", []byte(token+"\n"), 0o644)
+	if err == nil {
+		err = os.Rename(reqFile+".tmp", reqFile)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to request configuration save: %w",
 			n.Cfg.ShortName, err)
 	}
 
-	msg, err := waitSaveDone(ctx, doneFile, saveTimeout)
+	msg, err := waitSaveDone(ctx, doneFile, token, saveTimeout)
 	if err != nil {
 		_ = os.Remove(reqFile)
 
@@ -141,14 +148,19 @@ func (n *vrVAOS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, e
 	}, nil
 }
 
-// waitSaveDone waits for the launcher to write its result in doneFile and
-// returns it. An empty file is still being written and is read again.
-func waitSaveDone(ctx context.Context, doneFile string, timeout time.Duration) (string, error) {
+// waitSaveDone waits for the launcher to write the result of the request
+// identified by token in doneFile and returns it. A result without the token
+// (an earlier request, or a file still being written) is ignored.
+func waitSaveDone(
+	ctx context.Context,
+	doneFile, token string,
+	timeout time.Duration,
+) (string, error) {
 	deadline := time.Now().Add(timeout)
 
 	for {
-		b, err := os.ReadFile(doneFile)
-		if msg := strings.TrimSpace(string(b)); err == nil && msg != "" {
+		b, _ := os.ReadFile(doneFile)
+		if msg, ok := strings.CutPrefix(strings.TrimSpace(string(b)), token+" "); ok {
 			_ = os.Remove(doneFile)
 
 			return msg, nil

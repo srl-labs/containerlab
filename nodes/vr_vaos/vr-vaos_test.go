@@ -1,6 +1,7 @@
 package vr_vaos
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -96,14 +97,20 @@ func TestVAOSInterfaceParsing(t *testing.T) {
 	}
 }
 
-// fakeLauncher answers a save request the way launch.py does.
-func fakeLauncher(t *testing.T, cfgDir, result string) {
-	t.Helper()
-
+// fakeLauncher answers a save request the way launch.py does. A result of an
+// earlier request is written first; SaveConfig must ignore it.
+func fakeLauncher(cfgDir, result string) {
 	go func() {
 		req := filepath.Join(cfgDir, saveRequestFile)
+		done := filepath.Join(cfgDir, saveDoneFile)
+
+		var token []byte
+
 		for {
-			if _, err := os.Stat(req); err == nil {
+			b, err := os.ReadFile(req)
+			if err == nil && len(b) > 0 {
+				token = bytes.TrimSpace(b)
+
 				break
 			}
 
@@ -111,12 +118,11 @@ func fakeLauncher(t *testing.T, cfgDir, result string) {
 		}
 
 		_ = os.Remove(req)
-		// the done file exists, empty, before the result is written
-		_ = os.WriteFile(filepath.Join(cfgDir, saveDoneFile), nil, 0o644)
+		_ = os.WriteFile(done, []byte("1 error: earlier request\n"), 0o644)
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(1500 * time.Millisecond)
 
-		_ = os.WriteFile(filepath.Join(cfgDir, saveDoneFile), []byte(result+"\n"), 0o644)
+		_ = os.WriteFile(done, []byte(string(token)+" "+result+"\n"), 0o644)
 	}()
 }
 
@@ -138,7 +144,7 @@ func TestVAOSSaveConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			fakeLauncher(t, cfgDir, tc.result)
+			fakeLauncher(cfgDir, tc.result)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
@@ -167,7 +173,7 @@ func TestVAOSSaveConfig(t *testing.T) {
 func TestVAOSSaveConfigTimeout(t *testing.T) {
 	doneFile := filepath.Join(t.TempDir(), saveDoneFile)
 
-	_, err := waitSaveDone(context.Background(), doneFile, 10*time.Millisecond)
+	_, err := waitSaveDone(context.Background(), doneFile, "1", 10*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected a timeout error")
 	}
