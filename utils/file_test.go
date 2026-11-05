@@ -610,31 +610,37 @@ func TestCopyFileContentsS3FromEndpointOverride(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var fetched atomic.Bool
 
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// path-style addressing puts bucket and key in the URL path
-				if r.URL.Path != "/"+bucket+"/"+key {
-					http.Error(w, "not found", http.StatusNotFound)
-					return
-				}
+			srv := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// path-style addressing puts bucket and key in the URL path
+					if r.URL.Path != "/"+bucket+"/"+key {
+						http.Error(w, "not found", http.StatusNotFound)
+						return
+					}
 
-				fetched.Store(true)
+					fetched.Store(true)
 
-				if tc.object == "" {
-					http.Error(w, `<?xml version="1.0"?><Error><Code>NoSuchKey</Code></Error>`, http.StatusNotFound)
-					return
-				}
+					if tc.object == "" {
+						http.Error(
+							w,
+							`<?xml version="1.0"?><Error><Code>NoSuchKey</Code></Error>`,
+							http.StatusNotFound,
+						)
+						return
+					}
 
-				// the request must be signed with credentials from the environment
-				if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256") {
-					http.Error(w, "unsigned request", http.StatusBadRequest)
-					return
-				}
+					// the request must be signed with credentials from the environment
+					if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256") {
+						http.Error(w, "unsigned request", http.StatusBadRequest)
+						return
+					}
 
-				w.Header().Set("ETag", `"d41d8cd98f00b204e9800998ecf8427e"`)
-				w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
-				w.Header().Set("Content-Length", strconv.Itoa(len(tc.object)))
-				_, _ = w.Write([]byte(tc.object))
-			}))
+					w.Header().Set("ETag", `"d41d8cd98f00b204e9800998ecf8427e"`)
+					w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+					w.Header().Set("Content-Length", strconv.Itoa(len(tc.object)))
+					_, _ = w.Write([]byte(tc.object))
+				}),
+			)
 			defer srv.Close()
 
 			t.Setenv("AWS_ENDPOINT_URL", srv.URL)

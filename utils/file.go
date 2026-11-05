@@ -278,7 +278,11 @@ func s3ClientConfig() (endpoint string, secure bool, err error) {
 		}
 
 		if u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
-			return "", false, fmt.Errorf("%s must be a valid http(s) endpoint URL, got %q", envVar, endpointURL)
+			return "", false, fmt.Errorf(
+				"%s must be a valid http(s) endpoint URL, got %q",
+				envVar,
+				endpointURL,
+			)
 		}
 
 		// the endpoint host is passed to the S3 client, the scheme selects TLS
