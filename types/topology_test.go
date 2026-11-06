@@ -823,6 +823,117 @@ func TestGetNodeImageOnlyViaDefault(t *testing.T) {
 	}
 }
 
+// TestGetNodeFieldsOfNilNodeDefinition tests that a node defined without a body,
+// which unmarshals into a nil definition, inherits from its group and kind.
+func TestGetNodeFieldsOfNilNodeDefinition(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{
+			Kind: "linux",
+		},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {
+				Group:                "grp1",
+				Privileged:           new(false),
+				EnforceStartupConfig: new(true),
+				Config: &ConfigDispatcher{
+					Vars: map[string]any{"var1": "kind"},
+				},
+			},
+		},
+		Groups: map[string]*NodeDefinition{
+			"grp1": {
+				SuppressStartupConfig: new(true),
+				AutoRemove:            new(true),
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": nil,
+		},
+	}
+
+	tests := map[string]struct {
+		got  any
+		want any
+	}{
+		"group": {
+			got:  topology.GetNodeGroup("node1"),
+			want: "grp1",
+		},
+		"privileged": {
+			got:  topology.GetNodePrivileged("node1", true),
+			want: false,
+		},
+		"enforce-startup-config": {
+			got:  topology.GetNodeEnforceStartupConfig("node1"),
+			want: true,
+		},
+		"suppress-startup-config": {
+			got:  topology.GetNodeSuppressStartupConfig("node1"),
+			want: true,
+		},
+		"auto-remove": {
+			got:  topology.GetNodeAutoRemove("node1"),
+			want: true,
+		},
+		"config": {
+			got:  topology.GetNodeConfigDispatcher("node1"),
+			want: &ConfigDispatcher{Vars: map[string]any{"var1": "kind"}},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if diff := cmp.Diff(tc.want, tc.got); diff != "" {
+				t.Errorf("%s mismatch (-want +got):\n%s", name, diff)
+			}
+		})
+	}
+}
+
+// TestGetNodeFieldsOfNilKindAndDefaults tests that a kind and the defaults left without
+// a body, which unmarshal into nil definitions, are treated as empty definitions.
+func TestGetNodeFieldsOfNilKindAndDefaults(t *testing.T) {
+	topology := &Topology{
+		Kinds: map[string]*NodeDefinition{
+			"linux": nil,
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {Kind: "linux"},
+			"node2": nil,
+		},
+	}
+
+	tests := map[string]struct {
+		got  any
+		want any
+	}{
+		"kind": {
+			got:  topology.GetKind("linux"),
+			want: &NodeDefinition{},
+		},
+		"group": {
+			got:  topology.GetNodeGroup("node1"),
+			want: "",
+		},
+		"node-kind": {
+			got:  topology.GetNodeKind("node2"),
+			want: "",
+		},
+		"config": {
+			got:  topology.GetNodeConfigDispatcher("node1"),
+			want: &ConfigDispatcher{},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if diff := cmp.Diff(tc.want, tc.got); diff != "" {
+				t.Errorf("%s mismatch (-want +got):\n%s", name, diff)
+			}
+		})
+	}
+}
+
 func TestGetNodeLicense(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
