@@ -12,7 +12,7 @@
         "aarch64-linux"
       ];
       forAll = f: nixpkgs.lib.genAttrs systems (s: f nixpkgs.legacyPackages.${s});
-      version = "0.82.0";
+      version = "0.83.0";
     in
     {
       packages = forAll (pkgs: rec {
