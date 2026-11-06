@@ -4,6 +4,8 @@
 
 The `save` command perform configuration save for all the containers running in a lab.
 
+When `save` fails, it will exit with a non-zero return code and reports each node that failed configuration save.
+
 /// note | Clabernetes runtime
 With `--runtime c9s`, `save` runs the kind-specific save command in each device
 container. `save --copy` streams the resulting files back to the local
