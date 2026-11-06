@@ -1,0 +1,192 @@
+package ovs
+
+import (
+	"context"
+	"os"
+	"os/exec"
+	"strings"
+	"testing"
+
+	goOvs "github.com/digitalocean/go-openvswitch/ovs"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	"github.com/vishvananda/netlink"
+)
+
+func TestOVSDeviceMissing(t *testing.T) {
+	t.Parallel()
+
+	if !ovsDeviceMissing(
+		`"could not open network device clab-deadbeef (No such device)"`,
+	) {
+		t.Fatal("expected a missing netdev to be detected")
+	}
+	if ovsDeviceMissing("[]") {
+		t.Fatal("a live interface reports an empty error set")
+	}
+	if !clabAutoPort.MatchString("clab-1f57ad50") {
+		t.Fatal("expected a containerlab auto port name to match")
+	}
+	if clabAutoPort.MatchString("ixr-dut-30-e1-1") {
+		t.Fatal("topology interface names are not auto ports")
+	}
+	if got := ovsMapValue("ixr-dut-30-e1-1"); got != "ixr-dut-30-e1-1" {
+		t.Fatalf("ovsMapValue() = %q", got)
+	}
+	if got := ovsMapValue("has space"); got != `"has space"` {
+		t.Fatalf("ovsMapValue() = %q", got)
+	}
+	if !ovsRowMissing(`ovs-vsctl: no row "clab-deadbeef" in table Interface`) {
+		t.Fatal("expected a missing OVS row to be detected")
+	}
+	if ovsRowMissing("database connection failed") {
+		t.Fatal("a database failure is not a missing row")
+	}
+}
+
+func TestOVSEndpointPortDoesNotAccumulate(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+	if _, err := exec.LookPath("ovs-vsctl"); err != nil {
+		t.Skip("ovs-vsctl not found")
+	}
+
+	// ixr-dut-30-e1-1 is 15 characters, so it is the OVS port name.
+	// ixr-dut-30-e1-10 is 16 and is recorded as a clab-* port instead.
+	for _, endpoint := range []string{"ixr-dut-30-e1-1", "ixr-dut-30-e1-10"} {
+		t.Run(endpoint, func(t *testing.T) {
+			assertReattachKeepsOnePort(t, endpoint)
+		})
+	}
+}
+
+func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
+	t.Helper()
+
+	bridge := "br-ovs-leak"
+	c := goOvs.New()
+	_ = c.VSwitch.DeleteBridge(bridge)
+	if err := c.VSwitch.AddBridge(bridge); err != nil {
+		t.Skipf("ovsdb is not available: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = goOvs.New().VSwitch.DeleteBridge(bridge)
+	})
+
+	n := &ovs{}
+	if err := n.Init(&clabtypes.NodeConfig{ShortName: bridge}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	ep := clablinks.NewEndpointBridge(
+		clablinks.NewEndpointGeneric(n, endpoint, nil),
+		false,
+	)
+	if err := n.AddEndpoint(ep); err != nil {
+		t.Fatalf("add endpoint: %v", err)
+	}
+
+	first, peer := addVethPair(t)
+	if err := n.AddLinkToContainer(
+		context.Background(),
+		first,
+		clablinks.SetNameMACAndUpInterface(first, ep),
+	); err != nil {
+		t.Fatalf("add link: %v", err)
+	}
+	if err := netlink.LinkDel(peer); err != nil {
+		t.Fatalf("delete peer: %v", err)
+	}
+	if ports := dataPorts(t, bridge); len(ports) != 1 {
+		t.Fatalf("peer delete left %v, want the stale port", ports)
+	}
+
+	// An untagged port may belong to the operator and is not removed for a topology interface.
+	if out, err := ovsVsctl("--no-wait", "add-port", bridge, "operator-port"); err != nil {
+		t.Fatalf("add operator port: %v (%s)", err, out)
+	}
+	if err := n.DeleteBridgePort("operator-port"); err != nil {
+		t.Fatalf("delete bridge port: %v", err)
+	}
+	if ports := dataPorts(t, bridge); len(ports) != 2 {
+		t.Fatalf("ports after untagged delete = %v, want the operator port kept", ports)
+	}
+	if err := c.VSwitch.DeletePort(bridge, "operator-port"); err != nil {
+		t.Fatalf("delete operator port: %v", err)
+	}
+
+	// A port named after the interface keeps its config across a reattach.
+	isNamedPort := dataPorts(t, bridge)[0] == endpoint
+	if isNamedPort {
+		if out, err := ovsVsctl("set", "Port", endpoint, "tag=100"); err != nil {
+			t.Fatalf("set tag: %v (%s)", err, out)
+		}
+	}
+
+	second, secondPeer := addVethPair(t)
+	t.Cleanup(func() { _ = netlink.LinkDel(secondPeer) })
+	if err := n.AddLinkToContainer(
+		context.Background(),
+		second,
+		clablinks.SetNameMACAndUpInterface(second, ep),
+	); err != nil {
+		t.Fatalf("reattach: %v", err)
+	}
+	if ports := dataPorts(t, bridge); len(ports) != 1 {
+		t.Fatalf("ports after reattach = %v, want 1", ports)
+	}
+	if isNamedPort {
+		out, err := ovsVsctl("get", "Port", endpoint, "tag")
+		if err != nil || strings.TrimSpace(string(out)) != "100" {
+			t.Fatalf("tag after reattach = %q, err = %v, want 100", out, err)
+		}
+	}
+
+	if err := n.Delete(context.Background()); err != nil {
+		t.Fatalf("delete node: %v", err)
+	}
+	if ports := dataPorts(t, bridge); len(ports) != 0 {
+		t.Fatalf("ports after node delete = %v", ports)
+	}
+}
+
+func addVethPair(t *testing.T) (netlink.Link, netlink.Link) {
+	t.Helper()
+
+	name := clablinks.NewEndpointGeneric(nil, "x", nil).GetRandIfaceName()
+	peerName := name + "p"
+	veth := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: name},
+		PeerName:  peerName,
+	}
+	if err := netlink.LinkAdd(veth); err != nil {
+		t.Fatalf("add veth: %v", err)
+	}
+	link, err := netlink.LinkByName(name)
+	if err != nil {
+		t.Fatalf("lookup veth: %v", err)
+	}
+	peer, err := netlink.LinkByName(peerName)
+	if err != nil {
+		t.Fatalf("lookup peer: %v", err)
+	}
+
+	return link, peer
+}
+
+func dataPorts(t *testing.T, bridge string) []string {
+	t.Helper()
+
+	ports, err := goOvs.New().VSwitch.ListPorts(bridge)
+	if err != nil {
+		t.Fatalf("list ports: %v", err)
+	}
+	var data []string
+	for _, port := range ports {
+		if port != bridge {
+			data = append(data, port)
+		}
+	}
+
+	return data
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -139,13 +140,14 @@ func (*EndpointGeneric) IsRuntimeDiscovered() bool {
 
 func (e *EndpointGeneric) Remove(ctx context.Context) error {
 	return e.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
-		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
+		brSideEp, err := netlink.LinkByName(clabutils.SanitizeInterfaceName(e.GetIfaceName()))
 		_, notfound := err.(netlink.LinkNotFoundError)
 
 		switch {
 		case notfound:
-			// interface is not present, all good
-			return nil
+			// The netdev may already be gone while its bridge port is not, which is how OVS
+			// keeps a port whose name is not the topology interface name.
+			return removeBridgePort(e.GetNode(), e.GetIfaceName())
 		case err != nil:
 			return err
 		}
@@ -154,7 +156,11 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 			e.GetIfaceName(),
 			e.GetNode().GetShortName(),
 		)
-		return netlink.LinkDel(brSideEp)
+		if err = netlink.LinkDel(brSideEp); err != nil {
+			return err
+		}
+
+		return removeBridgePort(e.GetNode(), e.GetIfaceName())
 	})
 }
 

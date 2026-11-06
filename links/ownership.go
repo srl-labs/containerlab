@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -168,9 +170,9 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 	}
 
 	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := netlink.LinkByName(ifaceName)
+		link, err := netlink.LinkByName(clabutils.SanitizeInterfaceName(ifaceName))
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
-			return nil
+			return removeBridgePort(node, ifaceName)
 		}
 		if err != nil {
 			return err
@@ -184,8 +186,43 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 			)
 		}
 
-		return netlink.LinkDel(link)
+		if err = netlink.LinkDel(link); err != nil {
+			return err
+		}
+
+		return removeBridgePort(node, ifaceName)
 	})
+}
+
+// bridgePortDeleter removes a bridge port that can outlive its netdev. OVS ports created for an
+// interface name Linux will not accept are named after the random netdev, so deleting the veth
+// from the container side leaves the port behind.
+type bridgePortDeleter interface {
+	DeleteBridgePort(string) error
+}
+
+func removeBridgePort(node Node, ifaceName string) error {
+	if node == nil || ifaceName == "" {
+		return nil
+	}
+
+	cleaner, ok := node.(bridgePortDeleter)
+	if !ok {
+		return nil
+	}
+
+	// Best-effort, matching ovs.Delete. A missing bridge or a down ovsdb must not abort
+	// destroy or reconcile and leave the container running.
+	if err := cleaner.DeleteBridgePort(ifaceName); err != nil {
+		log.Errorf(
+			"Could not remove bridge port %q on node %q: %v",
+			ifaceName,
+			node.GetShortName(),
+			err,
+		)
+	}
+
+	return nil
 }
 
 // isOwnedBy reports whether link carries the ownership marker of the logical
