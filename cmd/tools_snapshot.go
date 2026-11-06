@@ -93,7 +93,7 @@ func snapshotSaveFn(cmd *cobra.Command, o *Options) error {
 	}
 
 	// Get containers to snapshot (respects node-filter)
-	containers, err := c.ListNodesContainers(ctx)
+	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 	if err != nil {
 		return err
 	}
