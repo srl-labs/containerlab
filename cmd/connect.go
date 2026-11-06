@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -92,6 +93,8 @@ func connectFn(ctx context.Context, o *Options, nodeFilter string) error {
 		return err
 	}
 
+	containers = foldInternalContainers(containers)
+
 	// Optional substring pre-filter on the node name (the positional arg).
 	if nodeFilter != "" {
 		var matched []clabruntime.GenericContainer
@@ -118,6 +121,34 @@ func connectFn(ctx context.Context, o *Options, nodeFilter string) error {
 		}
 		return connectSingle(ctx, o, c, containers[idx])
 	}
+}
+
+// foldInternalContainers removes internal containers (ie. netns holders) from the list, as they
+// are not user-facing nodes. A node joining a holder's network namespace has no management
+// addressing of its own, so the holder's network settings and ports are copied over to it.
+func foldInternalContainers(
+	containers []clabruntime.GenericContainer,
+) []clabruntime.GenericContainer {
+	holders := make(map[string]clabruntime.GenericContainer)
+	for _, ct := range containers {
+		if ct.Labels[clabconstants.InternalNode] == "true" {
+			holders[ct.Labels[clabconstants.RootNodeLongName]] = ct
+		}
+	}
+
+	containers = slices.DeleteFunc(containers, func(ct clabruntime.GenericContainer) bool {
+		return ct.Labels[clabconstants.InternalNode] == "true"
+	})
+
+	for i := range containers {
+		if holder, ok := holders[containers[i].Labels[clabconstants.LongName]]; ok {
+			containers[i].NetworkName = holder.NetworkName
+			containers[i].NetworkSettings = holder.NetworkSettings
+			containers[i].Ports = holder.Ports
+		}
+	}
+
+	return containers
 }
 
 // connectSingle opens the connection for exactly one container. When a method
