@@ -243,6 +243,23 @@ With the `c9s` runtime the plan also lists the Pods that a link change replaces,
 
 `--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys and redeploys the full lab.
 
+#### format
+
+The local `--format | -f` flag selects `table` or `json` output for the final
+deployment summary. It also controls the output of `--dry-run` and, with the
+Clabernetes runtime, `--emit-crs`.
+
+#### graph
+
+The local `--graph | -g` flag writes a Graphviz DOT representation of the
+deployed topology to the lab directory under `graph/<topology-name>.dot`. If
+the Graphviz `dot` command is installed, containerlab also creates a PNG file
+in the same directory.
+
+For the other available graph formats and the interactive HTML view, use the
+standalone [`graph`](graph.md) command. The deploy flag is supported by local
+container runtimes only.
+
 #### max-workers
 
 With `--max-workers` flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.
