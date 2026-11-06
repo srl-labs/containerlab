@@ -48,6 +48,7 @@ func GetOptions() *Options {
 			Exec: &ExecOptions{
 				Format: "plain",
 			},
+			Connect: &ConnectOptions{},
 			Inspect: &InspectOptions{
 				Format:           "table",
 				InterfacesFormat: "table",
@@ -144,6 +145,7 @@ type Options struct {
 	Destroy        *DestroyOptions
 	Save           *SaveOptions
 	Exec           *ExecOptions
+	Connect        *ConnectOptions
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
 	Events         *EventsOptions
@@ -401,6 +403,11 @@ type SaveOptions struct {
 type ExecOptions struct {
 	Format   string
 	Commands []string
+}
+
+type ConnectOptions struct {
+	Shell string
+	SSH   bool
 }
 
 type LogsOptions struct {

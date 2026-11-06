@@ -122,6 +122,7 @@ nav:
       - capture: cmd/capture.md
       - save: cmd/save.md
       - exec: cmd/exec.md
+      - connect: cmd/connect.md
       - generate: cmd/generate.md
       - graph: cmd/graph.md
       - validate: cmd/validate.md

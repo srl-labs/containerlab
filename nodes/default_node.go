@@ -113,6 +113,8 @@ func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { r
 func (*DefaultNode) PreStop(context.Context) error                           { return nil }
 func (*DefaultNode) PreDestroy(context.Context) error                        { return nil }
 
+func (*DefaultNode) ExecInteractiveShell() []string { return []string{"/bin/sh"} }
+
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	if d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck {
