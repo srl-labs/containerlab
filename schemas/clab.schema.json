@@ -249,6 +249,7 @@
                         "cisco_ftdv",
                         "dell_ftosv",
                         "dell_sonic",
+                        "ale_vaos",
                         "aruba_aoscx",
                         "linux",
                         "bridge",
@@ -3467,6 +3468,16 @@
                             ]
                         },
                         "juniper_cjunosevolved": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-other"
+                                }
+                            ]
+                        },
+                        "ale_vaos": {
                             "allOf": [
                                 {
                                     "$ref": "#/definitions/node-config"
