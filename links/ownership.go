@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -169,7 +170,7 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 	}
 
 	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := netlink.LinkByName(ifaceName)
+		link, err := netlink.LinkByName(clabutils.SanitizeInterfaceName(ifaceName))
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
 			return removeBridgePort(node, ifaceName)
 		}

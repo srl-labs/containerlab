@@ -25,7 +25,11 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const ovsEndpointExtID = "containerlab-endpoint"
+const (
+	ovsEndpointExtID = "containerlab-endpoint"
+	// ovsTimeoutSeconds bounds ovs-vsctl calls, which wait forever when ovs-vswitchd is down.
+	ovsTimeoutSeconds = 30
+)
 
 // clabAutoPort matches the random netdev name used when the topology interface name is not a
 // valid Linux name. Those netdevs are what Open vSwitch records as the port name.
@@ -85,8 +89,16 @@ func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
 func (n *ovs) Delete(_ context.Context) error {
+	c := goOvs.New(goOvs.Timeout(ovsTimeoutSeconds))
+
 	for _, ep := range n.GetEndpoints() {
-		if err := n.removeEndpointPorts(ep.GetIfaceName()); err != nil {
+		// Under the hood, this is called with "--if-exists", so it will handle the case where it
+		// doesn't exist for some reason.
+		err := c.VSwitch.DeletePort(n.Cfg.ShortName, ep.GetIfaceName())
+		if err == nil {
+			err = n.removeEndpointPorts(ep.GetIfaceName())
+		}
+		if err != nil {
 			log.Errorf(
 				"Could not remove OVS port %q from bridge %q: %v",
 				ep.GetIfaceName(),
@@ -109,9 +121,8 @@ func (n *ovs) Delete(_ context.Context) error {
 	return nil
 }
 
-// DeleteBridgePort removes the OVS port for one topology interface. Callers that attach a new
-// link use removeEndpointPorts directly and fail on error. Link removal treats this as
-// best-effort.
+// DeleteBridgePort removes the OVS port containerlab tagged for one topology interface. Untagged
+// ports may belong to the operator, so only Delete removes a port by its name.
 func (n *ovs) DeleteBridgePort(endpoint string) error {
 	return n.removeEndpointPorts(endpoint)
 }
@@ -150,8 +161,6 @@ func (n *ovs) AddLinkToContainer(
 		return err
 	}
 
-	c := goOvs.New()
-
 	// need to reread the link, due to the changed the function f might have applied to
 	// the link. Usually it renames the link to its final name.
 	link, err = netlink.LinkByIndex(link.Attrs().Index)
@@ -159,23 +168,28 @@ func (n *ovs) AddLinkToContainer(
 		return err
 	}
 
+	name := link.Attrs().Name
 	logical := n.logicalEndpointName(link)
-	// A previous attach of this same topology interface may still be registered under the random
-	// netdev name. Remove that tagged port before adding the new one. The full stale-port sweep
-	// runs once from Delete, not on every attach.
-	if err := n.removeEndpointPorts(logical); err != nil {
-		return err
+	args := []string{"--may-exist", "add-port", n.Cfg.ShortName, name}
+	// A port named after the interface is reused by --may-exist and keeps its config. A random
+	// netdev name needs a tag, so that a later attach or link removal can find the port. The full
+	// stale-port sweep runs once from Delete, not on every attach.
+	if logical != name {
+		if err := n.removeEndpointPorts(logical); err != nil {
+			return err
+		}
+		args = append(args,
+			"--", "set", "Interface", name,
+			"external_ids:"+ovsEndpointExtID+"="+ovsMapValue(logical),
+		)
 	}
 
-	if err := c.VSwitch.AddPort(n.Cfg.ShortName, link.Attrs().Name); err != nil {
-		return err
+	out, err := ovsVsctl(args...)
+	if err != nil {
+		return fmt.Errorf("add OVS port %q as %q: %w (%s)", name, logical, err, out)
 	}
 
-	if logical == "" || logical == link.Attrs().Name {
-		return nil
-	}
-
-	return setOVSEndpointID(link.Attrs().Name, logical)
+	return nil
 }
 
 func (m *ovs) GetLinkEndpointType() clablinks.LinkEndpointType {
@@ -208,16 +222,13 @@ func (n *ovs) logicalEndpointName(link netlink.Link) string {
 	return name
 }
 
+// removeEndpointPorts deletes the ports on this bridge tagged with the topology interface name.
 func (n *ovs) removeEndpointPorts(endpoint string) error {
 	if endpoint == "" || n.Cfg == nil || n.Cfg.ShortName == "" {
 		return nil
 	}
 
-	c := goOvs.New()
-	// Valid Linux names are used as the OVS port name. --if-exists covers a missing port.
-	if err := c.VSwitch.DeletePort(n.Cfg.ShortName, endpoint); err != nil {
-		return err
-	}
+	c := goOvs.New(goOvs.Timeout(ovsTimeoutSeconds))
 
 	names, err := ovsInterfaceNames(
 		"external_ids:" + ovsEndpointExtID + "=" + ovsMapValue(endpoint),
@@ -250,7 +261,7 @@ func (n *ovs) removeMissingAutoPorts() error {
 		return nil
 	}
 
-	c := goOvs.New()
+	c := goOvs.New(goOvs.Timeout(ovsTimeoutSeconds))
 	ports, err := c.VSwitch.ListPorts(n.Cfg.ShortName)
 	if err != nil {
 		return err
@@ -294,24 +305,14 @@ func bridgePortSet(c *goOvs.Client, bridge string) (map[string]struct{}, error) 
 	return set, nil
 }
 
-func setOVSEndpointID(iface, endpoint string) error {
-	out, err := exec.Command(
-		"ovs-vsctl",
-		"set",
-		"Interface",
-		iface,
-		"external_ids:"+ovsEndpointExtID+"="+ovsMapValue(endpoint),
-	).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("tag OVS interface %q as %q: %w (%s)", iface, endpoint, err, out)
-	}
+func ovsVsctl(args ...string) ([]byte, error) {
+	args = append([]string{fmt.Sprintf("--timeout=%d", ovsTimeoutSeconds)}, args...)
 
-	return nil
+	return exec.Command("ovs-vsctl", args...).CombinedOutput()
 }
 
 func ovsInterfaceNames(condition string) ([]string, error) {
-	out, err := exec.Command(
-		"ovs-vsctl",
+	out, err := ovsVsctl(
 		"--format=csv",
 		"--no-headings",
 		"--data=bare",
@@ -319,7 +320,7 @@ func ovsInterfaceNames(condition string) ([]string, error) {
 		"find",
 		"Interface",
 		condition,
-	).CombinedOutput()
+	)
 	if err != nil {
 		return nil, fmt.Errorf("find OVS interfaces: %w (%s)", err, out)
 	}
@@ -333,14 +334,7 @@ func ovsInterfaceNames(condition string) ([]string, error) {
 }
 
 func ovsInterfaceDeviceMissing(iface string) (bool, error) {
-	out, err := exec.Command(
-		"ovs-vsctl",
-		"--data=bare",
-		"get",
-		"Interface",
-		iface,
-		"error",
-	).CombinedOutput()
+	out, err := ovsVsctl("--data=bare", "get", "Interface", iface, "error")
 	if err != nil {
 		// The port disappeared between ListPorts and this get. Nothing left to delete.
 		if ovsRowMissing(string(out)) {

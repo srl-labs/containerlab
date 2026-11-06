@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -139,7 +140,7 @@ func (*EndpointGeneric) IsRuntimeDiscovered() bool {
 
 func (e *EndpointGeneric) Remove(ctx context.Context) error {
 	return e.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
-		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
+		brSideEp, err := netlink.LinkByName(clabutils.SanitizeInterfaceName(e.GetIfaceName()))
 		_, notfound := err.(netlink.LinkNotFoundError)
 
 		switch {

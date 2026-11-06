@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
@@ -100,6 +101,28 @@ func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
 		t.Fatalf("peer delete left %v, want the stale port", ports)
 	}
 
+	// An untagged port may belong to the operator and is not removed for a topology interface.
+	if out, err := ovsVsctl("--no-wait", "add-port", bridge, "operator-port"); err != nil {
+		t.Fatalf("add operator port: %v (%s)", err, out)
+	}
+	if err := n.DeleteBridgePort("operator-port"); err != nil {
+		t.Fatalf("delete bridge port: %v", err)
+	}
+	if ports := dataPorts(t, bridge); len(ports) != 2 {
+		t.Fatalf("ports after untagged delete = %v, want the operator port kept", ports)
+	}
+	if err := c.VSwitch.DeletePort(bridge, "operator-port"); err != nil {
+		t.Fatalf("delete operator port: %v", err)
+	}
+
+	// A port named after the interface keeps its config across a reattach.
+	isNamedPort := dataPorts(t, bridge)[0] == endpoint
+	if isNamedPort {
+		if out, err := ovsVsctl("set", "Port", endpoint, "tag=100"); err != nil {
+			t.Fatalf("set tag: %v (%s)", err, out)
+		}
+	}
+
 	second, secondPeer := addVethPair(t)
 	t.Cleanup(func() { _ = netlink.LinkDel(secondPeer) })
 	if err := n.AddLinkToContainer(
@@ -111,6 +134,12 @@ func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
 	}
 	if ports := dataPorts(t, bridge); len(ports) != 1 {
 		t.Fatalf("ports after reattach = %v, want 1", ports)
+	}
+	if isNamedPort {
+		out, err := ovsVsctl("get", "Port", endpoint, "tag")
+		if err != nil || strings.TrimSpace(string(out)) != "100" {
+			t.Fatalf("tag after reattach = %q, err = %v, want 100", out, err)
+		}
 	}
 
 	if err := n.Delete(context.Background()); err != nil {
