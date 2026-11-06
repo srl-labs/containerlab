@@ -330,6 +330,12 @@ func (n *NodeConfig) GetHostname() string {
 	return n.ShortName
 }
 
+// LabContainerName returns the long container name of a node in the same lab as n. Only the end of
+// LongName is the short name, as the lab name can contain the same text.
+func (n *NodeConfig) LabContainerName(shortName string) string {
+	return strings.TrimSuffix(n.LongName, n.ShortName) + shortName
+}
+
 // whether a node should participate in IPAM or not.
 func (n *NodeConfig) ManagementIPAMEligible() bool {
 	if n.IsRootNamespaceBased || n.SkipUniquenessCheck {

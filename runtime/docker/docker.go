@@ -1892,7 +1892,7 @@ func (d *DockerRuntime) processNetworkMode(
 		// internally, aka within clab topology. If it doesn't, we assume that users referred to an
 		// external container. extract lab/topo prefix to craft a full container name if an internal
 		// container is referenced.
-		contName := strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
+		contName := node.LabContainerName(netMode[1])
 
 		_, err := d.GetContainer(ctx, contName)
 		if err != nil {

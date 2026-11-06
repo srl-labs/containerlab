@@ -1264,6 +1264,63 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	}
 }
 
+func TestRuntimeNodeGroupsDeletesSRLNetnsHolderLast(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Names: []string{"clab-lab-srl1"},
+				Labels: map[string]string{
+					clabconstants.NodeName: "srl1",
+				},
+			},
+			{
+				Names: []string{"clab-lab-srl1-netns"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "srl1-netns",
+					clabconstants.RootNodeName: "srl1",
+					clabconstants.InternalNode: "true",
+				},
+			},
+		}, nil)
+
+	currentNodes, err := c.runtimeNodeGroups(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	group := currentNodes["srl1"]
+	if group == nil {
+		t.Fatal("expected the netns holder to be grouped with its node")
+	}
+	if got := len(group.containers); got != 2 {
+		t.Fatalf("expected the node and its internal holder, got %d", got)
+	}
+	gomock.InOrder(
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-srl1").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-srl1-netns").Return(nil),
+	)
+	if err := c.deleteApplyNodes(context.Background(), &applyPlan{
+		currentNodes:   currentNodes,
+		deletedNodeSet: map[string]struct{}{"srl1": {}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRuntimeNodeGroupsIncludesPreExistingNodes(t *testing.T) {
 	t.Parallel()
 

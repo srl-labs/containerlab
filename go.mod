@@ -23,7 +23,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.1.0
 	github.com/florianl/go-tc v0.4.8
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/go-xmlfmt/xmlfmt v1.1.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/nftables v0.3.0
@@ -36,13 +36,13 @@ require (
 	github.com/jlaffaye/ftp v0.2.4
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
-	github.com/klauspost/cpuid/v2 v2.4.0
+	github.com/klauspost/cpuid/v2 v2.4.1
 	github.com/mackerelio/go-osstat v0.2.8
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/sftp v1.13.11
 	github.com/pmorjan/kmod v1.1.1
-	github.com/scrapli/scrapligo v1.4.2
+	github.com/scrapli/scrapligo v1.4.3
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0

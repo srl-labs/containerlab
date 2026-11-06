@@ -2,6 +2,8 @@ package ciena_saos
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -209,5 +211,69 @@ func TestSaosPartialConfigOnly(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+// TestSaosLicenseFile ensures a topology-supplied license file is copied into
+// the node's config dir and SAOS_LICENSE_PATH is set for the vrnetlab launcher.
+func TestSaosLicenseFile(t *testing.T) {
+	labDir := t.TempDir()
+
+	licenseSrc := filepath.Join(t.TempDir(), "my-license.lic")
+	wantContent := []byte("license activate built-in-trial-license\n")
+	if err := os.WriteFile(licenseSrc, wantContent, 0o644); err != nil {
+		t.Fatalf("failed to write test license file: %v", err)
+	}
+
+	n := &cienaSaos{
+		VRNode: clabnodes.VRNode{
+			DefaultNode: clabnodes.DefaultNode{
+				Cfg: &clabtypes.NodeConfig{
+					ShortName: "saos",
+					LabDir:    labDir,
+					License:   licenseSrc,
+				},
+			},
+			ConfigDirName: "config",
+		},
+	}
+
+	if err := n.PreDeploy(context.Background(), &clabnodes.PreDeployParams{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := n.Cfg.Env["SAOS_LICENSE_PATH"]; got != "/config/license" {
+		t.Errorf("SAOS_LICENSE_PATH = %q, want /config/license", got)
+	}
+
+	gotContent, err := os.ReadFile(filepath.Join(labDir, "config", "license"))
+	if err != nil {
+		t.Fatalf("license file was not copied: %v", err)
+	}
+	if string(gotContent) != string(wantContent) {
+		t.Errorf("copied license content = %q, want %q", gotContent, wantContent)
+	}
+}
+
+// TestSaosNoLicense ensures nodes without a license knob get no SAOS_LICENSE_PATH env var.
+func TestSaosNoLicense(t *testing.T) {
+	n := &cienaSaos{
+		VRNode: clabnodes.VRNode{
+			DefaultNode: clabnodes.DefaultNode{
+				Cfg: &clabtypes.NodeConfig{
+					ShortName: "saos",
+					LabDir:    t.TempDir(),
+				},
+			},
+			ConfigDirName: "config",
+		},
+	}
+
+	if err := n.PreDeploy(context.Background(), &clabnodes.PreDeployParams{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got, ok := n.Cfg.Env["SAOS_LICENSE_PATH"]; ok {
+		t.Errorf("SAOS_LICENSE_PATH = %q, want unset", got)
 	}
 }

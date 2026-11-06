@@ -142,7 +142,7 @@ Valid values are:
 - `always` - Always restart the container if it stops. If it's manually stopped, it's restarted only when Docker daemon restarts or the container itself is manually restarted.
 - `unless-stopped` Similar to always, except that when the container is stopped (manually or otherwise), it isn't restarted even after Docker daemon restarts.
 
-`no` is the default restart policy value for all kinds, but `linux`. Linux kind defaults to `always`.
+`no` is the default restart policy value for all kinds, but `linux` and `nokia_srlinux`. Linux kind defaults to `always`, and [SR Linux](kinds/srl.md#reboot) kind defaults to `unless-stopped`.
 
 ```yaml
 topology:

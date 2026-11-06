@@ -221,6 +221,14 @@ func runtimeContainerNodeName(ctr clabruntime.GenericContainer) string {
 }
 
 func runtimeContainerLess(a, b clabruntime.GenericContainer) bool {
+	// internal holders own the network namespace of the other containers in the group,
+	// so they sort first to be deleted last.
+	aInternal := a.Labels[clabconstants.InternalNode] == "true"
+	bInternal := b.Labels[clabconstants.InternalNode] == "true"
+	if aInternal != bInternal {
+		return aInternal
+	}
+
 	aName := runtimeContainerNodeName(a)
 	bName := runtimeContainerNodeName(b)
 

@@ -220,13 +220,11 @@ func (r *PodmanRuntime) createContainerSpec(
 				netMode,
 			)
 		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
 		// Compile the net spec
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{
 				NSMode: "container",
-				Value:  prefix + netMode[1],
+				Value:  cfg.LabContainerName(netMode[1]),
 			},
 		}
 	case "host":

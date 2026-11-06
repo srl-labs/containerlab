@@ -188,6 +188,10 @@ If the type is not set in the clab file, the `ixr-d2l` type will be used by cont
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 
+/// warning
+When using Nokia 7250 IXR and Nokia 7730 SXR `types`, you need to add a licence, as described in [`license`](#license).
+///
+
 ### Modular chassis
 
 The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavors. The card is chosen with a `components` block, where `type` names the line card:
@@ -465,6 +469,16 @@ SR Linux container can run without a license emulating the datacenter types (722
 In that license-less mode, the datapath is limited to 1000 PPS and the `sr_linux` process will restart once a week.
 
 The license file lifts these limitations as well as unlocks chassis-based platform variants and a path to it can be provided with [`license`](../nodes.md#license) directive.
+
+### Reboot
+
+A reboot issued from within the node, for example with `tools platform chassis reboot`, restarts the SR Linux container. The node comes back with its links, saved configuration and management address intact.
+
+To support that, SR Linux nodes default to the `unless-stopped` [restart policy](../nodes.md#restart-policy), and containerlab keeps the links and the management address of each node in an internal `<node-name>-netns` container. The internal container is only listed by `containerlab inspect --all`, and it is removed together with the node.
+
+Use `containerlab stop`, `start` and `restart` to manage the lifecycle of SR Linux nodes instead of restarting the containers with the container runtime directly.
+
+Nodes with a user-defined [`network-mode`](../nodes.md#network-mode) do not use the internal container.
 
 ## Container configuration
 

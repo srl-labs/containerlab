@@ -420,6 +420,9 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	if len(containers) == 0 {
+		if len(c.Nodes) > 0 && len(c.Links) > 0 {
+			c.deleteSpecialLinkNodes(ctx)
+		}
 		return nil
 	}
 
@@ -695,7 +698,15 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	// close channel to terminate the workers
 	close(concurrentChan)
 
-	// also call delete on the special nodes
+	wg.Wait()
+
+	// Host and mgmt-br links must be removed only after node workers finish.
+	// vxlan-stitch teardown deletes veth pairs from containers concurrently with
+	// host-namespace VXLAN interfaces; running both at once races netlink deletes.
+	c.deleteSpecialLinkNodes(ctx)
+}
+
+func (c *CLab) deleteSpecialLinkNodes(ctx context.Context) {
 	specialNodes := append(
 		[]clablinks.Node{clablinks.GetHostLinkNode()},
 		clablinks.GetMgmtBrLinkNodes()...,
@@ -706,8 +717,6 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 			log.Warn(err)
 		}
 	}
-
-	wg.Wait()
 }
 
 // deleteContainersDirect deletes containers directly via the runtime API.

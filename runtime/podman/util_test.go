@@ -129,6 +129,26 @@ func TestCreateContainerSpecAppliesNoneNetworkMode(t *testing.T) {
 	}
 }
 
+func TestCreateContainerSpecContainerNetworkModeWithLabNamedAsNode(t *testing.T) {
+	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
+	cfg := &types.NodeConfig{
+		LongName:    "clab-srl02-srl02",
+		ShortName:   "srl02",
+		Image:       "localhost/test:latest",
+		Labels:      map[string]string{},
+		NetworkMode: "container:srl02-netns",
+	}
+
+	sg, err := r.createContainerSpec(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("createContainerSpec returned error: %v", err)
+	}
+
+	if want := "clab-srl02-srl02-netns"; sg.NetNS.Value != want {
+		t.Fatalf("NetNS value = %q, want %q", sg.NetNS.Value, want)
+	}
+}
+
 func TestCreateContainerSpecPreservesImageCommandDefaults(t *testing.T) {
 	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
 	cfg := &types.NodeConfig{
