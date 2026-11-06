@@ -30,7 +30,8 @@ func TestProcessNetworkModeLabNamedAsNode(t *testing.T) {
 				return
 			}
 			_, _ = w.Write([]byte(
-				`[{"Id":"` + id + `","Names":["/` + holder + `"],"NetworkSettings":{"Networks":{}}}]`,
+				`[{"Id":"` + id + `","Names":["/` + holder +
+					`"],"NetworkSettings":{"Networks":{}}}]`,
 			))
 		case strings.Contains(r.URL.Path, id):
 			_, _ = w.Write([]byte(`{"Id":"` + id + `","State":{"Pid":1234}}`))
