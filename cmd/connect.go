@@ -21,6 +21,9 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
+// errConnectCancelled is returned when the user leaves a picker without choosing anything.
+var errConnectCancelled = errors.New("selection cancelled")
+
 func connectCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "connect [node]",
@@ -37,7 +40,11 @@ or plain SSH via the per-lab SSH config.`,
 			if len(args) == 1 {
 				nodeFilter = args[0]
 			}
-			return connectFn(cobraCmd.Context(), o, nodeFilter)
+			err := connectFn(cobraCmd.Context(), o, nodeFilter)
+			if errors.Is(err, errConnectCancelled) {
+				return nil
+			}
+			return err
 		},
 	}
 
@@ -54,6 +61,14 @@ or plain SSH via the per-lab SSH config.`,
 		"",
 		o.Connect.SSH,
 		"connect via SSH instead of a container shell (skips the method picker)",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.LabelFilter,
+		"label",
+		"",
+		o.Filter.LabelFilter,
+		"labels to filter container subset",
 	)
 
 	return c, nil
@@ -84,8 +99,13 @@ func connectFn(ctx context.Context, o *Options, nodeFilter string) error {
 		clabcore.WithListFromCliArgs(o.Filter.LabelFilter),
 	}
 
-	if o.Global.TopologyFile != "" {
+	switch {
+	case o.Global.TopologyFile != "":
 		listOptions = append(listOptions, clabcore.WithListLabName(c.Config.Name))
+	case o.Global.TopologyName != "":
+		listOptions = append(listOptions, clabcore.WithListLabName(o.Global.TopologyName))
+	default:
+		listOptions = append(listOptions, clabcore.WithListclabLabelExists())
 	}
 
 	containers, err := c.ListContainers(ctx, listOptions...)
@@ -153,7 +173,12 @@ func foldInternalContainers(
 
 // connectSingle opens the connection for exactly one container. When a method
 // was forced via --shell or --ssh the TUI is skipped entirely.
-func connectSingle(_ context.Context, o *Options, c *clabcore.CLab, ct clabruntime.GenericContainer) error {
+func connectSingle(
+	_ context.Context,
+	o *Options,
+	c *clabcore.CLab,
+	ct clabruntime.GenericContainer,
+) error {
 	name := strings.TrimPrefix(ct.Names[0], "/")
 
 	forcedMethod := ""
@@ -194,7 +219,12 @@ func connectSingle(_ context.Context, o *Options, c *clabcore.CLab, ct clabrunti
 
 // connectShell replaces the current process with a `docker/podman exec -it`
 // invocation of the given shell argv.
-func connectShell(o *Options, c *clabcore.CLab, ct clabruntime.GenericContainer, shell []string) error {
+func connectShell(
+	o *Options,
+	c *clabcore.CLab,
+	ct clabruntime.GenericContainer,
+	shell []string,
+) error {
 	if len(shell) == 0 {
 		shell = []string{"/bin/sh"}
 	}

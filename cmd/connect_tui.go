@@ -7,7 +7,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -140,6 +139,18 @@ func highlightMatched(s string, idx []int, matchStyle lipgloss.Style) string {
 	return b.String()
 }
 
+// truncateText shortens s to at most width characters, marking the cut with an ellipsis.
+func truncateText(s string, width int) string {
+	r := []rune(s)
+	if len(r) <= width {
+		return s
+	}
+	if width <= 0 {
+		return ""
+	}
+	return string(r[:width-1]) + "…"
+}
+
 // matchIndicesFor returns the fuzzy match indices of query inside s, or nil.
 func matchIndicesFor(query, s string) []int {
 	if strings.TrimSpace(query) == "" {
@@ -238,6 +249,9 @@ type nodePickerModel struct {
 	width    int
 	height   int
 	visible  int
+	// detailWidth is the width of the widest details panel, it keeps the
+	// layout stable while the cursor moves between nodes.
+	detailWidth int
 }
 
 func newNodePicker(entries []connectNodeEntry) nodePickerModel {
@@ -260,6 +274,9 @@ func newNodePicker(entries []connectNodeEntry) nodePickerModel {
 		filtered: fuzzyMatch("", names),
 		chosen:   -1,
 		visible:  10,
+	}
+	for i := range entries {
+		m.detailWidth = max(m.detailWidth, lipgloss.Width(renderNodeDetail(&entries[i])))
 	}
 	m.input.Focus()
 	return m
@@ -291,13 +308,13 @@ func (m nodePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.chosen = m.filtered[m.cursor]
 				return m, tea.Quit
 			}
-		case "up", "ctrl+p", "k":
+		case "up", "ctrl+p":
 			if m.cursor > 0 {
 				m.cursor--
 			}
 			m.clampOffset()
 			return m, nil
-		case "down", "ctrl+n", "j":
+		case "down", "ctrl+n":
 			if m.cursor < len(m.filtered)-1 {
 				m.cursor++
 			}
@@ -361,17 +378,75 @@ func (m nodePickerModel) currentEntry() *connectNodeEntry {
 	return &m.entries[m.filtered[m.cursor]]
 }
 
+// nodeListLayout holds the column widths of the node list. An image width of
+// zero hides the image column.
+type nodeListLayout struct {
+	name, kind, image int
+	showDetail        bool
+}
+
+const (
+	connectRowPrefixWidth = 4 // indent, state dot and a space
+	connectColumnGap      = 2
+	connectMinImageWidth  = 8
+	connectDefaultWidth   = 120 // used until the terminal reports its size
+)
+
+// width returns the total width of a list row.
+func (l nodeListLayout) width() int {
+	w := connectRowPrefixWidth + l.name + connectColumnGap + l.kind
+	if l.image > 0 {
+		w += connectColumnGap + l.image
+	}
+	return w
+}
+
+// layout fits the node list into the terminal width so that rows never wrap.
+// The details panel is hidden when node names and kinds wouldn't fit next to
+// it, and the image column gets whatever space remains.
+func (m nodePickerModel) layout() nodeListLayout {
+	var l nodeListLayout
+	imageWidth := 0
+	for i := range m.entries {
+		l.name = max(l.name, lipgloss.Width(m.entries[i].name))
+		l.kind = max(l.kind, lipgloss.Width(m.entries[i].kind))
+		imageWidth = max(imageWidth, lipgloss.Width(m.entries[i].image))
+	}
+
+	termWidth := m.width
+	if termWidth <= 0 {
+		termWidth = connectDefaultWidth
+	}
+	termWidth-- // the picker's left padding
+
+	required := connectRowPrefixWidth + l.name + connectColumnGap + l.kind
+	available := termWidth - connectColumnGap - m.detailWidth
+	l.showDetail = required <= available
+	if !l.showDetail {
+		available = termWidth
+	}
+
+	l.name = max(1, l.name-max(0, required-available))
+	if room := available - required - connectColumnGap; room >= connectMinImageWidth {
+		l.image = min(imageWidth, room)
+	}
+
+	return l
+}
+
 func (m nodePickerModel) View() string {
+	// Clear the picker from the screen once a choice has been made.
+	if m.cancel || m.chosen >= 0 {
+		return ""
+	}
+
 	var b strings.Builder
 
 	b.WriteString("\n")
 	b.WriteString(m.input.View())
 	b.WriteString("\n\n")
 
-	listWidth := 46
-	if m.width > 120 {
-		listWidth = 60
-	}
+	layout := m.layout()
 
 	// Render the visible slice of the node list.
 	rows := make([]string, 0, m.visible)
@@ -380,16 +455,22 @@ func (m nodePickerModel) View() string {
 		entry := m.entries[idx]
 		selected := i == m.cursor
 
-		matched := matchIndicesFor(m.input.Value(), entry.name)
+		nameText := truncateText(entry.name, layout.name)
+		matched := matchIndicesFor(m.input.Value(), nameText)
 
-		name := highlightMatched(entry.name, matched, lipgloss.NewStyle().Bold(true).Foreground(connectAccent))
+		name := highlightMatched(
+			nameText,
+			matched,
+			lipgloss.NewStyle().Bold(true).Foreground(connectAccent),
+		)
 		if selected {
 			name = connectSelectedNameStyle.Render(name)
 		}
 
 		kindBadge := kindBadgeBaseStyle.
 			Foreground(connectKindColor(entry.kind)).
-			Render(fmt.Sprintf("%s", entry.kind))
+			Width(layout.kind).
+			Render(entry.kind)
 
 		// Smaller state dot (• instead of ●) so lines stay compact.
 		dot := "•"
@@ -404,19 +485,17 @@ func (m nodePickerModel) View() string {
 			dotStyle = lipgloss.NewStyle().Foreground(connectSelectedDotColor)
 		}
 
-		img := entry.image
-		if len(img) > 30 {
-			img = img[:27] + "…"
-		}
-
 		// Fixed two-space indent keeps lines perfectly aligned when the
 		// cursor moves — selection is conveyed by the dot color only.
-		line := fmt.Sprintf("  %s %s  %-18s %s",
+		line := fmt.Sprintf("  %s %s%s  %s",
 			dotStyle.Render(dot),
 			name,
+			strings.Repeat(" ", layout.name-lipgloss.Width(nameText)),
 			kindBadge,
-			connectDimStyle.Render(img),
 		)
+		if layout.image > 0 {
+			line += "  " + connectDimStyle.Render(truncateText(entry.image, layout.image))
+		}
 		rows = append(rows, line)
 	}
 
@@ -426,23 +505,30 @@ func (m nodePickerModel) View() string {
 
 	// Details panel for the highlighted node.
 	detail := ""
-	if cur := m.currentEntry(); cur != nil {
+	if cur := m.currentEntry(); cur != nil && layout.showDetail {
 		detail = renderNodeDetail(cur)
 	}
 
 	left := strings.Join(rows, "\n")
 	if len(m.filtered) > m.visible {
-		left += "\n" + connectDimStyle.Render(fmt.Sprintf("  … %d/%d shown", m.visible, len(m.filtered)))
+		left += "\n" + connectDimStyle.Render(
+			fmt.Sprintf("  … %d/%d shown", m.visible, len(m.filtered)),
+		)
 	}
 
 	// Layout: list on the left, details on the right.
-	listBlock := lipgloss.NewStyle().Width(listWidth).Render(left)
+	listBlock := lipgloss.NewStyle().Width(layout.width()).Render(left)
 	detailBlock := lipgloss.NewStyle().Width(0).Render(detail)
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, listBlock, "  ", detailBlock)
+	body := listBlock
+	if layout.showDetail {
+		body = lipgloss.JoinHorizontal(lipgloss.Top, listBlock, "  ", detailBlock)
+	}
 	b.WriteString(body)
 	b.WriteString("\n\n")
-	b.WriteString(connectHelpStyle.Render("type to fuzzy search • ↑/↓ move • enter select • esc quit"))
+	b.WriteString(
+		connectHelpStyle.Render("type to fuzzy search • ↑/↓ move • enter select • esc quit"),
+	)
 
 	return lipgloss.NewStyle().PaddingLeft(1).Render(b.String())
 }
@@ -505,6 +591,8 @@ type methodPickerModel struct {
 	chosen   int
 	cancel   bool
 	width    int
+	// labelWidth is the width of the widest method label, it aligns the descriptions.
+	labelWidth int
 }
 
 func newMethodPicker(node *connectNodeEntry, methods []connectMethod) methodPickerModel {
@@ -516,8 +604,10 @@ func newMethodPicker(node *connectNodeEntry, methods []connectMethod) methodPick
 	input.CharLimit = 64
 
 	labels := make([]string, len(methods))
+	labelWidth := 0
 	for i, m := range methods {
 		labels[i] = m.Label
+		labelWidth = max(labelWidth, lipgloss.Width(m.Label))
 	}
 
 	m := methodPickerModel{
@@ -527,6 +617,8 @@ func newMethodPicker(node *connectNodeEntry, methods []connectMethod) methodPick
 		labels:   labels,
 		filtered: fuzzyMatch("", labels),
 		chosen:   -1,
+
+		labelWidth: labelWidth,
 	}
 	m.input.Focus()
 	return m
@@ -557,12 +649,12 @@ func (m methodPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.chosen = m.filtered[m.cursor]
 				return m, tea.Quit
 			}
-		case "up", "ctrl+p", "k":
+		case "up", "ctrl+p":
 			if m.cursor > 0 {
 				m.cursor--
 			}
 			return m, nil
-		case "down", "ctrl+n", "j":
+		case "down", "ctrl+n":
 			if m.cursor < len(m.filtered)-1 {
 				m.cursor++
 			}
@@ -595,6 +687,11 @@ func (m *methodPickerModel) refilter() {
 }
 
 func (m methodPickerModel) View() string {
+	// Clear the picker from the screen once a choice has been made.
+	if m.cancel || m.chosen >= 0 {
+		return ""
+	}
+
 	var b strings.Builder
 
 	b.WriteString("\n")
@@ -605,6 +702,7 @@ func (m methodPickerModel) View() string {
 		method := m.methods[idx]
 		selected := i == m.cursor
 
+		padding := strings.Repeat(" ", m.labelWidth-lipgloss.Width(method.Label))
 		label := method.Label
 		if selected {
 			label = connectSelectedNameStyle.Render(label)
@@ -613,7 +711,7 @@ func (m methodPickerModel) View() string {
 
 		// Fixed two-space indent keeps method lines aligned while navigating —
 		// selection is conveyed by the label styling only.
-		line := fmt.Sprintf("  %-16s %s", label, desc)
+		line := fmt.Sprintf("  %s%s  %s", label, padding, desc)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
@@ -624,7 +722,9 @@ func (m methodPickerModel) View() string {
 
 	b.WriteString("\n")
 	if m.node != nil {
-		b.WriteString(connectDimStyle.Render(fmt.Sprintf("target: %s (%s)", m.node.name, m.node.kind)))
+		b.WriteString(
+			connectDimStyle.Render(fmt.Sprintf("target: %s (%s)", m.node.name, m.node.kind)),
+		)
 		b.WriteString("\n")
 	}
 	b.WriteString(connectHelpStyle.Render("type to filter • ↑/↓ move • enter select • esc quit"))
@@ -668,7 +768,7 @@ func runNodePicker(containers []clabruntime.GenericContainer, _ *clabcore.CLab) 
 		return -1, fmt.Errorf("unexpected picker result")
 	}
 	if m.cancel || m.chosen < 0 {
-		return -1, fmt.Errorf("selection cancelled")
+		return -1, errConnectCancelled
 	}
 	return m.chosen, nil
 }
@@ -707,13 +807,14 @@ func runMethodPicker(ct clabruntime.GenericContainer, c *clabcore.CLab) (connect
 		return connectMethod{}, fmt.Errorf("unexpected picker result")
 	}
 	if m.cancel || m.chosen < 0 {
-		return connectMethod{}, fmt.Errorf("selection cancelled")
+		return connectMethod{}, errConnectCancelled
 	}
 	return m.methods[m.chosen], nil
 }
 
-// buildConnectMethods assembles the connection options offered for a node:
-// its default shell, common fallback shells, and SSH via the lab's ssh config.
+// buildConnectMethods assembles the connection options offered for a node, in
+// display order: its default shell, SSH via the lab's ssh config, and common
+// fallback shells.
 func buildConnectMethods(defaultShell []string, kind string) []connectMethod {
 	defaultStr := strings.Join(defaultShell, " ")
 
@@ -753,33 +854,5 @@ func buildConnectMethods(defaultShell []string, kind string) []connectMethod {
 	add("/bin/sh", "POSIX sh", []string{"/bin/sh"}, false)
 	add("/bin/ash", "alpine ash", []string{"/bin/ash"}, false)
 
-	// Sort methods: default first, ssh second, then the rest alphabetically
-	// for a stable, predictable list.
-	sort.SliceStable(out, func(i, j int) bool {
-		ri := methodRank(out[i])
-		rj := methodRank(out[j])
-		if ri != rj {
-			return ri < rj
-		}
-		return out[i].Label < out[j].Label
-	})
-
 	return out
-}
-
-func methodRank(m connectMethod) int {
-	switch {
-	case m.SSH:
-		return 1
-	case m.Label == "/bin/bash":
-		return 2
-	case m.Label == "/bin/bash -l":
-		return 3
-	case m.Label == "/bin/sh":
-		return 4
-	case m.Label == "/bin/ash":
-		return 5
-	default:
-		return 0 // the node default comes first
-	}
 }

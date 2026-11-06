@@ -7,13 +7,13 @@ The `connect` command opens an interactive shell or an SSH session on a **single
 If more than one node matches the given filters, a beautiful TUI picker appears:
 
 * Type to **fuzzy-search** on node names.
-* Navigate with `↑/↓` (or `j/k`), press `enter` to select, `esc` to quit.
+* Navigate with `↑/↓` (or `ctrl+p/ctrl+n`), press `enter` to select, `esc` to quit.
 * The right-hand panel shows details of the highlighted node (kind, lab, image, state, IPv4/IPv6, ports).
 * After picking a node, a second picker lets you choose **how** to connect — the node's default shell, a common fallback shell, or plain `ssh` via the per-lab SSH config.
 
 When only one node matches, the node picker is skipped and the method picker is shown directly.
 
-The topology file is auto-detected from the current working directory when `--topo` / `--name` are not given.
+The topology file is auto-detected from the current working directory when `--topo` / `--name` are not given. When no topology file is found, the nodes of all running labs are listed.
 
 ## Usage
 

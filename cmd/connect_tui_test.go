@@ -139,3 +139,127 @@ func TestFoldInternalContainers(t *testing.T) {
 		t.Errorf("unrelated container changed: %+v", got[1].NetworkSettings)
 	}
 }
+
+func TestBuildConnectMethodsKeepsFallbackDefaultFirst(t *testing.T) {
+	methods := buildConnectMethods([]string{"/bin/sh"}, "linux")
+
+	if methods[0].Label != "/bin/sh" {
+		t.Fatalf("expected default shell first, got %q", methods[0].Label)
+	}
+	if !strings.Contains(methods[0].Description, "default shell") {
+		t.Errorf("expected default shell description, got %q", methods[0].Description)
+	}
+	if !methods[1].SSH {
+		t.Errorf("expected ssh as second method, got %+v", methods[1])
+	}
+
+	for _, m := range methods[1:] {
+		if m.Label == "/bin/sh" {
+			t.Errorf("default shell listed twice: %+v", methods)
+		}
+	}
+}
+
+func TestPickersTreatJAndKAsSearchInput(t *testing.T) {
+	keys := func(r rune) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}} }
+
+	entries := []connectNodeEntry{{name: "clab-lab1-juniper"}, {name: "clab-lab1-spine-k"}}
+	var node tea.Model = newNodePicker(entries)
+	node, _ = node.Update(keys('j'))
+	node, _ = node.Update(keys('u'))
+
+	nodePicker := node.(nodePickerModel)
+	if got := nodePicker.input.Value(); got != "ju" {
+		t.Errorf("node picker query = %q, want %q", got, "ju")
+	}
+	if nodePicker.cursor != 0 {
+		t.Errorf("node picker cursor moved to %d", nodePicker.cursor)
+	}
+
+	var method tea.Model = newMethodPicker(nil,
+		buildConnectMethods([]string{"/bin/sh"}, "linux"))
+	method, _ = method.Update(keys('k'))
+
+	if got := method.(methodPickerModel).input.Value(); got != "k" {
+		t.Errorf("method picker query = %q, want %q", got, "k")
+	}
+}
+
+func TestNodePickerRowsDoNotWrap(t *testing.T) {
+	entries := []connectNodeEntry{
+		{
+			name:  "clab-a-rather-long-lab-name-client1",
+			kind:  "linux",
+			image: "srl-labs/network-multitool:latest",
+			ipv6:  "3fff:172:20:20::8/64",
+		},
+		{
+			name:  "clab-a-rather-long-lab-name-srl1",
+			kind:  "nokia_srlinux",
+			image: "nokia/srlinux:25.10",
+		},
+	}
+
+	for _, width := range []int{60, 80, 100, 120, 140, 200} {
+		var m tea.Model = newNodePicker(entries)
+		m, _ = m.Update(tea.WindowSizeMsg{Width: width, Height: 40})
+
+		picker := m.(nodePickerModel)
+		layout := picker.layout()
+		if layout.width() > width {
+			t.Errorf("width %d: list is %d wide", width, layout.width())
+		}
+
+		view := picker.View()
+		if got := lipgloss.Width(view); got > width {
+			t.Errorf("width %d: view is %d wide:\n%s", width, got, view)
+		}
+
+		for _, entry := range entries {
+			if !viewHasRow(view, entry.name[:12], entry.kind) {
+				t.Errorf("width %d: %s row is wrapped:\n%s", width, entry.kind, view)
+			}
+		}
+	}
+}
+
+// viewHasRow reports whether name and kind share a single line of view.
+func viewHasRow(view, name, kind string) bool {
+	for line := range strings.Lines(view) {
+		if strings.Contains(line, name) && strings.Contains(line, kind) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestPickersClearScreenOnceDone(t *testing.T) {
+	var node tea.Model = newNodePicker([]connectNodeEntry{{name: "clab-lab1-srl1"}})
+	node, _ = node.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if got := node.View(); got != "" {
+		t.Errorf("node picker left %q on the screen", got)
+	}
+
+	var method tea.Model = newMethodPicker(nil,
+		buildConnectMethods([]string{"/bin/sh"}, "linux"))
+	method, _ = method.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if got := method.View(); got != "" {
+		t.Errorf("method picker left %q on the screen", got)
+	}
+}
+
+func TestConnectCmdHasLabelFlag(t *testing.T) {
+	o := GetOptions()
+
+	c, err := connectCmd(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Flags().Parse([]string{"--label", "clab-node-kind=linux"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.Filter.LabelFilter) != 1 || o.Filter.LabelFilter[0] != "clab-node-kind=linux" {
+		t.Errorf("unexpected label filter %v", o.Filter.LabelFilter)
+	}
+}
