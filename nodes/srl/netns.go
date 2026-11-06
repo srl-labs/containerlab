@@ -7,6 +7,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -113,9 +114,17 @@ func (n *srl) linkNetns(ctx context.Context) error {
 	return clabutils.LinkContainerNS(nsPath, n.Cfg.LongName)
 }
 
+// deployedWithoutNetnsNode reports whether the node's container runs without a holder: it keeps
+// its own network namespace, as a node deployed by a containerlab before the holder does until
+// it is recreated.
+func (n *srl) deployedWithoutNetnsNode(ctx context.Context) bool {
+	return n.netnsNode.GetContainerStatus(ctx) == clabruntime.NotFound &&
+		n.GetContainerStatus(ctx) != clabruntime.NotFound
+}
+
 // GetNSPath retrieves the Namespace Path.
 func (n *srl) GetNSPath(ctx context.Context) (string, error) {
-	if n.netnsNode == nil {
+	if n.netnsNode == nil || n.deployedWithoutNetnsNode(ctx) {
 		return n.DefaultNode.GetNSPath(ctx)
 	}
 
