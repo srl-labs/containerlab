@@ -23,6 +23,11 @@ func (r *Runtime) Deploy(
 	ctx context.Context,
 	req clablabruntime.DeployRequest,
 ) (*clablabruntime.LabState, error) {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return nil, connErr
+	}
+
 	ctx = withKubernetesClientDebugLogs(ctx)
 
 	if req.Name == "" {
@@ -202,6 +207,11 @@ func (r *Runtime) Deploy(
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return connErr
+	}
+
 	ctx = withKubernetesClientDebugLogs(ctx)
 
 	if req.Name == "" {
@@ -331,6 +341,15 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		}
 	}
 
+	retainedClaims, err := r.handlePersistentClaims(ctx, req, namespace)
+	if err != nil {
+		return err
+	}
+	if retainedClaims != 0 {
+		// The namespace holds the retained storage; deleting it would delete the claims.
+		return nil
+	}
+
 	namespaceDeleted, err := r.deleteManagedLabNamespace(ctx, req.Name, namespace)
 	if err != nil {
 		return err
@@ -342,10 +361,96 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	return r.waitNamespaceDeleted(ctx, namespace, req.Timeout)
 }
 
+// handlePersistentClaims deletes the lab's persistent node storage on a destroy with Cleanup.
+// Without Cleanup it keeps the claims the lab retained and returns their number.
+func (r *Runtime) handlePersistentClaims(
+	ctx context.Context,
+	req clablabruntime.DestroyRequest,
+	namespace string,
+) (int, error) {
+	claims := r.kubeClient.CoreV1().PersistentVolumeClaims(namespace)
+	selector := labels.Set{labelTopologyOwner: req.Name}.String()
+
+	list, err := claims.List(ctx, metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return 0, fmt.Errorf("failed to list persistent claims of c9s lab %s/%s: %w",
+			namespace, req.Name, err)
+	}
+
+	if !req.Cleanup {
+		retained := 0
+		for idx := range list.Items {
+			// Claims owned by a Node are garbage-collected with it.
+			if len(list.Items[idx].OwnerReferences) == 0 {
+				retained++
+			}
+		}
+		if retained != 0 {
+			log.Info(
+				"Keeping persistent node storage of C9s lab; destroy with --cleanup to delete it",
+				"name", req.Name,
+				"namespace", namespace,
+				"claims", retained,
+			)
+		}
+
+		return retained, nil
+	}
+
+	if len(list.Items) == 0 {
+		return 0, nil
+	}
+
+	log.Info("Deleting persistent node storage of C9s lab",
+		"name", req.Name,
+		"namespace", namespace,
+		"claims", len(list.Items),
+	)
+
+	for idx := range list.Items {
+		err := claims.Delete(ctx, list.Items[idx].Name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return 0, fmt.Errorf("failed to delete persistent claim %s/%s: %w",
+				namespace, list.Items[idx].Name, err)
+		}
+	}
+
+	if !req.Wait {
+		return 0, nil
+	}
+
+	// A claim is only removed once no pod uses it any more. A redeploy right after the
+	// destroy must not adopt a claim that is still terminating.
+	waitCtx, cancel := context.WithTimeout(ctx, r.timeoutFor(req.Timeout))
+	defer cancel()
+
+	err = wait.PollUntilContextCancel(waitCtx, pollInterval, true,
+		func(ctx context.Context) (bool, error) {
+			remaining, err := claims.List(ctx, metav1.ListOptions{LabelSelector: selector})
+			if err != nil {
+				return false, fmt.Errorf("failed to list persistent claims of c9s lab %s/%s: %w",
+					namespace, req.Name, err)
+			}
+
+			return len(remaining.Items) == 0, nil
+		})
+	if err != nil {
+		return 0, fmt.Errorf("waiting for the persistent claims of c9s lab %s/%s to be deleted: %w",
+			namespace, req.Name, err)
+	}
+
+	return 0, nil
+}
+
 func (r *Runtime) Inspect(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (*clablabruntime.LabState, error) {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return nil, connErr
+	}
+
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}
@@ -370,7 +475,7 @@ func (r *Runtime) Inspect(
 			return nil, listErr
 		}
 		if len(nodes.Items) == 0 {
-			return nil, fmt.Errorf("c9s lab %s/%s was not found", namespace, req.Name)
+			return nil, &labNotFoundError{namespace: namespace, name: req.Name}
 		}
 		state = stateFromNodeResources(req.Name, namespace, nodes.Items)
 	}
@@ -382,10 +487,25 @@ func (r *Runtime) Inspect(
 	return state, nil
 }
 
+// labNotFoundError reports a lab without a Topology or Node resource.
+type labNotFoundError struct {
+	namespace string
+	name      string
+}
+
+func (e *labNotFoundError) Error() string {
+	return fmt.Sprintf("c9s lab %s/%s was not found", e.namespace, e.name)
+}
+
 func (r *Runtime) LabExists(
 	ctx context.Context,
 	req clablabruntime.InspectRequest,
 ) (bool, error) {
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return false, connErr
+	}
+
 	if req.Name == "" {
 		return false, fmt.Errorf("topology name is required")
 	}
@@ -411,10 +531,12 @@ func (r *Runtime) List(
 	ctx context.Context,
 	req clablabruntime.ListRequest,
 ) ([]*clablabruntime.LabState, error) {
-	namespace := r.namespaceFor(req.Namespace)
-	if req.AllNamespaces {
-		namespace = metav1.NamespaceAll
+	r, connErr := r.connect(ctx, req.Identity)
+	if connErr != nil {
+		return nil, connErr
 	}
+
+	namespace := r.listNamespace(req.Namespace, req.AllNamespaces)
 
 	topologyList, err := r.client.Resource(topologyGVR).Namespace(namespace).
 		List(ctx, metav1.ListOptions{})
@@ -488,6 +610,7 @@ func (r *Runtime) waitReady(
 	defer cancel()
 
 	var lastState *clablabruntime.LabState
+	settledWithStopped := false
 	readinessProgress := nodeReadinessProgress{}
 	imageProgress := imagePullProgress{}
 	phaseProgress := nodePhaseProgress{}
@@ -518,6 +641,12 @@ func (r *Runtime) waitReady(
 			if state.Ready {
 				return true, nil
 			}
+			if settled, err := r.labSettledWithStoppedNodes(ctx, state); err != nil {
+				return false, err
+			} else if settled {
+				settledWithStopped = true
+				return true, nil
+			}
 			if failure := phaseProgress.terminalFailure(); failure != "" {
 				return false, fmt.Errorf(
 					"clabernetes lab %s/%s cannot be deployed: %s",
@@ -537,7 +666,9 @@ func (r *Runtime) waitReady(
 			return false, nil
 		})
 	if err == nil {
-		log.Info("C9s lab is ready", "name", name, "namespace", namespace)
+		if !settledWithStopped {
+			log.Info("C9s lab is ready", "name", name, "namespace", namespace)
+		}
 
 		return nil
 	}
@@ -576,6 +707,50 @@ func (r *Runtime) waitReady(
 		name,
 		strings.Join(pendingNodes, ", "),
 	)
+}
+
+// labSettledWithStoppedNodes reports whether a lab with stopped nodes reached the state an
+// apply can reach: every node is ready, stopped on purpose, or up and only waiting for stopped
+// link peers. A lab without stopped nodes is settled only when it is ready.
+func (r *Runtime) labSettledWithStoppedNodes(
+	ctx context.Context,
+	state *clablabruntime.LabState,
+) (bool, error) {
+	hasStopped := false
+	for _, node := range state.Nodes {
+		if node.State == "stopped" || node.State == "stopping" {
+			hasStopped = true
+		}
+	}
+	if !hasStopped {
+		return false, nil
+	}
+
+	states, err := r.labRunStates(ctx, state.Name, state.Namespace)
+	if err != nil {
+		if ctx.Err() != nil || contextDeadlineIsImminent(ctx) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	notes := make([]string, 0)
+	for _, node := range state.Nodes {
+		if node.Ready {
+			continue
+		}
+		settled, reason := states.settledNode(node.Name)
+		if !settled {
+			return false, nil
+		}
+		notes = append(notes, fmt.Sprintf("%s (%s)", node.Name, reason))
+	}
+
+	log.Info("C9s lab is ready apart from stopped nodes", "name", state.Name,
+		"namespace", state.Namespace, "nodes", strings.Join(notes, ", "))
+
+	return true, nil
 }
 
 type trackedNodeReadiness struct {

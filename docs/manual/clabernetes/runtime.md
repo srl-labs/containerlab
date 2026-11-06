@@ -23,6 +23,11 @@ installation, concepts, guides, and CRD reference, see the
 ///
 
 /// warning | c9s version compatibility
+The c9s runtime needs clabernetes with Node run state and the clabwire capture
+contract (0.11 or newer). Containerlab checks this before its first cluster call
+and fails with an error that names the required release; there is no fallback
+for older clabernetes releases. See [Required clabernetes release](#required-clabernetes-release).
+
 This guide describes containerlab 0.80+ with the direct-runtime API introduced
 in c9s 0.9. It does not apply to launcher-based c9s 0.8 and older releases.
 c9s 0.9 cannot upgrade an older installation in place; follow the
@@ -100,13 +105,16 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | ------- | ------------ |
 | `deploy` | creates the `Topology` resource and waits for readiness; `--no-topology-cr` creates `NodeProfile`, `Link`, and `Node` resources directly instead |
 | `destroy` | deletes the lab's resources and its containerlab-managed namespace |
-| `inspect` | reads Node, Deployment, Pod, and service status |
+| `inspect` | reads Node, Pod, and service status |
 | `exec` | execs directly into the node's device container |
-| `start` | scales node Deployments to `1` |
-| `stop` | scales node Deployments to `0` and pauses reconciliation |
-| `restart` | restarts node Deployments |
+| `start` | sets the node's `spec.runState` to `Running` |
+| `stop` | sets the node's `spec.runState` to `Stopped` |
+| `restart` | requests a Pod replacement with a `c9s.run/restart-requested` token |
 | `save` | runs the node's save lifecycle inside its device container |
 | `events` | watches Clabernetes resources and pods |
+| `logs` | streams the device container log |
+| `capture` | captures lab link interfaces through the `clabwire` sidecar into one pcapng stream |
+| `inspect interfaces` | lists the capturable link interfaces with their sysfs state |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, NodeProfile, Link, and Node resources without changing them |
 | `deploy --emit-crs` | prints the Namespace, ConfigMap, and Topology (or NodeProfile, Link, and Node) manifests deploy would create, without contacting the cluster |
@@ -117,7 +125,8 @@ The c9s runtime expects:
 
 - a reachable kubernetes cluster
 - kubernetes 1.31 or newer
-- c9s 0.9 direct-runtime CRDs installed in the cluster
+- clabernetes with Node run state and the clabwire capture contract (0.11 or
+  newer) installed in the cluster
 - the Clabernetes manager running and watching all lab namespaces
 - kubernetes RBAC allowing containerlab to manage the required resources
 - permission for lab namespaces to run the privileged c9s connectivity
@@ -128,6 +137,48 @@ Containerlab creates a dedicated namespace for each c9s lab. The kube identity
 therefore needs cluster-scoped permission to get, create, and delete namespaces
 unless you select an existing namespace with `CLAB_KUBE_NAMESPACE`.
 ///
+
+### Required clabernetes release
+
+Containerlab needs a clabernetes release that has:
+
+- Node run state: `nodes.c9s.run` `spec.runState` (`Running` | `Stopped`), the
+  `Stopped` condition, and restart requests through the
+  `c9s.run/restart-requested` annotation
+- the clabwire packet capture contract: `--nodeName`, repeated `--interface`,
+  `--format pcapng`, `--list-interfaces` and `--stop-on-stdin-close`
+- the namespace-bindable `clabernetes-lab-viewer` and `clabernetes-lab-editor`
+  roles
+
+Both features ship in the same release, so containerlab checks one field: the
+published OpenAPI schema of `nodes.c9s.run` (`/openapi/v3/apis/c9s.run/v1alpha1`)
+must have `spec.runState`. Every authenticated user may read that document, so
+the check needs no extra RBAC. It runs once per command (once per runtime
+instance for library users) before the first cluster call. Commands that do not
+contact the cluster (`validate`, `deploy --emit-crs`, `graph`) skip it. Against
+an older release every other command fails like this:
+
+```text
+the clabernetes release on this cluster is not supported: nodes.c9s.run has no
+spec.runState (Node run state); the c9s runtime needs clabernetes with Node run
+state and the clabwire capture contract (0.11 or newer)
+```
+
+A cluster that passes this check but runs a `clabwire` without
+`--stop-on-stdin-close` (a development build between the two features) fails
+the first capture with the same kind of error, naming the pod:
+
+```text
+the clabernetes release on this cluster is not supported: clabwire in pod
+<namespace>/<pod> does not accept packet-capture --stop-on-stdin-close; the c9s
+runtime needs clabernetes with Node run state and the clabwire capture contract
+(0.11 or newer)
+```
+
+Library users can run the check up front with
+`(*core.CLab).CheckLabRuntimeSupport(ctx)` or the optional
+`labruntime.SupportChecker` interface; the error wraps
+`labruntime.ErrUnsupportedRuntimeVersion`.
 
 See the
 [c9s cluster requirements](https://c9s.run/docs/installation#cluster-requirements)
@@ -239,11 +290,17 @@ Some commands intentionally look across namespaces:
 
 - `inspect --all`
 - `destroy --all`
-- `events`
+- `events` without a lab
 
 For these commands, containerlab uses all-namespaces kubernetes listing or
-watching. The synthetic c9s container ID includes the namespace so follow-up
-actions can still target the right lab:
+watching. A namespace override (`--namespace` or `CLAB_KUBE_NAMESPACE`) limits
+them to that namespace, so an identity whose RBAC only covers one namespace can
+still list, destroy and watch the labs in it. `events` with a lab (`-t` or
+`--name`) watches only that lab, in the lab's namespace.
+
+The c9s container ID includes the namespace so follow-up actions can still
+target the right lab. `inspect` reports it as `container_id`, and events use it
+as the actor ID:
 
 ```text
 <namespace>/<lab>/<node>
@@ -397,7 +454,9 @@ containerlab --runtime c9s deploy --emit-crs -t topo.clab.yml > topo-crs.yaml
 ```
 
 `validate` reports whether the topology can be represented by the c9s runtime without reading
-or changing lab resources. Compilation is fail-closed: every source construct c9s cannot
+or changing lab resources. Like `deploy --emit-crs`, it never contacts the cluster and works
+without a kubeconfig that loads: containerlab only loads the kubeconfig when a command first
+needs the cluster, so a topology can be validated before the cluster is reachable. Compilation is fail-closed: every source construct c9s cannot
 preserve is reported as an error, with its field and line, in one pass. A small set of
 lossy-but-safe fields (shared management network selection, pinned host-side ports) is accepted
 with a warning. `deploy --dry-run` additionally reads the selected cluster and reports the
@@ -435,8 +494,91 @@ allocated management address.
 
 /// note
 `inspect --all` groups c9s Nodes by `c9s.run/topologyOwner` across all
-namespaces. A single-lab inspect uses its canonical `c9s-<lab-name>` namespace.
+namespaces, or in the namespace override when one is set. A single-lab inspect
+uses its canonical `c9s-<lab-name>` namespace.
 ///
+
+`inspect --format json` identifies every node uniquely and names the Kubernetes
+workload that runs it, so clients can open terminals, follow logs or
+port-forward without working out the pod themselves:
+
+| Field | Value |
+|---|---|
+| `container_id` | `<namespace>/<lab>/<node>`, the same ID events use as actor |
+| `namespace` | the lab's Kubernetes namespace |
+| `pod` | the pod that runs the node; nodes grouped through `network-mode: container:<node>` share the pod of their primary node |
+| `container` | the node's primary device container in the pod, the same container `exec` uses |
+| `node_uid` | the UID of the c9s `Node` resource |
+| `exposed_ports` | the ports the node's Service publishes (`Node.status.exposedPorts`): `port` on the node, `expose_port` on the Service, and `protocol` |
+| `load_balancer_address` | the address of the node's LoadBalancer Service, when it has one |
+
+```json
+{
+  "clos": [
+    {
+      "lab_name": "clos",
+      "labPath": "clos.clab.yml",
+      "absLabPath": "/home/user/clos.clab.yml",
+      "name": "clos-srl1",
+      "container_id": "c9s-clos/clos/srl1",
+      "image": "ghcr.io/nokia/srlinux",
+      "kind": "nokia_srlinux",
+      "state": "running",
+      "status": "healthy",
+      "ipv4_address": "172.18.0.200",
+      "ipv6_address": "N/A",
+      "namespace": "c9s-clos",
+      "pod": "srl1-7d9c6b5f4-x2k8p",
+      "container": "node-srl1-3f2a",
+      "node_uid": "0b6e2f60-3d0c-4c5e-9a43-5c1b7f1d2a9e",
+      "exposed_ports": [
+        { "port": 22, "expose_port": 22, "protocol": "tcp" },
+        { "port": 57400, "expose_port": 57400, "protocol": "tcp" }
+      ],
+      "load_balancer_address": "172.18.0.200"
+    }
+  ]
+}
+```
+
+These fields are only present for lab runtimes; Docker and Podman output is
+unchanged. Fields without a value, such as `pod` for a stopped node, are left
+out. `--details` keeps printing the raw records.
+
+The other fields mean what they mean for Docker and Podman, so clients can treat
+c9s nodes like containers:
+
+| Field | c9s value |
+|---|---|
+| `state` | `created` while the node's pod is scheduled and prepared, `running` once its device containers run, `exited` once the node is stopped (or its pod ends or is replaced) |
+| `status` | `healthy` once the node is ready or its device containers are, `health: starting` while a running device boots, `Created`, `Exited` |
+| `labPath`, `absLabPath` | the topology file the lab was deployed from (see below) |
+| `name` | `<lab>-<node>`, the name events use as `actor_name` |
+
+### Topology file
+
+A deploy records the absolute path of the topology file, on the machine that
+deployed it, in the annotation `containerlab.dev/topo-file`:
+
+- with a `Topology` resource, on the `Topology`; every deploy records the file
+  it read
+- with `--no-topology-cr`, on every `Node`. clabernetes copies a Node's
+  annotations into its pod, so a Node keeps the file it was created from: a
+  later deploy from another file does not change it and does not restart the
+  node. Destroy and deploy again to record a new file.
+
+`inspect` reports the recorded file as `labPath` and `absLabPath` (shortened
+for the table, as for Docker), and events as `clab-topo-file`, so a client
+matches a running lab to its file the same way for every runtime. The file is a
+path on the deploying machine; a client on another machine cannot assume it
+exists there.
+
+A lab that containerlab did not deploy from a file, for example one applied from
+`deploy --emit-crs` output with `kubectl` (the emitted manifests do not carry
+the annotation), has no recorded file. It reports where its definition lives in
+the cluster: `k8s://<namespace>/topologies/<lab>`, or
+`k8s://<namespace>/labs/<lab>` without a `Topology` resource. With `-t`,
+`inspect` reports the given file.
 
 Useful kubernetes checks for the same state are:
 
@@ -466,43 +608,154 @@ The command executes in the actual device container. RBAC must allow
 `pods/exec`, and the device pod must be running.
 ///
 
+`exec` does not check for a local Docker or Podman daemon; the outer host only
+needs to reach the cluster.
+
 If any selected command returns nonzero, or pod exec itself fails, the outer
 `containerlab exec` also returns nonzero. Successful and failed results that
 were received are still printed, so automation can use both the output and the
 process exit status.
 
-## Start, stop, and restart
+## Logs
 
-Node lifecycle commands operate on the kubernetes Deployments created by
-Clabernetes.
+`logs` shows the log of a node's primary device container, the same container
+`exec` uses:
 
 ```bash
-containerlab --runtime c9s stop -t topo.clab.yml
-containerlab --runtime c9s start -t topo.clab.yml
+containerlab --runtime c9s logs -t topo.clab.yml -n srl1
+containerlab --runtime c9s logs --name clos -n srl1 --tail 100 --follow --timestamps
+```
+
+It reads the `pods/log` subresource of the node's pod, so RBAC must allow
+`get` on `pods/log`. Kubernetes returns stdout and stderr as one stream. See
+the [`logs` command](../../cmd/logs.md) for the flags.
+
+## Packet capture
+
+[`containerlab capture`](../../cmd/capture.md) captures lab link interfaces of
+one or more nodes into one pcapng stream. Each node's pod runs the `clabwire`
+sidecar, which realized the node's links; containerlab execs its capture
+command (`/clabernetes/manager node-runtime packet-capture`) in the sidecar.
+No capture service runs in the cluster, and nothing is captured outside the
+lab's planned link interfaces.
+
+```bash
+# both ends of a link, for 30 seconds
+containerlab -r c9s capture -t clos.clab.yml \
+  --target srl1:e1-1 --target srl2:e1-1 --duration 30s -w srl.pcapng
+
+# live in Wireshark until Wireshark or Ctrl+C ends it
+containerlab -r c9s capture --name clos --target srl1:e1-1,e1-2 -w - | wireshark -k -i -
+
+# what can be captured, with the peer of each link
+containerlab -r c9s capture --name clos --list
+```
+
+How it works:
+
+- containerlab locates each target node's pod and runs one `clabwire` capture
+  per node, with `--nodeName`, every requested interface of that node,
+  `--format pcapng` and `--stop-on-stdin-close`, with stdin attached.
+- The streams are merged into one section: one Interface Description Block per
+  target named `<node>:<interface>` (the node as the topology spells it),
+  written before the first packet, and the packets of every target with their
+  interface IDs remapped.
+- Packets are written in timestamp order. Each node's stream arrives over its
+  own exec stream, so the merged stream holds every packet for 250 ms and
+  writes the held packets ordered by timestamp. A packet that arrives later
+  than that, stamped before a packet already written, is written as it comes;
+  the number of such packets goes to the debug log.
+- `clabwire` limits one capture to one hour. Longer captures, and captures
+  without `--duration`, chain captures with a few seconds of overlap and switch
+  in the middle of it; packets near the switch are matched by content so each
+  is written once. A follow-up that does not start in time is reported as a
+  gap, with its time span.
+- `clabwire` audit records (JSON on its stderr, schema
+  `c9s.direct-packet-capture-audit/v1alpha1`) with status `Denied` or `Failed`
+  end the command with their reason. `Started` and `Succeeded` go to the debug
+  log.
+
+Interface names are the names inside the node; targets may also use the alias
+the topology used for an interface:
+
+| Kind | Interface | Alias |
+| ---- | --------- | ----- |
+| linux | `eth1` | |
+| SR Linux | `e1-1` | `ethernet-1/1` |
+| vr-sros / nokia_sros | `eth3` | `1/1/3` |
+
+The management interface and the pod's `c9s0` interface cannot be captured.
+
+Ctrl+C or SIGTERM ends a capture cleanly: the output stays a valid pcapng
+file and the command exits with code 0. Kubernetes does not stop a command
+when its exec stream closes, but it closes the command's stdin. containerlab
+closes the stdin of every `clabwire` capture when the capture ends for any
+reason (the duration or packet limit, Ctrl+C, an error, a failed write of the
+output such as a closed Wireshark, or a newer segment taking over), and
+`clabwire` then ends the capture within milliseconds. If the process does not
+end within three seconds, containerlab cuts the exec stream. A killed
+containerlab drops the connection, which closes stdin as well.
+
+Capturing needs `get` and `create` on `pods/exec` in the lab namespace, which
+`clabernetes-lab-editor` grants. `inspect interfaces -r c9s` lists the same
+interfaces, with the MAC address, index, MTU and operational state read from
+sysfs in the device container (type `veth`, which is how `clabwire` realizes
+lab links).
+
+## Start, stop, and restart
+
+Node lifecycle commands ask the clabernetes controllers for a run state; they
+never touch Deployments or Pods.
+
+```bash
+containerlab --runtime c9s stop -t topo.clab.yml -n srl1
+containerlab --runtime c9s start -t topo.clab.yml -n srl1
 containerlab --runtime c9s restart -t topo.clab.yml
 ```
 
-`stop` sets the Clabernetes ignore-reconcile label on the selected `Node`
-resources, then scales their Deployments to `0`:
+`stop` and `start` send a merge patch to the node's `Node` resource:
 
-```text
-c9s.run/ignoreReconcile=true
+```json
+{"spec": {"runState": "Stopped"}}
 ```
 
-The label prevents the Clabernetes manager from immediately reconciling the
-nodes back to the running state. A stopped node's links go carrier-down on
-every peer, exactly like unplugging a cable.
+(`"Running"` for `start`). `stop` returns once the controller reports the
+`Stopped` condition as `True`, which it does when no Pod of the node remains.
+`start` returns once the condition is `False` for the patched generation and
+the node's readiness is `ready`. Both wait at most `--timeout`.
 
-`start` scales the selected Deployments back to `1` and clears the
-corresponding Node labels. A grouped secondary shares lifecycle with its
-primary node's Deployment.
+`restart` sets a new token in the `c9s.run/restart-requested` annotation of the
+node. The controller replaces the Pod once per new token, and `restart` returns
+when `status.observedRestartToken` equals the token and the node is ready. A
+stopped node is started by the same patch.
 
-`restart` patches each selected Deployment with a restart annotation and waits
-for it to become ready:
+What a stopped node keeps and loses:
 
-```text
-kubectl.kubernetes.io/restartedAt=<utc timestamp>
-```
+- The `Node`, its Services, PersistentVolumeClaims and Links stay. Saved
+  configuration survives a stop and start.
+- Its links go carrier-down on every peer, like an unplugged cable;
+  `events` reports an interface `update` with state `lower-layer-down` on the
+  peers, and deletes the stopped node's interfaces.
+- `inspect` shows the node as `exited` with status `Exited`.
+- `events` reports the container actions Docker reports for `containerlab stop`
+  and `start`: `kill`, `stop` and `die` when the node's pod goes, `start` when
+  its new pod runs, then `health_status: starting` and
+  `health_status: healthy` as the device boots. A restart reports `kill`,
+  `stop`, `die` and `start`.
+- clabernetes keeps a running peer of a stopped node `notready`: its
+  connectivity sidecar waits for the far end of the wire. Deploy, apply, start
+  and restart treat such a node as settled when its containers are ready, and
+  log `link peers stopped: <nodes>` instead of waiting for it.
+
+Nodes that share a Pod (`network-mode: container:<node>`) follow the run state
+of their primary node. Stopping, starting or restarting any node of the group
+acts on the primary, once.
+
+The controllers keep reconciling while nodes are stopped. A `deploy` that
+changes a stopped node updates its `Node`; the node stays stopped and boots the
+new definition on its next `start`. Containerlab never sends `spec.runState`
+during deploy, and with `--no-topology-cr` it carries the run state of existing
+Nodes over, so an apply never starts a stopped node.
 
 ## Save
 
@@ -544,12 +797,17 @@ files, the c9s runtime has nothing to copy for that node.
 
 ## Events
 
-The c9s runtime can stream Node, Topology, pod, and interface-stat events:
+The c9s runtime streams container, interface state and interface-stat events
+with the actions and attributes the Docker runtime reports, so a client that
+reads Docker events reads c9s events the same way. It also streams `topology`
+events, which only c9s has:
 
 ```bash
 containerlab --runtime c9s events --format json
 containerlab --runtime c9s events --initial-state
 containerlab --runtime c9s events --interface-stats --format json
+containerlab --runtime c9s events --name clos --format json
+containerlab --runtime c9s --namespace team-a events --format json
 ```
 
 For c9s, events do not come from Docker events on the outer host. Containerlab
@@ -559,17 +817,170 @@ watches:
 - `Topology` resources
 - Pods labeled with `c9s.run/topologyOwner`
 
-With `--initial-state`, the stream starts with synthetic events for the current
-c9s node state and then continues with live watches.
+and reads a lab again whenever one of them changes.
 
-With `--interface-stats`, containerlab periodically reads `/proc/net/dev`
-inside each node's device container. All containers of a device pod share one
-network namespace, so the statistics cover the node's pod interfaces.
+What the stream covers:
+
+| Invocation | Scope |
+|---|---|
+| `events` | every namespace |
+| `--namespace <ns> events` or `CLAB_KUBE_NAMESPACE=<ns>` | the labs in `<ns>` |
+| `events -t <topo>` or `events --name <lab>` | that lab, in its namespace (`c9s-<lab>`, or the namespace override) |
+
+An identity whose RBAC only covers one namespace needs one of the scoped forms;
+watching every namespace requires cluster-wide `list` and `watch`.
+
+### Container events
+
+Each node is reported as a container. Its state follows its pod: `created`
+while the pod is scheduled and prepared, `running` once the device containers
+run, `exited` once the node is stopped, or its pod ends or is replaced. A change
+is reported with the actions Docker reports for the same change:
+
+| Change | Actions |
+|---|---|
+| the node appears (deploy, apply) | `create`, then `start` once its pod runs |
+| the device boots, is ready, is not ready anymore | `health_status: starting`, `health_status: healthy`, `health_status: unhealthy` |
+| `stop` | `kill`, `stop`, `die` |
+| `start` | `start` |
+| `restart`, or the pod is replaced | `kill`, `stop`, `die`, `start` |
+| the node is removed (destroy, apply) | `kill`, `die` (when it ran), `destroy` |
+
+With `--initial-state`, the stream starts with one event per node whose action
+is its state (`running`, `exited`, `created`) and `origin` `snapshot`, like the
+snapshot of a Docker container.
+
+Every container event describes the node with the attributes of a Docker
+container event, taken from the record `inspect` reports for the node:
+
+```json
+{
+  "timestamp": "2026-10-27T10:15:02.123456789Z",
+  "type": "container",
+  "action": "start",
+  "actor_id": "c9s-clos/clos/srl1",
+  "actor_name": "clos-srl1",
+  "actor_full_id": "c9s-clos/clos/srl1",
+  "attributes": {
+    "containerlab": "clos",
+    "clab-node-name": "srl1",
+    "clab-node-longname": "clos-srl1",
+    "clab-node-kind": "nokia_srlinux",
+    "clab-node-type": "ixr-d2l",
+    "clab-topo-file": "/home/user/clos.clab.yml",
+    "clab-owner": "alice",
+    "image": "ghcr.io/nokia/srlinux",
+    "mgmt_ipv4": "172.20.20.11/24",
+    "ports": "22/tcp;57400/tcp",
+    "state": "running",
+    "id": "c9s-clos/clos/srl1",
+    "name": "clos-srl1",
+    "lab": "clos",
+    "node": "srl1",
+    "namespace": "c9s-clos",
+    "pod": "srl1-7d9c6b5f4-x2k8p"
+  }
+}
+```
+
+- The actor ID is the node's `<namespace>/<lab>/<node>` ID, the `container_id`
+  inspect reports, and `actor_name` and `name` are the inspect `name`.
+- `clab-node-name` is the node name as the topology spells it.
+- `clab-topo-file` is the file the lab was deployed from (see
+  [Topology file](#topology-file)).
+- `state` is the container state after the event: `created`, `running` or
+  `exited`. Docker leaves it to the client to derive it from the action; c9s
+  reports it on every container event.
+- `ports` lists the node's exposed ports without a host binding: they are
+  reached through the node's Service or a port-forward, not on a port of the
+  local machine.
+- `kill` carries `signal` `15`; Kubernetes stops containers with SIGTERM.
+- `create` can come before the controller has allocated the node's management
+  address and Service, so it may lack `mgmt_ipv4`, `mgmt_ipv6` and `ports`;
+  the following events carry them.
+- `namespace`, `lab`, `node` and `pod` are c9s attributes on top.
+
+Docker attributes c9s does not report: `scope`, `clab-mgmt-net-bridge` (no
+Docker bridge), `clab-node-lab-dir` (a c9s lab has no lab directory on the
+deploying machine; node state lives in the cluster), and `exitCode` and
+`execDuration` on `die`. `clab-node-type` and `clab-node-group` are reported
+when the topology sets them, and with `-t` also a kind's default type; read by
+`--name` alone, a default type such as SR Linux's `ixr-d2l` is not known.
+
+### Interface events
+
+Containerlab samples the interfaces of every running node by exec into its
+device container. One exec per node and interval reads `/proc/net/dev` and
+`/sys/class/net/*/operstate` (with index, MTU, MAC address, flags and alias).
+
+It reports the interfaces a Docker container of the same node kind has, named
+as in that container:
+
+- the node's lab link interfaces, with the names and aliases clabwire lists for
+  them (`containerlab capture --list`): `eth1` for a linux node, `e1-1` with
+  alias `ethernet-1/1` for SR Linux, so a client finds a link's interface by
+  the endpoint name in the topology or its alias
+- the management interface `eth0`
+- the loopback `lo`
+
+The pod's own interfaces (the pod network interface `c9s0`, clabernetes'
+interposition interfaces `c9sr0` and `c9sm0`, and the link transport interfaces
+`c9ss*`) are not reported, and neither are the aliases clabernetes sets for its
+own use (`c9s:…`).
+
+Interface state events are always streamed, with the actions and attributes of
+the local runtimes' netlink events:
+
+```json
+{
+  "timestamp": "2026-10-27T10:15:02.123456789Z",
+  "type": "interface",
+  "action": "update",
+  "actor_id": "c9s-clos/clos/srl1",
+  "actor_name": "clos-srl1",
+  "actor_full_id": "c9s-clos/clos/srl1",
+  "attributes": {
+    "ifname": "e1-1",
+    "alias": "ethernet-1/1",
+    "state": "lower-layer-down",
+    "type": "veth",
+    "index": "7",
+    "mtu": "9232",
+    "mac": "aa:c1:ab:5e:2f:01",
+    "lab": "clos",
+    "name": "clos-srl1",
+    "id": "c9s-clos/clos/srl1",
+    "node": "srl1",
+    "namespace": "c9s-clos",
+    "pod": "srl1-7d9c6b5f4-x2k8p",
+    "origin": "clabernetes"
+  }
+}
+```
+
+- `action` is `snapshot` for every interface at the start with
+  `--initial-state`, `create` when an interface appears (for example when a
+  node starts), `update` when one of its attributes changes, and `delete` when
+  it disappears or its node stops running.
+- `state` is the operational state in netlink's names: `up`, `down`,
+  `lower-layer-down`, `unknown` (loopback), `dormant`, `testing`, `not-present`.
+- `type` is `veth` for the lab link and management interfaces and `device` for
+  loopback.
+- Device containers without a shell report statistics only, no interface state,
+  and no `index` or `mtu`.
+
+With `--interface-stats`, the same exec also produces `interface stats` events
+for the same interfaces, with their attributes and the byte and packet counters
+and rates. `--interface-stats-interval` sets the sampling interval of both
+(default 1s).
+
+`inspect interfaces -r c9s` lists the same interfaces with the same values.
 
 /// note | Polling, not netlink
-c9s interface statistics are sampled periodically. The first sample seeds the
-counters, and rates start with the second sample. Short-lived changes between
-samples can be missed.
+c9s interface state and statistics are sampled periodically. The first sample
+seeds the counters, and rates start with the second sample. Short-lived changes
+between samples can be missed. Every running node gets one exec per interval,
+so use a longer `--interface-stats-interval` for large labs.
 ///
 
 ## Lab artifacts
@@ -638,9 +1049,21 @@ No local lab directory is created for c9s labs: the cluster holds the lab
 state. Use `containerlab --runtime c9s save --copy <dir>` to export saved
 configurations to local disk when you want a copy outside the cluster.
 
-`containerlab --runtime c9s destroy` deletes the lab namespace and with it
-the claims and all saved device state -- it behaves like a local
-`destroy --cleanup`. To re-seed a single node from its declared configuration
+Deploy sets the claims' reclaim policy to `Retain`, so they outlive their
+`Node` resources, like a local lab directory outlives its containers:
+
+| Command | Persistent claims |
+|---|---|
+| `destroy` | kept, with the managed `c9s-<lab>` namespace that holds them; the next deploy of the lab boots from them |
+| `destroy --cleanup` | deleted, then the managed namespace |
+| `redeploy` | kept, so the redeployed nodes boot from their saved state |
+| `redeploy --cleanup`, `deploy --reconfigure` | deleted before the lab is deployed again |
+
+A plain destroy reports the claims it keeps. To delete them later, run
+`destroy --cleanup` for the lab, or delete them with
+`kubectl -n <namespace> delete pvc -l c9s.run/topologyOwner=<lab>`.
+
+To re-seed a single node from its declared configuration
 without redeploying the lab, annotate its Node with a device-state reset
 token:
 
@@ -649,19 +1072,113 @@ kubectl -n <namespace> annotate node.c9s.run <node> \
   c9s.run/device-state-reset=$(date +%s) --overwrite
 ```
 
+## Node access from Go
+
+Programs that use containerlab as a Go library, such as clab-api-server, open
+terminals, follow logs, reach node ports and read resource usage through
+optional lab runtime interfaces in `github.com/srl-labs/containerlab/labruntime`,
+implemented by the c9s runtime:
+
+| Interface | Method | What it does |
+|---|---|---|
+| `NodeLocator` | `LocateNode(ctx, NodeRequest) ([]NodeLocation, error)` | the namespace, pod, primary device container, Node UID, exposed ports and LoadBalancer address of nodes |
+| `NodeAttacher` | `Attach(ctx, AttachRequest, AttachStreams) error` | an interactive exec with stdin, an optional TTY and a resize channel, in the device container or a chosen container |
+| `NodeLogStreamer` | `StreamLogs(ctx, LogRequest, io.Writer) error` | the device container log, with tail, follow and timestamps |
+| `NodePortForwarder` | `DialPort(ctx, NodeRequest, port) (net.Conn, error)` | a connection to a TCP port of the node's pod through `pods/portforward` (SSH, web UIs) |
+| `NodeStatsSampler` | `SampleStats(ctx, InspectRequest) ([]NodeStats, error)` | CPU and memory per node from `metrics.k8s.io` PodMetrics, summing the node's device containers; without the metrics API the error wraps `labruntime.ErrMetricsUnavailable` |
+| `PacketCapturer` | `CaptureInterfaces(ctx, NodeRequest) ([]CaptureInterface, error)` | the capturable link interfaces of nodes, with alias, peer node and peer interface |
+| `PacketCapturer` | `Capture(ctx, CaptureRequest, io.Writer) error` | one pcapng stream of the request's targets, for `Duration` (0: until ctx ends), `PacketLimit` and `SnapLength`; gaps go to `OnGap` |
+| `InterfaceInspector` | `InspectInterfaces(ctx, NodeRequest) ([]*types.ContainerInterfaces, error)` | the `inspect interfaces` view of the link interfaces |
+| `SupportChecker` | `CheckSupport(ctx, Identity) error` | the clabernetes release check |
+
+The `core` package wraps them per lab and node name, accepting the node name
+as the topology file spells it or as it was sanitized:
+`CLab.LocateLabRuntimeNodes`, `CLab.AttachLabRuntimeNode`,
+`CLab.DialLabRuntimeNodePort`, `CLab.SampleLabRuntimeNodeStats`,
+`CLab.CaptureInterfaces`, `CLab.Capture`, `CLab.LabRuntimeInterfaces`,
+`CLab.CheckLabRuntimeSupport` and `CLab.NodeLogs`, which also serves Docker and
+Podman.
+
+```go
+c, err := clabcore.NewContainerLab(
+	clabcore.WithRuntime("c9s", nil),
+	clabcore.WithTopologyName("clos"),
+	clabcore.WithLabRuntimeIdentity(clablabruntime.Identity{
+		User:   "clab:alice",
+		Groups: []string{"clab:users"},
+	}),
+)
+if err != nil {
+	return err
+}
+
+conn, err := c.DialLabRuntimeNodePort(ctx, "srl1", 22)
+
+// stream pcapng to a websocket, a file or Wireshark until ctx ends
+err = c.Capture(ctx, clablabruntime.CaptureRequest{
+	Targets: []clablabruntime.CaptureTarget{
+		{Node: "srl1", Interface: "ethernet-1/1"},
+		{Node: "srl2", Interface: "e1-1"},
+	},
+}, w)
+```
+
+### Acting as a user
+
+A server that runs labs for many users acts as each user, so the cluster's RBAC
+decides what a user may do and its audit log names the user:
+
+- `labruntime.Identity{User, Groups}` is Kubernetes user impersonation.
+  `labruntime.Config.Identity` sets it for a runtime, every request type has an
+  `Identity` field that overrides it per call, and
+  `clabcore.WithLabRuntimeIdentity` sets it for every call of a `CLab`.
+- The c9s runtime builds one set of Kubernetes clients per identity from the
+  kubeconfig and caches them. The impersonation applies to every transport:
+  REST calls, watches, log streams, and the websocket and SPDY connections of
+  exec, attach and port-forward.
+- Without an identity, the kubeconfig is used as it is. The CLI has no
+  impersonation flags: a CLI user acts with their own kubeconfig rights.
+
+The kubeconfig identity then needs the `impersonate` verb on the users and
+groups it acts as.
+
 ## RBAC requirements
 
-The kube identity used by the outer containerlab process must be able to:
+clabernetes ships two ClusterRoles meant to be bound per lab namespace with a
+RoleBinding: `clabernetes-lab-viewer` (read) and `clabernetes-lab-editor`
+(read, write c9s resources and ConfigMaps, delete PersistentVolumeClaims,
+`pods/exec` and `pods/portforward`). Users who work with labs in existing
+namespaces need only `clabernetes-lab-editor` there; it has no write access to
+Deployments or Pods, and containerlab needs none:
+
+```bash
+kubectl create rolebinding alice-lab-editor -n <namespace> \
+  --clusterrole clabernetes-lab-editor --user alice
+containerlab --runtime c9s --namespace <namespace> deploy -t topo.clab.yml
+```
+
+`inspect`, `events` and `logs` work with `clabernetes-lab-viewer`. Creating the
+per-lab namespace is a cluster-scoped right the lab roles do not include; select
+a precreated namespace with `--namespace` or `CLAB_KUBE_NAMESPACE`, or grant
+namespace rights separately.
+
+In detail, the kube identity used by the outer containerlab process must be able
+to:
 
 - get, create, and delete namespaces when using automatic per-lab namespaces
-- create, get, list, watch, update, and delete c9s `Node` resources
+- create, get, list, watch, update, patch, and delete c9s `Node` resources
+  (`patch` for `start`, `stop` and `restart`)
 - create, get, list, watch, and delete c9s `Link` and `NodeProfile` resources
 - get, list, watch, and delete `Topology` resources when Topology-based labs
   must remain manageable
 - list and watch Pods
-- list, get, and update Deployments
 - create, get, list, update, and delete ConfigMaps used for local files
-- exec into device Pods with `pods/exec`
+- exec into device Pods with `pods/exec`, also for `capture` and `inspect
+  interfaces` (in the `clabwire` and device containers)
+- list and delete PersistentVolumeClaims for `destroy --cleanup`
+- read container logs with `pods/log` for `logs`
+- port-forward with `pods/portforward` for `NodePortForwarder`
+- list `pods.metrics.k8s.io` for `NodeStatsSampler`
 
 Useful checks:
 
@@ -672,6 +1189,7 @@ kubectl auth can-i delete namespaces
 kubectl auth can-i create nodes.c9s.run -n <namespace>
 kubectl auth can-i list nodes.c9s.run -n <namespace>
 kubectl auth can-i update nodes.c9s.run -n <namespace>
+kubectl auth can-i patch nodes.c9s.run -n <namespace>
 kubectl auth can-i delete nodes.c9s.run -n <namespace>
 kubectl auth can-i create links.c9s.run -n <namespace>
 kubectl auth can-i delete links.c9s.run -n <namespace>
@@ -679,8 +1197,7 @@ kubectl auth can-i create nodeprofiles.c9s.run -n <namespace>
 kubectl auth can-i delete nodeprofiles.c9s.run -n <namespace>
 kubectl auth can-i list pods -n <namespace>
 kubectl auth can-i watch pods -A
-kubectl auth can-i create pods/exec -n <namespace>
-kubectl auth can-i update deployments -n <namespace>
+kubectl auth can-i create pods --subresource exec -n <namespace>
 ```
 
 ## Troubleshooting
@@ -760,7 +1277,9 @@ kubectl api-resources | grep -i c9s
 kubectl get crd nodes.c9s.run links.c9s.run nodeprofiles.c9s.run
 ```
 
-Install Clabernetes and its CRDs before using `--runtime c9s`.
+Install Clabernetes and its CRDs before using `--runtime c9s`. A cluster
+without the c9s API fails the version check with `the c9s.run/v1alpha1 API is
+not served (is clabernetes installed?)`.
 
 ### Manager is not reconciling
 
@@ -815,8 +1334,8 @@ The node containers live in the cluster.
 
 ### Exec, save, or stats cannot reach a node
 
-`exec`, `save`, `save --copy`, and `events --interface-stats` need pod exec
-into the device pod.
+`exec`, `save`, `save --copy`, and the interface events of `events` need pod
+exec into the device pod.
 
 Check:
 
@@ -868,12 +1387,19 @@ Known command differences:
 - Deploy flags `--graph`, `--skip-post-deploy`, `--skip-labdir-acl`,
   `--export-template`, `--restore`, and `--restore-all` are rejected.
 - Destroy flags `--graceful` and `--keep-mgmt-net` are rejected. `--cleanup`
-  removes the local lab directory in addition to the cluster resources.
+  also deletes the lab's persistent claims (saved device state) and removes
+  the local lab directory; a plain destroy keeps the claims.
 - Local Docker commands on the outer host are not authoritative for c9s labs.
-- `inspect interfaces` is rejected. Host-side `tc` or netem operations do not
-  have the same local namespace access they have with Docker labs.
-- `graph` and `tools` commands operate on local containers and host networking
-  and are rejected with an error when the `c9s` runtime is selected.
+- `inspect interfaces` lists only the lab link interfaces (those `capture`
+  accepts), not the management or pod interfaces. Host-side `tc` or netem
+  operations do not have the same local namespace access they have with Docker
+  labs.
+- `graph` renders from the topology file only: `--mermaid`, `--dot`, `--drawio`
+  and `--offline` work, the default mode that reads running containers is
+  rejected, and so is `--node-filter`. `--drawio` runs the clab-io-draw
+  container, so it needs Docker or Podman on the outer host.
+- `tools` commands operate on local containers and host networking and are
+  rejected with an error when the `c9s` runtime is selected.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting
   the global `c9s` lab runtime.
 - A lab name maps to one canonical `c9s-<lab-name>` namespace in the selected

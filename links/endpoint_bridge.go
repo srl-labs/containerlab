@@ -27,8 +27,11 @@ func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error 
 	if err != nil {
 		errs = append(errs, err)
 	}
+	// the bridge of a management network that does not exist yet is only known
+	// once the network is created, which happens before the links are deployed
 	if (p == nil || p.RunBridgeExistsCheck) &&
-		e.Node.GetLinkEndpointType() != LinkEndpointTypeBridgeNS {
+		e.Node.GetLinkEndpointType() != LinkEndpointTypeBridgeNS &&
+		!IsUnresolvedMgmtBridgeEndpoint(e) {
 		err = CheckBridgeExists(ctx, e.GetNode())
 		if err != nil {
 			errs = append(errs, err)

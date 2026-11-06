@@ -15,8 +15,8 @@
 #   1. waits for the CLAB_INTFS data interfaces containerlab attaches (eth1..N)
 #   2. management, transparent: the container's eth0 is bridged with the VM's
 #      ether1 tap, and eth0's addresses and default gateways move into RouterOS
-#      ether1. The router IS the node's management address: every service and
-#      LLDP reach it directly, nothing is port-forwarded. The image ships only
+#      ether1. The router IS the node's management address: management services
+#      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
 #      LLDP forwarded). NIC order in the VM follows the eth index, so container
@@ -24,7 +24,7 @@
 #   4. after boot, over IPv6 link-local on the management bridge (no address is
 #      added to the management network): sets the credentials and the identity,
 #      configures ether1 with the management addresses and keeps their return
-#      path in its own routing table (`mgmt`, below), then fetches
+#      path in its own VRF (`mgmt`, below), then fetches
 #      /ftpboot/config.auto.rsc (the containerlab startup-config, when present)
 #      from the launcher and `/import`s it
 #   5. prints the ready marker on the container log and waits on qemu
@@ -57,7 +57,9 @@
 #   "startup config import FAILED: …"  the router rejected the .rsc (RouterOS's
 #                                      own reason, with the line number)
 #   "credential bootstrap FAILED: …"   the user/password step failed
-#   "management setup FAILED: …"       the ether1 address / mgmt table step failed
+#   "management setup FAILED: …"       the ether1 address / mgmt VRF step failed
+#   "data NIC check FAILED: …"         RouterOS lacks an interface for a data NIC
+#                                      even after re-plugging it
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -108,6 +110,8 @@ log() { echo "chr-launch: $*"; }
 rm -f "$READY_FILE"
 
 FETCH_PORT=8080
+# QEMU's QMP monitor, inside the container only: re-plugs NICs RouterOS rejected at boot
+QMP_PORT=5001
 
 # ---- disk -----------------------------------------------------------------
 IMG=""
@@ -146,9 +150,11 @@ log "interfaces: $(count_intfs) of $INTFS expected after ${waited}s"
 case "$(uname -m)" in
     aarch64|arm64)
         QEMU="qemu-system-aarch64 -M virt -pflash /usr/share/qemu/edk2-aarch64-code.fd"
+        PCI_BRIDGES=0
         TCG_CPU="-cpu cortex-a57" ;;
     *)
         QEMU="qemu-system-x86_64"
+        PCI_BRIDGES=1
         TCG_CPU="" ;;
 esac
 if [ -e /dev/kvm ]; then
@@ -179,6 +185,51 @@ case "$node_id" in
         ;;
 esac
 NET="-netdev tap,id=mgmt,ifname=tap0,script=no,downscript=no -device virtio-net,netdev=mgmt,mac=52:54:00:$node_id:00"
+nic_mac() { # nic_mac <index>: the data NIC's MAC, its index in the last octet
+    printf '52:54:00:%s:%02x' "$node_id" "$1"
+}
+
+check_nic_index() { # check_nic_index <max-index>: reject indices beyond the NIC layout
+    # 63 NICs behind bridges are tested. More run into the guest's interrupt
+    # vectors (about 100 NICs per vCPU) and SeaBIOS's PCI I/O space (8 bridges).
+    if [ "$PCI_BRIDGES" = 1 ] && [ "$1" -gt 63 ]; then
+        log "at most 63 data NICs are supported (eth63 / ether64); index $1 is beyond the tested limit"
+        return 1
+    fi
+    # Without bridges (arm64 virt) one bus holds the disk, management and 29 data NICs.
+    if [ "$PCI_BRIDGES" != 1 ] && [ "$1" -gt 29 ]; then
+        log "at most 29 data NICs fit without PCI bridges (eth29 / ether30); index $1 leaves no PCI slot for the disk"
+        return 1
+    fi
+}
+
+data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (also used to re-plug it)
+    case "$PCI_BRIDGES" in
+        1)
+            # The default PC has only 29 free PCI slots, including management.
+            # Keep management on the root bus and put data NICs behind bridges.
+            # Follow vrnetlab's conservative allocation of 25 NICs per bridge.
+            # Omit PXE ROMs to avoid exhausting SeaBIOS option-ROM space.
+            # Keep MSI-X, but share one vector between RX/TX queues (plus one
+            # for config) to reduce IRQ pressure.
+            # Disabling MSI-X entirely can leave NICs missing in RouterOS.
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2"
+            ;;
+        *)
+            # ARM64 uses the virt machine and keeps its existing NIC layout.
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2"
+            ;;
+    esac
+}
+
+qemu_data_nic() { # qemu_data_nic <index> <mac>: append-only QEMU arguments
+    # Each bridge comes right before its first NIC.
+    if [ "$PCI_BRIDGES" = 1 ] && [ $(( ($1 - 1) % 25 )) -eq 0 ]; then
+        _bridge=$(( ($1 - 1) / 25 + 1 ))
+        printf '%s ' "-device pci-bridge,id=chrpci$_bridge,chassis_nr=$_bridge,bus=pci.0"
+    fi
+    printf '%s' "-netdev tap,id=d$1,ifname=tap$1,script=no,downscript=no -device $(data_nic_device "$1" "$2")"
+}
 
 # ---- management: eth0 + tap0 on one bridge, eth0's addressing to the VM ----
 ip_global() { # ip_global <4|6> <dev>: the first global address/prefix
@@ -259,6 +310,7 @@ case "$prev" in *[!0-9]*|"") prev=0 ;; esac
 # the watcher bridges the late veths.
 case "$INTFS" in *[!0-9]*|"") INTFS=0 ;; esac
 [ "$INTFS" -gt "$max" ] && max="$INTFS"
+check_nic_index "$max" || exit 1
 [ "$max" -gt "$prev" ] && { printf '%s\n' "$max" > "$NICS_FILE" 2>/dev/null || true; }
 
 # RouterOS v7 memory ≈ 256 + 8·CPUS·(ifaces) MiB (MikroTik CHR system
@@ -314,13 +366,13 @@ while [ "$i" -le "$max" ]; do
     tunctl -t "$tap" >/dev/null 2>&1 || ip tuntap add dev "$tap" mode tap
     [ -e "$SYSNET/eth$i" ] && bridge_eth "$i"
     ip link set "$tap" up
-    mac="$(printf '52:54:00:%s:%02x' "$node_id" "$((i & 255))")"
-    NET="$NET -netdev tap,id=d$i,ifname=$tap,script=no,downscript=no -device virtio-net,netdev=d$i,mac=$mac"
+    NET="$NET $(qemu_data_nic "$i" "$(nic_mac "$i")")"
     i=$((i + 1))
 done
 
 # shellcheck disable=SC2086
 $QEMU $ACCEL -display none -monitor none \
+    -qmp "tcp:127.0.0.1:$QMP_PORT,server,nowait" \
     -m "$MEM" -smp "cpus=$CPUS" \
     -drive "file=$IMG,format=raw" \
     -serial telnet:0.0.0.0:5000,server,nowait \
@@ -407,6 +459,80 @@ while [ -z "$AUTH" ]; do
 done
 log "RouterOS answered after ${waited}s"
 
+# ---- data NICs: every one must be a RouterOS interface ----------------------
+# RouterOS's kernel can veto a virtio NIC that registers while RouterOS itself
+# starts up: the driver's probe fails with -1 and the interface never appears.
+# With more than about 33 NICs one or more are hit, and which one depends on
+# timing. The NIC itself is fine: plugged in again after boot it registers
+# normally, and RouterOS re-attaches the port's config, which it keys by MAC.
+# So wait until the interface list stops growing, then re-plug every NIC
+# RouterOS lacks, at the same PCI address.
+ros_macs() { # the orig-mac-address of every RouterOS ethernet interface, lower case
+    rest "$AUTH" interface/ethernet | tr '{' '\n' \
+        | sed -n 's/.*"orig-mac-address":"\([^"]*\)".*/\1/p' | tr 'A-F' 'a-f'
+}
+missing_nics() { # indices of the data NICs RouterOS has no interface for
+    _have="$(ros_macs)"
+    _i=1
+    while [ "$_i" -le "$max" ]; do
+        case "$_have" in *"$(nic_mac "$_i")"*) ;; *) printf '%s ' "$_i" ;; esac
+        _i=$((_i + 1))
+    done
+}
+ether_names() { # ether_names <index>...: the RouterOS names of data NICs
+    for _i; do printf 'ether%s ' $((_i + 1)); done
+}
+qmp() { # qmp <command>...: run QMP commands (one JSON object each), print the replies
+    { printf '%s\n' '{"execute":"qmp_capabilities"}' "$@"; sleep 1; } \
+        | timeout 5 nc 127.0.0.1 "$QMP_PORT" 2>/dev/null
+}
+replug_nic() { # replug_nic <index>: unplug data NIC <index>, plug it back at the same address
+    qmp "{\"execute\":\"device_del\",\"arguments\":{\"id\":\"nic$1\"}}" >/dev/null
+    # The guest ejects the device over ACPI hotplug; its id is free once it is gone.
+    _w=0
+    while qmp "{\"execute\":\"qom-get\",\"arguments\":{\"path\":\"/machine/peripheral/nic$1\",\"property\":\"type\"}}" \
+        | grep -q '"return": *"'; do
+        [ "$_w" -ge 20 ] && return 1
+        sleep 1
+        _w=$((_w + 1))
+    done
+    # human-monitor-command answers "" on success, the error text otherwise
+    qmp "{\"execute\":\"human-monitor-command\",\"arguments\":{\"command-line\":\"device_add $(data_nic_device "$1" "$(nic_mac "$1")")\"}}" \
+        | grep -q '"return": *""'
+}
+_n=-1; _same=0; _t=0
+while [ "$_same" -lt 3 ] && [ "$_t" -lt 60 ]; do
+    # grep -c, not wc -l: the REST reply ends without a newline
+    _c=$(ros_macs | grep -c .)
+    [ "$_c" -gt "$max" ] && break
+    if [ "$_c" -eq "$_n" ]; then _same=$((_same + 1)); else _same=0; _n=$_c; fi
+    sleep 2
+    _t=$((_t + 2))
+done
+miss="$(missing_nics)"
+_round=1
+while [ -n "$miss" ] && [ "$PCI_BRIDGES" = 1 ] && [ "$_round" -le 3 ]; do
+    # shellcheck disable=SC2086  # a list of indices
+    log "RouterOS has no interface for $(ether_names $miss)(attempt $_round): re-plugging"
+    for _i in $miss; do
+        replug_nic "$_i" || log "re-plug of ether$((_i + 1)) did not complete"
+    done
+    _t=0
+    while [ -n "$(missing_nics)" ] && [ "$_t" -lt 20 ]; do
+        sleep 2
+        _t=$((_t + 2))
+    done
+    miss="$(missing_nics)"
+    _round=$((_round + 1))
+done
+if [ -n "$miss" ]; then
+    # shellcheck disable=SC2086  # a list of indices
+    log "data NIC check FAILED: RouterOS has no interface for $(ether_names $miss)(of $max data NICs)"
+    wait "$QEMU_PID"
+    exit 0
+fi
+[ "$_round" -gt 1 ] && log "all $max data NICs are RouterOS interfaces after re-plugging"
+
 # Ready means a user can log in: RouterOS starts its SSH server well after REST
 # answers on a slow boot (about 40 s later under TCG on arm64), so when the
 # configuration keeps SSH enabled, its port must send the banner first.
@@ -438,16 +564,10 @@ bootstrap_fail() {
     exit 0
 }
 
-# ---- management: ether1 addressing and its own routing table ----------------
-# ether1 gets the container's management addresses, and their return path lives
-# in a `mgmt` routing table selected by a rule on those source addresses: a
-# default route the lab adds to `main` (a static 0.0.0.0/0, a PPPoE client's
-# default route, a dual-WAN pair) would otherwise take SSH/REST replies away
-# from the management network while the data plane works. CHR's default ether1
-# DHCP client is disabled: the address is static. Everything is tagged
-# clab-mgmt and re-applied on every boot from the container's CURRENT addressing
-# (a restart can bring a new IP), while the bootstrap channel itself
-# (link-local) never depends on it.
+# ---- management: ether1 in its own VRF -------------------------------------
+# The VRF owns its routing table and connected routes. Services must bind to
+# it explicitly; source-policy rules are unnecessary. The link-local REST
+# channel survives the handoff once www and ether1 belong to the same VRF.
 mgmt_fail() {
     log "management setup FAILED: $1 (redeploy the node: containerlab deploy --reconfigure)"
     wait "$QEMU_PID"
@@ -471,18 +591,53 @@ rest_clear() { # rest_clear <menu>: remove its clab-mgmt objects
         | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | paste -sd, -)"
     [ -z "$_ids" ] || rest_add "remove old $1" "$1/remove" "{\".id\":\"$_ids\"}"
 }
+# A native VRF creates its routing table asynchronously. Move the interface
+# and services together in a router-local background job, then prove the
+# handoff before configuring addresses/routes or attaching external eth0.
+mgmt_vrf_ready() {
+    rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false" || return 1
+    rest_has "routing/table?name=$MGMT_TABLE&dynamic=true&invalid=false" || return 1
+    for _svc in ssh www www-ssl api api-ssl winbox telnet; do
+        rest_has "ip/service?name=$_svc&vrf=$MGMT_TABLE&dynamic=false" || return 1
+    done
+    case "$(rest "$AUTH" snmp)" in
+        *"\"vrf\":\"$MGMT_TABLE\""*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+mgmt_vrf() {
+    if rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false"; then
+        # User service overrides are applied by startup-config, after the
+        # first-boot defaults. Do not overwrite them on a restart.
+        [ -f "$DONE_MARKER" ] && return 0
+    else
+        if rest_has "routing/table?name=$MGMT_TABLE"; then
+            mgmt_fail "table $MGMT_TABLE already exists without the launcher's VRF; use a fresh container"
+        fi
+        _script=":delay 1s; /ip vrf add name=$MGMT_TABLE interfaces=ether1 place-before=0 comment=$MGMT_COMMENT; /ip service set ssh,www,www-ssl,api,api-ssl,winbox,telnet vrf=$MGMT_TABLE; /snmp set vrf=$MGMT_TABLE"
+        rest_add "start management VRF handoff" execute "{\"script\":\"$(json_str "$_script")\"}"
+    fi
+    _start=$(date +%s)
+    until mgmt_vrf_ready; do
+        [ $(( $(date +%s) - _start )) -lt "$BOOT_WAIT" ] \
+            || mgmt_fail "VRF handoff did not complete; inspect RouterOS script errors through the serial console"
+        sleep 1
+    done
+    log "management VRF $MGMT_TABLE: ether1, routing table and service bindings verified"
+}
 # The tagged objects already match the container's addressing (a restart with
 # the same IP): leave them alone, re-applying would only drop live sessions.
 mgmt_in_place() {
     _want=0
+    rest_has "ip/vrf?name=$MGMT_TABLE&interfaces=ether1&comment=$MGMT_COMMENT&disabled=false" || return 1
     if [ -n "$M4" ]; then
         rest_has "ip/address?interface=ether1&address=$M4&comment=$MGMT_COMMENT" || return 1
-        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" || return 1
-        [ -z "$G4" ] || rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0&gateway=$G4" || return 1
+        [ -z "$G4" ] || rest_has "ip/route?routing-table=$MGMT_TABLE&dst-address=0.0.0.0/0&gateway=$G4@$MGMT_TABLE" || return 1
         _want=$((_want + 1))
     fi
     if [ -n "$M6" ]; then
         rest_has "ipv6/address?interface=ether1&address=$M6&comment=$MGMT_COMMENT" || return 1
+        [ -z "$G6" ] || rest_has "ipv6/route?routing-table=$MGMT_TABLE&dst-address=::/0&gateway=$G6@$MGMT_TABLE" || return 1
         _want=$((_want + 1))
     fi
     [ "$(rest_count "ip/address?comment=$MGMT_COMMENT")$(rest_count "ipv6/address?comment=$MGMT_COMMENT")" \
@@ -491,35 +646,23 @@ mgmt_in_place() {
     [ "$_want" -gt 0 ]
 }
 mgmt_setup() {
+    mgmt_vrf
     if mgmt_in_place; then
         log "management on ether1 unchanged: ${M4:-no IPv4}${M6:+, $M6}"
         return 0
     fi
-    for _m in routing/rule ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
-    rest_has "routing/table?name=$MGMT_TABLE" \
-        || rest_add "routing table $MGMT_TABLE" routing/table/add \
-            "{\"name\":\"$MGMT_TABLE\",\"fib\":\"yes\",\"comment\":\"$MGMT_COMMENT\"}"
+    for _m in ip/route ipv6/route ip/address ipv6/address; do rest_clear "$_m"; done
     _c="\"comment\":\"$MGMT_COMMENT\""
     if [ -n "$M4" ]; then
-        _net4="$(ipcalc -n "$M4" | sed -n 's/^NETWORK=//p')/${M4#*/}"
         rest_add "ether1 address $M4" ip/address/add "{\"address\":\"$M4\",\"interface\":\"ether1\",$_c}"
-        rest_add "route $_net4 in table $MGMT_TABLE" ip/route/add \
-            "{\"dst-address\":\"$_net4\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        [ -z "$G4" ] || rest_add "default via $G4 in table $MGMT_TABLE" ip/route/add \
-            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$G4\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        rest_add "routing rule for ${M4%/*}" routing/rule/add \
-            "{\"src-address\":\"${M4%/*}/32\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G4" ] || rest_add "default via $G4 in VRF $MGMT_TABLE" ip/route/add \
+            "{\"dst-address\":\"0.0.0.0/0\",\"gateway\":\"$G4@$MGMT_TABLE\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
     fi
     if [ -n "$M6" ]; then
         rest_add "ether1 address $M6" ipv6/address/add \
             "{\"address\":\"$M6\",\"interface\":\"ether1\",\"advertise\":\"no\",$_c}"
-        # RouterOS normalizes the host bits of dst-address (::3/64 -> ::/64)
-        rest_add "IPv6 route $M6 in table $MGMT_TABLE" ipv6/route/add \
-            "{\"dst-address\":\"$M6\",\"gateway\":\"ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        [ -z "$G6" ] || rest_add "IPv6 default via $G6 in table $MGMT_TABLE" ipv6/route/add \
-            "{\"dst-address\":\"::/0\",\"gateway\":\"$G6%ether1\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
-        rest_add "routing rule for ${M6%/*}" routing/rule/add \
-            "{\"src-address\":\"${M6%/*}/128\",\"action\":\"lookup-only-in-table\",\"table\":\"$MGMT_TABLE\",$_c}"
+        [ -z "$G6" ] || rest_add "IPv6 default via $G6 in VRF $MGMT_TABLE" ipv6/route/add \
+            "{\"dst-address\":\"::/0\",\"gateway\":\"$G6@$MGMT_TABLE\",\"routing-table\":\"$MGMT_TABLE\",$_c}"
     fi
     _id="$(rest "$AUTH" "ip/dhcp-client?interface=ether1" | sed -n 's/.*"\.id":"\([^"]*\)".*/\1/p' | head -n1)"
     [ -z "$_id" ] || rest_add "disable the ether1 DHCP client" ip/dhcp-client/set \
@@ -542,10 +685,33 @@ mgmt_setup() {
     # an error by the set-contract).
     if [ -n "$M4" ]; then
         rest_has "ip/address?interface=ether1&address=$M4" || mgmt_fail "$M4 not on ether1"
-        rest_has "routing/rule?src-address=${M4%/*}/32&table=$MGMT_TABLE" \
-            || mgmt_fail "routing rule for ${M4%/*} not applied"
     fi
-    log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in routing table $MGMT_TABLE"
+    mgmt_in_place || mgmt_fail "management addressing or routes not applied"
+    log "management on ether1: ${M4:-no IPv4}${M6:+, $M6}, return path in VRF $MGMT_TABLE"
+}
+# Keep discovery on static data interfaces, excluding management. Set this only
+# on first boot, before attaching eth0: startup-config and subsequent user changes
+# can select a different list, and restarts must preserve that choice.
+discovery_setup() {
+    rest_add "management interface list" interface/list/add \
+        "{\"name\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management interface list member" interface/list/member/add \
+        "{\"list\":\"clab-management\",\"interface\":\"ether1\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "discovery interface list" interface/list/add \
+        "{\"name\":\"clab-discovery\",\"include\":\"static\",\"exclude\":\"clab-management\",\"comment\":\"$MGMT_COMMENT\"}"
+    rest_add "management discovery off" ip/neighbor/discovery-settings/set \
+        '{"discover-interface-list":"clab-discovery"}'
+    rest_has "interface/list?name=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list not applied"
+    rest_has "interface/list/member?list=clab-management&interface=ether1&disabled=false&comment=$MGMT_COMMENT" \
+        || mgmt_fail "management interface list member not applied"
+    rest_has "interface/list?name=clab-discovery&include=static&exclude=clab-management&comment=$MGMT_COMMENT" \
+        || mgmt_fail "discovery interface list not applied"
+    case "$(rest "$AUTH" ip/neighbor/discovery-settings)" in
+        *'"discover-interface-list":"clab-discovery"'*) : ;;
+        *) mgmt_fail "management discovery policy not applied" ;;
+    esac
+    log "neighbor discovery: static interfaces except ether1 (clab-discovery)"
 }
 # Join the management network, then have the router reach its gateway from the
 # management address: proves the return path both ways, and the ARP/ND request
@@ -559,7 +725,7 @@ mgmt_attach() {
         set -- $_pair
         [ $# -eq 2 ] || continue
         _t0=$(date +%s)
-        until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\"}")" in
+        until case "$(rest "$AUTH" ping "{\"address\":\"$1\",\"src-address\":\"$2\",\"count\":\"2\",\"vrf\":\"$MGMT_TABLE\"}")" in
                 *'"received":"'[1-9]*) true ;; *) false ;; esac; do
             if [ $(( $(date +%s) - _t0 )) -ge 30 ]; then
                 log "gateway $1 does not answer from $2 after $(( $(date +%s) - _t0 ))s (continuing)"
@@ -622,6 +788,7 @@ case "$got" in
 esac
 
 mgmt_setup
+discovery_setup
 mgmt_attach
 
 # ---- startup config -------------------------------------------------------
@@ -637,7 +804,7 @@ if [ -s "$STARTUP_CFG" ]; then
     } | timeout 90 nc -l -s "$LL%$MGMT_BR" -p "$FETCH_PORT" >/dev/null 2>&1 &
     sleep 1
     fetch="$(rest "$AUTH" tool/fetch \
-        "{\"address\":\"$LL%ether1\",\"port\":\"$FETCH_PORT\",\"src-path\":\"/config.auto.rsc\",\"mode\":\"http\",\"dst-path\":\"config.auto.rsc\"}")"
+        "{\"address\":\"$LL%ether1@$MGMT_TABLE\",\"port\":\"$FETCH_PORT\",\"src-path\":\"/config.auto.rsc\",\"mode\":\"http\",\"dst-path\":\"config.auto.rsc\"}")"
     case "$fetch" in
         *'"status":"finished"'*)
             # /import answers only when it finishes: a large config gets

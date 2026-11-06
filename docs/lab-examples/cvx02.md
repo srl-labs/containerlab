@@ -1,6 +1,6 @@
 |                               |                                                                      |
 | ----------------------------- | -------------------------------------------------------------------- |
-| **Description**               | Cumulus Linux in Docker runtime connected to a Host                  |
+| **Description**               | Cumulus Linux connected to a Host                                    |
 | **Components**                | [Cumulus Linux][cvx]                                                 |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 1 GB |
 | **Topology file**             | [topo.clab.yml][topofile]                                            |
@@ -9,7 +9,7 @@
 
 ## Description
 
-The lab consists of Cumulus Linux running in its non-default, docker runtime, connected to a `linux` container playing the role of an end-host. Both nodes are also connected to the clab docker network over their management `eth0` interfaces.
+The lab consists of Cumulus Linux connected to a `linux` container playing the role of an end-host. Both nodes are also connected to the clab docker network over their management `eth0` interfaces.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/cvx.drawio&quot;}"></div>
 
@@ -37,7 +37,7 @@ root@sw1:mgmt:~#
 
 ## Use cases
 
-* Demonstrate how a `cvx` node can run in its non-default `docker` runtime
+* Demonstrate how a `cvx` node can connect to a `linux` end-host
 * Demonstrate how to inject startup configuration into a `cvx` node.
 * Verify basic control plane and data plane operations
 

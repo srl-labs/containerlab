@@ -160,3 +160,82 @@ func endpointToken(ep Endpoint) string {
 	}
 	return nodeName + ":" + ep.GetIfaceName()
 }
+
+func TestOwnershipAltNameForMgmtNetEndpointIsNetworkIndependent(t *testing.T) {
+	t.Parallel()
+
+	defaultNode := &mgmtBridgeLinkNode{GenericLinkNode: GenericLinkNode{shortname: "br-default"}}
+	labNode := &mgmtBridgeLinkNode{GenericLinkNode: GenericLinkNode{shortname: "br-lab"}}
+
+	want := ownershipAltNameFor(mgmtNetOwnerName, "srl1_e1-1")
+	for _, node := range []*mgmtBridgeLinkNode{defaultNode, labNode} {
+		ep := NewEndpointBridge(NewEndpointGeneric(node, "srl1_e1-1", nil), true)
+		if got := ownershipAltName(ep); got != want {
+			t.Fatalf("bridge %q: got ownership altname %q, want %q", node.shortname, got, want)
+		}
+	}
+}
+
+func TestIsOwnedByMgmtNetNode(t *testing.T) {
+	t.Parallel()
+
+	node := &mgmtBridgeLinkNode{GenericLinkNode: GenericLinkNode{shortname: "br-lab"}}
+
+	tests := map[string]struct {
+		altName string
+		want    bool
+	}{
+		"stable owner name": {
+			altName: ownershipAltNameFor(mgmtNetOwnerName, "srl1_e1-1"),
+			want:    true,
+		},
+		"legacy bridge owner name": {
+			altName: ownershipAltNameFor("br-lab", "srl1_e1-1"),
+			want:    true,
+		},
+		"other bridge owner name": {
+			altName: ownershipAltNameFor("br-other", "srl1_e1-1"),
+			want:    false,
+		},
+		"other interface": {
+			altName: ownershipAltNameFor(mgmtNetOwnerName, "srl1_e1-2"),
+			want:    false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			link := &netlink.Dummy{
+				LinkAttrs: netlink.LinkAttrs{
+					Name:     "srl1_e1-1",
+					AltNames: []string{tt.altName},
+				},
+			}
+
+			got := isOwnedBy(link, node, ownershipName(node), "srl1_e1-1")
+			if got != tt.want {
+				t.Fatalf("got %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsOwnedByIgnoresLegacyNameForRegularNodes(t *testing.T) {
+	t.Parallel()
+
+	link := &netlink.Dummy{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:     "eth1",
+			AltNames: []string{ownershipAltNameFor("n1", "eth1")},
+		},
+	}
+
+	if isOwnedBy(link, newFakeNode("n1"), mgmtNetOwnerName, "eth1") {
+		t.Fatal("did not expect a regular node marker to satisfy the mgmt-net owner")
+	}
+	if !isOwnedBy(link, newFakeNode("n1"), "n1", "eth1") {
+		t.Fatal("expected the node marker to satisfy its own owner")
+	}
+}

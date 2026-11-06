@@ -109,9 +109,9 @@ var (
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
 	}
 
-	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
-	readyCmdBoth = `/usr/bin/pgrep ^both$`
-	readyCmdIom  = `/usr/bin/pgrep ^iom$`
+	readyCmdCpm  = `/usr/bin/pgrep -f ^/opt/nokia/cpm`
+	readyCmdBoth = `/usr/bin/pgrep -f ^/opt/nokia/both`
+	readyCmdIom  = `/usr/bin/pgrep -f ^/opt/nokia/iom`
 
 	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
@@ -224,7 +224,7 @@ type sros struct {
 
 	preDeployParams *clabnodes.PreDeployParams
 
-	netnsNode clabnodes.Node
+	netnsNode *clabnodes.NetnsHolder
 }
 
 func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
@@ -627,7 +627,7 @@ func (n *sros) setupComponentNodes() error {
 		return nil
 	}
 
-	n.netnsNode = new(namespaceNode)
+	n.netnsNode = new(clabnodes.NetnsHolder)
 	if err := n.netnsNode.Init(
 		n.newNetnsConfig(),
 		clabnodes.WithRuntime(n.GetRuntime()),
@@ -1824,7 +1824,7 @@ func (n *sros) Start(ctx context.Context) error {
 		return n.PostDeployEndpoints(ctx)
 	}
 
-	if err := n.ensureNetnsRunning(ctx); err != nil {
+	if err := n.netnsNode.EnsureRunning(ctx, n.Cfg.ShortName); err != nil {
 		return err
 	}
 

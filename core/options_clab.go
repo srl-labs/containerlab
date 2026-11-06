@@ -79,6 +79,16 @@ func WithSkippedBindsPathsCheck() ClabOption {
 	}
 }
 
+// WithSkippedMgmtNetLinksCheck skips the mgmt-net link checks.
+// It must precede the options that load the topology, as those run the checks.
+func WithSkippedMgmtNetLinksCheck() ClabOption {
+	return func(c *CLab) error {
+		c.checkMgmtNetLinks = false
+
+		return nil
+	}
+}
+
 // checkMgmtOverride rejects management network flags for topologies with several networks,
 // since a flag cannot tell which network it applies to.
 func (c *CLab) checkMgmtOverride() error {
@@ -200,6 +210,22 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 
 		return nil
 	}
+}
+
+// WithLabRuntimeIdentity makes every lab runtime call of this CLab act as the given Kubernetes
+// identity, through user impersonation. A server that runs labs for many users sets it per user;
+// the zero identity acts with the kubeconfig as it is. Local container runtimes ignore it.
+func WithLabRuntimeIdentity(identity clablabruntime.Identity) ClabOption {
+	return func(c *CLab) error {
+		c.labRuntimeIdentity = identity
+
+		return nil
+	}
+}
+
+// LabRuntimeIdentity returns the Kubernetes identity lab runtime calls act as.
+func (c *CLab) LabRuntimeIdentity() clablabruntime.Identity {
+	return c.labRuntimeIdentity
 }
 
 func labRuntimeNamespace(config *clabruntime.RuntimeConfig) string {

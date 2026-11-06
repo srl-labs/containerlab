@@ -35,6 +35,21 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
+	if c.LabRuntime != nil {
+		// lab runtimes list the link interfaces packet capture accepts, with their state
+		containerInterfaces, err := c.LabRuntimeInterfaces(cobraCmd.Context(),
+			o.Inspect.InterfacesNode)
+		if err != nil {
+			return fmt.Errorf("failed to list node interfaces: %w", err)
+		}
+		if len(containerInterfaces) == 0 {
+			log.Info("no running nodes found")
+			return nil
+		}
+
+		return printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
+	}
+
 	var labNameFilterLabel string
 
 	switch {

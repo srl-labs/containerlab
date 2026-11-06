@@ -17,6 +17,12 @@ Containerlab offers a simple way to capture the packets from any interface of an
 
 ///tip
 
+The [`containerlab capture`](../cmd/capture.md) command captures one or more lab link interfaces, of one or more nodes, into one pcapng file or stream, with nothing to install in the nodes or on the host:
+
+```bash
+containerlab capture --name quickstart --target srl:e1-1 -w - | wireshark -k -i -
+```
+
 If you are looking for a free Web UI for packet capture with Wireshark, check out our [Edgeshark integration](#edgeshark-integration).
 ///
 

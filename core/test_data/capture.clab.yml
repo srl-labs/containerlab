@@ -1,0 +1,15 @@
+name: capture
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+    srl2:
+      kind: nokia_srlinux
+    client:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["srl1:ethernet-1/1", "srl2:e1-1"]
+    - endpoints: ["srl1:e1-2", "client:eth1"]
+    - endpoints: ["client:eth2", "host:client-eth2"]
+    - endpoints: ["client:eth3", "mgmt-net:client-eth3"]

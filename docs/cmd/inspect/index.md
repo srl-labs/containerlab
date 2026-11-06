@@ -10,7 +10,7 @@ tags:
 The `inspect` command provides the information about the deployed labs.
 
 /// note | Clabernetes runtime
-With `--runtime c9s`, `inspect` reads Clabernetes `Topology` resources and their related kubernetes objects instead of local Docker containers. `inspect --all` lists c9s topologies across all namespaces. See [Containerlab runtime](../../manual/clabernetes/runtime.md#inspect) for details.
+With `--runtime c9s`, `inspect` reads Clabernetes `Topology` resources and their related kubernetes objects instead of local Docker containers. `inspect --all` lists c9s topologies across all namespaces, or in the `--namespace` override. The JSON output uses `<namespace>/<lab>/<node>` as `container_id` and adds the `namespace`, `pod`, `container`, `node_uid`, `exposed_ports` and `load_balancer_address` fields. See [Containerlab runtime](../../manual/clabernetes/runtime.md#inspect) for details.
 ///
 
 ### Usage

@@ -77,10 +77,11 @@ telnet <container-name/id> 5000
 Dell SONiC container uses the following mapping rules for its interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data (front-panel port) interface that is mapped to Ethernet0 port
-* `eth2` - second data interface that is mapped to Ethernet4 port. Any new port will result in a "previous interface + 4" (Ethernet4) mapping.
+* `eth1`, `eth2`, ... - data interfaces, attached to the VM in order. The first one is mapped to `Ethernet0`.
 
-When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` mapped to `Ethernet0` port and needs to be configured with IP addressing manually.
+The SONiC port name of each later data interface depends on the image's HwSKU. SONiC maps the VM NIC `ethN` to lanes in the HwSKU's `lanemap.ini`, and those lanes to an `EthernetX` port in `port_config.ini`. With the default HwSKU of the 4.1 and 4.6 images (`DellEMC-S5248f-P-25G-DPB`, one lane per 25G port), `eth2` is `Ethernet1`, `eth3` is `Ethernet2`, and so on. With a 4-lane HwSKU, ports go up by 4 (`eth2` is `Ethernet4`). To see the mapping for your image, run `show interfaces status` and read `/usr/share/sonic/device/<platform>/<hwsku>/lanemap.ini` in the node.
+
+When containerlab launches a Dell SONiC node, it assigns IPv4/6 addresses to the `eth0` interface. Data interfaces need to be configured with IP addressing manually.
 
 ## Features and options
 

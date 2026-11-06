@@ -116,6 +116,12 @@ func graphFn(ctx context.Context, o *Options) error {
 		return err
 	}
 
+	// Lab runtimes do not build the topology's nodes; the graph modes they support render
+	// from the topology file, so the nodes are built here without a container runtime.
+	if err := c.LoadTopologyNodes(); err != nil {
+		return err
+	}
+
 	err = c.ResolveLinks()
 	if err != nil {
 		return err

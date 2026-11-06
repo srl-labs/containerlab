@@ -330,6 +330,12 @@ func (n *NodeConfig) GetHostname() string {
 	return n.ShortName
 }
 
+// LabContainerName returns the long container name of a node in the same lab as n. Only the end of
+// LongName is the short name, as the lab name can contain the same text.
+func (n *NodeConfig) LabContainerName(shortName string) string {
+	return strings.TrimSuffix(n.LongName, n.ShortName) + shortName
+}
+
 // whether a node should participate in IPAM or not.
 func (n *NodeConfig) ManagementIPAMEligible() bool {
 	if n.IsRootNamespaceBased || n.SkipUniquenessCheck {
@@ -385,6 +391,35 @@ type ContainerDetails struct {
 	IPv6Address string                `json:"ipv6_address,omitempty"`
 	Ports       []*GenericPortBinding `json:"ports,omitempty"`
 	Owner       string                `json:"owner,omitempty"`
+	// LabRuntimeWorkload is set for nodes a lab runtime (c9s) runs. Its fields are inlined,
+	// so local runtime output is unchanged.
+	*LabRuntimeWorkload
+}
+
+// LabRuntimeWorkload locates the Kubernetes workload a lab runtime runs a node in.
+type LabRuntimeWorkload struct {
+	// Namespace is the Kubernetes namespace of the lab.
+	Namespace string `json:"namespace,omitempty"`
+	// Pod is the pod that runs the node.
+	Pod string `json:"pod,omitempty"`
+	// Container is the node's primary device container in the pod.
+	Container string `json:"container,omitempty"`
+	// NodeUID is the UID of the clabernetes Node resource.
+	NodeUID string `json:"node_uid,omitempty"`
+	// ExposedPorts are the node ports published through the node's Service.
+	ExposedPorts []ExposedPort `json:"exposed_ports,omitempty"`
+	// LoadBalancerAddress is the address of the LoadBalancer Service that exposes the node.
+	LoadBalancerAddress string `json:"load_balancer_address,omitempty"`
+}
+
+// ExposedPort is a node port a lab runtime publishes through a Service.
+type ExposedPort struct {
+	// Port is the port the node listens on.
+	Port int `json:"port"`
+	// ExposePort is the Service port that publishes Port.
+	ExposePort int `json:"expose_port"`
+	// Protocol is "tcp" or "udp".
+	Protocol string `json:"protocol"`
 }
 
 // ContainerInterfaceDetails contains information about a specific container's network interfaces.

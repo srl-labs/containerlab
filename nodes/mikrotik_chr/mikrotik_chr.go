@@ -13,12 +13,14 @@ package mikrotik_chr
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -54,11 +56,20 @@ const (
 	// mgmtComment tags every management object the launcher creates in RouterOS.
 	mgmtComment = "clab-mgmt"
 
+	// amd64's tested PCI-bridge layout. Beyond it the guest runs out of interrupt
+	// vectors (about 100 NICs per vCPU) and SeaBIOS out of PCI I/O space (8 bridges).
+	maxDataNICIndex = 63
+	// arm64's virt machine gets no PCI bridges: its single bus holds the disk, the
+	// management NIC and at most 29 data NICs before QEMU runs out of slots.
+	maxDataNICIndexARM64 = 29
+
 	// the launcher's CHR_INTF_WAIT and CHR_BOOT_WAIT defaults, and the time its config
 	// fetch and gateway check add, in seconds.
 	defaultIntfWait  = 60
 	defaultBootWait  = 300
 	startPeriodSlack = 90
+	// the launcher's wait for the interface list to settle and its re-plug rounds, in seconds.
+	replugWait = 180
 
 	scrapliPlatformName = "mikrotik_routeros" //nolint: misspell
 )
@@ -78,6 +89,9 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type mikrotikCHR struct {
 	clabnodes.VRNode
+	// goarch selects the NIC layout the interface limit is checked against. The
+	// containerlab binary's architecture matches the image's outside emulated setups.
+	goarch string
 }
 
 func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -123,17 +137,67 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
+	n.goarch = runtime.GOARCH
+
+	return nil
+}
+
+// dataNICLimit is the highest data NIC index the launcher's NIC layout holds on goarch.
+func dataNICLimit(goarch string) int {
+	if goarch == "arm64" {
+		return maxDataNICIndexARM64
+	}
+
+	return maxDataNICIndex
+}
+
+// CheckInterfaceName rejects data NIC indices the launcher does not create: beyond the
+// tested PCI-bridge layout on amd64, or the free PCI slots on arm64.
+func (n *mikrotikCHR) CheckInterfaceName() error {
+	if err := n.VRNode.CheckInterfaceName(); err != nil {
+		return err
+	}
+
+	limit := dataNICLimit(n.goarch)
+	for _, ep := range n.Endpoints {
+		ifName := ep.GetIfaceName()
+		// Name the interface as written in the topology (etherN), with its ethN mapping.
+		shown := fmt.Sprintf("%q", ep.GetIfaceDisplayName())
+		if ep.GetIfaceDisplayName() != ifName {
+			shown += " (" + ifName + ")"
+		}
+		index, err := strconv.Atoi(strings.TrimPrefix(ifName, "eth"))
+		// An index too large for an int is still an index over the limit.
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
+			return fmt.Errorf(
+				"node %q interface %s: cannot parse interface index: %w",
+				n.Cfg.ShortName, shown, err,
+			)
+		}
+		if err != nil || index > limit {
+			return fmt.Errorf(
+				"node %q interface %s exceeds the maximum data NIC index %d on %s (eth%d / ether%d)",
+				n.Cfg.ShortName,
+				shown,
+				limit,
+				n.goarch,
+				limit,
+				limit+1,
+			)
+		}
+	}
 
 	return nil
 }
 
 // startPeriod is the healthcheck start period in seconds: the launcher's own worst case
 // before the ready file, so a slow boot (TCG) never reports unhealthy. It waits up to
-// CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the startup-config
-// import and the SSH banner, plus the config fetch and the gateway check.
+// CHR_INTF_WAIT for the links, then up to CHR_BOOT_WAIT each for REST, the VRF
+// handoff, the startup-config import and the SSH banner, plus fetch and gateway checks
+// and re-plugging NICs RouterOS rejected.
 func startPeriod(env map[string]string) int {
 	return envSeconds(env, "CHR_INTF_WAIT", defaultIntfWait) +
-		3*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack
+		4*envSeconds(env, "CHR_BOOT_WAIT", defaultBootWait) + startPeriodSlack + replugWait
 }
 
 // envSeconds reads a positive number of seconds from env, else returns def (the launcher
@@ -168,13 +232,19 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 
 // SaveConfig exports the RouterOS configuration over SSH (scrapligo has no RouterOS
 // platform, see clabnodes.ExportConfigOverSSH) and writes it as the node's startup config,
-// without the objects the launcher creates at every boot.
+// without the objects the launcher creates at every boot. Explicit discovery=static
+// and vrf=main settings retain user choices that compact export omits as defaults,
+// without adding unrelated verbose defaults that older RouterOS may not understand.
 func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	exported, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
-		"/export",
+		`/export; :if ([/ip neighbor discovery-settings get discover-interface-list] = "static") `+
+			`do={:put "/ip neighbor discovery-settings set discover-interface-list=static"}; `+
+			`:foreach s in=[/ip service find where dynamic=no vrf=main] do={`+
+			`:put ("/ip service set [find where name=" . [/ip service get $s name] . " dynamic=no] vrf=main")}; `+
+			`:if ([/snmp get vrf] = "main") do={:put "/snmp set vrf=main"}`,
 	)
 	if err != nil {
 		return nil, err
@@ -185,18 +255,19 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 }
 
 // filterLauncherConfig drops what the launcher configures at every boot from an /export:
-// every object tagged clab-mgmt (the ether1 management addresses, the mgmt routing table,
-// its routes and rules), the ether1 ND entry and CHR's ether1 DHCP client. Imported again
-// as a startup config, these lines duplicate objects the launcher already created and
-// RouterOS stops the import at the first one; the management addressing also belongs to
+// every object tagged clab-mgmt (the ether1 management addresses, the mgmt VRF,
+// its default routes and the discovery lists), the ether1 ND entry and CHR's ether1
+// DHCP client. Imported again as a startup config, these lines duplicate objects the
+// launcher already created and RouterOS stops the import at the first one; management addressing
+// belongs to
 // the deployment, not the lab. Continuation lines (an unescaped trailing backslash) are joined
-// before
-// matching.
+// before matching.
 func filterLauncherConfig(config string) string {
 	var out []string
 
 	section := ""
 	pending := ""
+	keymatHeader := ""
 	for line := range strings.SplitSeq(strings.ReplaceAll(config, "\r\n", "\n"), "\n") {
 		if pending != "" {
 			line = pending + "\n" + line
@@ -210,13 +281,35 @@ func filterLauncherConfig(config string) string {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "/") {
 			section = trimmed
+			keymatHeader = ""
+			// Older RouterOS releases reject even an empty keymat menu. Emit
+			// its header only if a command remains after filtering below.
+			if section == "/system keymat-provider" {
+				keymatHeader = line
+				continue
+			}
 		}
 		if launcherOwned(section, trimmed) {
 			continue
 		}
+		// Repeated RouterOS exports can include this disabled factory QKD
+		// placeholder. Fresh imports reject it (duplicate name or empty KME
+		// address). Drop only this exact entry; keep configured providers.
+		if section == "/system keymat-provider" &&
+			strings.Join(strings.Fields(strings.ReplaceAll(trimmed, `\`, "")), " ") ==
+				"add disabled=yes key-size=0 name=default qkd-cache-size=0 qkd-certificate=*0 type=qkd" {
+			continue
+		}
+		if keymatHeader != "" && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+			out = append(out, keymatHeader)
+			keymatHeader = ""
+		}
 		out = append(out, line)
 	}
 	if pending != "" {
+		if keymatHeader != "" {
+			out = append(out, keymatHeader)
+		}
 		out = append(out, pending)
 	}
 

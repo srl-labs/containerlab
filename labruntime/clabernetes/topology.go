@@ -14,6 +14,52 @@ import (
 
 type topologyObjectOption func(map[string]any)
 
+// annotationTopologyFile records the absolute path of the topology file a lab was deployed from,
+// on the machine that deployed it. Inspect reports it as the lab's topology path and events as
+// clab-topo-file, as the local runtimes do, so clients match the running lab to its file. A lab
+// created by other means than a containerlab deploy has no annotation and reports where its
+// definition lives in the cluster (k8s://<namespace>/topologies/<lab>).
+const annotationTopologyFile = "containerlab.dev/topo-file"
+
+// setTopologySourceFile records the topology file a deploy reads on the Topology. An empty path
+// (a definition that came from no file) records nothing.
+func setTopologySourceFile(topology *unstructured.Unstructured, path string) {
+	if path == "" {
+		return
+	}
+
+	annotations := topology.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[annotationTopologyFile] = path
+	topology.SetAnnotations(annotations)
+}
+
+// removeTopologySourceFile drops the deploying machine's file path from an object.
+func removeTopologySourceFile(obj *unstructured.Unstructured) {
+	annotations := obj.GetAnnotations()
+	if _, ok := annotations[annotationTopologyFile]; !ok {
+		return
+	}
+
+	delete(annotations, annotationTopologyFile)
+	if len(annotations) == 0 {
+		annotations = nil
+	}
+	obj.SetAnnotations(annotations)
+}
+
+// labTopologyPath is the topology path a lab reports: the file it was deployed from when the
+// deploy recorded one, otherwise the place given.
+func labTopologyPath(annotations map[string]string, fallback string) string {
+	if path := annotations[annotationTopologyFile]; path != "" {
+		return path
+	}
+
+	return fallback
+}
+
 func topologyWithNaming(naming string) topologyObjectOption {
 	return func(spec map[string]any) {
 		if naming != "" {
@@ -50,9 +96,10 @@ func topologyWithExposeType(exposeType string) topologyObjectOption {
 
 // topologyWithPersistence backs each node's artifact volume with a persistent claim so saved
 // device configuration survives Pod replacement, the same contract a local runtime provides
-// through the lab directory. Disabled leaves persistence unset entirely: ephemeral storage is
-// the CRD default, and a reconcile that drops the field makes the controller remove the
-// c9s-owned claims.
+// through the lab directory. The claims are retained when their Node is deleted, so a plain
+// destroy keeps the saved configuration like the local lab directory, and a redeploy boots from
+// it; destroy --cleanup deletes them. Disabled leaves persistence unset entirely: ephemeral
+// storage is the CRD default.
 func topologyWithPersistence(enabled bool) topologyObjectOption {
 	return func(spec map[string]any) {
 		if !enabled {
@@ -65,6 +112,7 @@ func topologyWithPersistence(enabled bool) topologyObjectOption {
 		}
 		deployment["persistence"] = map[string]any{
 			"enabled": true,
+			"reclaim": persistenceReclaimRetain,
 		}
 	}
 }
@@ -137,6 +185,10 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *clabla
 		owner = obj.GetAnnotations()[clabconstants.Owner]
 	}
 	nodeSpecs := nodeSpecsFromTopology(obj)
+	topologyPath := labTopologyPath(
+		obj.GetAnnotations(),
+		fmt.Sprintf("k8s://%s/topologies/%s", namespace, obj.GetName()),
+	)
 
 	nodeNames := make([]string, 0, len(nodeSpecs))
 	for nodeName := range nodeSpecs {
@@ -158,7 +210,7 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *clabla
 		Name:         obj.GetName(),
 		Namespace:    namespace,
 		Owner:        owner,
-		TopologyPath: fmt.Sprintf("k8s://%s/topologies/%s", namespace, obj.GetName()),
+		TopologyPath: topologyPath,
 		State:        state,
 		Ready:        ready,
 		Nodes:        nodes,

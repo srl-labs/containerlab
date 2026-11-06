@@ -500,6 +500,28 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 		},
 		{
+			name: "mgmt-net link with network",
+			args: args{
+				yaml: []byte(`
+                    type:              mgmt-net
+                    network:           lab
+                    host-interface:    srl1_e1-6
+                    endpoint:
+                        node:          srl1
+                        interface:     e1-6
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeMgmtNet),
+				Link: &LinkMgmtNetRaw{
+					HostInterface: "srl1_e1-6",
+					Endpoint:      NewEndpointRaw("srl1", "e1-6", ""),
+					Network:       "lab",
+				},
+			},
+		},
+		{
 			name: "host link",
 			args: args{
 				yaml: []byte(`

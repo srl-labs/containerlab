@@ -35,6 +35,23 @@ func (r *Runtime) namespaceFor(namespace string) string {
 	return defaultNamespace
 }
 
+// listNamespace resolves the namespace a read across labs (list, events) covers. An explicit
+// namespace wins: the request's, then --namespace / CLAB_KUBE_NAMESPACE, so users whose RBAC is
+// limited to one namespace can still list and watch it. Without one, allNamespaces covers the
+// whole cluster and otherwise the kubeconfig context namespace applies.
+func (r *Runtime) listNamespace(namespace string, allNamespaces bool) string {
+	switch {
+	case namespace != "":
+		return namespace
+	case r.labNamespaceOverride != "":
+		return r.labNamespaceOverride
+	case allNamespaces:
+		return metav1.NamespaceAll
+	default:
+		return r.namespaceFor("")
+	}
+}
+
 func canonicalNamespaceForLab(name string) (string, error) {
 	namespace := labNamespacePrefix + name
 	if errs := validation.IsDNS1123Label(namespace); len(errs) != 0 {

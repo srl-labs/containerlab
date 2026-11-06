@@ -669,9 +669,11 @@ func TestDestroyWithNoContainersByNameWithEnvBaseRemovesLabDir(t *testing.T) {
 // mgmtResolveBehavior configures the fake runtime the management network resolution
 // tests register under the "mgmtresolvetest" name.
 type mgmtResolveBehavior struct {
-	// checkable lets the fake implement the MgmtNetworkChecker interface.
+	// checkable lets the fake implement the MgmtNetworkChecker and MgmtBridgeResolver
+	// interfaces.
 	checkable bool
-	// networkExists is what MgmtNetworkExists reports when checkable is set.
+	// networkExists is what MgmtNetworkExists and ResolveMgmtBridge report when
+	// checkable is set.
 	networkExists bool
 	// failCreateNet makes CreateNet return an error, so a call to it is observable
 	// through the test failing instead of silently creating a network.
@@ -684,6 +686,7 @@ var mgmtResolveRuntimeBehavior atomic.Pointer[mgmtResolveBehavior]
 type mgmtResolveRuntimeStats struct {
 	createNetCalls atomic.Int32
 	existsCalls    atomic.Int32
+	resolveCalls   atomic.Int32
 }
 
 var mgmtResolveRuntimeStatsPtr atomic.Pointer[mgmtResolveRuntimeStats]
@@ -777,6 +780,16 @@ type fakeMgmtResolveCheckableRuntime struct {
 	fakeMgmtResolveRuntime
 }
 
+// ForMgmtNet binds a copy of the fake to another management network, so the fake
+// supports the multiple management networks of a topology.
+func (f *fakeMgmtResolveCheckableRuntime) ForMgmtNet(
+	m *clabtypes.MgmtNet,
+) clabruntime.ContainerRuntime {
+	c := *f
+	c.mgmt = m
+	return &c
+}
+
 func (*fakeMgmtResolveCheckableRuntime) MgmtNetworkExists(context.Context) (bool, error) {
 	stats := mgmtResolveRuntimeStatsPtr.Load()
 	if stats != nil {
@@ -789,6 +802,20 @@ func (*fakeMgmtResolveCheckableRuntime) MgmtNetworkExists(context.Context) (bool
 	}
 
 	return behavior.networkExists, nil
+}
+
+func (f *fakeMgmtResolveCheckableRuntime) ResolveMgmtBridge(context.Context) error {
+	stats := mgmtResolveRuntimeStatsPtr.Load()
+	if stats != nil {
+		stats.resolveCalls.Add(1)
+	}
+
+	behavior := mgmtResolveRuntimeBehavior.Load()
+	if behavior != nil && behavior.networkExists && f.mgmt.Bridge == "" {
+		f.mgmt.Bridge = "br-fake"
+	}
+
+	return nil
 }
 
 // TestMakeCopyForDestroySkipsMissingMgmtNetworks reproduces issue 3466: destroying a
@@ -868,6 +895,53 @@ func TestMakeCopyForDestroySkipsMissingMgmtNetworks(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestMakeCopyForDestroyIgnoresMgmtNetLinkChecks verifies that a lab can be destroyed
+// after its topology dropped a management network a mgmt-net link still selects.
+func TestMakeCopyForDestroyIgnoresMgmtNetLinkChecks(t *testing.T) {
+	registerMgmtResolveRuntime()
+	setMgmtResolveBehavior(t, &mgmtResolveBehavior{checkable: true, failCreateNet: true})
+
+	topo := writeTopo(t, `
+name: mgmtnet-dropped
+mgmt:
+  - network: mgmtnet-dropped-a
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+  links:
+    - type: mgmt-net
+      network: mgmtnet-dropped-b
+      endpoint:
+        node: n1
+        interface: eth1
+      host-interface: n1-eth1
+`)
+
+	if _, err := NewContainerLab(WithTopoPath(topo, nil)); err == nil {
+		t.Fatal("topology with an undefined mgmt-net link network was accepted")
+	}
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithSkippedMgmtNetLinksCheck(),
+		WithTopoPath(topo, nil),
+		WithRuntime("mgmtresolvetest", &clabruntime.RuntimeConfig{}),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cc, err := c.makeCopyForDestroy(context.Background(), topo, "", *NewDestroyOptions())
+	if err != nil {
+		t.Fatalf("makeCopyForDestroy failed: %v", err)
+	}
+	// the mgmt-net link nodes are shared by the package, release their endpoints
+	t.Cleanup(cc.resetResolvedLinks)
 }
 
 func boolToInt(b bool) int {

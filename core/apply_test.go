@@ -417,6 +417,78 @@ func TestApplyPlanLinkNeedsDeployRejectsMismatchedVethPeer(t *testing.T) {
 	}
 }
 
+type applyFakeBridgeLinkNode struct {
+	applyFakeLinkNode
+}
+
+func (*applyFakeBridgeLinkNode) GetLinkEndpointType() clablinks.LinkEndpointType {
+	return clablinks.LinkEndpointTypeBridge
+}
+
+func TestApplyPlanLinkNeedsDeployChecksMgmtNetBridge(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		bridge string
+		master string
+		want   bool
+	}{
+		{
+			name:   "attached to the resolved bridge",
+			bridge: "br-lab",
+			master: "br-lab",
+			want:   false,
+		},
+		{
+			name:   "moved to another management network",
+			bridge: "br-oob",
+			master: "br-lab",
+			want:   true,
+		},
+		{
+			name:   "unresolved bridge",
+			bridge: "",
+			master: "br-lab",
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mgmt := &applyFakeBridgeLinkNode{applyFakeLinkNode{name: tt.bridge}}
+			n1 := &applyFakeLinkNode{name: "n1"}
+			link := clablinks.NewLinkVEth()
+			brEp := clablinks.NewEndpointBridge(
+				clablinks.NewEndpointGeneric(mgmt, "n1-eth1", link),
+				true,
+			)
+			nodeEp := clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth1", link))
+			link.Endpoints = []clablinks.Endpoint{brEp, nodeEp}
+
+			brKey := applyEndpointKey{node: "mgmt-net", iface: "n1-eth1"}
+			nodeKey := applyEndpointKey{node: "n1", iface: "eth1"}
+			plan := newApplyPlan(nil, nil)
+			plan.liveEndpointSet = map[applyEndpointKey]struct{}{brKey: {}, nodeKey: {}}
+			plan.liveEndpointInfo = map[applyEndpointKey]clablinks.OwnedInterface{
+				brKey: {
+					Name:       "n1-eth1",
+					Index:      11,
+					PeerIndex:  21,
+					MasterName: tt.master,
+				},
+				nodeKey: {Name: "eth1", Index: 21, PeerIndex: 11},
+			}
+
+			if got := plan.linkNeedsDeploy(link); got != tt.want {
+				t.Fatalf("linkNeedsDeploy() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 
@@ -1187,6 +1259,63 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	if err := c.deleteApplyNodes(context.Background(), &applyPlan{
 		currentNodes:   currentNodes,
 		deletedNodeSet: map[string]struct{}{"sros": {}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRuntimeNodeGroupsDeletesSRLNetnsHolderLast(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Names: []string{"clab-lab-srl1"},
+				Labels: map[string]string{
+					clabconstants.NodeName: "srl1",
+				},
+			},
+			{
+				Names: []string{"clab-lab-srl1-netns"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "srl1-netns",
+					clabconstants.RootNodeName: "srl1",
+					clabconstants.InternalNode: "true",
+				},
+			},
+		}, nil)
+
+	currentNodes, err := c.runtimeNodeGroups(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	group := currentNodes["srl1"]
+	if group == nil {
+		t.Fatal("expected the netns holder to be grouped with its node")
+	}
+	if got := len(group.containers); got != 2 {
+		t.Fatalf("expected the node and its internal holder, got %d", got)
+	}
+	gomock.InOrder(
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-srl1").Return(nil),
+		mockRuntime.EXPECT().DeleteContainer(gomock.Any(), "clab-lab-srl1-netns").Return(nil),
+	)
+	if err := c.deleteApplyNodes(context.Background(), &applyPlan{
+		currentNodes:   currentNodes,
+		deletedNodeSet: map[string]struct{}{"srl1": {}},
 	}); err != nil {
 		t.Fatal(err)
 	}

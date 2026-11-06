@@ -22,7 +22,6 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	"gopkg.in/yaml.v2"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -3583,8 +3582,16 @@ func TestDeployReconcilesPrimitiveResources(t *testing.T) {
 	node1 := getTestPrimitive(t, r, nodeGVR, "lab-ns", "node1")
 	node1.SetLabels(mergeDesiredMetadata(node1.GetLabels(), map[string]string{
 		"example.com/preserved": "true",
-		labelIgnoreReconcile:    "true",
 	}))
+	// node1 was stopped and has a pending restart request; an apply must keep both
+	node1.SetAnnotations(mergeDesiredMetadata(node1.GetAnnotations(), map[string]string{
+		restartRequestedAnnotation: "token-1",
+	}))
+	if err := unstructured.SetNestedField(
+		node1.Object, nodeRunStateStopped, "spec", "runState",
+	); err != nil {
+		t.Fatal(err)
+	}
 	if err := unstructured.SetNestedField(
 		node1.Object,
 		"ready",
@@ -3620,8 +3627,16 @@ func TestDeployReconcilesPrimitiveResources(t *testing.T) {
 	if node1.GetLabels()["example.com/preserved"] != "true" {
 		t.Fatalf("node1 extra labels were not preserved: %v", node1.GetLabels())
 	}
-	if _, exists := node1.GetLabels()[labelIgnoreReconcile]; exists {
-		t.Fatalf("node1 retained stop lifecycle label: %v", node1.GetLabels())
+	if got := nodeRunState(node1); got != nodeRunStateStopped {
+		t.Fatalf("node1 runState = %q after apply, want the stopped node to stay stopped", got)
+	}
+	if got := node1.GetAnnotations()[restartRequestedAnnotation]; got != "token-1" {
+		t.Fatalf("node1 restart request = %q after apply, want token-1", got)
+	}
+	if _, found, _ := unstructured.NestedString(
+		getTestPrimitive(t, r, nodeGVR, "lab-ns", "node2").Object, "spec", "runState",
+	); found {
+		t.Fatal("containerlab sent a runState for the new node2; the controller defaults it")
 	}
 
 	_ = getTestPrimitive(t, r, nodeGVR, "lab-ns", "node2")
@@ -3721,7 +3736,7 @@ func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
 	if !r.forwardPodWatch(
 		context.Background(),
 		watcher,
-		make(chan clablabruntime.Event, 1),
+		make(chan labRef, 1),
 		make(chan error, 1),
 	) {
 		t.Fatal("expected closed pod watch to request reconnect")
@@ -3739,6 +3754,7 @@ func TestForwardTopologyWatchReconnectsOnClosedChannel(t *testing.T) {
 		context.Background(),
 		"default",
 		watcher,
+		make(chan labRef, 1),
 		make(chan clablabruntime.Event, 1),
 		make(chan error, 1),
 	) {
@@ -3746,11 +3762,11 @@ func TestForwardTopologyWatchReconnectsOnClosedChannel(t *testing.T) {
 	}
 }
 
-func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
+func TestForwardPodWatchReportsTheLabOfAPod(t *testing.T) {
 	t.Parallel()
 
 	watcher := watch.NewFake()
-	events := make(chan clablabruntime.Event, 1)
+	changed := make(chan labRef, 1)
 	errs := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -3758,11 +3774,12 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	r := &Runtime{}
 	done := make(chan bool, 1)
 	go func() {
-		done <- r.forwardPodWatch(ctx, watcher, events, errs)
+		done <- r.forwardPodWatch(ctx, watcher, changed, errs)
 	}()
 
+	// a pod without the lab label is not a lab's pod
 	watcher.Add(&corev1.Pod{})
-	watcher.Add(&corev1.Pod{
+	watcher.Modify(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod1",
 			Namespace: "lab-ns",
@@ -3771,19 +3788,11 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 				labelTopologyNode:  "node1",
 			},
 		},
-		Status: corev1.PodStatus{
-			Phase: corev1.PodRunning,
-			PodIP: "10.0.0.1",
-		},
+		Status: corev1.PodStatus{Phase: corev1.PodRunning},
 	})
 
-	got := <-events
-	if got.ActorID != "lab-ns/lab1/node1" ||
-		got.ActorName != "lab1-node1" ||
-		got.ActorFullID != "pod1" ||
-		got.Attributes["phase"] != string(corev1.PodRunning) ||
-		got.Attributes["pod_ip"] != "10.0.0.1" {
-		t.Fatalf("unexpected pod event: %+v", got)
+	if got := <-changed; got != (labRef{namespace: "lab-ns", lab: "lab1"}) {
+		t.Fatalf("changed lab = %+v", got)
 	}
 
 	cancel()
@@ -3793,127 +3802,6 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("forwardPodWatch did not exit after cancellation")
-	}
-}
-
-func TestWaitDeploymentRolloutWaitsForTheOutgoingReplicaToGo(t *testing.T) {
-	t.Parallel()
-
-	// Mid rolling update: the Deployment controller has observed the new generation and the
-	// replacement pod is up, but the outgoing pod is still counted and still available. Ready
-	// replicas alone would call this settled.
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "server",
-			Namespace:  defaultNamespace,
-			Generation: 2,
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 2,
-			Replicas:           2,
-			UpdatedReplicas:    1,
-			ReadyReplicas:      1,
-			AvailableReplicas:  1,
-		},
-	}
-
-	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	err := r.waitDeploymentRollout(ctx, defaultNamespace, "server", 2, 1, 50*time.Millisecond)
-	if err == nil {
-		t.Fatal("rollout wait returned while the previous pod template was still running")
-	}
-}
-
-func TestWaitDeploymentRolloutWaitsForTheObservedGeneration(t *testing.T) {
-	t.Parallel()
-
-	// The write landed but the Deployment controller has not acted on it yet, so the status
-	// still describes the previous pod template.
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "server",
-			Namespace:  defaultNamespace,
-			Generation: 3,
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 2,
-			Replicas:           1,
-			UpdatedReplicas:    1,
-			ReadyReplicas:      1,
-			AvailableReplicas:  1,
-		},
-	}
-
-	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	err := r.waitDeploymentRollout(ctx, defaultNamespace, "server", 3, 1, 50*time.Millisecond)
-	if err == nil {
-		t.Fatal("rollout wait returned before the deployment controller observed the update")
-	}
-}
-
-func TestWaitDeploymentRolloutReturnsOnSettledRollout(t *testing.T) {
-	t.Parallel()
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "server",
-			Namespace:  defaultNamespace,
-			Generation: 2,
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 2,
-			Replicas:           1,
-			UpdatedReplicas:    1,
-			ReadyReplicas:      1,
-			AvailableReplicas:  1,
-		},
-	}
-
-	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
-
-	if err := r.waitDeploymentRollout(
-		context.Background(),
-		defaultNamespace,
-		"server",
-		2,
-		1,
-		time.Second,
-	); err != nil {
-		t.Fatalf("rollout wait did not return on a settled rollout: %v", err)
-	}
-}
-
-func TestWaitDeploymentRolloutReturnsOnScaleToZero(t *testing.T) {
-	t.Parallel()
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "server",
-			Namespace:  defaultNamespace,
-			Generation: 4,
-		},
-		Status: appsv1.DeploymentStatus{ObservedGeneration: 4},
-	}
-
-	r := newTestRuntimeWithKubeObjects(nil, []k8sruntime.Object{deployment})
-
-	if err := r.waitDeploymentRollout(
-		context.Background(),
-		defaultNamespace,
-		"server",
-		4,
-		0,
-		time.Second,
-	); err != nil {
-		t.Fatalf("rollout wait did not return on a stopped deployment: %v", err)
 	}
 }
 
@@ -3961,6 +3849,7 @@ func newTestRuntimeWithKubeObjects(
 				nodeGVR:        "NodeList",
 				linkGVR:        "LinkList",
 				nodeProfileGVR: "NodeProfileList",
+				podMetricsGVR:  "PodMetricsList",
 			},
 			runtimeObjects...,
 		),

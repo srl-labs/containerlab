@@ -144,6 +144,9 @@ func (c *CLab) makeCopyForDestroy(
 ) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
+		// a topology edited after deploy may no longer pass the mgmt-net link checks,
+		// which must not prevent the removal of the deployed lab.
+		WithSkippedMgmtNetLinksCheck(),
 	}
 
 	// Try to load topology file if it exists, otherwise use lab name only.
@@ -197,11 +200,6 @@ func (c *CLab) makeCopyForDestroy(
 		}
 	}
 
-	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
 	// populate the management network state (bridge names) destroy needs for the
 	// removal of the iptables rules, without creating networks that are missing:
 	// a lab deployed with a management network override leaves the topology's
@@ -214,9 +212,14 @@ func (c *CLab) makeCopyForDestroy(
 				bridged = append(bridged, m)
 			}
 		}
-		if err = cc.resolveMgmtNetworksForDestroy(ctx, bridged); err != nil {
+		if err = cc.resolveExistingMgmtNetworks(ctx, bridged); err != nil {
 			return nil, err
 		}
+	}
+
+	err = cc.setMgmtNetLinkBridges()
+	if err != nil {
+		return nil, err
 	}
 
 	err = cc.ResolveLinks()
@@ -227,12 +230,12 @@ func (c *CLab) makeCopyForDestroy(
 	return cc, nil
 }
 
-// resolveMgmtNetworksForDestroy inspects the management networks that already exist
-// so their bridge names are populated for the iptables cleanup. Networks that do not
-// exist are skipped: they hold no bridge to clean up, and destroy must not create
-// management networks. Runtimes that cannot check network existence keep the
-// create-or-inspect behavior.
-func (c *CLab) resolveMgmtNetworksForDestroy(
+// resolveExistingMgmtNetworks inspects the management networks that already exist
+// so their bridge names are populated, e.g. for the iptables cleanup on destroy.
+// Networks that do not exist are skipped: they hold no bridge yet, and the callers
+// must not create management networks. Runtimes that cannot check network existence
+// keep the create-or-inspect behavior.
+func (c *CLab) resolveExistingMgmtNetworks(
 	ctx context.Context,
 	networks clabtypes.MgmtNetworks,
 ) error {
@@ -417,6 +420,9 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	if len(containers) == 0 {
+		if len(c.Nodes) > 0 && len(c.Links) > 0 {
+			c.deleteSpecialLinkNodes(ctx)
+		}
 		return nil
 	}
 
@@ -692,15 +698,25 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	// close channel to terminate the workers
 	close(concurrentChan)
 
-	// also call delete on the special nodes
-	for _, n := range c.getSpecialLinkNodes() {
+	wg.Wait()
+
+	// Host and mgmt-br links must be removed only after node workers finish.
+	// vxlan-stitch teardown deletes veth pairs from containers concurrently with
+	// host-namespace VXLAN interfaces; running both at once races netlink deletes.
+	c.deleteSpecialLinkNodes(ctx)
+}
+
+func (c *CLab) deleteSpecialLinkNodes(ctx context.Context) {
+	specialNodes := append(
+		[]clablinks.Node{clablinks.GetHostLinkNode()},
+		clablinks.GetMgmtBrLinkNodes()...,
+	)
+	for _, n := range specialNodes {
 		err := n.Delete(ctx)
 		if err != nil {
 			log.Warn(err)
 		}
 	}
-
-	wg.Wait()
 }
 
 // deleteContainersDirect deletes containers directly via the runtime API.

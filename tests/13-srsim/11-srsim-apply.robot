@@ -2,6 +2,7 @@
 Library             OperatingSystem
 Resource            ../common.robot
 Resource            ../ssh.robot
+Resource            ../srsim.robot
 
 Suite Setup         Run Keyword    Cleanup
 Suite Teardown      Run Keyword    Cleanup
@@ -26,6 +27,7 @@ Apply initial lab without links has no client connectivity
     # a fresh deployment prints the container inspect table and no reconciliation summary
     Should Contain    ${output}    clab-${lab-name}-client
     Should Not Contain    ${output}    Apply summary
+    Check SR-SIM License    ${CURDIR}/${topo}    ${runtime}
     # no links yet: client cannot reach either SR-SIM node
     Client Cannot Ping    10.0.1.2
     Client Cannot Ping    10.0.2.2

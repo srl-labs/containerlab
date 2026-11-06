@@ -72,6 +72,10 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 			"reference: https://containerlab.dev/cmd/inspect/interfaces/",
 		Aliases: []string{"int", "intf"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if commandSkipsRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
@@ -471,6 +475,9 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 			IPv4Address: containers[idx].GetContainerIPv4(),
 			IPv6Address: containers[idx].GetContainerIPv6(),
 			ContainerID: containers[idx].ShortID,
+			// Only lab runtimes set the workload; it adds namespace, pod, container, node_uid,
+			// exposed_ports and load_balancer_address to the JSON output.
+			LabRuntimeWorkload: containers[idx].Workload,
 		}
 
 		if len(containers[idx].Names) > 0 {

@@ -24,6 +24,13 @@ func stateFromNodeResources(
 		Namespace:    namespace,
 		TopologyPath: fmt.Sprintf("k8s://%s/labs/%s", namespace, name),
 	}
+	// Without a Topology resource the Nodes record the file the lab was deployed from.
+	for idx := range nodeResources {
+		if path := nodeResources[idx].GetAnnotations()[annotationTopologyFile]; path != "" {
+			state.TopologyPath = path
+			break
+		}
+	}
 	if len(nodeResources) != 0 {
 		state.Owner = nodeResources[0].GetLabels()[clabconstants.Owner]
 		if state.Owner == "" {
@@ -40,9 +47,20 @@ func stateFromNodeResources(
 }
 
 func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabruntime.NodeState {
-	node := clablabruntime.NodeState{Name: nodeResource.GetName()}
+	node := clablabruntime.NodeState{
+		Name:    nodeResource.GetName(),
+		NodeUID: string(nodeResource.GetUID()),
+	}
+	if original := nodeResource.GetLabels()[labelOriginalNodeName]; original != node.Name {
+		node.TopologyName = original
+	}
+	node.ExposedPorts = nodeExposedPorts(nodeResource)
+	// The same container exec targets: the observed primary device container.
+	node.Container, _ = preferredDeviceContainerName(nodeResource, node.Name)
 	node.Kind, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "kind")
 	node.Image, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "image")
+	node.Type, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "type")
+	node.Group, _, _ = unstructured.NestedString(nodeResource.Object, "spec", "group")
 	node.State, _, _ = unstructured.NestedString(nodeResource.Object, "status", "readiness")
 	node.Ready = node.State == "ready"
 	node.LoadBalancerAddress, _, _ = unstructured.NestedString(
@@ -67,6 +85,102 @@ func nodeStateFromResource(nodeResource *unstructured.Unstructured) clablabrunti
 	return node
 }
 
+// nodeExposedPorts reads the expose-port allocations the controller published on the Node.
+func nodeExposedPorts(nodeResource *unstructured.Unstructured) []clablabruntime.ExposedPort {
+	rawPorts, _, _ := unstructured.NestedSlice(
+		nodeResource.Object,
+		"status",
+		"exposedPorts",
+		"ports",
+	)
+
+	ports := make([]clablabruntime.ExposedPort, 0, len(rawPorts))
+	for _, raw := range rawPorts {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		port := clablabruntime.ExposedPort{
+			Port:       intField(entry["destinationPort"]),
+			ExposePort: intField(entry["exposePort"]),
+			Protocol:   strings.ToLower(fmt.Sprint(entry["protocol"])),
+		}
+		if port.Port == 0 {
+			continue
+		}
+		if port.Protocol == "" || port.Protocol == "<nil>" {
+			port.Protocol = "tcp"
+		}
+
+		ports = append(ports, port)
+	}
+
+	if len(ports) == 0 {
+		return nil
+	}
+
+	sort.Slice(ports, func(i, j int) bool {
+		if ports[i].Port == ports[j].Port {
+			return ports[i].Protocol < ports[j].Protocol
+		}
+
+		return ports[i].Port < ports[j].Port
+	})
+
+	return ports
+}
+
+func intField(value any) int {
+	switch v := value.(type) {
+	case int64:
+		return int(v)
+	case int:
+		return v
+	case int32:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
+}
+
+// newestPod prefers a pod that is not being deleted, then a running pod and, among equals, the
+// newest one: several pods can match a node during a rolling update or a restart, when the old
+// pod terminates while its replacement starts.
+func newestPod(current, candidate *corev1.Pod) *corev1.Pod {
+	if current == nil {
+		return candidate
+	}
+
+	currentDeleting := current.DeletionTimestamp != nil
+	candidateDeleting := candidate.DeletionTimestamp != nil
+	if currentDeleting != candidateDeleting {
+		if candidateDeleting {
+			return current
+		}
+
+		return candidate
+	}
+
+	currentRunning := current.Status.Phase == corev1.PodRunning
+	candidateRunning := candidate.Status.Phase == corev1.PodRunning
+	if currentRunning != candidateRunning {
+		if candidateRunning {
+			return candidate
+		}
+
+		return current
+	}
+
+	if candidate.CreationTimestamp.After(current.CreationTimestamp.Time) {
+		return candidate
+	}
+
+	return current
+}
+
 func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
 	if state == nil || state.Name == "" {
 		return nil
@@ -83,15 +197,12 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	}
 
 	networkModes := make(map[string]string, len(nodeResources.Items))
+	resourcesByName := make(map[string]*unstructured.Unstructured, len(nodeResources.Items))
 	for idx := range nodeResources.Items {
 		nodeResource := &nodeResources.Items[idx]
 		nodesByName[nodeResource.GetName()] = nodeStateFromResource(nodeResource)
 		networkModes[nodeResource.GetName()] = nodeNetworkMode(nodeResource)
-	}
-
-	deployments, err := r.deploymentsForTopology(ctx, state.Name, state.Namespace)
-	if err != nil {
-		return err
+		resourcesByName[nodeResource.GetName()] = nodeResource
 	}
 
 	pods, err := r.kubeClient.CoreV1().Pods(state.Namespace).List(ctx, metav1.ListOptions{
@@ -111,64 +222,61 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 		if nodeName == "" {
 			continue
 		}
-		if pods.Items[idx].Status.Phase == corev1.PodRunning {
-			podsByNode[nodeName] = &pods.Items[idx]
-			continue
-		}
-		if _, ok := podsByNode[nodeName]; !ok {
-			podsByNode[nodeName] = &pods.Items[idx]
-		}
-	}
-
-	for idx := range deployments.Items {
-		deployment := &deployments.Items[idx]
-		nodeName := deployment.Labels[labelTopologyNode]
-		if nodeName == "" {
-			continue
-		}
-
-		replicas := int32(1)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
-		}
-
-		deploymentState := "notready"
-		deploymentReady := false
-		switch {
-		case replicas == 0:
-			deploymentState = "stopped"
-		case deployment.Status.ReadyReplicas > 0:
-			deploymentState = "ready"
-			deploymentReady = true
-		case podsByNode[nodeName] != nil && podsByNode[nodeName].Status.Phase != "":
-			deploymentState = strings.ToLower(string(podsByNode[nodeName].Status.Phase))
-		}
-
-		matched := false
-		for logicalNodeName, node := range nodesByName {
-			if resolvePrimaryNode(logicalNodeName, networkModes) != nodeName {
+		// A pod of an earlier Node of the same name (a redeploy while the old pod still
+		// terminates) is not this node's pod.
+		if uid := pods.Items[idx].Annotations[annotationDirectNodeUID]; uid != "" {
+			if resource := resourcesByName[nodeName]; resource != nil &&
+				string(resource.GetUID()) != uid {
 				continue
 			}
+		}
+		podsByNode[nodeName] = newestPod(podsByNode[nodeName], &pods.Items[idx])
+	}
 
-			// The Node's status.readiness is the authoritative signal for the device itself; a
-			// Deployment can report ready before the controller has observed the device
-			// container as ready. Deployment state is therefore only the fallback for a Node
-			// carrying no readiness yet, and replicas=0 is always an explicit stopped state.
-			if replicas == 0 || node.State == "" {
-				node.State = deploymentState
-				node.Ready = deploymentReady
+	// The Node's status.readiness is the authoritative device signal. The primary Node's run
+	// state governs the pod a group of nodes shares: a stopped primary stops the whole group.
+	// Nodes without readiness yet report their pod phase.
+	for nodeName, node := range nodesByName {
+		primary := resolvePrimaryNode(nodeName, networkModes)
+		primaryResource := resourcesByName[primary]
+		stopRequested := primaryResource != nil &&
+			nodeRunState(primaryResource) == nodeRunStateStopped
+		if stopRequested {
+			node.State = "stopping"
+			if condition := nodeCondition(
+				primaryResource,
+				nodeConditionStopped,
+			); condition != nil &&
+				condition.status == string(metav1.ConditionTrue) {
+				node.State = "stopped"
 			}
-			nodesByName[logicalNodeName] = node
-			matched = true
+			node.Ready = false
+		} else if pod := podsByNode[primary]; node.State == "" && pod != nil &&
+			pod.Status.Phase != "" {
+			node.State = strings.ToLower(string(pod.Status.Phase))
+		}
+		node.ContainerState = nodeContainerState(stopRequested, podsByNode[primary])
+		if node.ContainerState == clablabruntime.ContainerStateRunning {
+			node.Health = nodeHealth(node, resourcesByName[nodeName])
+		}
+		nodesByName[nodeName] = node
+	}
+
+	// Nodes grouped through network-mode container: share the pod of the group's primary
+	// node. Before the controller observed the device containers, the pod's default-container
+	// annotation names the primary node's container.
+	for nodeName, node := range nodesByName {
+		primary := resolvePrimaryNode(nodeName, networkModes)
+		pod := podsByNode[primary]
+		if pod == nil {
+			continue
 		}
 
-		if !matched {
-			node := nodesByName[nodeName]
-			node.Name = nodeName
-			node.State = deploymentState
-			node.Ready = deploymentReady
-			nodesByName[nodeName] = node
+		node.Pod = pod.Name
+		if node.Container == "" && primary == nodeName {
+			node.Container = pod.Annotations[defaultContainerAnnotation]
 		}
+		nodesByName[nodeName] = node
 	}
 
 	nodeNames := make([]string, 0, len(nodesByName))
@@ -200,4 +308,45 @@ func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabStat
 	}
 
 	return nil
+}
+
+// nodeContainerState is the state of a node in container runtime terms, from its pod: created
+// while the pod is scheduled and prepared (init containers), running once the device containers
+// run, and exited once the node was stopped, its pod is being deleted, or the pod ended. Between
+// the pods of a restart the node is exited, then created.
+func nodeContainerState(stopRequested bool, pod *corev1.Pod) string {
+	switch {
+	case pod == nil && stopRequested:
+		return clablabruntime.ContainerStateExited
+	case pod == nil:
+		return clablabruntime.ContainerStateCreated
+	case stopRequested || pod.DeletionTimestamp != nil:
+		return clablabruntime.ContainerStateExited
+	}
+
+	switch pod.Status.Phase {
+	case corev1.PodRunning:
+		return clablabruntime.ContainerStateRunning
+	case corev1.PodSucceeded, corev1.PodFailed:
+		return clablabruntime.ContainerStateExited
+	default:
+		return clablabruntime.ContainerStateCreated
+	}
+}
+
+// nodeHealth is the health of a running node: healthy once the Node is ready or its device
+// containers are, starting before. Device containers are the analogue of a container
+// healthcheck: a node whose links wait for a stopped peer is not ready, but its device is.
+func nodeHealth(node clablabruntime.NodeState, resource *unstructured.Unstructured) string {
+	if node.Ready {
+		return clablabruntime.ContainerHealthHealthy
+	}
+	if resource != nil {
+		if condition := nodeCondition(resource, nodeConditionContainersReady); condition != nil &&
+			condition.status == string(metav1.ConditionTrue) {
+			return clablabruntime.ContainerHealthHealthy
+		}
+	}
+
+	return clablabruntime.ContainerHealthStarting
 }
