@@ -418,7 +418,7 @@ func (n *srl) Deploy(ctx context.Context, params *clabnodes.DeployParams) error 
 }
 
 func (n *srl) Start(ctx context.Context) error {
-	if n.netnsNode == nil {
+	if n.netnsNode == nil || n.deployedWithoutNetnsNode(ctx) {
 		return n.DefaultNode.Start(ctx)
 	}
 
