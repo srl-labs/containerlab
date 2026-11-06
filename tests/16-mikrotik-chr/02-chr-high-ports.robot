@@ -61,6 +61,8 @@ Ensure a reboot from inside RouterOS keeps all interfaces
     # Before the reboot starts, the old interfaces would still answer.
     Sleep    20s
     Wait Until Keyword Succeeds    300s    10s    High port forwards traffic
+    # Proves that RouterOS rebooted and the launcher checked the NICs afterwards.
+    Wait Until Keyword Succeeds    60s    5s    Launcher checked NICs after a reboot    r1
     Node is healthy    r1
 
 
@@ -92,6 +94,13 @@ Node is healthy
     ...    sudo -E ${runtime} inspect -f '{{.State.Health.Status}}' clab-${lab-name}-${node}
     Log    ${output}
     Should Be Equal As Strings    ${output}    healthy
+
+Launcher checked NICs after a reboot
+    [Arguments]    ${node}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${runtime} logs clab-${lab-name}-${node} 2>&1
+    Should Contain    ${output}    RouterOS rebooted: checking the data NICs again
+    Should Contain    ${output}    data NICs after the reboot: all 63 are RouterOS interfaces
 
 Cleanup
     FOR    ${node}    IN    r1    r2

@@ -61,6 +61,8 @@
 #   "data NIC check FAILED: …"         RouterOS lacks an interface for a data NIC
 #                                      even after re-plugging it (also checked
 #                                      after a reboot from inside RouterOS)
+#   "RouterOS did not answer within …  after a reboot from inside RouterOS; the
+#    after the reboot: not ready"      launcher keeps waiting and checks later
 #
 # Copyright 2026 NetPilot Labs
 # Licensed under the BSD 3-Clause License.
@@ -750,7 +752,7 @@ mgmt_attach() {
 # can reject a NIC again on its way up. QEMU reports the reset as a RESET event
 # on its second QMP monitor: check the data NICs again once RouterOS answers.
 # The node stays ready during the reboot, as before; it loses the ready marker
-# only when a NIC is still missing afterwards.
+# when RouterOS does not answer within CHR_BOOT_WAIT or a NIC is still missing.
 qmp_events() { # print QEMU's QMP events, one per line, while qemu runs
     # busybox nc exits when its stdin closes: hold it open for qemu's lifetime
     {
@@ -763,9 +765,11 @@ after_reboot() { # wait for RouterOS to answer, then check the data NICs again
     sleep 5
     _t0=$(date +%s)
     until rest "$AUTH" system/resource >/dev/null 2>&1; do
-        if [ $(( $(date +%s) - _t0 )) -ge "$BOOT_WAIT" ]; then
-            log "RouterOS did not answer within ${BOOT_WAIT}s after the reboot: data NICs not checked"
-            return
+        kill -0 "$QEMU_PID" 2>/dev/null || return
+        if [ -f "$READY_FILE" ] && [ $(( $(date +%s) - _t0 )) -ge "$BOOT_WAIT" ]; then
+            # Not ready, but keep waiting: a late answer still gets the check.
+            rm -f "$READY_FILE"
+            log "RouterOS did not answer within ${BOOT_WAIT}s after the reboot: not ready"
         fi
         sleep 2
     done
@@ -783,8 +787,10 @@ watch_reboots() { # in the background: check the data NICs after every reboot
     qmp_events | while read -r _ev; do
         case "$_ev" in *'"event": "RESET"'*) ;; *) continue ;; esac
         # One reboot resets the guest twice, milliseconds apart: handle it once.
+        # The timestamps are whole seconds, so the two can differ by one;
+        # RouterOS needs far longer than 3 s to boot before it can reboot again.
         _ts=$(printf '%s' "$_ev" | sed -n 's/.*"seconds": *\([0-9]*\).*/\1/p')
-        [ "${_ts:-0}" -gt $((_last + 10)) ] || continue
+        [ "${_ts:-0}" -gt $((_last + 3)) ] || continue
         _last=$_ts
         after_reboot
     done &

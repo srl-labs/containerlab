@@ -81,7 +81,7 @@ The highest interface depends on the architecture, and larger indices are reject
 The check uses the architecture of the containerlab binary, which matches the image's except in emulated setups.
 ///
 
-With more than about 30 data ports, RouterOS can reject a NIC while it boots, and the interface does not appear. The launcher checks that RouterOS has an interface for every data NIC and re-plugs the missing ones before the node reports ready; RouterOS keeps their configuration. It checks again after RouterOS reboots itself (for example with `/system reboot`), when the container keeps running. If a NIC is still missing, the launcher logs `data NIC check FAILED` and the node is not healthy.
+With more than about 30 data ports, RouterOS can reject a NIC while it boots, and the interface does not appear. The launcher checks that RouterOS has an interface for every data NIC and re-plugs the missing ones before the node reports ready; RouterOS keeps their configuration. It checks again after RouterOS reboots itself (for example with `/system reboot`), when the container keeps running. If a NIC is still missing, the launcher logs `data NIC check FAILED` and the node is not healthy. The node is also not healthy while RouterOS does not answer within `CHR_BOOT_WAIT` after such a reboot.
 
 Sparse interface numbering also consumes VM resources for the intervening ports; memory defaults scale with the highest index, not just the number of links.
 
