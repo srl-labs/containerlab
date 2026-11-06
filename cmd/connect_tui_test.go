@@ -263,3 +263,99 @@ func TestConnectCmdHasLabelFlag(t *testing.T) {
 		t.Errorf("unexpected label filter %v", o.Filter.LabelFilter)
 	}
 }
+
+func TestFormatConnectPorts(t *testing.T) {
+	tests := map[string]struct {
+		bindings []*clabtypes.GenericPortBinding
+		want     string
+	}{
+		"none": {want: ""},
+		"exposed only, sorted numerically": {
+			bindings: []*clabtypes.GenericPortBinding{
+				{ContainerPort: 8080, Protocol: "tcp"},
+				{ContainerPort: 22, Protocol: "tcp"},
+				{ContainerPort: 443, Protocol: "tcp"},
+			},
+			want: "22/tcp, 443/tcp, 8080/tcp",
+		},
+		"published on IPv4 and IPv6 is shown once": {
+			bindings: []*clabtypes.GenericPortBinding{
+				{HostIP: "0.0.0.0", HostPort: 18080, ContainerPort: 80, Protocol: "tcp"},
+				{HostIP: "::", HostPort: 18080, ContainerPort: 80, Protocol: "tcp"},
+			},
+			want: "18080→80/tcp",
+		},
+		"published and exposed": {
+			bindings: []*clabtypes.GenericPortBinding{
+				{ContainerPort: 443, Protocol: "tcp"},
+				{HostPort: 18080, ContainerPort: 80, Protocol: "tcp"},
+			},
+			want: "18080→80/tcp, 443/tcp",
+		},
+		"no protocol": {
+			bindings: []*clabtypes.GenericPortBinding{{ContainerPort: 22}},
+			want:     "22",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := formatConnectPorts(tc.bindings); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNodeDetailWrapsLongPortLists(t *testing.T) {
+	short := connectNodeEntry{name: "clab-lab1-client1"}
+	long := short
+	long.ports = "22/tcp, 80/tcp, 443/tcp, 1180/tcp, 8080/tcp, 11443/tcp"
+
+	detail := renderNodeDetail(&long)
+	if got, limit := lipgloss.Width(
+		detail,
+	), lipgloss.Width(
+		renderNodeDetail(&short),
+	)+connectPortsWidth; got > limit {
+		t.Errorf("details panel is %d wide, want at most %d:\n%s", got, limit, detail)
+	}
+	for _, port := range []string{"22/tcp", "11443/tcp"} {
+		if !strings.Contains(detail, port) {
+			t.Errorf("port %q is missing:\n%s", port, detail)
+		}
+	}
+}
+
+func TestPickersResetCursorOnNewQuery(t *testing.T) {
+	typeRune := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	down := tea.KeyMsg{Type: tea.KeyDown}
+
+	var node tea.Model = newNodePicker([]connectNodeEntry{
+		{name: "clab-lab1-client1"}, {name: "clab-lab1-client2"}, {name: "clab-lab1-client3"},
+	})
+	node, _ = node.Update(down)
+	node, _ = node.Update(down)
+	if got := node.(nodePickerModel).cursor; got != 2 {
+		t.Fatalf("node picker cursor = %d, want 2", got)
+	}
+
+	// messages that leave the query alone, ie. the input's cursor blink, keep the position
+	node, _ = node.Update(struct{}{})
+	if got := node.(nodePickerModel).cursor; got != 2 {
+		t.Errorf("node picker cursor moved to %d without a new query", got)
+	}
+
+	node, _ = node.Update(typeRune)
+	if got := node.(nodePickerModel).cursor; got != 0 {
+		t.Errorf("node picker cursor = %d after a new query, want 0", got)
+	}
+
+	var method tea.Model = newMethodPicker(nil,
+		buildConnectMethods([]string{"/bin/sh"}, "linux"))
+	method, _ = method.Update(down)
+	method, _ = method.Update(typeRune)
+	if got := method.(methodPickerModel).cursor; got != 0 {
+		t.Errorf("method picker cursor = %d after a new query, want 0", got)
+	}
+}

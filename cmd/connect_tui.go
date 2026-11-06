@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"cmp"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -17,6 +19,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -215,11 +218,6 @@ func buildConnectNodeEntries(containers []clabruntime.GenericContainer) []connec
 		if ipv6 != "" {
 			ipv6 = fmt.Sprintf("%s/%d", ipv6, ct.NetworkSettings.IPv6pLen)
 		}
-		ports := make([]string, 0, len(ct.Ports))
-		for _, p := range ct.Ports {
-			ports = append(ports, fmt.Sprintf("%d", p.HostPort))
-		}
-
 		entries = append(entries, connectNodeEntry{
 			container: ct,
 			name:      name,
@@ -230,11 +228,38 @@ func buildConnectNodeEntries(containers []clabruntime.GenericContainer) []connec
 			state:     ct.State,
 			ipv4:      ipv4,
 			ipv6:      ipv6,
-			ports:     strings.Join(ports, ","),
+			ports:     formatConnectPorts(ct.Ports),
 			shell:     "",
 		})
 	}
 	return entries
+}
+
+// formatConnectPorts renders port bindings the way `docker ps` does: published
+// ports as host→container/protocol, exposed ones as container/protocol. Bindings
+// that differ only by the host IP (ie. IPv4 and IPv6) are shown once.
+func formatConnectPorts(bindings []*clabtypes.GenericPortBinding) string {
+	sorted := slices.Clone(bindings)
+	slices.SortStableFunc(sorted, func(a, b *clabtypes.GenericPortBinding) int {
+		return cmp.Or(
+			cmp.Compare(a.ContainerPort, b.ContainerPort),
+			cmp.Compare(a.HostPort, b.HostPort),
+		)
+	})
+
+	ports := make([]string, 0, len(sorted))
+	for _, p := range sorted {
+		port := fmt.Sprintf("%d", p.ContainerPort)
+		if p.HostPort != 0 {
+			port = fmt.Sprintf("%d→%s", p.HostPort, port)
+		}
+		if p.Protocol != "" {
+			port += "/" + p.Protocol
+		}
+		ports = append(ports, port)
+	}
+
+	return strings.Join(slices.Compact(ports), ", ")
 }
 
 type nodePickerModel struct {
@@ -338,9 +363,14 @@ func (m nodePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// default: feed to the input and refilter
+		// default: feed to the input and refilter, a new query starts from the best match
+		query := m.input.Value()
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
+		if m.input.Value() != query {
+			m.cursor = 0
+			m.offset = 0
+		}
 		m.refilter()
 		return m, cmd
 	}
@@ -390,6 +420,7 @@ const (
 	connectColumnGap      = 2
 	connectMinImageWidth  = 8
 	connectDefaultWidth   = 120 // used until the terminal reports its size
+	connectPortsWidth     = 24
 )
 
 // width returns the total width of a list row.
@@ -557,7 +588,13 @@ func renderNodeDetail(e *connectNodeEntry) string {
 	writeDetail("ipv4", e.ipv4)
 	writeDetail("ipv6", e.ipv6)
 	if e.ports != "" {
-		writeDetail("ports", e.ports)
+		// Long port lists wrap to keep the panel from taking over the list's space.
+		b.WriteString(lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			label(fmt.Sprintf("%-10s", "ports"))+" ",
+			value.Width(connectPortsWidth).Render(e.ports),
+		))
+		b.WriteString("\n")
 	}
 
 	return connectDetailBorderStyle.Render(b.String())
@@ -667,8 +704,13 @@ func (m methodPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// a new query starts from the best match
+		query := m.input.Value()
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
+		if m.input.Value() != query {
+			m.cursor = 0
+		}
 		m.refilter()
 		return m, cmd
 	}
