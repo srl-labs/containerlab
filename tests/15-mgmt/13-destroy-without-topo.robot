@@ -21,6 +21,10 @@ Deploy lab with two management networks
     Network Driver Should Be    clab-mgmt13-main    bridge
     Network Driver Should Be    clab-mgmt13-oob    bridge
 
+Netns symlinks are created for both nodes
+    Command Should Succeed    test -L /run/netns/clab-mgmt13-n1
+    Command Should Succeed    test -L /run/netns/clab-mgmt13-n2
+
 Forwarding rules are installed for both bridges
     ${main-br} =    Network Bridge    clab-mgmt13-main
     ${oob-br} =    Network Bridge    clab-mgmt13-oob
@@ -38,6 +42,10 @@ Destroy by name after the topology file is removed
 All management networks are removed
     Network Should Not Exist    clab-mgmt13-main
     Network Should Not Exist    clab-mgmt13-oob
+
+Netns symlinks are removed for both nodes
+    Command Should Fail    test -L /run/netns/clab-mgmt13-n1
+    Command Should Fail    test -L /run/netns/clab-mgmt13-n2
 
 Forwarding rules are removed for both bridges
     ${count} =    Containerlab Firewall Rule Count    ${main-br}

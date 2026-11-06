@@ -741,7 +741,12 @@ func (c *CLab) deleteContainersDirect(
 		err := rt.DeleteContainer(ctx, name)
 		if err != nil {
 			log.Errorf("could not remove container %q: %v", name, err)
+			if rt.GetContainerStatus(ctx, name) != clabruntime.NotFound {
+				continue
+			}
 		}
+
+		_ = clabutils.DeleteNetnsSymlink(name)
 	}
 }
 
