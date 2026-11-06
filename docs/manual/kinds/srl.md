@@ -188,6 +188,10 @@ If the type is not set in the clab file, the `ixr-d2l` type will be used by cont
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 
+/// warning
+When using Nokia 7250 IXR and Nokia 7730 SXR `types`, you need to add a licence, as described in [`license`](#license).
+///
+
 ### Modular chassis
 
 The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavors. The card is chosen with a `components` block, where `type` names the line card:
