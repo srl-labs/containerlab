@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1181,6 +1189,8 @@
       
         
       
+        
+      
     
     
     
@@ -1324,6 +1334,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1639,6 +1653,60 @@
     
   
   events
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  logs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  capture
 
     
   </span>
@@ -2585,6 +2653,8 @@
       
         
       
+        
+      
     
     
     
@@ -2603,7 +2673,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3069,6 +3139,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3129,6 +3203,10 @@
 Or <code>CLAB_INSPECT_ALL=1</code> to set <code>--all</code> flag for the <code>inspect</code> command.
 Or <code>CLAB_TOPO=srlinux.dev/clab-srl clab dep -c</code> to deploy a lab with the topology passed via environment variable.</p>
 </blockquote>
+<div class="admonition note">
+<p class="admonition-title">Lab runtimes</p>
+<p>With a lab runtime such as <code>--runtime c9s</code>, <code>graph</code> renders from the topology file alone: <code>--mermaid</code>, <code>--dot</code>, <code>--drawio</code> and the HTML server with <code>--offline</code> work, and need no cluster access. The default HTML mode, which reads the running containers, and <code>--node-filter</code> are rejected. <code>--drawio</code> still runs the clab-io-draw container on the local host.</p>
+</div>
 <h3 id="html">HTML<a class="headerlink" href="#html" title="Permanent link">#</a></h3>
 <p>The HTML-based graph representation is the default graphing option. The topology will be graphed and served online using the embedded web server.</p>
 <p>The default graph template is based on the NeXt UI framework<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>.</p>

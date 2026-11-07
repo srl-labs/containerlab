@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1105,6 +1113,8 @@
       
         
           
+        
+      
         
       
         
@@ -2496,6 +2506,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2828,6 +2842,8 @@
       
         
       
+        
+      
     
     
     
@@ -2846,7 +2862,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3726,6 +3742,7 @@
 <li>Nodes using <code>network-mode</code> ignore the <code>mgmt-net</code> key.</li>
 <li>The <code>--network</code>, <code>--ipv4/6-subnet</code> flag is not supported.</li>
 <li><a href="#skipping-the-management-network"><code>skip-when-unused</code></a> is evaluated per network: a network with the flag set is not created when every node attached to it runs with <code>network-mode: none</code>.</li>
+<li><a href="#additional-connections-to-management-network"><code>mgmt-net</code> links</a> attach to the first management network unless the extended link definition selects another one with the <code>network</code> key.</li>
 <li>When a management network is dropped from the <code>mgmt</code> list, the next <code>destroy</code> removes it together with the networks the topology still defines.</li>
 </ul>
 <h3 id="drivers">Drivers<a class="headerlink" href="#drivers" title="Permanent link">#</a></h3>
@@ -4042,75 +4059,98 @@ Currently only TCP ports are forwarded using the <code>/ts</code> port nomenclat
 </span></code></pre></div>
 <p>In the above example the node <code>n1</code> connects with its <code>e1-1</code> interface to the management network. This is done by specifying the endpoint with a reserved name <code>mgmt-net</code> and defining the name of the interface that should be used in that bridge (<code>n1-e1-1</code>).</p>
 <p>By specifying <code>mgmt-net</code> name of the node in the endpoint definition we tell containerlab to find out which bridge is used by the management network of our lab and use this bridge as the attachment point for our veth pair.</p>
+<p>With <a href="#multiple-management-networks">multiple management networks</a> the brief form attaches to the first network in the <code>mgmt</code> list. To attach to a different network, use the <a href="../topo-def-file/#mgmt-net">extended <code>mgmt-net</code> link</a> definition and set the <code>network</code> key to the name of the management network:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">multi</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="nt">mgmt</span><span class="p">:</span>
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oob</span>
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="w">    </span><span class="nt">ipv4-subnet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.31.10.0/24</span>
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab</span>
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a><span class="w">    </span><span class="nt">ipv4-subnet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.31.20.0/24</span>
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a><span class="w">    </span><span class="nt">bridge</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">br-lab</span>
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="nt">topology</span><span class="p">:</span>
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
+</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a><span class="w">    </span><span class="nt">r1</span><span class="p">:</span>
+</span><span id="__span-35-11"><a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-35-12"><a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine</span>
+</span><span id="__span-35-13"><a id="__codelineno-35-13" name="__codelineno-35-13" href="#__codelineno-35-13"></a><span class="w">      </span><span class="nt">mgmt-net</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oob</span>
+</span><span id="__span-35-14"><a id="__codelineno-35-14" name="__codelineno-35-14" href="#__codelineno-35-14"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>
+</span><span id="__span-35-15"><a id="__codelineno-35-15" name="__codelineno-35-15" href="#__codelineno-35-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mgmt-net</span>
+</span><span id="__span-35-16"><a id="__codelineno-35-16" name="__codelineno-35-16" href="#__codelineno-35-16"></a><span class="w">      </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab</span>
+</span><span id="__span-35-17"><a id="__codelineno-35-17" name="__codelineno-35-17" href="#__codelineno-35-17"></a><span class="w">      </span><span class="nt">endpoint</span><span class="p">:</span>
+</span><span id="__span-35-18"><a id="__codelineno-35-18" name="__codelineno-35-18" href="#__codelineno-35-18"></a><span class="w">        </span><span class="nt">node</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">r1</span>
+</span><span id="__span-35-19"><a id="__codelineno-35-19" name="__codelineno-35-19" href="#__codelineno-35-19"></a><span class="w">        </span><span class="nt">interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eth1</span>
+</span><span id="__span-35-20"><a id="__codelineno-35-20" name="__codelineno-35-20" href="#__codelineno-35-20"></a><span class="w">      </span><span class="nt">host-interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">r1-eth1</span>
+</span></code></pre></div>
+<p>The referenced network must be defined in the <code>mgmt</code> list and use the <code>bridge</code> driver.</p>
 <p>This is best illustrated with the following diagram:</p>
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:14,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 <h3 id="macvlan-links">MACVLAN links<a class="headerlink" href="#macvlan-links" title="Permanent link">#</a></h3>
 <p>In addition to the <code>veth</code> links, containerlab supports <code>macvlan</code> links. This type of links is useful when users want to connect containers to the host interface/network directly. This is achieved by defining a link endpoints which has one end defined with a special <code>macvlan:&lt;host-iface-name&gt;</code> signature.</p>
 <p>Consider the following example where we connect a Linux container <code>l1</code> to the hosts <code>enp0s3</code> interface:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">macvlan</span>
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>
-</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="nt">topology</span><span class="p">:</span>
-</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
-</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="w">    </span><span class="nt">l1</span><span class="p">:</span>
-</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
-</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
-</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>
-</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>
-</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;l1:eth1&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;macvlan:enp0s3&quot;</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">macvlan</span>
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="nt">topology</span><span class="p">:</span>
+</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
+</span><span id="__span-36-5"><a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="w">    </span><span class="nt">l1</span><span class="p">:</span>
+</span><span id="__span-36-6"><a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-36-7"><a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
+</span><span id="__span-36-8"><a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a>
+</span><span id="__span-36-9"><a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>
+</span><span id="__span-36-10"><a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;l1:eth1&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;macvlan:enp0s3&quot;</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <p>This topology will result in l1 node having its <code>eth1</code> interface connected to the <code>enp0s3</code> interface of the host as per the diagram below:</p>
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph='{"page":16,"zoom":1.5,"highlight":"#0000ff","nav":true,"check-visible-state":true,"resize":true,"url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio"}'></div>
 
 <p>Containerlab will create a macvlan interface in the bridge mode, attach it to the parent <code>enp0s3</code> interface and then move it to the container's net namespace and name it <code>eth1</code>, as instructed by the endpoint definition in the topology.</p>
 <p>Users then can configure the <code>eth1</code> interface inside the container as they would do with any other interface. As per the diagram above, we configure <code>eth1</code> interface with ipv4 address from the host's <code>enp0s3</code> interface subnet:</p>
-<div class="language-bash highlight"><span class="filename">entering the container&#x27;s shell</span><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>clab-macvlan-l1<span class="w"> </span>ash
+<div class="language-bash highlight"><span class="filename">entering the container&#x27;s shell</span><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>clab-macvlan-l1<span class="w"> </span>ash
 </span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="c1"># adding v4 address to the eth1 interface</span>
-</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>ip<span class="w"> </span>address<span class="w"> </span>add<span class="w"> </span><span class="m">10</span>.0.0.111/24<span class="w"> </span>dev<span class="w"> </span>eth1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># adding v4 address to the eth1 interface</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>ip<span class="w"> </span>address<span class="w"> </span>add<span class="w"> </span><span class="m">10</span>.0.0.111/24<span class="w"> </span>dev<span class="w"> </span>eth1
 </span></code></pre></div>
 <p>Once v4 address is assigned to the macvlan interface, we can test the connectivity by pinging default gateway of the host:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>❯<span class="w"> </span>ping<span class="w"> </span><span class="m">10</span>.0.0.1
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>PING<span class="w"> </span><span class="m">10</span>.0.0.1<span class="w"> </span><span class="o">(</span><span class="m">10</span>.0.0.1<span class="o">)</span>:<span class="w"> </span><span class="m">56</span><span class="w"> </span>data<span class="w"> </span>bytes
-</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span><span class="nv">seq</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">0</span>.545<span class="w"> </span>ms
-</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span><span class="nv">seq</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">0</span>.243<span class="w"> </span>ms
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>❯<span class="w"> </span>ping<span class="w"> </span><span class="m">10</span>.0.0.1
+</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>PING<span class="w"> </span><span class="m">10</span>.0.0.1<span class="w"> </span><span class="o">(</span><span class="m">10</span>.0.0.1<span class="o">)</span>:<span class="w"> </span><span class="m">56</span><span class="w"> </span>data<span class="w"> </span>bytes
+</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a><span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span><span class="nv">seq</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">0</span>.545<span class="w"> </span>ms
+</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span><span class="nv">seq</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">0</span>.243<span class="w"> </span>ms
 </span></code></pre></div>
 <p>When capturing packets from the hosts's <code>enp0s3</code> interface we can see that the ping packets are coming through it using the mac address assigned to the macvlan interface:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>❯<span class="w"> </span>tcpdump<span class="w"> </span>-nnei<span class="w"> </span>enp0s3<span class="w"> </span>icmp
-</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>tcpdump:<span class="w"> </span>verbose<span class="w"> </span>output<span class="w"> </span>suppressed,<span class="w"> </span>use<span class="w"> </span>-v<span class="o">[</span>v<span class="o">]</span>...<span class="w"> </span><span class="k">for</span><span class="w"> </span>full<span class="w"> </span>protocol<span class="w"> </span>decode
-</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>listening<span class="w"> </span>on<span class="w"> </span>enp0s3,<span class="w"> </span>link-type<span class="w"> </span>EN10MB<span class="w"> </span><span class="o">(</span>Ethernet<span class="o">)</span>,<span class="w"> </span>snapshot<span class="w"> </span>length<span class="w"> </span><span class="m">262144</span><span class="w"> </span>bytes
-</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="m">22</span>:35:02.430901<span class="w"> </span>aa:c1:ab:72:b3:fe<span class="w"> </span>&gt;<span class="w"> </span>fa:16:3e:af:03:05,<span class="w"> </span>ethertype<span class="w"> </span>IPv4<span class="w"> </span><span class="o">(</span>0x0800<span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">98</span>:<span class="w"> </span><span class="m">10</span>.0.0.111<span class="w"> </span>&gt;<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span>ICMP<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>request,<span class="w"> </span>id<span class="w"> </span><span class="m">24</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">4</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">64</span>
-</span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="m">22</span>:35:02.431017<span class="w"> </span>fa:16:3e:af:03:05<span class="w"> </span>&gt;<span class="w"> </span>aa:c1:ab:72:b3:fe,<span class="w"> </span>ethertype<span class="w"> </span>IPv4<span class="w"> </span><span class="o">(</span>0x0800<span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">98</span>:<span class="w"> </span><span class="m">10</span>.0.0.1<span class="w"> </span>&gt;<span class="w"> </span><span class="m">10</span>.0.0.111:<span class="w"> </span>ICMP<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>reply,<span class="w"> </span>id<span class="w"> </span><span class="m">24</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">4</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">64</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>❯<span class="w"> </span>tcpdump<span class="w"> </span>-nnei<span class="w"> </span>enp0s3<span class="w"> </span>icmp
+</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>tcpdump:<span class="w"> </span>verbose<span class="w"> </span>output<span class="w"> </span>suppressed,<span class="w"> </span>use<span class="w"> </span>-v<span class="o">[</span>v<span class="o">]</span>...<span class="w"> </span><span class="k">for</span><span class="w"> </span>full<span class="w"> </span>protocol<span class="w"> </span>decode
+</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>listening<span class="w"> </span>on<span class="w"> </span>enp0s3,<span class="w"> </span>link-type<span class="w"> </span>EN10MB<span class="w"> </span><span class="o">(</span>Ethernet<span class="o">)</span>,<span class="w"> </span>snapshot<span class="w"> </span>length<span class="w"> </span><span class="m">262144</span><span class="w"> </span>bytes
+</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="m">22</span>:35:02.430901<span class="w"> </span>aa:c1:ab:72:b3:fe<span class="w"> </span>&gt;<span class="w"> </span>fa:16:3e:af:03:05,<span class="w"> </span>ethertype<span class="w"> </span>IPv4<span class="w"> </span><span class="o">(</span>0x0800<span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">98</span>:<span class="w"> </span><span class="m">10</span>.0.0.111<span class="w"> </span>&gt;<span class="w"> </span><span class="m">10</span>.0.0.1:<span class="w"> </span>ICMP<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>request,<span class="w"> </span>id<span class="w"> </span><span class="m">24</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">4</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">64</span>
+</span><span id="__span-40-5"><a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a><span class="m">22</span>:35:02.431017<span class="w"> </span>fa:16:3e:af:03:05<span class="w"> </span>&gt;<span class="w"> </span>aa:c1:ab:72:b3:fe,<span class="w"> </span>ethertype<span class="w"> </span>IPv4<span class="w"> </span><span class="o">(</span>0x0800<span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">98</span>:<span class="w"> </span><span class="m">10</span>.0.0.1<span class="w"> </span>&gt;<span class="w"> </span><span class="m">10</span>.0.0.111:<span class="w"> </span>ICMP<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>reply,<span class="w"> </span>id<span class="w"> </span><span class="m">24</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">4</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">64</span>
 </span></code></pre></div>
 <h2 id="manual-control-over-the-management-network">Manual control over the management network<a class="headerlink" href="#manual-control-over-the-management-network" title="Permanent link">#</a></h2>
 <p>By default containerlab creates a docker network named <code>clab</code> and attaches all the nodes to this network. This network is used as a management network for the nodes and is managed by the container runtime such as docker or podman.</p>
 <p>Container runtime is responsible for creating the <code>eth0</code> interface inside the container and attaching it to the <code>clab</code> network. This interface is used by the container to communicate with the management network. For that reason the links users create in the topology's <code>links</code> section typically do not include the <code>eth0</code> interface.</p>
 <p>However, there might be cases when users want to take control over <code>eth0</code> interface management. For example, they might want to connect <code>eth0</code> to a different network or even another container's interface. To achieve that, users can instruct container runtime to not manage the <code>eth0</code> interface and leave it to the user, using <a href="../nodes/#network-mode"><code>network-mode: none</code></a> setting.</p>
 <p>Consider the following example, where node1's management interface <code>eth0</code> is provided in the <code>links</code> section and connects to node2's <code>eth1</code> interface:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">e0</span>
-</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>
-</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="nt">topology</span><span class="p">:</span>
-</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
-</span><span id="__span-40-5"><a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a><span class="w">    </span><span class="nt">node1</span><span class="p">:</span>
-</span><span id="__span-40-6"><a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
-</span><span id="__span-40-7"><a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
-</span><span id="__span-40-8"><a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a><span class="w">      </span><span class="nt">network-mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span>
-</span><span id="__span-40-9"><a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="w">    </span><span class="nt">node2</span><span class="p">:</span>
-</span><span id="__span-40-10"><a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
-</span><span id="__span-40-11"><a id="__codelineno-40-11" name="__codelineno-40-11" href="#__codelineno-40-11"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
-</span><span id="__span-40-12"><a id="__codelineno-40-12" name="__codelineno-40-12" href="#__codelineno-40-12"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>
-</span><span id="__span-40-13"><a id="__codelineno-40-13" name="__codelineno-40-13" href="#__codelineno-40-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;node1:eth0&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;node2:eth1&quot;</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">e0</span>
+</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>
+</span><span id="__span-41-3"><a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="nt">topology</span><span class="p">:</span>
+</span><span id="__span-41-4"><a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
+</span><span id="__span-41-5"><a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a><span class="w">    </span><span class="nt">node1</span><span class="p">:</span>
+</span><span id="__span-41-6"><a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-41-7"><a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
+</span><span id="__span-41-8"><a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a><span class="w">      </span><span class="nt">network-mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span>
+</span><span id="__span-41-9"><a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a><span class="w">    </span><span class="nt">node2</span><span class="p">:</span>
+</span><span id="__span-41-10"><a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-41-11"><a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
+</span><span id="__span-41-12"><a id="__codelineno-41-12" name="__codelineno-41-12" href="#__codelineno-41-12"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>
+</span><span id="__span-41-13"><a id="__codelineno-41-13" name="__codelineno-41-13" href="#__codelineno-41-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;node1:eth0&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;node2:eth1&quot;</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h2 id="dns">DNS<a class="headerlink" href="#dns" title="Permanent link">#</a></h2>
 <p>When containerlab finishes the nodes deployment, it also creates static DNS entries inside the <code>/etc/hosts</code> file so that users can access the nodes using their DNS names.</p>
 <p>The DNS entries are created for each node's IPv4/6 address, and follow the pattern - <code>clab-$labName-$nodeName</code>.</p>
 <p>For a lab named <code>demo</code> with two nodes named <code>l1</code> and <code>l2</code> containerlab will create the following section inside the <code>/etc/hosts</code> file.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>###### CLAB-demo-START ######
-</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>172.20.20.2     clab-demo-l1
-</span><span id="__span-41-3"><a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a>172.20.20.3     clab-demo-l2
-</span><span id="__span-41-4"><a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a>3fff:172:20:20::2       clab-demo-l1
-</span><span id="__span-41-5"><a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a>3fff:172:20:20::3       clab-demo-l2
-</span><span id="__span-41-6"><a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>###### CLAB-demo-END ######
+<div class="language-text highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>###### CLAB-demo-START ######
+</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>172.20.20.2     clab-demo-l1
+</span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>172.20.20.3     clab-demo-l2
+</span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a>3fff:172:20:20::2       clab-demo-l1
+</span><span id="__span-42-5"><a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a>3fff:172:20:20::3       clab-demo-l2
+</span><span id="__span-42-6"><a id="__codelineno-42-6" name="__codelineno-42-6" href="#__codelineno-42-6"></a>###### CLAB-demo-END ######
 </span></code></pre></div>
 <div class="footnote">
 <hr />

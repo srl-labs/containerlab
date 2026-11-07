@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1105,6 +1113,8 @@
       
         
           
+        
+      
         
       
         
@@ -2400,6 +2410,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2732,6 +2746,8 @@
       
         
       
+        
+      
     
     
     
@@ -2750,7 +2766,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3580,11 +3596,13 @@ For example, SR Linux maps its <code>ethernet-1/2</code> interface to the Linux 
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">      </span><span class="nt">interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;NodeA-Interface-Name&gt;</span><span class="w">     </span><span class="c1"># mandatory</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">      </span><span class="nt">mac</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;NodeA-Interface-Mac&gt;</span><span class="w">            </span><span class="c1"># optional</span>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="nt">host-interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;interface-name&gt;</span><span class="w">        </span><span class="c1"># mandatory</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="nt">mtu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-mtu&gt;</span><span class="w">                         </span><span class="c1"># optional</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">    </span><span class="nt">vars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-variables&gt;</span><span class="w">                  </span><span class="c1"># optional (used in templating)</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-labels&gt;</span><span class="w">                   </span><span class="c1"># optional (used in templating)</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;mgmt-network-name&gt;</span><span class="w">            </span><span class="c1"># optional</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">    </span><span class="nt">mtu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-mtu&gt;</span><span class="w">                         </span><span class="c1"># optional</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">vars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-variables&gt;</span><span class="w">                  </span><span class="c1"># optional (used in templating)</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;link-labels&gt;</span><span class="w">                   </span><span class="c1"># optional (used in templating)</span>
 </span></code></pre></div>
 <p>The <code>host-interface</code> is the desired interface name that will be attached to the management network in the host namespace.</p>
+<p>The <code>network</code> selects one of the <a href="../network/#multiple-management-networks">multiple management networks</a> by its name. When omitted, the link attaches to the first management network. The selected network must use the <code>bridge</code> driver.</p>
 <h6 id="macvlan">macvlan<a class="headerlink" href="#macvlan" title="Permanent link">#</a></h6>
 <p>The macvlan link type creates a MACVlan interface with the <code>host-interface</code> as its parent interface. The MACVlan interface is then moved to a node's network namespace and renamed to the <code>endpoint.interface</code> name.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="w">  </span><span class="nt">links</span><span class="p">:</span>

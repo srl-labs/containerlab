@@ -100,6 +100,9 @@
         <loc>https://containerlab.dev/manual/kinds/nvidia_cumulusvx/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/manual/kinds/ale_vaos/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/manual/kinds/vr-aoscx/</loc>
       </url>
       <url>
@@ -310,6 +313,12 @@
         <loc>https://containerlab.dev/cmd/events/</loc>
       </url>
       <url>
+        <loc>https://containerlab.dev/cmd/logs/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/cmd/capture/</loc>
+      </url>
+      <url>
         <loc>https://containerlab.dev/cmd/save/</loc>
       </url>
       <url>
@@ -512,6 +521,9 @@
       </url>
       <url>
         <loc>https://containerlab.dev/lab-examples/generic_vm01/</loc>
+      </url>
+      <url>
+        <loc>https://containerlab.dev/rn/0.83/</loc>
       </url>
       <url>
         <loc>https://containerlab.dev/rn/0.82/</loc>

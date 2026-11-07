@@ -527,6 +527,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.82/" class="md-tabs__link">
+        <a href="../../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1107,6 +1115,8 @@
       
         
           
+        
+      
         
       
         
@@ -1540,6 +1550,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../ale_vaos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ALE OmniSwitch vAOS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../vr-aoscx/" class="md-nav__link">
         
   
@@ -1645,10 +1682,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -1665,8 +1702,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2824,6 +2861,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3156,6 +3197,8 @@
       
         
       
+        
+      
     
     
     
@@ -3174,7 +3217,7 @@
   
   
   
-    <a href="../../../rn/0.82/" class="md-nav__link">
+    <a href="../../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3448,6 +3491,8 @@
       
         
       
+        
+      
     
     
     
@@ -3583,10 +3628,10 @@ You can monitor the progress with <code>docker logs -f &lt;container-name&gt;</c
 <p>Dell SONiC container uses the following mapping rules for its interfaces:</p>
 <ul>
 <li><code>eth0</code> - management interface connected to the containerlab management network</li>
-<li><code>eth1</code> - first data (front-panel port) interface that is mapped to Ethernet0 port</li>
-<li><code>eth2</code> - second data interface that is mapped to Ethernet4 port. Any new port will result in a "previous interface + 4" (Ethernet4) mapping.</li>
+<li><code>eth1</code>, <code>eth2</code>, ... - data interfaces, attached to the VM in order. The first one is mapped to <code>Ethernet0</code>.</li>
 </ul>
-<p>When containerlab launches sonic-vs node, it will assign IPv4/6 address to the <code>eth0</code> interface. Data interface <code>eth1</code> mapped to <code>Ethernet0</code> port and needs to be configured with IP addressing manually.</p>
+<p>The SONiC port name of each later data interface depends on the image's HwSKU. SONiC maps the VM NIC <code>ethN</code> to lanes in the HwSKU's <code>lanemap.ini</code>, and those lanes to an <code>EthernetX</code> port in <code>port_config.ini</code>. With the default HwSKU of the 4.1 and 4.6 images (<code>DellEMC-S5248f-P-25G-DPB</code>, one lane per 25G port), <code>eth2</code> is <code>Ethernet1</code>, <code>eth3</code> is <code>Ethernet2</code>, and so on. With a 4-lane HwSKU, ports go up by 4 (<code>eth2</code> is <code>Ethernet4</code>). To see the mapping for your image, run <code>show interfaces status</code> and read <code>/usr/share/sonic/device/&lt;platform&gt;/&lt;hwsku&gt;/lanemap.ini</code> in the node.</p>
+<p>When containerlab launches a Dell SONiC node, it assigns IPv4/6 addresses to the <code>eth0</code> interface. Data interfaces need to be configured with IP addressing manually.</p>
 <h2 id="features-and-options">Features and options<a class="headerlink" href="#features-and-options" title="Permanent link">#</a></h2>
 <h3 id="startup-configuration">Startup configuration<a class="headerlink" href="#startup-configuration" title="Permanent link">#</a></h3>
 <p>VM-based Dell SONiC supports the <a href="../../nodes/#startup-config"><code>startup-config</code></a> feature. The startup configuration must be provided in a form of a json file extracted from the VM's <code>/etc/sonic/config_db.json</code> path. Consequently, the startup config must be provided in full, partial configuration is not supported.</p>

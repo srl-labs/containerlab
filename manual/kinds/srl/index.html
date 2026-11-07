@@ -527,6 +527,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.82/" class="md-tabs__link">
+        <a href="../../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1107,6 +1115,8 @@
       
         
           
+        
+      
         
       
         
@@ -1625,6 +1635,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#reboot" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reboot
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2020,6 +2041,33 @@
     
   
   NVIDIA Cumulus VX
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ale_vaos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ALE OmniSwitch vAOS
 
     
   </span>
@@ -3152,6 +3200,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3484,6 +3536,8 @@
       
         
       
+        
+      
     
     
     
@@ -3502,7 +3556,7 @@
   
   
   
-    <a href="../../../rn/0.82/" class="md-nav__link">
+    <a href="../../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3855,6 +3909,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#reboot" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reboot
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4001,6 +4066,8 @@
       
         
           
+        
+      
         
       
         
@@ -4274,6 +4341,10 @@ A kind defines a supported feature set and a startup procedure of a node.</p>
 <p>Nokia 7730 SXR routers have types <code>sxr-1x-44s</code>, <code>sxr-1d-32d</code>, <code>sxr-1-32d</code>.</p>
 <p>If the type is not set in the clab file, the <code>ixr-d2l</code> type will be used by containerlab.</p>
 <p>Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When using Nokia 7250 IXR and Nokia 7730 SXR <code>types</code>, you need to add a licence, as described in <a href="#license"><code>license</code></a>.</p>
+</div>
 <h3 id="modular-chassis">Modular chassis<a class="headerlink" href="#modular-chassis" title="Permanent link">#</a></h3>
 <p>The 7250 IXR-6e, IXR-10e and IXR-18e are modular systems that accept several line card flavors. The card is chosen with a <code>components</code> block, where <code>type</code> names the line card:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">srl_modular</span>
@@ -4565,6 +4636,11 @@ A kind defines a supported feature set and a startup procedure of a node.</p>
 <p>SR Linux container can run without a license emulating the datacenter types (7220 IXR) <img alt="🥳" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@16.0.1/assets/svg/1f973.svg" title=":partying_face:" />.<br />
 In that license-less mode, the datapath is limited to 1000 PPS and the <code>sr_linux</code> process will restart once a week.</p>
 <p>The license file lifts these limitations as well as unlocks chassis-based platform variants and a path to it can be provided with <a href="../../nodes/#license"><code>license</code></a> directive.</p>
+<h3 id="reboot">Reboot<a class="headerlink" href="#reboot" title="Permanent link">#</a></h3>
+<p>A reboot issued from within the node, for example with <code>tools platform chassis reboot</code>, restarts the SR Linux container. The node comes back with its links, saved configuration and management address intact.</p>
+<p>To support that, SR Linux nodes default to the <code>unless-stopped</code> <a href="../../nodes/#restart-policy">restart policy</a>, and containerlab keeps the links and the management address of each node in an internal <code>&lt;node-name&gt;-netns</code> container. The internal container is only listed by <code>containerlab inspect --all</code>, and it is removed together with the node.</p>
+<p>Use <code>containerlab stop</code>, <code>start</code> and <code>restart</code> to manage the lifecycle of SR Linux nodes instead of restarting the containers with the container runtime directly.</p>
+<p>Nodes with a user-defined <a href="../../nodes/#network-mode"><code>network-mode</code></a> do not use the internal container.</p>
 <h2 id="container-configuration">Container configuration<a class="headerlink" href="#container-configuration" title="Permanent link">#</a></h2>
 <p>To start an SR Linux NOS containerlab uses the configuration that is described in SR Linux Software Installation Guide</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Startup command</label><label for="__tabbed_3_2">Syscalls</label><label for="__tabbed_3_3">Environment variables</label></div>

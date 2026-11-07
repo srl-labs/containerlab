@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1105,6 +1113,8 @@
       
         
           
+        
+      
         
       
         
@@ -2685,6 +2695,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3017,6 +3031,8 @@
       
         
       
+        
+      
     
     
     
@@ -3035,7 +3051,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -4008,7 +4024,7 @@
 <li><code>always</code> - Always restart the container if it stops. If it's manually stopped, it's restarted only when Docker daemon restarts or the container itself is manually restarted.</li>
 <li><code>unless-stopped</code> Similar to always, except that when the container is stopped (manually or otherwise), it isn't restarted even after Docker daemon restarts.</li>
 </ul>
-<p><code>no</code> is the default restart policy value for all kinds, but <code>linux</code>. Linux kind defaults to <code>always</code>.</p>
+<p><code>no</code> is the default restart policy value for all kinds, but <code>linux</code> and <code>nokia_srlinux</code>. Linux kind defaults to <code>always</code>, and <a href="../kinds/srl/#reboot">SR Linux</a> kind defaults to <code>unless-stopped</code>.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">topology</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">srl</span><span class="p">:</span>
@@ -4435,26 +4451,21 @@ When it is not set, the image's default command is preserved.</p>
 <h4 id="none-mode">none mode<a class="headerlink" href="#none-mode" title="Permanent link">#</a></h4>
 <p>If you want to completely disable the networking stack on a container, you can use the <code>none</code> network mode. In this mode containerlab will deploy nodes without <code>eth0</code> interface and docker networking. See <a href="https://docs.docker.com/network/none/">docker docs</a> for more details.</p>
 <h3 id="runtime">runtime<a class="headerlink" href="#runtime" title="Permanent link">#</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Deprecated</p>
+<p>The per-node <code>runtime</code> parameter is deprecated and will be removed in a future release. Mixing runtimes in one lab is not supported: the management network is created, and the lab is destroyed and inspected, with the lab-wide runtime only. Set the runtime for the whole lab with the global <code>--runtime</code> flag or the <code>CLAB_RUNTIME</code> environment variable instead.</p>
+</div>
 <p>By default containerlab nodes will be started by the <code>docker</code> container runtime. Besides that, containerlab has experimental support for the <code>podman</code> runtime.</p>
-<p>It is possible to specify a global local container runtime with the global <code>--runtime</code> flag, or set the runtime on a per-node basis:</p>
-<p>Options for the per-node <code>runtime</code> parameter are:</p>
-<ul>
-<li><code>docker</code></li>
-<li><code>podman</code></li>
-</ul>
-<p>The default runtime can also be influenced via the <code>CLAB_RUNTIME</code> environment variable.</p>
+<p>The runtime is selected for the whole lab with the global <code>--runtime</code> flag or the <code>CLAB_RUNTIME</code> environment variable:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>containerlab<span class="w"> </span>deploy<span class="w"> </span>-t<span class="w"> </span>mylab.clab.yml<span class="w"> </span>--runtime<span class="w"> </span>podman
+</span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Clabernetes lab runtime</p>
 <p>The global <code>--runtime</code> flag and <code>CLAB_RUNTIME</code> environment variable accept
 <code>c9s</code>. This is a whole-lab runtime that sends the topology to kubernetes as a
-Clabernetes <code>Topology</code> resource. It is not a valid per-node <code>runtime:</code> value.</p>
+Clabernetes <code>Topology</code> resource.</p>
 <p>See <a href="../clabernetes/runtime/">c9s runtime</a> for details.</p>
 </div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># example node definition with per-node runtime definition</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="nt">my-node</span><span class="p">:</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3</span>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">podman</span>
-</span></code></pre></div>
 <h3 id="exec">exec<a class="headerlink" href="#exec" title="Permanent link">#</a></h3>
 <p>Containers typically have some process that is launched inside the sandboxed environment. The said process and its arguments are provided via container instructions such as <code>entrypoint</code> and <code>cmd</code> in Docker's case.</p>
 <p>Quite often, it is needed to run additional commands inside the containers when they finished booting. Instead of modifying the <code>entrypoint</code> and <code>cmd</code> it is possible to use the <code>exec</code> parameter and specify a list of commands to execute:</p>

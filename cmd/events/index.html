@@ -18,7 +18,7 @@
         <link rel="prev" href="../inspect/interfaces/">
       
       
-        <link rel="next" href="../save/">
+        <link rel="next" href="../logs/">
       
       
         
@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1181,6 +1189,8 @@
       
         
       
+        
+      
     
     
     
@@ -1324,6 +1334,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1798,6 +1812,60 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  logs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  capture
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2391,6 +2459,8 @@
       
         
       
+        
+      
     
     
     
@@ -2409,7 +2479,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -2681,6 +2751,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2778,13 +2852,23 @@
 <li><code>c9s</code></li>
 </ul>
 <p>With <code>--runtime c9s</code>, events are backed by kubernetes watches for Clabernetes
-<code>Topology</code> resources and labeled Pods. Interface statistics are sampled inside
-the device containers, not through local host netlink.</p>
+<code>Topology</code> and <code>Node</code> resources and labeled Pods. They use the actions and
+attributes of the Docker runtime: a node is a container (<code>create</code>, <code>start</code>,
+<code>kill</code>, <code>stop</code>, <code>die</code>, <code>destroy</code>, <code>health_status: …</code>) described by the same
+labels, and the interface events (<code>snapshot</code>, <code>create</code>, <code>update</code>, <code>delete</code>,
+<code>stats</code>) report the node's lab link interfaces, <code>eth0</code> and <code>lo</code> under the names
+a Docker container of the node has. Interface state and statistics are sampled
+inside the device containers, not through local host netlink. The stream covers
+every namespace by default; <code>--namespace</code> (or <code>CLAB_KUBE_NAMESPACE</code>) limits it
+to one namespace, and <code>-t</code>/<code>--name</code> to one lab. With Docker and Podman the lab
+selection is ignored and every lab is streamed. The
+<a href="../../manual/clabernetes/runtime/#events">c9s runtime manual</a> lists the
+attributes and the few Docker attributes c9s has no equivalent for.</p>
 <p>Runtimes that do not implement the <code>events</code> API, or are not yet supported by Containerlab, will exit with an explanatory error.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">#</a></h2>
 <ul>
 <li><a href="../inspect/interfaces/"><code>inspect interfaces</code></a> – produces a point-in-time view of the same interface details that <code>events</code> reports continuously.</li>
-<li><a href="../../manual/clabernetes/runtime/">Clabernetes containerlab runtime</a> - explains how c9s events differ from Docker events.</li>
+<li><a href="../../manual/clabernetes/runtime/#events">Clabernetes containerlab runtime</a> - describes c9s events and how they map onto Docker events.</li>
 <li><code>docker events</code> – the raw runtime feed that Containerlab builds upon.</li>
 </ul>
   
@@ -2857,13 +2941,13 @@ the device containers, not through local host netlink.</p>
         
         
           
-          <a href="../save/" class="md-footer__link md-footer__link--next" aria-label="Next: save">
+          <a href="../logs/" class="md-footer__link md-footer__link--next" aria-label="Next: logs">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                save
+                logs
               </div>
             </div>
             <div class="md-footer__button md-icon">

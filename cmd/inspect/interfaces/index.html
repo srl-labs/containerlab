@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.82/" class="md-tabs__link">
+        <a href="../../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1181,6 +1189,8 @@
       
         
       
+        
+      
     
     
     
@@ -1324,6 +1334,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1853,6 +1867,60 @@
     
   
   events
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  logs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  capture
 
     
   </span>
@@ -2453,6 +2521,8 @@
       
         
       
+        
+      
     
     
     
@@ -2471,7 +2541,7 @@
   
   
   
-    <a href="../../../rn/0.82/" class="md-nav__link">
+    <a href="../../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -2760,6 +2830,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2838,6 +2912,7 @@
 <h3 id="description">Description<a class="headerlink" href="#description" title="Permanent link">#</a></h3>
 <p>The <code>inspect interfaces</code> subcommand provides information about the network interfaces of deployed nodes of a deployed lab.
 The subcommand gathers information directly from deployed containers, and displays information about their operational state, network interface type, and if applicable, the applied network interface alias.</p>
+<p>With the <a href="../../../manual/clabernetes/runtime/#interface-events">c9s runtime</a>, the listing covers the interfaces a Docker container of the node has: the lab link interfaces of each running node (the ones <a href="../../capture/"><code>capture</code></a> accepts) with the alias the topology used, the management interface <code>eth0</code> and the loopback <code>lo</code>, with the MAC address, index, MTU and operational state read in the node's device container. The pod's own interfaces are not listed. The node names follow <code>inspect</code> (<code>&lt;lab&gt;-&lt;node&gt;</code>), and the JSON fields and values (<code>veth</code>/<code>device</code>, netlink state names) are the same as with Docker. <code>eth0</code> and <code>lo</code> cannot be captured on c9s.</p>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h3>
 <p><code>containerlab [global-flags] inspect interfaces [local-flags]</code></p>
 <p>A shorthand can be used for this subcommand: <code>int</code> or <code>intf</code>.</p>

@@ -527,6 +527,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.82/" class="md-tabs__link">
+        <a href="../../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1107,6 +1115,8 @@
       
         
           
+        
+      
         
       
         
@@ -1540,6 +1550,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../ale_vaos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ALE OmniSwitch vAOS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../vr-aoscx/" class="md-nav__link">
         
   
@@ -1757,10 +1794,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_11" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_11" id="__nav_4_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
             
   
   
@@ -1777,8 +1814,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_11_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1954,6 +1991,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Management connectivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neighbor-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Neighbor discovery
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2890,6 +2944,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3222,6 +3280,8 @@
       
         
       
+        
+      
     
     
     
@@ -3240,7 +3300,7 @@
   
   
   
-    <a href="../../../rn/0.82/" class="md-nav__link">
+    <a href="../../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3434,6 +3494,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Management connectivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neighbor-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Neighbor discovery
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3504,6 +3581,8 @@
       
         
           
+        
+      
         
       
         
@@ -3688,7 +3767,7 @@
 </div>
 </div>
 </div>
-<p>The node's management address is RouterOS's own <code>ether1</code> address (<a href="#management-connectivity">transparent management</a>), so every service RouterOS runs answers on it directly, with nothing forwarded.</p>
+<p>The node's management address is RouterOS's own <code>ether1</code> address in the <code>mgmt</code> VRF (<a href="#management-connectivity">transparent management</a>). Services bound to this VRF answer directly, with nothing forwarded.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Default credentials are <code>admin:admin</code>. With custom <a href="../../nodes/#credentials"><code>credentials</code></a> the kind creates that user in the <code>full</code> group and disables the factory <code>admin</code> account, which has a blank password on a fresh CHR disk.</p>
@@ -3704,6 +3783,18 @@
 <p>Data ports start at <code>ether2</code>: <code>ether1</code> is the management interface. Using <code>ether1</code> in a topology results in an error.</p>
 </div>
 <p>The container interface <code>ethN</code> is RouterOS <code>ether(N+1)</code>, also when links leave gaps: a link on <code>eth12</code> alone still lands on <code>ether13</code>, with <code>ether2</code> to <code>ether12</code> present and unlinked. Interface MTU follows the link MTU, and LLDP frames are forwarded, so <code>/ip neighbor</code> shows the peers.</p>
+<p>On AMD64, data NICs are placed behind PCI bridges rather than sharing the default PC's root bus with all other devices. This removes the default layout's limit of 29 total Ethernet interfaces (management plus 28 data ports), so links can use <code>ether30</code> and higher without a custom launcher. ARM64 still uses a single PCI bus on the <code>virt</code> machine, shared with the disk and the management NIC; the PCI-bridge expansion applies only to AMD64.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The highest interface depends on the architecture, and larger indices are rejected during deployment:</p>
+<ul>
+<li>AMD64: <code>eth63</code> / <code>ether64</code>, the highest port tested. More interfaces exhaust the guest's interrupt vectors (with the default single vCPU) and, from about 200, the virtual PC firmware's PCI address space, which stops the VM before RouterOS boots.</li>
+<li>ARM64: <code>eth29</code> / <code>ether30</code>, the last data port that fits on the <code>virt</code> machine's PCI bus.</li>
+</ul>
+<p>The check uses the architecture of the containerlab binary, which matches the image's except in emulated setups.</p>
+</div>
+<p>With more than about 30 data ports, RouterOS can reject a NIC while it boots, and the interface does not appear. The launcher checks that RouterOS has an interface for every data NIC and re-plugs the missing ones before the node reports ready; RouterOS keeps their configuration. It checks again after RouterOS reboots itself (for example with <code>/system reboot</code>), when the container keeps running. If a NIC is still missing, the launcher logs <code>data NIC check FAILED</code> and the node is not healthy. The node is also not healthy while RouterOS does not answer within <code>CHR_BOOT_WAIT</code> after such a reboot.</p>
+<p>Sparse interface numbering also consumes VM resources for the intervening ports; memory defaults scale with the highest index, not just the number of links.</p>
 <h2 id="node-configuration">Node configuration<a class="headerlink" href="#node-configuration" title="Permanent link">#</a></h2>
 <p>MikroTik RouterOS CHR nodes boot with the default CHR configuration plus the credentials, the identity (set to the node name) and the management setup described below.</p>
 <h3 id="startup-configuration">Startup configuration<a class="headerlink" href="#startup-configuration" title="Permanent link">#</a></h3>
@@ -3721,12 +3812,15 @@
 </span></code></pre></div>
 <p>and the node does not become ready.</p>
 <h3 id="saving-configuration">Saving configuration<a class="headerlink" href="#saving-configuration" title="Permanent link">#</a></h3>
-<p><a href="../../../cmd/save/"><code>containerlab save</code></a> writes each node's <code>/export</code> to <code>ftpboot/config.auto.rsc</code> in its lab directory. The management objects the launcher creates at every boot (everything tagged <code>clab-mgmt</code>, and the <code>ether1</code> DHCP client) are left out, so the saved file can be used as the startup config of the next deployment, also one with different management addresses.</p>
+<p><a href="../../../cmd/save/"><code>containerlab save</code></a> writes each node's <code>/export</code> to <code>ftpboot/config.auto.rsc</code> in its lab directory. The save filter omits <code>add</code> entries tagged <code>clab-mgmt</code>, plus IPv4/IPv6 address, DHCP-client and IPv6 neighbor-discovery <code>add</code> entries for <code>ether1</code>, even without that tag. These management settings belong to the deployment and are recreated by the launcher; custom entries in those <code>ether1</code> sections are also omitted. Other interfaces and untagged configuration in other sections are preserved.</p>
+<p>Saving explicitly retains an intentional <code>discover-interface-list=static</code> choice, which RouterOS normally omits as its default, so it survives redeployment. The launcher-owned discovery lists are recreated before the saved configuration is imported.</p>
+<p>Saving also retains service and SNMP VRF overrides back to <code>main</code>, which RouterOS normally omits as its default.</p>
+<p>Repeated exports on RouterOS 7.24.5, 7.25, 7.25rc3 and 7.26beta4 can include an empty, disabled default <code>/system keymat-provider</code> entry that fails to import on a fresh router. Saving omits only that exact entry and leaves out the menu header if the section becomes empty, since RouterOS 7.23.8 does not recognize that menu. Configured default providers and custom providers are preserved. RouterOS 7.23.8 does not emit the entry.</p>
 <h3 id="node-readiness">Node readiness<a class="headerlink" href="#node-readiness" title="Permanent link">#</a></h3>
 <p>The node is ready once RouterOS accepted the credentials and the startup config, reaches its gateway from the management address and, unless the configuration disables SSH, its SSH server answers. An SSH server that does not answer within <code>CHR_BOOT_WAIT</code> is logged, and the node is still declared ready, since REST and the console work. The container log then shows</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>chr-launch: RouterOS ready
 </span></code></pre></div>
-<p>and the kind's default <a href="../../nodes/#healthcheck">healthcheck</a> reports the container <code>healthy</code>, so <a href="../../nodes/#stages"><code>stages</code></a> with <code>wait-for</code> can depend on it. A node whose startup config was rejected never becomes healthy. The default healthcheck's start period follows the launcher's own deadlines (<code>CHR_INTF_WAIT</code> + 3 × <code>CHR_BOOT_WAIT</code> + 90 s, 1050 s with the defaults), so a slow boot never reports <code>unhealthy</code>. A <code>healthcheck</code> set in the topology replaces the default one.</p>
+<p>and the kind's default <a href="../../nodes/#healthcheck">healthcheck</a> reports the container <code>healthy</code>, so <a href="../../nodes/#stages"><code>stages</code></a> with <code>wait-for</code> can depend on it. A node whose startup config was rejected never becomes healthy. The default healthcheck's start period follows the launcher's own deadlines (<code>CHR_INTF_WAIT</code> + 4 × <code>CHR_BOOT_WAIT</code> + 90 s, 1350 s with the defaults), so a slow boot never reports <code>unhealthy</code>. A <code>healthcheck</code> set in the topology replaces the default one.</p>
 <h3 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">#</a></h3>
 <p>The kind reads the official image's own environment variables:</p>
 <table>
@@ -3761,7 +3855,7 @@
 <tr>
 <td><code>CHR_BOOT_WAIT</code></td>
 <td><code>300</code></td>
-<td>seconds to wait for RouterOS to answer, for the startup config import, and for SSH before the node is declared ready</td>
+<td>seconds to wait for RouterOS to answer, for the VRF handoff, for the startup config import, and for SSH before the node is declared ready</td>
 </tr>
 </tbody>
 </table>
@@ -3774,13 +3868,33 @@
 </span></code></pre></div>
 <p>KVM is used when <code>/dev/kvm</code> is available. Without it the image's QEMU runs under TCG emulation: the node works, but boots several times slower.</p>
 <h2 id="management-connectivity">Management connectivity<a class="headerlink" href="#management-connectivity" title="Permanent link">#</a></h2>
-<p>Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab gives the node's <code>eth0</code> are configured on RouterOS <code>ether1</code>, and the container's <code>eth0</code> is bridged to the VM's <code>ether1</code>. The router is the node's management address: SSH, the REST API, Winbox, SNMP and every other service answer on it, LLDP/MNDP work on the management network, and the address in the topology table is the one in the RouterOS configuration.</p>
+<p>Management is transparent: the IPv4 and IPv6 addresses and gateways containerlab gives the node's <code>eth0</code> are configured on RouterOS <code>ether1</code>, and the container's <code>eth0</code> is bridged to the VM's <code>ether1</code>. The address in the topology table is the one in the RouterOS configuration.</p>
 <p>The image ships busybox only (no <code>tc</code>), so where vrnetlab's <a href="../../vrnetlab/#management-interface">transparent management</a> redirects with tc-mirred, this kind uses a Linux bridge. The container itself has no address on the management network; it reaches RouterOS for bootstrap over IPv6 link-local on that bridge.</p>
-<p>The management return path lives in its own routing table, <code>mgmt</code>, selected by routing rules for the management addresses, and CHR's <code>ether1</code> DHCP client is disabled. A default route in the lab configuration, a PPPoE client's default route or a dual-WAN setup in <code>main</code> therefore does not cut SSH or REST access to the node. RouterOS's router advertisements on <code>ether1</code> carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway; the container joins the management network only once this is in place. The objects carry the comment <code>clab-mgmt</code> and are re-applied at boot when the container's addressing changed.</p>
+<p>The launcher places <code>ether1</code> in a native <code>mgmt</code> VRF before <code>main</code>. RouterOS creates its routing table and connected routes; the launcher adds IPv4 and IPv6 defaults that resolve their gateways in <code>mgmt</code>. No source-policy rules or route leaks are added. Data interfaces remain in <code>main</code>, so a lab default route does not take management replies away from <code>ether1</code>. CHR's <code>ether1</code> DHCP client is disabled.</p>
+<p>On first boot, one RouterOS background job creates the VRF and binds SSH, HTTP/HTTPS (including REST), API/API-SSL, Winbox, Telnet and SNMP to it. Their enabled/disabled state is preserved. The launcher waits for the native routing table and service bindings before configuring management addressing, joining the external management bridge and fetching the startup config through <code>mgmt</code>. On restart, startup-config service overrides are preserved. The launcher uses HTTP/REST with the topology credentials during container startup. SSH in <code>mgmt</code> provides user login access and is also used by <code>containerlab save</code>. Credential setup, service ports and access controls are unchanged.</p>
+<p>A service's VRF binding also changes where it can be reached: these services no longer listen through data interfaces in <code>main</code> unless the startup config changes their binding. RouterOS FTP does not support VRF binding and is unavailable through the management VRF. Other router-originated services, such as DNS, NTP and logging, need their own VRF-aware configuration to use management egress. RouterOS applies its VRF interface matching to firewall rules; see the <a href="https://manual.mikrotik.com/docs/user-guides/routing-and-networking-protocols/vrf/">RouterOS VRF documentation</a>.</p>
+<p>VRF membership does not disable Layer 2 neighbor discovery. The launcher sets an interface list that excludes <code>ether1</code> by default; see <a href="#neighbor-discovery">Neighbor discovery</a> for overrides.</p>
+<p>RouterOS's router advertisements on <code>ether1</code> carry a zero router lifetime, so no host on the management network takes the router as its IPv6 default gateway. The container joins the management network only once this is in place. Management objects carry the comment <code>clab-mgmt</code> and are re-applied at boot when the container's addressing changed.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Do not remove or change the <code>clab-mgmt</code> objects or the <code>mgmt</code> routing table: management of the node depends on them.</p>
+<p>Do not remove or change the <code>clab-mgmt</code> objects or the <code>mgmt</code> VRF: management of the node depends on them. This setup requires a fresh node container; it does not migrate a running node that uses the previous policy-only <code>mgmt</code> table. Export the user configuration before recreating such a node.</p>
 </div>
+<h3 id="neighbor-discovery">Neighbor discovery<a class="headerlink" href="#neighbor-discovery" title="Permanent link">#</a></h3>
+<p>CHR routers sharing the management bridge can appear in each other's neighbor tables. LLDP, CDP and MNDP are disabled on management <code>ether1</code> by default; discovery stays enabled on the other static interfaces.</p>
+<p>On first boot, before joining the management network, the launcher creates:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/interface list
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>add name=clab-management comment=clab-mgmt
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>add name=clab-discovery include=static exclude=clab-management comment=clab-mgmt
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>/interface list member
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>add list=clab-management interface=ether1 comment=clab-mgmt
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>/ip neighbor discovery-settings
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>set discover-interface-list=clab-discovery
+</span></code></pre></div>
+<p>These reserved lists belong to the launcher. To change discovery, select another list in your startup configuration or on the running router. For example, to enable discovery on all static interfaces, including management:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/ip neighbor discovery-settings set discover-interface-list=static
+</span></code></pre></div>
+<p>Use <code>discover-interface-list=none</code> to disable discovery everywhere, or select your own interface list. Startup configuration is imported after this default is applied. Restarts preserve the selected policy, including on nodes created before this default was introduced. SSH, REST and other management services remain available. This setting does not control IPv6 address resolution or router advertisements under <code>/ipv6 nd</code>.</p>
+<p>As with RouterOS's normal discovery rules, including a bridge or bonding master enables discovery on its slave ports. If your configuration puts <code>ether1</code> into a bridge or bond, select a discovery list that excludes the master as well.</p>
 <h2 id="restarts">Restarts<a class="headerlink" href="#restarts" title="Permanent link">#</a></h2>
 <p><a href="../../../cmd/restart/"><code>containerlab restart</code></a> and a <code>/system reboot</code> inside RouterOS keep the interface names, MAC addresses, configuration and links: the launcher persists the NIC identity in the container on first boot and does not re-run the bootstrap. A plain <code>docker restart</code> keeps the router and its management, but Docker deletes the node's veth links, which stay down until the node is restarted with containerlab or the lab is redeployed.</p>
 <h2 id="file-mounts">File mounts<a class="headerlink" href="#file-mounts" title="Permanent link">#</a></h2>

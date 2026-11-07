@@ -527,6 +527,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../../rn/0.82/" class="md-tabs__link">
+        <a href="../../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1107,6 +1115,8 @@
       
         
           
+        
+      
         
       
         
@@ -1540,6 +1550,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../ale_vaos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ALE OmniSwitch vAOS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../vr-aoscx/" class="md-nav__link">
         
   
@@ -1877,6 +1914,17 @@
       On this page
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the image
+      </span>
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#managing-ipinfusion_ocnos-nodes" class="md-nav__link">
@@ -2722,6 +2770,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3054,6 +3106,8 @@
       
         
       
+        
+      
     
     
     
@@ -3072,7 +3126,7 @@
   
   
   
-    <a href="../../../rn/0.82/" class="md-nav__link">
+    <a href="../../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -3162,6 +3216,17 @@
       On this page
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the image
+      </span>
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#managing-ipinfusion_ocnos-nodes" class="md-nav__link">
@@ -3307,6 +3372,8 @@
       
         
       
+        
+      
     
     
     
@@ -3355,10 +3422,17 @@
 <p>IPInfusion OcNOS virtualized router is identified with <code>ipinfusion_ocnos</code> kind in the <a href="../../topo-def-file/">topology file</a>.
 It is built using <a href="https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos">srl-labs/vrnetlab</a> and essentially is a Qemu VM packaged in a docker container format.</p>
 <p>ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>OcNOS VM disk images need to be altered to support telnet serial access and ethX interfaces name style. This can be done by modifying the grub config file, as shown <a href="https://github.com/srl-labs/vrnetlab/pull/99">here</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>OcNOS 7.0.0-262 (<code>OcNOS-SP-PLUS-x86-7.0.0-262-GA.qcow2</code>) builds and boots with <code>make docker-image</code> without modification.
+Older images such as 6.0.2 needed a GRUB change for the serial console, as shown <a href="https://github.com/srl-labs/vrnetlab/pull/99">here</a>.</p>
 </div>
+<h2 id="getting-the-image">Getting the image<a class="headerlink" href="#getting-the-image" title="Permanent link">#</a></h2>
+<p>The OcNOS VM image for KVM is a free download from IP Infusion (registration required):
+<a href="https://www.ipinfusion.com/free-software-demos/?vm=KVM&amp;utm_source=containerlab&amp;utm_medium=docs&amp;utm_campaign=ocnos-vm">OcNOS-SP VM for KVM</a>.
+The VM includes a 365-day license and is licensed for non-production evaluation only (<a href="https://www.ipinfusion.com/eula/">OcNOS EULA</a>).
+Decompress the image with <code>xz -d</code>, then copy the <code>.qcow2</code> file into the <code>ipinfusion/ocnos</code> directory of
+<a href="https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos">srl-labs/vrnetlab</a> and run <code>make docker-image</code>.</p>
 <h2 id="managing-ipinfusion_ocnos-nodes">Managing ipinfusion_ocnos nodes<a class="headerlink" href="#managing-ipinfusion_ocnos-nodes" title="Permanent link">#</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

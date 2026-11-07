@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1105,6 +1113,8 @@
       
         
           
+        
+      
         
       
         
@@ -2167,6 +2177,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2499,6 +2513,8 @@
       
         
       
+        
+      
     
     
     
@@ -2517,7 +2533,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -2865,6 +2881,9 @@
 <p>Containerlab offers a simple way to capture the packets from any interface of any node in the lab. This article will explain how to do that.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
+<p>The <a href="../../cmd/capture/"><code>containerlab capture</code></a> command captures one or more lab link interfaces, of one or more nodes, into one pcapng file or stream, with nothing to install in the nodes or on the host:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>containerlab<span class="w"> </span>capture<span class="w"> </span>--name<span class="w"> </span>quickstart<span class="w"> </span>--target<span class="w"> </span>srl:e1-1<span class="w"> </span>-w<span class="w"> </span>-<span class="w"> </span><span class="p">|</span><span class="w"> </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+</span></code></pre></div>
 <p>If you are looking for a free Web UI for packet capture with Wireshark, check out our <a href="#edgeshark-integration">Edgeshark integration</a>.</p>
 </div>
 <p>Consider the following lab topology which highlights the typical points of packet capture.</p>
@@ -2892,22 +2911,22 @@
 <p>In both cases, the capturing software (<code>tcpdump</code> or <code>tshark</code>) needs to be available on the containerlab host.</p>
 <h3 id="local-capture">local capture<a class="headerlink" href="#local-capture" title="Permanent link">#</a></h3>
 <p>Local capture assumes the capture is initiated from the containerlab host. For instance, to capture from the <code>e1-1</code> interface of the <code>clab-quickstart-srl</code> node use:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ip<span class="w"> </span>netns<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>clab-quickstart-srl<span class="w"> </span>tcpdump<span class="w"> </span>-nni<span class="w"> </span>e1-1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ip<span class="w"> </span>netns<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>clab-quickstart-srl<span class="w"> </span>tcpdump<span class="w"> </span>-nni<span class="w"> </span>e1-1
 </span></code></pre></div>
 <p>In this example we first entered the namespace where the target interface is located using <code>ip netns exec</code> command and then started the capture with <code>tcpdump</code> providing the interface name to it.</p>
 <p>The downside of local capture is that typically containerlab hosts run in a headless (no UI) mode and thus the visibility of the captured traffic is limited to the console output. This is where <code>tshark</code> might come in in handy by providing more readable output. Still, the lack of Wireshark UI is a downside, therefore it is our recommendation for you to get familiar with the remote capture method.</p>
 <h3 id="remote-capture">remote capture<a class="headerlink" href="#remote-capture" title="Permanent link">#</a></h3>
 <p>The limitations of the local capture are lifted when the remote capture is used. In the remote capture model you initiate the packet capture from your descktop/laptop and the traffic is sent to your machine where it can be displayed in the Wireshark UI.</p>
 <p>Before we start mixing in the Wireshark, lets see how the remote capture is initiated:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec clab-quickstart-srl tcpdump -nni e1-1&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec clab-quickstart-srl tcpdump -nni e1-1&quot;</span>
 </span></code></pre></div>
 <p>Assuming we ran the above command from our laptop, we rely on <code>$containerlab_host_address</code> being reachable from our laptop. We use <code>ssh</code> to connect to the remote containerlab host and execute the same command we did in the local capture.  </p>
 <p>But simply seeing the tcpdump output on your laptop's terminal doesn't offer much difference to the local capture.</p>
 <p>The true power the remote capture has is in being able to use the Wireshark installed on your machine to display the captured traffic. To do that we need to pipe the output of the <code>tcpdump</code> command to the <code>wireshark</code> command. This is done by adding the <code>-w -</code> option to the <code>tcpdump</code> command which tells it to write the captured traffic to the standard output. The output is then piped to the <code>wireshark</code> command which is invoked with the <code>-k -i -</code> options. The <code>-k</code> option tells wireshark to start capturing immediately and the <code>-i -</code> option tells it to read the input from the standard input.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$lab_node_name</span><span class="s2"> tcpdump -U -nni </span><span class="nv">$if_name</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$lab_node_name</span><span class="s2"> tcpdump -U -nni </span><span class="nv">$if_name</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 <p>This will start the capture from a given interface and redirect the received flow to the Wireshark!</p>
 <video width="100%" controls>
@@ -2917,31 +2936,31 @@
 <div class="admonition note">
 <p class="admonition-title">Windows users</p>
 <p>Windows users should use WSL and invoke the command similar to the following:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$lab_node_name</span><span class="s2"> tcpdump -U -nni </span><span class="nv">$if_name</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>/mnt/c/Program<span class="se">\ </span>Files/Wireshark/wireshark.exe<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ssh<span class="w"> </span><span class="nv">$containerlab_host_address</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$lab_node_name</span><span class="s2"> tcpdump -U -nni </span><span class="nv">$if_name</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>/mnt/c/Program<span class="se">\ </span>Files/Wireshark/wireshark.exe<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 </div>
 <h2 id="capture-script">Capture script<a class="headerlink" href="#capture-script" title="Permanent link">#</a></h2>
 <p>Since capturing is a so popular it makes sense to create a tiny helper script that will simplify the process of capturing from a given interface of a given node. The script presented below hides all the irrelevant details and makes sniffing a breeze. Let's see how it works:</p>
-<div class="language-bash highlight"><span class="filename">pcap.sh</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="ch">#!/bin/sh</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># call this script as</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># pcap.sh &lt;containerlab-host&gt; &lt;container-name&gt; &lt;interface-name&gt;</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># example: pcap.sh clab-vm srl e1-1</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># to support multiple interfaces, pass them as comma separated list</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># split $3 separate by comma as -i &lt;interface1&gt; -i &lt;interface2&gt; -i &lt;interface3&gt;</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nv">IFS</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-ra<span class="w"> </span>ADDR<span class="w"> </span><span class="o">&lt;&lt;&lt;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$3</span><span class="s2">&quot;</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nv">IFACES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">ADDR</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="nv">IFACES</span><span class="o">+=</span><span class="s2">&quot; -i </span><span class="nv">$i</span><span class="s2">&quot;</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">done</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>ssh<span class="w"> </span><span class="nv">$1</span><span class="w"> </span><span class="s2">&quot;sudo ip netns exec </span><span class="nv">$2</span><span class="s2"> tshark -l </span><span class="si">${</span><span class="nv">IFACES</span><span class="si">}</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span>/Applications/Wireshark.app/Contents/MacOS/Wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><span class="filename">pcap.sh</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ch">#!/bin/sh</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># call this script as</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># pcap.sh &lt;containerlab-host&gt; &lt;container-name&gt; &lt;interface-name&gt;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># example: pcap.sh clab-vm srl e1-1</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># to support multiple interfaces, pass them as comma separated list</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># split $3 separate by comma as -i &lt;interface1&gt; -i &lt;interface2&gt; -i &lt;interface3&gt;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nv">IFS</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-ra<span class="w"> </span>ADDR<span class="w"> </span><span class="o">&lt;&lt;&lt;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$3</span><span class="s2">&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nv">IFACES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">ADDR</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="nv">IFACES</span><span class="o">+=</span><span class="s2">&quot; -i </span><span class="nv">$i</span><span class="s2">&quot;</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="k">done</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>ssh<span class="w"> </span><span class="nv">$1</span><span class="w"> </span><span class="s2">&quot;sudo ip netns exec </span><span class="nv">$2</span><span class="s2"> tshark -l </span><span class="si">${</span><span class="nv">IFACES</span><span class="si">}</span><span class="s2"> -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span>/Applications/Wireshark.app/Contents/MacOS/Wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 <p>If you put this script somewhere in your <code>$PATH</code> you can invoke it as follows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pcap.sh<span class="w"> </span>clab-vm<span class="w"> </span>srl<span class="w"> </span>e1-1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pcap.sh<span class="w"> </span>clab-vm<span class="w"> </span>srl<span class="w"> </span>e1-1
 </span></code></pre></div>
 <p>where</p>
 <ul>
@@ -2978,15 +2997,15 @@
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Install</label><label for="__tabbed_1_2">Uninstall</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="p">|</span><span class="w"> </span><span class="nv">DOCKER_DEFAULT_PLATFORM</span><span class="o">=</span><span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span>up<span class="w"> </span>-d
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">|</span><span class="w"> </span><span class="nv">DOCKER_DEFAULT_PLATFORM</span><span class="o">=</span><span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span>up<span class="w"> </span>-d
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">|</span><span class="w"> </span><span class="nv">DOCKER_DEFAULT_PLATFORM</span><span class="o">=</span><span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span>down
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="p">|</span><span class="w"> </span><span class="nv">DOCKER_DEFAULT_PLATFORM</span><span class="o">=</span><span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span>down
 </span></code></pre></div>
 </div>
 </div>
@@ -2995,7 +3014,7 @@
 <details>
 <summary>SSH port forwarding in case you don't have direct reachability</summary>
 <p>If you don't have direct reachability, you can use SSH port forwarding to access the Web UI:</p>
-<div class="language-bash highlight"><span class="filename">ssh port forwarding</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ssh<span class="w"> </span>-L<span class="w"> </span><span class="m">5001</span>:localhost:5001<span class="w"> </span><span class="nv">$containerlab_host</span>
+<div class="language-bash highlight"><span class="filename">ssh port forwarding</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ssh<span class="w"> </span>-L<span class="w"> </span><span class="m">5001</span>:localhost:5001<span class="w"> </span><span class="nv">$containerlab_host</span>
 </span></code></pre></div>
 <p>Then open your browser and navigate to <code>http://localhost:5001</code> to see the Edgeshark UI.</p>
 </details>
@@ -3016,11 +3035,11 @@
 <ol>
 <li>
 <p>Download the zip file with the AppleScript that enables the <code>packetflix://</code> URL schema handling, unarchive it and move the EdgeShark-handler script to the Applications folder. Here is the script that does all that, run it from your MacOS:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/pflix-handler<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/tmp/pflix-handler<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>rm<span class="w"> </span>-rf<span class="w"> </span>packetflix-handler.zip<span class="w"> </span>packetflix-handler.app<span class="w"> </span>__MACOSX<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>curl<span class="w"> </span>-sLO<span class="w"> </span>https://github.com/srl-labs/containerlab/files/14278951/packetflix-handler.zip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>unzip<span class="w"> </span>packetflix-handler.zip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>sudo<span class="w"> </span>mv<span class="w"> </span>packetflix-handler.app<span class="w"> </span>/Applications
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/pflix-handler<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/tmp/pflix-handler<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>rm<span class="w"> </span>-rf<span class="w"> </span>packetflix-handler.zip<span class="w"> </span>packetflix-handler.app<span class="w"> </span>__MACOSX<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>curl<span class="w"> </span>-sLO<span class="w"> </span>https://github.com/srl-labs/containerlab/files/14278951/packetflix-handler.zip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>unzip<span class="w"> </span>packetflix-handler.zip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>sudo<span class="w"> </span>mv<span class="w"> </span>packetflix-handler.app<span class="w"> </span>/Applications
 </span></code></pre></div>
 </li>
 <li>
@@ -3042,34 +3061,34 @@
 <div class="tabbed-block">
 <p>SR Linux linecard interfaces are named as <code>e&lt;linecard_num&gt;-&lt;port_num&gt;</code> which translates to <code>ethernet-&lt;linecard_num&gt;/&lt;port_num&gt;</code> name inside the NOS itself.<br />
 So to capture from <code>ethernet-1/1</code> interface the following command should be used:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-srl tcpdump -U -nni e1-1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-srl tcpdump -U -nni e1-1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 <p>The management interface on the SR Linux container is named <code>mgmt0</code>, so the relevant command will look like:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-srl tcpdump -U -nni mgmt0 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-srl tcpdump -U -nni mgmt0 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <p>Similarly to SR Linux example, to capture the data interface of cEOS is no different. Just pick the right interface:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-ceos tcpdump -U -nni eth1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-ceos tcpdump -U -nni eth1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <p>A bare linux container is no different, its interfaces are named <code>ethX</code> where <code>eth0</code> is the interface connected to the containerlab management network.<br />
 So to capture from the first data link we will use <code>eth1</code> interface:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-linux tcpdump -U -nni eth1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="s2">&quot;ip netns exec </span><span class="nv">$clab</span><span class="s2">-pcap-linux tcpdump -U -nni eth1 -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <p>It is also possible to listen for all management traffic that traverses the containerlab's management network. To do that you firstly need to <a href="../network/#connection-details">find out the name of the linux bridge</a> and then capture from it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="s2">&quot;tcpdump -U -nni brXXXXXX -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>ssh<span class="w"> </span><span class="nv">$clab_host</span><span class="w"> </span><span class="s2">&quot;tcpdump -U -nni brXXXXXX -w -&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wireshark<span class="w"> </span>-k<span class="w"> </span>-i<span class="w"> </span>-
 </span></code></pre></div>
 <p>Note that in this case you do not need to drill into the network namespace, since management bridge is in the default netns.</p>
 </div>
@@ -3077,11 +3096,11 @@ So to capture from the first data link we will use <code>eth1</code> interface:<
 </div>
 <h2 id="useful-commands">Useful commands<a class="headerlink" href="#useful-commands" title="Permanent link">#</a></h2>
 <p>To list available network namespaces:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>ip<span class="w"> </span>netns<span class="w"> </span>list
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>ip<span class="w"> </span>netns<span class="w"> </span>list
 </span></code></pre></div>
 <p>To list the interfaces (links) of a given container leverage the <code>ip</code> utility:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># where $netns_name is the container name of a node</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>ip<span class="w"> </span>netns<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="nv">$netns_name</span><span class="w"> </span>ip<span class="w"> </span>link
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># where $netns_name is the container name of a node</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>ip<span class="w"> </span>netns<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="nv">$netns_name</span><span class="w"> </span>ip<span class="w"> </span>link
 </span></code></pre></div>
 <div class="footnote">
 <hr />

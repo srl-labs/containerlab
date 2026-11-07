@@ -525,6 +525,8 @@
       
         
       
+        
+      
     
     
     
@@ -612,6 +614,10 @@
   
     
       
+      
+        
+      
+        
       
         
       
@@ -921,12 +927,14 @@
       
         
       
+        
+      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="../../rn/0.82/" class="md-tabs__link">
+        <a href="../../rn/0.83/" class="md-tabs__link">
           
   
   Release notes
@@ -1181,6 +1189,8 @@
       
         
       
+        
+      
     
     
     
@@ -1324,6 +1334,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1885,6 +1899,60 @@
     
   
   events
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  logs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  capture
 
     
   </span>
@@ -2485,6 +2553,8 @@
       
         
       
+        
+      
     
     
     
@@ -2503,7 +2573,7 @@
   
   
   
-    <a href="../../rn/0.82/" class="md-nav__link">
+    <a href="../../rn/0.83/" class="md-nav__link">
       
   
   
@@ -2869,6 +2939,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2934,6 +3008,7 @@ Or <code>CLAB_TOPO=srlinux.dev/clab-srl clab dep -c</code> to deploy a lab with 
 <h4 id="cleanup">cleanup<a class="headerlink" href="#cleanup" title="Permanent link">#</a></h4>
 <p>The local <code>--cleanup | -c</code> flag instructs containerlab to remove the lab directory and all its content.</p>
 <p>Without this flag present, containerlab will keep the lab directory and all files inside of it.</p>
+<p>With <code>--runtime c9s</code>, <code>--cleanup</code> also deletes the lab's persistent node storage (the PersistentVolumeClaims holding saved device configuration) and then the lab namespace. A plain destroy keeps the claims, so the next deploy of the lab boots from the saved configuration. See <a href="../../manual/clabernetes/runtime/#device-state-persistence">device state persistence</a>.</p>
 <p>Refer to the <a href="../../manual/conf-artifacts/">configuration artifacts</a> page to get more information on the lab directory contents.</p>
 <h4 id="graceful">graceful<a class="headerlink" href="#graceful" title="Permanent link">#</a></h4>
 <p>To make containerlab attempt a graceful shutdown of the running containers, add the <code>--graceful</code> flag to destroy cmd. Without it, containers will be removed forcefully without even attempting to stop them.</p>
