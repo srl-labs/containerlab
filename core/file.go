@@ -13,8 +13,6 @@ import (
 	"slices"
 	"text/template"
 
-	"github.com/hellt/envsubst"
-
 	"github.com/charmbracelet/log"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -83,7 +81,7 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	// expand env vars if any
 	// do not replace vars initialized with defaults
 	// and do not replace vars that are not set
-	yamlFile, err := envsubst.BytesRestrictedNoReplace(buf.Bytes(), false, false, true, true)
+	yamlFile, err := clabutils.SubstituteEnvs(buf.Bytes(), c.topologyEnv)
 	if err != nil {
 		return err
 	}
@@ -109,7 +107,7 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 		)
 	}
 
-	c.Config.Topology.ImportEnvs()
+	c.Config.Topology.ImportEnvsFrom(c.topologyEnv)
 
 	return nil
 }

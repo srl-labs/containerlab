@@ -232,3 +232,47 @@ func TestMergeStringSlices(t *testing.T) {
 		}
 	}
 }
+
+func TestSubstituteEnvs(t *testing.T) {
+	tests := map[string]struct {
+		env  []string
+		in   string
+		want string
+	}{
+		"value_from_env": {
+			env:  []string{"VAR=given"},
+			in:   "a: ${VAR}",
+			want: "a: given",
+		},
+		"default_value": {
+			env:  []string{},
+			in:   "a: ${VAR:=default}",
+			want: "a: default",
+		},
+		"process_env_ignored": {
+			env:  []string{"VAR=given"},
+			in:   "a: ${CLAB_TEST_PROCESS_VAR}",
+			want: "a: $CLAB_TEST_PROCESS_VAR",
+		},
+		"nil_env": {
+			env:  nil,
+			in:   "a: ${CLAB_TEST_PROCESS_VAR}",
+			want: "a: process",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("CLAB_TEST_PROCESS_VAR", "process")
+
+			got, err := SubstituteEnvs([]byte(tc.in), tc.env)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if d := cmp.Diff(tc.want, string(got)); d != "" {
+				t.Fatalf("expanded text mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}

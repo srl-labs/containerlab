@@ -208,6 +208,12 @@ func (n NodeDefinition) MarshalYAML() (any, error) {
 // ImportEnvs imports all environment variables defined in the shell
 // if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {
+	n.ImportEnvsFrom(nil)
+}
+
+// ImportEnvsFrom imports the env vars of env (key=value entries)
+// if __IMPORT_ENVS is set to true. A nil env imports the process environment.
+func (n *NodeDefinition) ImportEnvsFrom(env []string) {
 	if n == nil || n.Env == nil {
 		return
 	}
@@ -225,7 +231,11 @@ func (n *NodeDefinition) ImportEnvs() {
 		return
 	}
 
-	for _, e := range os.Environ() {
+	if env == nil {
+		env = os.Environ()
+	}
+
+	for _, e := range env {
 		kv := strings.SplitN(e, "=", 2)
 		if len(kv) < 2 {
 			continue
