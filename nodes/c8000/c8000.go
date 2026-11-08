@@ -71,7 +71,7 @@ func (n *c8000) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 	return n.create8000Files(ctx)
 }
 
-func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+func (n *c8000) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
@@ -89,11 +89,14 @@ func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 		return nil, err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
+	log.FromContext(ctx).Infof(
+		"saved %s running configuration to startup configuration file\n",
+		n.Cfg.ShortName,
+	)
 	return nil, nil
 }
 
-func (n *c8000) create8000Files(_ context.Context) error {
+func (n *c8000) create8000Files(ctx context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate first-boot config
@@ -118,7 +121,7 @@ func (n *c8000) create8000Files(_ context.Context) error {
 		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
+	err := n.GenerateConfig(ctx, nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}

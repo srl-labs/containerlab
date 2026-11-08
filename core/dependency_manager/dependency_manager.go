@@ -1,6 +1,7 @@
 package dependency_manager
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,7 +16,7 @@ type DependencyManager interface {
 	// GetNode gets a dependency node registered with the dependency manager.
 	GetNode(name string) (*DependencyNode, error)
 	// CheckAcyclicity checks if dependencies contain cycles.
-	CheckAcyclicity() error
+	CheckAcyclicity(ctx context.Context) error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
 	// GetNodes returns the DependencyNodes registered with the DependencyManager
@@ -120,12 +121,12 @@ func (dm *defaultDependencyManager) generateDependencyMap() map[string][]string 
 }
 
 // CheckAcyclicity checks if dependencies contain cycles.
-func (dm *defaultDependencyManager) CheckAcyclicity() error {
-	log.Debugf("Dependencies:\n%s", dm.String())
+func (dm *defaultDependencyManager) CheckAcyclicity(ctx context.Context) error {
+	log.FromContext(ctx).Debugf("Dependencies:\n%s", dm.String())
 
 	nodeDependers := dm.generateDependencyMap()
 
-	if !isAcyclic(nodeDependers, 1) {
+	if !isAcyclic(ctx, nodeDependers, 1) {
 		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
 	}
 
@@ -134,10 +135,12 @@ func (dm *defaultDependencyManager) CheckAcyclicity() error {
 
 // isAcyclic checks the provided dependencies map for cycles.
 // i indicates the check round. Must be set to 1.
-func isAcyclic(nodeDependers map[string][]string, i int) bool {
+func isAcyclic(ctx context.Context, nodeDependers map[string][]string, i int) bool {
 	// no more nodes then the graph is acyclic
 	if len(nodeDependers) == 0 {
-		log.Debugf("node creation graph is successfully validated as being acyclic")
+		log.FromContext(ctx).Debugf(
+			"node creation graph is successfully validated as being acyclic",
+		)
 
 		return true
 	}
@@ -149,7 +152,7 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))
 	}
 
-	log.Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
+	log.FromContext(ctx).Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
 
 	remainingNodeDependers := map[string][]string{}
 
@@ -198,5 +201,5 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 		remainingNodeDependers[dependee] = newRemainingNodeDependers
 	}
 
-	return isAcyclic(remainingNodeDependers, i+1)
+	return isAcyclic(ctx, remainingNodeDependers, i+1)
 }

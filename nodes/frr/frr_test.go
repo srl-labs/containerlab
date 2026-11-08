@@ -98,7 +98,7 @@ func TestInitEnablesForwarding(t *testing.T) {
 func TestCreateFRRFilesWithoutStartupConfig(t *testing.T) {
 	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 
-	if err := n.createFRRFiles(); err != nil {
+	if err := n.createFRRFiles(context.Background()); err != nil {
 		t.Fatalf("createFRRFiles: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestCreateFRRFilesUsesStartupConfig(t *testing.T) {
 		StartupConfig: startup,
 	})
 
-	if err := n.createFRRFiles(); err != nil {
+	if err := n.createFRRFiles(context.Background()); err != nil {
 		t.Fatalf("createFRRFiles: %v", err)
 	}
 
@@ -151,7 +151,7 @@ func TestCreateFRRFilesHonoursDaemons(t *testing.T) {
 		KindSpecificConfig: &KindSpecificConfig{Daemons: []string{"ospfd", "bfdd"}},
 	})
 
-	if err := n.createFRRFiles(); err != nil {
+	if err := n.createFRRFiles(context.Background()); err != nil {
 		t.Fatalf("createFRRFiles: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestCreateFRRFilesRejectsUnknownDaemon(t *testing.T) {
 		KindSpecificConfig: &KindSpecificConfig{Daemons: []string{"bogusd"}},
 	})
 
-	err := n.createFRRFiles()
+	err := n.createFRRFiles(context.Background())
 	if err == nil {
 		t.Fatal("expected an error for an unknown daemon, got none")
 	}
@@ -367,7 +367,7 @@ func TestConfigFilePermissionsRestored(t *testing.T) {
 		n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
 		path := writeLockedDown(t, n)
 
-		if err := n.createFRRFiles(); err != nil {
+		if err := n.createFRRFiles(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 

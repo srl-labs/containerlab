@@ -110,17 +110,17 @@ func (s *csrx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	return nil
 }
 
-func (s *csrx) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (s *csrx) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := s.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
-	return createCSRXFiles(s)
+	return createCSRXFiles(ctx, s)
 }
 
 func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for csrx %q node", s.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Running postdeploy actions for csrx %q node", s.Cfg.ShortName)
 
 	cmd, _ := clabexec.NewExecCmdFromString(sshRestartCmd)
 	execResult, err := s.RunExec(ctx, cmd)
@@ -133,7 +133,7 @@ func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		// on Junos >=23.4, where the SSH service was renamed to junos-ssh and
 		// is fully managed by MGD
 		if strings.Contains(execResult.GetStdErrString(), "ssh: unrecognized service") {
-			log.Debug(`Caught "ssh: unrecognized service" error, ignoring`)
+			log.FromContext(ctx).Debug(`Caught "ssh: unrecognized service" error, ignoring`)
 		} else {
 			return fmt.Errorf(
 				"csrx post-deploy sshd restart failed: %s",
@@ -143,7 +143,12 @@ func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	}
 
 	if s.Config().License != "" {
-		d, err := clabutils.SpawnCLIviaExec("juniper_junos", s.Cfg.LongName, s.Runtime.GetName())
+		d, err := clabutils.SpawnCLIviaExec(
+			ctx,
+			"juniper_junos",
+			s.Cfg.LongName,
+			s.Runtime.GetName(),
+		)
 		if err != nil {
 			return err
 		}
@@ -161,7 +166,7 @@ func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 				resp.Failed,
 			)
 		}
-		log.Debugf("csrx post-deploy license add completed")
+		log.FromContext(ctx).Debugf("csrx post-deploy license add completed")
 	}
 
 	return nil
@@ -190,14 +195,18 @@ func (s *csrx) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 			err,
 		)
 	}
-	log.Infof("saved csrx configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
+	log.FromContext(ctx).Infof(
+		"saved csrx configuration from %s node to %s\n",
+		s.Cfg.ShortName,
+		confPath,
+	)
 
 	return &clabnodes.SaveConfigResult{
 		ConfigPath: confPath,
 	}, nil
 }
 
-func createCSRXFiles(node clabnodes.Node) error {
+func createCSRXFiles(ctx context.Context, node clabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to csrx
 	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, configDir),
@@ -222,7 +231,7 @@ func createCSRXFiles(node clabnodes.Node) error {
 		cfgTemplate = defaultCfgTemplate
 	}
 
-	err := node.GenerateConfig(cfg, cfgTemplate)
+	err := node.GenerateConfig(ctx, cfg, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("node=%s, failed to generate config: %w", nodeCfg.ShortName, err)
 	}
@@ -236,7 +245,7 @@ func createCSRXFiles(node clabnodes.Node) error {
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
 	}
-	log.Debug("Writing sshd_config succeeded")
+	log.FromContext(ctx).Debug("Writing sshd_config succeeded")
 
 	// Pre-create the cSRX password sentinel file. Its mere existence makes
 	// rc.local skip the block that force-sets root-authentication to
@@ -260,7 +269,7 @@ func createCSRXFiles(node clabnodes.Node) error {
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		log.FromContext(ctx).Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 	return nil
 }

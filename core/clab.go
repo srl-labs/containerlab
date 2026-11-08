@@ -492,7 +492,7 @@ func (c *CLab) GetNode(name string) (clabnodes.Node, error) {
 //	network-mode: container:node_b
 //
 // then node_a depends on node_b, and waits for node_b to be scheduled first.
-func (c *CLab) createNamespaceSharingDependency() {
+func (c *CLab) createNamespaceSharingDependency(ctx context.Context) {
 	for _, n := range c.dependencyManager.GetNodes() {
 		nodeConfig := n.Config()
 
@@ -506,7 +506,7 @@ func (c *CLab) createNamespaceSharingDependency() {
 
 		referenceNode, err := c.dependencyManager.GetNode(referenceNodeName)
 		if err != nil {
-			log.Warnf(
+			log.FromContext(ctx).Warnf(
 				"node %s referenced in namespace sharing not found in topology definition, "+
 					"considering it an external dependency.",
 				referenceNodeName,
@@ -589,15 +589,19 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 		select {
 		case node, ok := <-input:
 			if node == nil || !ok {
-				log.Debugf("Worker %d terminating...", i)
+				log.FromContext(ctx).Debugf("Worker %d terminating...", i)
 				return
 			}
 
-			log.Debugf("Worker %d received node: %+v", i, node.Config())
+			log.FromContext(ctx).Debugf("Worker %d received node: %+v", i, node.Config())
 
 			delay := node.Config().StartupDelay
 			if delay > 0 {
-				log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
+				log.FromContext(ctx).Infof(
+					"node %q is being delayed for %d seconds",
+					node.Config().ShortName,
+					delay,
+				)
 				select {
 				case <-ctx.Done():
 					return
@@ -606,7 +610,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			}
 
 			if err := c.deployNode(ctx, node); err != nil {
-				log.Error(err)
+				log.FromContext(ctx).Error(err)
 				nodeFailCh <- err
 				cancelSchedule()
 				return
@@ -623,7 +627,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			err := node.DeployEndpoints(ctx)
 			if err != nil {
 				err = fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)
-				log.Error(err)
+				log.FromContext(ctx).Error(err)
 				nodeFailCh <- err
 				cancelSchedule()
 				return
@@ -642,7 +646,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 						node.Config().ShortName,
 						err,
 					)
-					log.Error(err)
+					log.FromContext(ctx).Error(err)
 					nodeFailCh <- err
 					cancelSchedule()
 					return
@@ -651,7 +655,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
 					err = fmt.Errorf("node %q post-deploy: %w", node.Config().ShortName, err)
-					log.Error(err)
+					log.FromContext(ctx).Error(err)
 					nodeFailCh <- err
 					cancelSchedule()
 					return
@@ -662,7 +666,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			err = node.RunExecFromConfig(ctx, execCollection)
 			if err != nil {
-				log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+				log.FromContext(ctx).Errorf(
+					"failed to run exec commands for %s: %v",
+					node.GetShortName(),
+					err,
+				)
 			}
 
 			if node.MustWait(clabtypes.WaitForHealthy) {
@@ -675,7 +683,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				for {
 					healthy, err := node.IsHealthy(ctx)
 					if err != nil {
-						log.Errorf(
+						log.FromContext(ctx).Errorf(
 							"error checking for node health %v. Continuing deployment anyways",
 							err,
 						)
@@ -684,7 +692,10 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 					}
 
 					if healthy {
-						log.Infof("node %q turned healthy, continuing", node.GetShortName())
+						log.FromContext(ctx).Infof(
+							"node %q turned healthy, continuing",
+							node.GetShortName(),
+						)
 						node.Done(ctx, clabtypes.WaitForHealthy)
 
 						break
@@ -708,7 +719,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				for {
 					status := node.GetContainerStatus(ctx)
 					if status == clabruntime.Stopped {
-						log.Infof("node %q stopped", node.GetShortName())
+						log.FromContext(ctx).Infof("node %q stopped", node.GetShortName())
 						node.Done(ctx, clabtypes.WaitForExit)
 
 						break
@@ -803,7 +814,7 @@ func (c *CLab) scheduleNodes(
 					if scheduleCtx.Err() != nil {
 						return
 					}
-					log.Error(err)
+					log.FromContext(ctx).Error(err)
 					nodeFailCh <- err
 					cancelSchedule()
 					return

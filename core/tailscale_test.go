@@ -328,7 +328,7 @@ func TestTailscaleSSONoInjectedNodes(t *testing.T) {
 	if len(n1.PortBindings) == 0 {
 		t.Fatal("docker port 80:8080 dropped")
 	}
-	if err := c.verifyTailscaleProxy(); err != nil {
+	if err := c.verifyTailscaleProxy(context.Background()); err != nil {
 		t.Fatalf("verify: %v", err)
 	}
 }
@@ -356,7 +356,7 @@ topology:
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = c.verifyTailscaleProxy()
+		err = c.verifyTailscaleProxy(context.Background())
 		if sso := mode == "auth-mode: sso"; sso != (err != nil) {
 			t.Fatalf("%s: err = %v", mode, err)
 		}
@@ -379,7 +379,10 @@ topology:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.verifyTailscaleProxy(); err == nil || !strings.Contains(err.Error(), "reserved") {
+	if err := c.verifyTailscaleProxy(
+		context.Background(),
+	); err == nil ||
+		!strings.Contains(err.Error(), "reserved") {
 		t.Fatalf("reserved name error = %v", err)
 	}
 }

@@ -241,11 +241,11 @@ func (r *Runtime) connect(
 
 func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
 	verbosity := -1
-	if log.GetLevel() <= log.DebugLevel {
+	if log.FromContext(ctx).GetLevel() <= log.DebugLevel {
 		verbosity = 3
 	}
 	logger := funcr.New(func(prefix, args string) {
-		log.Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
+		log.FromContext(ctx).Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
 	}, funcr.Options{Verbosity: verbosity})
 
 	return klog.NewContext(ctx, logger)

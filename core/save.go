@@ -46,7 +46,7 @@ func (c *CLab) Save(
 
 			result, err := node.SaveConfig(ctx)
 			if err != nil {
-				log.Errorf("node %q save failed: %v", node.GetShortName(), err)
+				log.FromContext(ctx).Errorf("node %q save failed: %v", node.GetShortName(), err)
 				return
 			}
 
@@ -55,7 +55,11 @@ func (c *CLab) Save(
 			}
 
 			if err := c.copySavedConfig(ctx, result, node, opts.copyDst); err != nil {
-				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
+				log.FromContext(ctx).Errorf(
+					"node %q save copy failed: %v",
+					node.GetShortName(),
+					err,
+				)
 			}
 		}(node)
 	}
@@ -109,7 +113,11 @@ func (c *CLab) copySavedConfig(
 	dstRoot string,
 ) error {
 	if result == nil || result.ConfigPath == "" {
-		log.Debug("no saved config path reported, skipping copy", "node", node.GetShortName())
+		log.FromContext(ctx).Debug(
+			"no saved config path reported, skipping copy",
+			"node",
+			node.GetShortName(),
+		)
 		return nil
 	}
 
@@ -141,7 +149,7 @@ func (c *CLab) copySavedConfig(
 		return fmt.Errorf("failed to create symlink %q -> %q: %w", linkPath, tsFileName, err)
 	}
 
-	log.Info(
+	log.FromContext(ctx).Info(
 		"copied saved config",
 		"node", nodeCfg.ShortName,
 		"src", result.ConfigPath,

@@ -154,8 +154,8 @@ func (l *LinkVEthStitched) stitchSegments(ctx context.Context) error {
 	steps := []func() error{
 		func() error { return markFarEnd(l.epB, l.segA.Endpoints[0], l.labName) },
 		func() error { return markFarEnd(l.epA, l.segB.Endpoints[0], l.labName) },
-		func() error { return stitch(l.epA, l.epB) },
-		func() error { return stitch(l.epB, l.epA) },
+		func() error { return stitch(ctx, l.epA, l.epB) },
+		func() error { return stitch(ctx, l.epB, l.epA) },
 	}
 	for _, step := range steps {
 		if err := retryTransientNetlink(ctx, "veth-stitch", step); err != nil {

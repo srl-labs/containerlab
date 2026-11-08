@@ -18,9 +18,9 @@ import (
 )
 
 // limitSSHKeys truncates SSH keys to SROS maximum of 32 per type.
-func limitSSHKeys(keys *[]string, keyType string) {
+func limitSSHKeys(ctx context.Context, keys *[]string, keyType string) {
 	if len(*keys) > 32 {
-		log.Warnf(
+		log.FromContext(ctx).Warnf(
 			"More than 32 public %s SSH keys found on the system. Selecting first 32 keys since SROS supports max 32 per key type",
 			keyType,
 		)
@@ -31,7 +31,7 @@ func limitSSHKeys(keys *[]string, keyType string) {
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
 // and checks that not more than 32 keys per type are present, otherwise truncates
 // the slices since SROS allows a max of 32 public keys per algorithm.
-func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
+func (n *sros) prepareSSHPubKeys(ctx context.Context, tplData *srosTemplateData) {
 	// a map of supported SSH key algorithms and the template slices
 	// the keys should be added to.
 	// In mapSSHPubKeys we map supported SSH key algorithms to the template slices.
@@ -47,12 +47,12 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 		supportedSSHKeyAlgos[ssh.KeyAlgoED25519] = &tplData.SSHPubKeysED25519
 	}
 
-	n.mapSSHPubKeys(supportedSSHKeyAlgos)
+	n.mapSSHPubKeys(ctx, supportedSSHKeyAlgos)
 
-	limitSSHKeys(&tplData.SSHPubKeysRSA, "RSA")
-	limitSSHKeys(&tplData.SSHPubKeysECDSA, "ECDSA")
+	limitSSHKeys(ctx, &tplData.SSHPubKeysRSA, "RSA")
+	limitSSHKeys(ctx, &tplData.SSHPubKeysECDSA, "ECDSA")
 	if semver.Compare(currVersion, "v26.7") >= 0 {
-		limitSSHKeys(&tplData.SSHPubKeysED25519, "ED25519")
+		limitSSHKeys(ctx, &tplData.SSHPubKeysED25519, "ED25519")
 	}
 }
 
@@ -62,12 +62,17 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 // that is used to store the keys of the corresponding algorithm family.
 // Two slices are used to store RSA and ECDSA keys separately.
 // The slices are modified in place by reference, so no return values are needed.
-func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
+func (n *sros) mapSSHPubKeys(ctx context.Context, supportedSSHKeyAlgos map[string]*[]string) {
 	for _, k := range n.sshPubKeys {
 		sshKeys, ok := supportedSSHKeyAlgos[k.Type()]
 		if !ok {
-			log.Debug("Unsupported SSH Key Algo, skipping key", "node", n.Cfg.ShortName,
-				"key", string(ssh.MarshalAuthorizedKey(k)))
+			log.FromContext(ctx).Debug(
+				"Unsupported SSH Key Algo, skipping key",
+				"node",
+				n.Cfg.ShortName,
+				"key",
+				string(ssh.MarshalAuthorizedKey(k)),
+			)
 			continue
 		}
 
@@ -79,12 +84,12 @@ func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 	}
 }
 
-func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c []string) error {
-	addr, err := n.MgmtIPAddr()
+func (n *sros) srosSendCommandsSSH(ctx context.Context, scrapli_platform string, c []string) error {
+	addr, err := n.MgmtIPAddr(ctx)
 	if err != nil {
 		return err
 	}
-	sl := log.StandardLog(log.StandardLogOptions{
+	sl := log.FromContext(ctx).StandardLog(log.StandardLogOptions{
 		ForceLevel: log.DebugLevel,
 	})
 	li, err := scraplilogging.NewInstance(
@@ -130,7 +135,7 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 		return fmt.Errorf("failed to send command (failed responses: %+v)", mresp.Failed)
 	}
 
-	log.Debug(
+	log.FromContext(ctx).Debug(
 		"Saved running configuration",
 		"node",
 		n.Cfg.ShortName,

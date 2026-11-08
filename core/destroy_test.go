@@ -5,16 +5,19 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -139,7 +142,7 @@ func TestMgmtNetworksForCleanupIncludesStateRecordedNetworks(t *testing.T) {
 		TopoPaths: paths,
 		Config:    &Config{Mgmt: main, MgmtNetworks: clabtypes.MgmtNetworks{main, oob}},
 	}
-	if err := seed.WriteState(); err != nil {
+	if err := seed.WriteState(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +151,7 @@ func TestMgmtNetworksForCleanupIncludesStateRecordedNetworks(t *testing.T) {
 		TopoPaths: paths,
 		Config:    &Config{Mgmt: main, MgmtNetworks: clabtypes.MgmtNetworks{main}},
 	}
-	networks := c.mgmtNetworksForCleanup()
+	networks := c.mgmtNetworksForCleanup(context.Background())
 	if len(networks) != 2 || networks[0] != main || networks[1].Network != "clab-lab-oob" ||
 		networks[1].ExternalAccess == nil {
 		t.Fatalf("mgmtNetworksForCleanup = %+v", networks)
@@ -159,7 +162,7 @@ func TestMgmtNetworksForCleanupIncludesStateRecordedNetworks(t *testing.T) {
 	if err := os.Remove(paths.StateFile()); err != nil {
 		t.Fatal(err)
 	}
-	networks = c.mgmtNetworksForCleanup()
+	networks = c.mgmtNetworksForCleanup(context.Background())
 	if len(networks) != 2 || networks[0] != main || networks[1] != oob {
 		t.Fatalf("mgmtNetworksForCleanup without state = %+v", networks)
 	}
@@ -412,6 +415,62 @@ func TestDestroyCleanupRemovesLabDirsOnSuccess(t *testing.T) {
 	}
 }
 
+// TestDestroyLogsToContextLogger checks that a destroy logs to the logger in its context,
+// so that a program embedding containerlab can collect the output of each lab.
+func TestDestroyLogsToContextLogger(t *testing.T) {
+	registerDestroyTestRuntime()
+	withTestHostsFiles(t, t.TempDir())
+
+	topo := writeDestroyTestTopology(t, "ok")
+
+	setDestroyTestBehavior(t, &destroyTestBehavior{
+		containers: []clabruntime.GenericContainer{{
+			Names: []string{"clab-ok-n1"},
+			Labels: map[string]string{
+				clabconstants.TopoFile:   topo,
+				clabconstants.NodeLabDir: t.TempDir(),
+			},
+		}},
+		listEmptyAfterFirst: true,
+	})
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithTopoPath(topo, nil),
+		WithRuntime("destroytest", &clabruntime.RuntimeConfig{}),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// the default logger logs at the debug level too, so that a message sent to it shows up
+	var global bytes.Buffer
+	oldLevel := log.GetLevel()
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(&global)
+	defer func() {
+		log.SetLevel(oldLevel)
+		log.SetOutput(os.Stderr)
+	}()
+
+	var labLog bytes.Buffer
+	logger := log.NewWithOptions(&labLog, log.Options{Level: log.DebugLevel})
+
+	err = c.Destroy(log.WithContext(context.Background(), logger), WithDestroyMaxWorkers(1))
+	if err != nil {
+		t.Fatalf("destroy failed: %v", err)
+	}
+
+	const msg = "got the following topologies for destroy"
+	if !strings.Contains(labLog.String(), msg) {
+		t.Fatalf("destroy did not log to the context logger:\n%s", labLog.String())
+	}
+	if strings.Contains(global.String(), msg) {
+		t.Fatalf("destroy logged to the global logger:\n%s", global.String())
+	}
+}
+
 // TestDestroyLabDirsKeepsFailedLabDirs checks destroyLabDirs directly: only the lab
 // directories of successful destroys are removed.
 func TestDestroyLabDirsKeepsFailedLabDirs(t *testing.T) {
@@ -423,6 +482,7 @@ func TestDestroyLabDirsKeepsFailedLabDirs(t *testing.T) {
 	c := &CLab{}
 
 	err := c.destroyLabDirs(
+		context.Background(),
 		map[string]string{
 			"a.clab.yml": removed,
 			"b.clab.yml": kept,
@@ -497,7 +557,12 @@ topology:
 	}
 
 	// No containers -> empty topos map triggers the fallback branch.
-	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+	if err := c.destroyLabDirs(
+		context.Background(),
+		map[string]string{},
+		false,
+		map[string]bool{},
+	); err != nil {
 		t.Fatalf("destroyLabDirs failed: %v", err)
 	}
 
@@ -545,7 +610,12 @@ topology:
 	}
 
 	// all=true must not delete anything when no containers are found.
-	if err := c.destroyLabDirs(map[string]string{}, true, map[string]bool{}); err != nil {
+	if err := c.destroyLabDirs(
+		context.Background(),
+		map[string]string{},
+		true,
+		map[string]bool{},
+	); err != nil {
 		t.Fatalf("destroyLabDirs failed: %v", err)
 	}
 	for _, dir := range []string{"clab-clos01", "clab-vyos-clos"} {
@@ -578,7 +648,12 @@ func TestDestroyWithNoContainersRefusesMismatchedDir(t *testing.T) {
 		TopoPaths: paths,
 	}
 
-	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+	if err := c.destroyLabDirs(
+		context.Background(),
+		map[string]string{},
+		false,
+		map[string]bool{},
+	); err != nil {
 		t.Fatalf("destroyLabDirs failed: %v", err)
 	}
 	if _, err := os.Stat(mismatched); err != nil {
@@ -618,7 +693,12 @@ topology:
 	if err := os.MkdirAll(unrelated, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+	if err := c.destroyLabDirs(
+		context.Background(),
+		map[string]string{},
+		false,
+		map[string]bool{},
+	); err != nil {
 		t.Fatalf("destroyLabDirs failed: %v", err)
 	}
 	if _, err := os.Stat(unrelated); err != nil {
@@ -655,7 +735,12 @@ func TestDestroyWithNoContainersByNameWithEnvBaseRemovesLabDir(t *testing.T) {
 		t.Fatalf("TopologyLabDir = %q, want empty for lab-name-only init", got)
 	}
 
-	if err := c.destroyLabDirs(map[string]string{}, false, map[string]bool{}); err != nil {
+	if err := c.destroyLabDirs(
+		context.Background(),
+		map[string]string{},
+		false,
+		map[string]bool{},
+	); err != nil {
 		t.Fatalf("destroyLabDirs failed: %v", err)
 	}
 	if _, err := os.Stat(expected); !os.IsNotExist(err) {

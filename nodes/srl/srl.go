@@ -383,7 +383,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 		}
 	}
 
-	return n.createSRLFiles()
+	return n.createSRLFiles(ctx)
 }
 
 func (n *srl) Deploy(ctx context.Context, params *clabnodes.DeployParams) error {
@@ -488,12 +488,12 @@ func (n *srl) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer
 }
 
 func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions",
+	log.FromContext(ctx).Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
 
 	// generate the certificate
-	certificate, err := n.LoadOrGenerateCertificate(n.cert, n.topologyName)
+	certificate, err := n.LoadOrGenerateCertificate(ctx, n.cert, n.topologyName)
 	if err != nil {
 		return err
 	}
@@ -504,7 +504,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err := n.populateHosts(ctx, params.Nodes); err != nil {
-		log.Warnf("Unable to populate hosts for node %q: %v", n.Cfg.ShortName, err)
+		log.FromContext(ctx).Warnf("Unable to populate hosts for node %q: %v", n.Cfg.ShortName, err)
 	}
 
 	// start waiting for initial commit and mgmt server ready
@@ -559,7 +559,7 @@ func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, erro
 
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 
-	log.Infof(
+	log.FromContext(ctx).Infof(
 		"saved SR Linux configuration from %s node. Output:\n%s",
 		n.Cfg.ShortName,
 		execResult.GetStdOutString(),
@@ -579,7 +579,7 @@ func (n *srl) Ready(ctx context.Context) error {
 
 	var err error
 
-	log.Debugf("Waiting for SR Linux node %q to boot...", n.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Waiting for SR Linux node %q to boot...", n.Cfg.ShortName)
 
 	for {
 		select {
@@ -605,14 +605,14 @@ func (n *srl) Ready(ctx context.Context) error {
 					logMsg += fmt.Sprintf(", output: \n%s", execResult)
 				}
 
-				log.Debug(logMsg)
+				log.FromContext(ctx).Debug(logMsg)
 				time.Sleep(retryTimer)
 
 				continue
 			}
 
 			if execResult.GetStdErrString() != "" {
-				log.Debugf(
+				log.FromContext(ctx).Debugf(
 					"error during checking SR Linux boot status: %s",
 					execResult.GetStdErrString(),
 				)
@@ -634,21 +634,24 @@ func (n *srl) Ready(ctx context.Context) error {
 
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
-				log.Debugf("error during readyForConfigCmd execution: %s", err)
+				log.FromContext(ctx).Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
 
 				continue
 			}
 
 			if execResult.GetStdErrString() != "" {
-				log.Debugf("readyForConfigCmd stderr: %s", execResult.GetStdErrString())
+				log.FromContext(ctx).Debugf(
+					"readyForConfigCmd stderr: %s",
+					execResult.GetStdErrString(),
+				)
 				time.Sleep(retryTimer)
 
 				continue
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "loaded initial configuration") {
-				log.Debugf(
+				log.FromContext(ctx).Debugf(
 					"Management server readiness files doesn't contain the marker string %s",
 					execResult.GetStdOutString(),
 				)
@@ -657,7 +660,7 @@ func (n *srl) Ready(ctx context.Context) error {
 				continue
 			}
 
-			log.Debugf("Node %s is ready to accept configs", n.Cfg.ShortName)
+			log.FromContext(ctx).Debugf("Node %s is ready to accept configs", n.Cfg.ShortName)
 
 			return nil
 		}
@@ -665,16 +668,16 @@ func (n *srl) Ready(ctx context.Context) error {
 }
 
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
-func (*srl) checkKernelVersion() error {
+func (*srl) checkKernelVersion(ctx context.Context) error {
 	// retrieve running kernel version
-	kv, err := clabutils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion(ctx)
 	if err != nil {
 		return err
 	}
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Infof(
+		log.FromContext(ctx).Infof(
 			"Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s",
 			requiredKernelVersion,
 			kv,
@@ -686,7 +689,7 @@ func (*srl) checkKernelVersion() error {
 
 func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
 	// perform the srl specific kernel version check
-	err := n.checkKernelVersion()
+	err := n.checkKernelVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -694,8 +697,11 @@ func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
 	return n.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
-func (n *srl) createSRLFiles() error {
-	log.Debugf("Creating directory structure for SRL container: %s", n.Cfg.ShortName)
+func (n *srl) createSRLFiles(ctx context.Context) error {
+	log.FromContext(ctx).Debugf(
+		"Creating directory structure for SRL container: %s",
+		n.Cfg.ShortName,
+	)
 
 	var src string
 
@@ -709,11 +715,11 @@ func (n *srl) createSRLFiles() error {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
+		log.FromContext(ctx).Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
 	// generate SRL topology file, including base MAC
-	err := generateSRLTopologyFile(n.Cfg)
+	err := generateSRLTopologyFile(ctx, n.Cfg)
 	if err != nil {
 		return err
 	}
@@ -735,7 +741,7 @@ func (n *srl) createSRLFiles() error {
 
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 	if n.Cfg.StartupConfig != "" {
-		log.Debug("Reading startup-config", "file", n.Cfg.StartupConfig)
+		log.FromContext(ctx).Debug("Reading startup-config", "file", n.Cfg.StartupConfig)
 
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -754,7 +760,7 @@ func (n *srl) createSRLFiles() error {
 
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
 				n.Cfg.ShortName,
 			)
@@ -770,7 +776,7 @@ func (n *srl) createSRLFiles() error {
 	}
 
 	if cfgTemplate == "" {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"configuration template for node %s is empty, skipping startup config file generation",
 			n.Cfg.ShortName,
 		)
@@ -778,9 +784,9 @@ func (n *srl) createSRLFiles() error {
 		return nil
 	}
 
-	err = n.GenerateConfig(cfgPath, cfgTemplate)
+	err = n.GenerateConfig(ctx, cfgPath, cfgTemplate)
 	if err != nil {
-		log.Errorf("node=%s, failed to generate config: %v", n.Cfg.ShortName, err)
+		log.FromContext(ctx).Errorf("node=%s, failed to generate config: %v", n.Cfg.ShortName, err)
 	}
 
 	return err
@@ -862,11 +868,11 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		DNSServersConfig: "",
 	}
 
-	if err := n.setVersionSpecificParams(&tplData); err != nil {
+	if err := n.setVersionSpecificParams(ctx, &tplData); err != nil {
 		return err
 	}
 
-	n.setCustomPrompt(&tplData)
+	n.setCustomPrompt(ctx, &tplData)
 
 	// set MgmtMTU to the MTU value of the runtime management network
 	// so that the two MTUs match.
@@ -883,7 +889,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
+	log.FromContext(ctx).Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	// Copy overlay config to container
 	tmpFilePath, err := clabutils.WriteToTempFile(buf.String())
@@ -910,7 +916,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"node %s. stdout: %s, stderr: %s",
 		n.Cfg.ShortName,
 		execResult.GetStdOutString(),
@@ -987,7 +993,7 @@ func (n *srl) populateInterfaceConfig(tplData *srlTemplateData) error {
 // startup-config directive.
 func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 	if len(n.startupCliCfg) == 0 {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"node %q: startup-config empty, committing existing candidate",
 			n.Config().ShortName,
 		)
@@ -997,7 +1003,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	cfgStr := string(n.startupCliCfg)
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Node %q additional config from startup-config file %s:\n%s",
 		n.Cfg.ShortName,
 		n.Cfg.StartupConfig,
@@ -1031,7 +1037,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"node %s. stdout: %s, stderr: %s",
 		n.Cfg.ShortName,
 		execResult.GetStdOutString(),
@@ -1043,7 +1049,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 // commitConfig commits and saves default+overlay config to the startup-config file.
 func (n *srl) commitConfig(ctx context.Context) error {
-	log.Debugf("Node %q: committing configuration", n.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Node %q: committing configuration", n.Cfg.ShortName)
 
 	cmd, err := clabexec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
 	if err != nil {
@@ -1059,7 +1065,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"node %s. stdout: %s, stderr: %s",
 		n.Cfg.ShortName,
 		execResult.GetStdOutString(),
@@ -1087,7 +1093,7 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"node %s. stdout: %s, stderr: %s",
 		n.Cfg.ShortName,
 		execResult.GetStdOutString(),
@@ -1103,7 +1109,12 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
-		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
+		log.FromContext(ctx).Warnf(
+			"Unable to locate /etc/hosts file for srl node %v: %v",
+			n.Cfg.ShortName,
+			err,
+		)
+
 		return err
 	}
 
@@ -1136,7 +1147,12 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, hostsFilePerm) // skipcq: GSC-G302
 	if err != nil {
-		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
+		log.FromContext(ctx).Warnf(
+			"Unable to open /etc/hosts file for srl node %v: %v",
+			n.Cfg.ShortName,
+			err,
+		)
+
 		return err
 	}
 

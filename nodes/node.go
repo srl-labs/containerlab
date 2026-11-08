@@ -67,13 +67,13 @@ func LinkApplyModeForNode(ctx context.Context, node Node) LinkApplyMode {
 		kindMode = mode
 	}
 
-	override := LinkApplyModeOverrideForNode(node)
+	override := LinkApplyModeOverrideForNode(ctx, node)
 	if override == "" {
 		return kindMode
 	}
 
 	if linkApplyModePermissiveness[override] > linkApplyModePermissiveness[kindMode] {
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"link-apply-mode is more permissive than the kind default; "+
 				"make sure the NOS picks up interface changes applied this way",
 			"node", node.Config().ShortName,
@@ -87,7 +87,7 @@ func LinkApplyModeForNode(ctx context.Context, node Node) LinkApplyMode {
 
 // LinkApplyModeOverrideForNode returns the validated link-apply-mode set for the
 // node in the topology file, or an empty string when no override is set.
-func LinkApplyModeOverrideForNode(node Node) LinkApplyMode {
+func LinkApplyModeOverrideForNode(ctx context.Context, node Node) LinkApplyMode {
 	if node == nil || node.Config() == nil {
 		return ""
 	}
@@ -98,7 +98,7 @@ func LinkApplyModeOverrideForNode(node Node) LinkApplyMode {
 	case "":
 		return ""
 	default:
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"Ignoring invalid link-apply-mode",
 			"node", node.Config().ShortName,
 			"link-apply-mode", node.Config().LinkApplyMode,
@@ -175,7 +175,7 @@ type Node interface {
 	Init(*clabtypes.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.
 	GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error)
-	DeleteNetnsSymlink() (err error)
+	DeleteNetnsSymlink(ctx context.Context) (err error)
 	Config() *clabtypes.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(ctx context.Context) error
@@ -211,7 +211,8 @@ type Node interface {
 	Start(context.Context) error
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() clabruntime.ContainerRuntime    // GetRuntime returns the nodes assigned runtime
-	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
+	// GenerateConfig generates the nodes configuration.
+	GenerateConfig(ctx context.Context, dst, templ string) error
 	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assigned
 	// by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error

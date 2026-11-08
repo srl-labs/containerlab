@@ -138,7 +138,7 @@ func (c *CLab) discoverTailscaleContainers(ctx context.Context, filter []string)
 
 // verifyTailscaleProxy checks that the SSO proxy container name is free and that every
 // /ts listen port is unique on the proxy.
-func (c *CLab) verifyTailscaleProxy() error {
+func (c *CLab) verifyTailscaleProxy(ctx context.Context) error {
 	if !c.tailscaleProxyEnabled() {
 		return nil
 	}
@@ -153,11 +153,15 @@ func (c *CLab) verifyTailscaleProxy() error {
 	for _, name := range sortedNodeNames(c.Nodes) {
 		cfg := c.Nodes[name].Config()
 		if len(cfg.TailscalePorts) > 0 && !cfg.ManagementIPAMEligible() {
-			log.Warn("Tailscale /ts ports need a node management IP, ignoring", "node", name)
+			log.FromContext(ctx).Warn(
+				"Tailscale /ts ports need a node management IP, ignoring",
+				"node",
+				name,
+			)
 			continue
 		}
 		if len(cfg.TailscalePorts) > 0 && cfg.MgmtNet != c.tailscaleMgmtNet().Network {
-			log.Warn(
+			log.FromContext(ctx).Warn(
 				"Tailscale /ts ports need the node on the tailscale management network, ignoring",
 				"node",
 				name,
@@ -205,7 +209,7 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 	if !c.tailscaleProxyEnabled() {
 		for idx := range existing {
 			name := strings.TrimPrefix(existing[idx].Names[0], "/")
-			log.Info("Removing Tailscale proxy", "container", name)
+			log.FromContext(ctx).Info("Removing Tailscale proxy", "container", name)
 			c.logoutTailscaleContainer(ctx, existing[idx])
 			if err := c.globalRuntime().DeleteContainer(ctx, name); err != nil {
 				return fmt.Errorf("removing Tailscale proxy %q: %w", name, err)
@@ -214,7 +218,7 @@ func (c *CLab) syncTailscaleProxy(ctx context.Context) error {
 		return os.Remove(serveFile)
 	}
 	if c.skipMgmtNetwork(c.tailscaleMgmtNet()) {
-		log.Warn("Tailscale SSO proxy needs the management network, skipping",
+		log.FromContext(ctx).Warn("Tailscale SSO proxy needs the management network, skipping",
 			"network", c.tailscaleMgmtNet().Network)
 		return nil
 	}
@@ -253,7 +257,7 @@ func (c *CLab) createTailscaleProxy(ctx context.Context, labDir string) error {
 		return fmt.Errorf("allocating Tailscale proxy management address: %w", err)
 	}
 
-	log.Info("Creating Tailscale SSO proxy", "container", cfg.LongName)
+	log.FromContext(ctx).Info("Creating Tailscale SSO proxy", "container", cfg.LongName)
 	id, err := rt.CreateContainer(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("creating Tailscale proxy: %w", err)
@@ -263,7 +267,7 @@ func (c *CLab) createTailscaleProxy(ctx context.Context, labDir string) error {
 		return fmt.Errorf("starting Tailscale proxy: %w", err)
 	}
 
-	log.Info("Tailscale SSO proxy started; if it has not joined the tailnet yet, "+
+	log.FromContext(ctx).Info("Tailscale SSO proxy started; if it has not joined the tailnet yet, "+
 		"open the login URL shown in its logs",
 		"container", cfg.LongName, "logs", "docker logs "+cfg.LongName)
 

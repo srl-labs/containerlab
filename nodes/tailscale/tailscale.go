@@ -70,12 +70,18 @@ func Logout(ctx context.Context, rt clabruntime.ContainerRuntime, containerName 
 	))
 	switch {
 	case err != nil:
-		log.Warn("Tailscale logout failed", "container", containerName, "error", err)
+		log.FromContext(ctx).Warn(
+			"Tailscale logout failed",
+			"container",
+			containerName,
+			"error",
+			err,
+		)
 	case res.GetReturnCode() != 0:
-		log.Warn("Tailscale logout failed", "container", containerName,
+		log.FromContext(ctx).Warn("Tailscale logout failed", "container", containerName,
 			"error", strings.TrimSpace(res.GetStdErrString()))
 	default:
-		log.Info("Logged out of the tailnet", "container", containerName)
+		log.FromContext(ctx).Info("Logged out of the tailnet", "container", containerName)
 	}
 }
 

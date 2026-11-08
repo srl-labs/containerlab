@@ -71,18 +71,17 @@ func buildTLSProfileXML() string {
 
 // createSROSConfigFiles handles config generation for the SR-SIM kind.
 // Flow: version detection → buildStartupConfig (default + partial) → GenerateConfig(dst, config).
-func (n *sros) createSROSConfigFiles() error {
+func (n *sros) createSROSConfigFiles(ctx context.Context) error {
 	// Get version from image before generating config
 	if n.swVersion == nil {
-		ctx := context.Background()
 		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
 			n.swVersion = n.parseVersionString(srosDefaultVersion)
-			log.Warn("Failed to get SR OS version from image",
+			log.FromContext(ctx).Warn("Failed to get SR OS version from image",
 				"node", n.Cfg.ShortName, "version", n.swVersion, "error", err)
 		} else {
 			n.swVersion = version
-			log.Info("Retrieved SR OS version from image",
+			log.FromContext(ctx).Info("Retrieved SR OS version from image",
 				"node", n.Cfg.ShortName,
 				"version", fmt.Sprintf("%s.%s.%s", version.Major, version.Minor, version.Build))
 		}
@@ -98,16 +97,16 @@ func (n *sros) createSROSConfigFiles() error {
 	isPartial := clabutils.IsPartialConfigFile(n.Cfg.StartupConfig)
 
 	// generate config and use that to boot node
-	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
+	log.FromContext(ctx).Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
 		n.Cfg.StartupConfig, "isPartial", isPartial)
 
-	startupConfig, err := n.buildStartupConfig(isPartial)
+	startupConfig, err := n.buildStartupConfig(ctx, isPartial)
 	if err != nil {
 		return err
 	}
 
 	if startupConfig == "" {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"startup config is empty, skipping startup config file generation",
 			"node",
 			n.Cfg.ShortName,
@@ -115,13 +114,13 @@ func (n *sros) createSROSConfigFiles() error {
 		return nil
 	}
 
-	return n.GenerateConfig(cf3CfgFile, startupConfig)
+	return n.GenerateConfig(ctx, cf3CfgFile, startupConfig)
 }
 
 // buildStartupConfig returns the full startup config string: either from user file (full config)
 // or from default + partial config generation. It does not return a template; the name is
 // historical.
-func (n *sros) buildStartupConfig(isPartial bool) (string, error) {
+func (n *sros) buildStartupConfig(ctx context.Context, isPartial bool) (string, error) {
 	// User provides full startup config
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
@@ -137,10 +136,10 @@ func (n *sros) buildStartupConfig(isPartial bool) (string, error) {
 	}
 
 	// Generate default config and optionally add partial config
-	if err := n.addDefaultConfig(); err != nil {
+	if err := n.addDefaultConfig(ctx); err != nil {
 		return "", err
 	}
-	if err := n.addPartialConfig(); err != nil {
+	if err := n.addPartialConfig(ctx); err != nil {
 		return "", err
 	}
 
@@ -149,7 +148,7 @@ func (n *sros) buildStartupConfig(isPartial bool) (string, error) {
 
 // prepareConfigTemplateData prepares all data needed for template selection and execution.
 // Service configs are filled from a single table-driven result: variant → getFullSnippetSet(v).
-func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
+func (n *sros) prepareConfigTemplateData(ctx context.Context) (*srosTemplateData, error) {
 	b, err := n.banner()
 	if err != nil {
 		return nil, err
@@ -157,9 +156,9 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 	componentConfig := ""
 	if !isFullConfigFile(n.Cfg.StartupConfig) {
-		componentConfig = n.generateComponentConfig()
+		componentConfig = n.generateComponentConfig(ctx)
 	} else {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"SR-SIM node %q has non-partial startup-config defined, skipping component config gen",
 			n.Cfg.LongName,
 		)
@@ -169,7 +168,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	snippets := getFullSnippetSet(v)
 	configMode := string(v.Mode)
 	if v.ForceClassic {
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
 			"node",
 			n.Cfg.LongName,
@@ -212,7 +211,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}
 
-	n.prepareSSHPubKeys(tplData)
+	n.prepareSSHPubKeys(ctx, tplData)
 
 	tplData.AdminUser = cliQuoted(n.Cfg.Credentials.Username)
 	tplData.AdminPassword = cliQuoted(n.Cfg.Credentials.Password)
@@ -245,9 +244,9 @@ func cliQuoted(s string) string {
 
 // addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
 // ssh keys.
-func (n *sros) addDefaultConfig() error {
+func (n *sros) addDefaultConfig(ctx context.Context) error {
 	// Prepare all template data
-	tplData, err := n.prepareConfigTemplateData()
+	tplData, err := n.prepareConfigTemplateData(ctx)
 	if err != nil {
 		return err
 	}
@@ -257,7 +256,7 @@ func (n *sros) addDefaultConfig() error {
 	if err != nil {
 		return fmt.Errorf("failed to select config template: %w", err)
 	}
-	log.Debug("Prepare SR OS config template", "template", srosCfgTpl.Name(),
+	log.FromContext(ctx).Debug("Prepare SR OS config template", "template", srosCfgTpl.Name(),
 		"node", n.Cfg.LongName,
 		"configuration-mode", tplData.ConfigurationMode,
 		"node-type", tplData.NodeType,
@@ -272,13 +271,13 @@ func (n *sros) addDefaultConfig() error {
 	}
 
 	if buf.Len() == 0 {
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"Buffer empty, template parsing error",
 			"node", n.Cfg.ShortName,
 			"template", srosCfgTpl.Name(),
 		)
 	} else {
-		log.Debug("Additional default config parsed",
+		log.FromContext(ctx).Debug("Additional default config parsed",
 			"node", n.Cfg.ShortName,
 			"template", srosCfgTpl.Name())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
@@ -288,13 +287,13 @@ func (n *sros) addDefaultConfig() error {
 }
 
 // applyPartialConfig applies partial configuration to the SR OS.
-func (n *sros) addPartialConfig() error {
+func (n *sros) addPartialConfig(ctx context.Context) error {
 	if n.Cfg.StartupConfig != "" {
 		// b holds the configuration to be applied to the node
 		b := &bytes.Buffer{}
 		// apply partial configs if partial config is used
 		if clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
-			log.Info("Adding configuration",
+			log.FromContext(ctx).Info("Adding configuration",
 				"node", n.Cfg.LongName,
 				"type", "partial",
 				"source", n.Cfg.StartupConfig)
@@ -316,18 +315,18 @@ func (n *sros) addPartialConfig() error {
 				return err
 			}
 			if configContent.Len() == 0 {
-				log.Warn(
+				log.FromContext(ctx).Warn(
 					"Buffer empty, PARTIAL config template parsing error",
 					"node",
 					n.Cfg.ShortName,
 				)
 			} else {
-				log.Debug("Additional PARTIAL config parsed", "node",
+				log.FromContext(ctx).Debug("Additional PARTIAL config parsed", "node",
 					n.Cfg.ShortName, "partial-config", configContent.String())
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn(
+			log.FromContext(ctx).Warn(
 				"Passed startup-config option, but it will not have any effect",
 				"node",
 				n.Cfg.ShortName,

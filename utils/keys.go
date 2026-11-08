@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"context"
+
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 )
@@ -8,7 +10,7 @@ import (
 // LoadSSHPubKeysFromFiles parses openssh keys from the files referenced by the paths
 // and returns a slice of ssh.PublicKey pointers.
 // The files may contain multiple keys each on a separate line.
-func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
+func LoadSSHPubKeysFromFiles(ctx context.Context, paths []string) ([]ssh.PublicKey, error) {
 	var keys []ssh.PublicKey
 
 	for _, p := range paths {
@@ -20,7 +22,7 @@ func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
 		for _, l := range lines {
 			pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(l))
 
-			log.Debugf("Loaded public key %s", l)
+			log.FromContext(ctx).Debugf("Loaded public key %s", l)
 
 			if err != nil {
 				return nil, err

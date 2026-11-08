@@ -318,7 +318,7 @@ func WaitForContainerRunning(
 				return nil
 			}
 
-			log.Infof(
+			log.FromContext(ctx).Infof(
 				"node %q depends on external container %q, which is not running yet. "+
 					"Waited %s. Retrying...",
 				nodeName,
@@ -326,7 +326,7 @@ func WaitForContainerRunning(
 				time.Since(startTime).Truncate(time.Second),
 			)
 		case <-timeout.C:
-			log.Errorf(
+			log.FromContext(ctx).Errorf(
 				"node %q waited %s for external dependency container %q to come up, "+
 					"which did not happen. Giving up now",
 				nodeName,

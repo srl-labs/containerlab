@@ -1,6 +1,7 @@
 package srl
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -333,7 +334,7 @@ func TestGenerateSRLTopologyFile(t *testing.T) {
 		}},
 	}
 
-	if err := generateSRLTopologyFile(cfg); err != nil {
+	if err := generateSRLTopologyFile(context.Background(), cfg); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

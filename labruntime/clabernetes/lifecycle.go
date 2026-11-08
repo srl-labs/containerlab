@@ -42,7 +42,7 @@ func (r *Runtime) Deploy(
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Preparing C9s lab", "name", req.Name, "namespace", namespace)
+	log.FromContext(ctx).Info("Preparing C9s lab", "name", req.Name, "namespace", namespace)
 	topologyResource := r.client.Resource(topologyGVR).Namespace(namespace)
 
 	existingTopology, err := topologyResource.Get(ctx, req.Name, metav1.GetOptions{})
@@ -75,7 +75,7 @@ func (r *Runtime) Deploy(
 	}
 	stagedConfigMaps := prepared.configMaps
 	primitives := prepared.primitives
-	log.Info(
+	log.FromContext(ctx).Info(
 		"Staging C9s lab artifacts",
 		"name", req.Name,
 		"namespace", namespace,
@@ -129,7 +129,7 @@ func (r *Runtime) Deploy(
 	if primitiveExists {
 		operation = "Reconciling"
 	}
-	log.Info(
+	log.FromContext(ctx).Info(
 		operation+" C9s lab resources",
 		"name", req.Name,
 		"namespace", namespace,
@@ -224,7 +224,13 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 	}
 	selector := labels.Set{labelTopologyOwner: req.Name}.String()
 
-	log.Info("Deleting C9s lab resources", "name", req.Name, "namespace", namespace)
+	log.FromContext(ctx).Info(
+		"Deleting C9s lab resources",
+		"name",
+		req.Name,
+		"namespace",
+		namespace,
+	)
 
 	var deleteErrors []error
 	workers, clientBurst := r.kubernetesWorkers(req.MaxWorkers)
@@ -271,7 +277,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 		}
 		if !warnedWorkerBurst {
 			warnedWorkerBurst = warnWorkersExceedBurst(
-				"Delete", req.MaxWorkers, clientBurst, len(names))
+				ctx, "Delete", req.MaxWorkers, clientBurst, len(names))
 		}
 		if deleteErr := runWithWorkers(names, workers, func(name string) error {
 			err := resource.Delete(ctx, name, metav1.DeleteOptions{})
@@ -314,7 +320,7 @@ func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest
 			names[idx] = configMaps.Items[idx].Name
 		}
 		if !warnedWorkerBurst {
-			warnWorkersExceedBurst("Delete", req.MaxWorkers, clientBurst, len(names))
+			warnWorkersExceedBurst(ctx, "Delete", req.MaxWorkers, clientBurst, len(names))
 		}
 		if deleteErr := runWithWorkers(names, workers, func(name string) error {
 			err := configMapResource.Delete(ctx, name, metav1.DeleteOptions{})
@@ -386,7 +392,7 @@ func (r *Runtime) handlePersistentClaims(
 			}
 		}
 		if retained != 0 {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Keeping persistent node storage of C9s lab; destroy with --cleanup to delete it",
 				"name", req.Name,
 				"namespace", namespace,
@@ -401,7 +407,7 @@ func (r *Runtime) handlePersistentClaims(
 		return 0, nil
 	}
 
-	log.Info("Deleting persistent node storage of C9s lab",
+	log.FromContext(ctx).Info("Deleting persistent node storage of C9s lab",
 		"name", req.Name,
 		"namespace", namespace,
 		"claims", len(list.Items),
@@ -481,7 +487,7 @@ func (r *Runtime) Inspect(
 	}
 
 	if err := r.enrichState(ctx, state); err != nil {
-		log.Debug("failed to enrich C9s lab state", "error", err)
+		log.FromContext(ctx).Debug("failed to enrich C9s lab state", "error", err)
 	}
 
 	return state, nil
@@ -581,7 +587,7 @@ func (r *Runtime) List(
 	states := make([]*clablabruntime.LabState, 0, len(statesByLab))
 	for _, state := range statesByLab {
 		if err := r.enrichState(ctx, state); err != nil {
-			log.Debug("failed to enrich C9s lab state",
+			log.FromContext(ctx).Debug("failed to enrich C9s lab state",
 				"name", state.Name,
 				"namespace", state.Namespace,
 				"error", err,
@@ -614,7 +620,13 @@ func (r *Runtime) waitReady(
 	readinessProgress := nodeReadinessProgress{}
 	imageProgress := imagePullProgress{}
 	phaseProgress := nodePhaseProgress{}
-	log.Info("Waiting for C9s lab to become ready", "name", name, "namespace", namespace)
+	log.FromContext(ctx).Info(
+		"Waiting for C9s lab to become ready",
+		"name",
+		name,
+		"namespace",
+		namespace,
+	)
 
 	err := wait.PollUntilContextCancel(waitCtx, pollInterval, true,
 		func(ctx context.Context) (bool, error) {
@@ -636,7 +648,7 @@ func (r *Runtime) waitReady(
 			lastState = state
 			imageProgress.observe(ctx, r, namespace, state)
 			phaseProgress.observe(ctx, r, name, namespace)
-			readinessProgress.report(state)
+			readinessProgress.report(ctx, state)
 
 			if state.Ready {
 				return true, nil
@@ -657,7 +669,7 @@ func (r *Runtime) waitReady(
 					namespace, name)
 			}
 
-			log.Debug("Waiting for C9s lab",
+			log.FromContext(ctx).Debug("Waiting for C9s lab",
 				"name", name,
 				"namespace", namespace,
 				"state", state.State,
@@ -667,7 +679,7 @@ func (r *Runtime) waitReady(
 		})
 	if err == nil {
 		if !settledWithStopped {
-			log.Info("C9s lab is ready", "name", name, "namespace", namespace)
+			log.FromContext(ctx).Info("C9s lab is ready", "name", name, "namespace", namespace)
 		}
 
 		return nil
@@ -747,7 +759,7 @@ func (r *Runtime) labSettledWithStoppedNodes(
 		notes = append(notes, fmt.Sprintf("%s (%s)", node.Name, reason))
 	}
 
-	log.Info("C9s lab is ready apart from stopped nodes", "name", state.Name,
+	log.FromContext(ctx).Info("C9s lab is ready apart from stopped nodes", "name", state.Name,
 		"namespace", state.Namespace, "nodes", strings.Join(notes, ", "))
 
 	return true, nil
@@ -762,7 +774,7 @@ type nodeReadinessProgress struct {
 	nodes map[string]trackedNodeReadiness
 }
 
-func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
+func (p *nodeReadinessProgress) report(ctx context.Context, state *clablabruntime.LabState) {
 	if state == nil {
 		return
 	}
@@ -790,7 +802,7 @@ func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
 		}
 
 		if node.Ready {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"C9s node is ready",
 				"node", node.Name,
 				"ready", readyCount,
@@ -803,7 +815,7 @@ func (p *nodeReadinessProgress) report(state *clablabruntime.LabState) {
 		if nodeState == "" {
 			nodeState = "unknown"
 		}
-		log.Info(
+		log.FromContext(ctx).Info(
 			"C9s node is not ready",
 			"node", node.Name,
 			"state", nodeState,

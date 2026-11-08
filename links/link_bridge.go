@@ -38,7 +38,7 @@ func (b *Bridge) Deploy(ctx context.Context, endpoint Endpoint) error {
 		if err != nil {
 			return err
 		}
-		return SetNameMACAndUpInterface(netlinkLink, b.endpoint)(nn)
+		return SetNameMACAndUpInterface(ctx, netlinkLink, b.endpoint)(nn)
 	})
 
 	return err
@@ -58,7 +58,7 @@ func (b *Bridge) Remove(ctx context.Context) error {
 	// trigger link removal via the NodeEndpoint
 	err := b.endpoint.Remove(ctx)
 	if err != nil {
-		log.Debug(err)
+		log.FromContext(ctx).Debug(err)
 	}
 	// adjust the Deployment status to reflect the removal
 	b.DeploymentState = LinkDeploymentStateRemoved

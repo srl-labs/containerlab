@@ -78,8 +78,8 @@ func (c *cvx) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	return nil
 }
 
-func (c *cvx) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
+func (c *cvx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
+	log.FromContext(ctx).Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
 	return nil
 }
 

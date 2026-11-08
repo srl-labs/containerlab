@@ -252,7 +252,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 		}
 	}
 
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,10 @@ func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 }
 
 func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
+	log.FromContext(ctx).Infof(
+		"Running postdeploy actions for Cisco IOL '%s' node",
+		n.Cfg.ShortName,
+	)
 
 	n.disableMgmtTxOffload(ctx)
 
@@ -317,14 +320,14 @@ func (n *iol) disableMgmtTxOffload(ctx context.Context) {
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
 	if err != nil {
-		log.Warn("Failed to get veth peer index for IOL mgmt interface",
+		log.FromContext(ctx).Warn("Failed to get veth peer index for IOL mgmt interface",
 			"node", n.Cfg.ShortName,
 			"error", err)
 		return
 	}
 
-	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-		log.Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
+	if err := clabutils.DisableTxOffloadByIndex(ctx, peerIfIndex); err != nil {
+		log.FromContext(ctx).Warn("Failed to disable TX checksum offload on IOL mgmt host veth",
 			"node", n.Cfg.ShortName,
 			"error", err)
 	}
@@ -643,8 +646,13 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	// 1. Start streaming container logs
 	logReader, err := n.Runtime.StreamLogs(waitCtx, n.Cfg.LongName)
 	if err != nil {
-		log.Warn("Skipping IOL mgmt interface update, cannot stream container logs",
-			"node", n.Cfg.ShortName, "error", err)
+		log.FromContext(ctx).Warn(
+			"Skipping IOL mgmt interface update, cannot stream container logs",
+			"node",
+			n.Cfg.ShortName,
+			"error",
+			err,
+		)
 		return nil
 	}
 	defer logReader.Close()
@@ -681,7 +689,7 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 			continue
 		}
 
-		log.Debugf("[IOL Boot Log] %s", line)
+		log.FromContext(ctx).Debugf("[IOL Boot Log] %s", line)
 
 		// Match boot prompts (>, #, or initial config dialog)
 		if strings.HasSuffix(line, ">") ||
@@ -693,7 +701,10 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 				continue
 			}
 
-			log.Infof("IOL boot prompt detected (%s). Proceeding with configuration.", line)
+			log.FromContext(ctx).Infof(
+				"IOL boot prompt detected (%s). Proceeding with configuration.",
+				line,
+			)
 			bootComplete = true
 			break
 		}
@@ -741,7 +752,7 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		if lastErr == nil {
 			break
 		}
-		log.Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
+		log.FromContext(ctx).Warnf("UpdateMgmtIntf: attempt %d/3 failed for %s: %v",
 			i+1, n.Cfg.ShortName, lastErr)
 	}
 	return lastErr
@@ -749,7 +760,7 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
 // configuration.
-func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+func (n *iol) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	p, err := platform.NewPlatform(
 		"cisco_iosxe",
 		n.Cfg.LongName,
@@ -778,7 +789,7 @@ func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error)
 		return nil, fmt.Errorf("failed to send command; error: %+v", err)
 	}
 
-	log.Infof(
+	log.FromContext(ctx).Infof(
 		"Successfully copied running configuration to startup configuration file for node: %q\n",
 		n.Cfg.ShortName,
 	)

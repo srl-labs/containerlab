@@ -202,31 +202,31 @@ func (mr *MockNodeOverwritesMockRecorder) RunExec(arg0, arg1 any) *gomock.Call {
 }
 
 // VerifyContainerName mocks base method.
-func (m *MockNodeOverwrites) VerifyContainerName() error {
+func (m *MockNodeOverwrites) VerifyContainerName(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyContainerName")
+	ret := m.ctrl.Call(m, "VerifyContainerName", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyContainerName indicates an expected call of VerifyContainerName.
-func (mr *MockNodeOverwritesMockRecorder) VerifyContainerName() *gomock.Call {
+func (mr *MockNodeOverwritesMockRecorder) VerifyContainerName(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyContainerName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyContainerName), ctx)
 }
 
 // VerifyHostRequirements mocks base method.
-func (m *MockNodeOverwrites) VerifyHostRequirements() error {
+func (m *MockNodeOverwrites) VerifyHostRequirements(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHostRequirements")
+	ret := m.ctrl.Call(m, "VerifyHostRequirements", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHostRequirements indicates an expected call of VerifyHostRequirements.
-func (mr *MockNodeOverwritesMockRecorder) VerifyHostRequirements() *gomock.Call {
+func (mr *MockNodeOverwritesMockRecorder) VerifyHostRequirements(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHostRequirements", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyHostRequirements))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHostRequirements", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyHostRequirements), ctx)
 }
 
 // VerifyLicenseFileExists mocks base method.

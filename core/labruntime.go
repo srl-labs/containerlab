@@ -183,7 +183,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 	}
 
 	if opts.cleanup {
-		return c.cleanupLabRuntimeLabDir()
+		return c.cleanupLabRuntimeLabDir(ctx)
 	}
 
 	return nil
@@ -192,7 +192,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 // cleanupLabRuntimeLabDir removes the local lab directory for --cleanup parity with local
 // runtimes. Controller-driven runtimes keep node state remotely, so the directory usually only
 // exists when a lab was previously deployed locally or configs were copied out.
-func (c *CLab) cleanupLabRuntimeLabDir() error {
+func (c *CLab) cleanupLabRuntimeLabDir(ctx context.Context) error {
 	if c.TopoPaths == nil || !c.TopoPaths.TopologyFileIsSet() {
 		return nil
 	}
@@ -205,7 +205,7 @@ func (c *CLab) cleanupLabRuntimeLabDir() error {
 		return nil
 	}
 
-	log.Info("Removing lab directory", "path", labDir)
+	log.FromContext(ctx).Info("Removing lab directory", "path", labDir)
 
 	if err := os.RemoveAll(labDir); err != nil {
 		return fmt.Errorf("failed to remove lab directory %q: %w", labDir, err)
@@ -224,7 +224,7 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 	}
 
 	if len(states) == 0 {
-		log.Info("no clabernetes topologies found")
+		log.FromContext(ctx).Info("no clabernetes topologies found")
 		return nil
 	}
 
@@ -327,7 +327,11 @@ func (c *CLab) execWithLabRuntime(
 	for idx := range containers {
 		namespace, labName, nodeName, err := labRuntimeContainerParts(containers[idx])
 		if err != nil {
-			log.Warnf("exec target %s is invalid: %v", containers[idx].Names[0], err)
+			log.FromContext(ctx).Warnf(
+				"exec target %s is invalid: %v",
+				containers[idx].Names[0],
+				err,
+			)
 			execErrors = append(execErrors, fmt.Errorf(
 				"exec target %s is invalid: %w", containers[idx].Names[0], err))
 			continue
@@ -342,7 +346,7 @@ func (c *CLab) execWithLabRuntime(
 				Command:   execCmd.GetCmd(),
 			})
 			if err != nil {
-				log.Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
+				log.FromContext(ctx).Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
 				execErrors = append(execErrors, fmt.Errorf(
 					"exec on %s failed: %w", containers[idx].Names[0], err))
 				continue
@@ -412,7 +416,7 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 		return nil
 	}
 
-	return c.copyLabRuntimeSavedFiles(result, opts.copyDst)
+	return c.copyLabRuntimeSavedFiles(ctx, result, opts.copyDst)
 }
 
 func (c *CLab) containersFromLabState(
@@ -746,6 +750,7 @@ func labRuntimeLabelMatches(labels map[string]string, filter *clabtypes.GenericF
 }
 
 func (c *CLab) copyLabRuntimeSavedFiles(
+	ctx context.Context,
 	result *clablabruntime.SaveResult,
 	dstRoot string,
 ) error {
@@ -794,7 +799,7 @@ func (c *CLab) copyLabRuntimeSavedFiles(
 			return fmt.Errorf("failed to write saved config %q: %w", dstPath, err)
 		}
 
-		log.Info(
+		log.FromContext(ctx).Info(
 			"copied saved config",
 			"node", file.NodeName,
 			"dst", dstPath,

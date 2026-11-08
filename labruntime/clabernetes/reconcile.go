@@ -430,7 +430,7 @@ func (r *Runtime) deployTopology(
 		}
 		if topologyCreated &&
 			r.topologyChangedSinceCreate(ctx, namespace, req.Name, createdTopology) {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"leaving the C9s lab in place: its Topology changed since this deploy started",
 				"name", req.Name,
 				"namespace", namespace,
@@ -466,7 +466,7 @@ func (r *Runtime) deployTopology(
 	if primitiveExists {
 		operation = "Adopting"
 	}
-	log.Info(
+	log.FromContext(ctx).Info(
 		operation+" C9s lab topology",
 		"name", req.Name,
 		"namespace", namespace,

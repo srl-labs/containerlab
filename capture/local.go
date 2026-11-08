@@ -242,7 +242,7 @@ func (r *localReader) run(ctx context.Context, source packetSource) {
 		if err != nil {
 			// The socket reports an error once its interface went down or was removed, and
 			// keeps reporting it: it is reopened.
-			log.Debug("Capture socket failed, reopening it", "node", r.target.Node,
+			log.FromContext(ctx).Debug("Capture socket failed, reopening it", "node", r.target.Node,
 				"interface", r.target.Interface, "error", err)
 			source.Close()
 			source = r.reopen(ctx)
@@ -314,7 +314,7 @@ func (r *localReader) reopen(ctx context.Context) packetSource {
 		select {
 		case <-ctx.Done():
 			if unavailable != nil {
-				r.reportGap(from, time.Time{}, unavailable)
+				r.reportGap(ctx, from, time.Time{}, unavailable)
 			}
 
 			return nil
@@ -324,7 +324,7 @@ func (r *localReader) reopen(ctx context.Context) packetSource {
 		opened, err := r.capture.open(ctx, r.target.Exec, []string{r.target.Interface}, r.snap)
 		if err != nil {
 			if unavailable == nil {
-				log.Debug("Capture interface is not available, waiting for it",
+				log.FromContext(ctx).Debug("Capture interface is not available, waiting for it",
 					"node", r.target.Node, "interface", r.target.Interface, "error", err)
 			}
 			unavailable = err
@@ -333,15 +333,15 @@ func (r *localReader) reopen(ctx context.Context) packetSource {
 			continue
 		}
 		if unavailable != nil {
-			r.reportGap(from, time.Now(), unavailable)
+			r.reportGap(ctx, from, time.Now(), unavailable)
 		}
 
 		return opened[0]
 	}
 }
 
-func (r *localReader) reportGap(from, to time.Time, cause error) {
-	ReportGap(r.onGap, clablabruntime.CaptureGap{
+func (r *localReader) reportGap(ctx context.Context, from, to time.Time, cause error) {
+	ReportGap(ctx, r.onGap, clablabruntime.CaptureGap{
 		Node:       r.target.Node,
 		Interfaces: []string{r.target.Interface},
 		From:       from,

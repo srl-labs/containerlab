@@ -53,7 +53,7 @@ func (c *CLab) Exec(
 				if errors.Is(err, clabexec.ErrRunExecNotSupported) {
 					continue
 				}
-				log.Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
+				log.FromContext(ctx).Warnf("exec on %s failed: %v", containers[idx].Names[0], err)
 				continue
 			}
 

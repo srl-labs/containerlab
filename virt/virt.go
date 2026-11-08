@@ -2,6 +2,7 @@ package virt
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"strings"
 
@@ -17,7 +18,7 @@ func VerifySSSE3Support() bool {
 // VerifyVirtSupport checks if virtualization is supported by a cpu in case topology contains
 // VM-based nodes
 // when clab itself is being invoked as a container, this check is bypassed.
-func VerifyVirtSupport() bool {
+func VerifyVirtSupport(ctx context.Context) bool {
 	// check if we are being executed in a container environment
 	// in that case we skip this check as there are no convenient ways to interrogate hosts
 	// capabilities
@@ -26,7 +27,7 @@ func VerifyVirtSupport() bool {
 
 	f, err := os.Open("/proc/2/status")
 	if err != nil {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"/proc/2/status file was not found. This means we run in a container and no virt checks are possible",
 		)
 		return true
@@ -39,7 +40,7 @@ func VerifyVirtSupport() bool {
 
 	scanner.Scan()
 	if !strings.Contains(scanner.Text(), "kthreadd") {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"/proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible",
 		)
 		return true
@@ -47,7 +48,7 @@ func VerifyVirtSupport() bool {
 
 	f, err = os.Open("/proc/cpuinfo")
 	if err != nil {
-		log.Debugf("Error checking VirtSupport: %v", err)
+		log.FromContext(ctx).Debugf("Error checking VirtSupport: %v", err)
 		return false
 	}
 	defer f.Close() // skipcq: GO-S2307
@@ -57,7 +58,7 @@ func VerifyVirtSupport() bool {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") ||
 			strings.Contains(scanner.Text(), "svm") {
-			log.Debug("virtualization support found")
+			log.FromContext(ctx).Debug("virtualization support found")
 
 			return true
 		}

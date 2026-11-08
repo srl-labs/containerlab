@@ -122,7 +122,7 @@ func (t *containerTracker) refresh(ctx context.Context, ref labRef) bool {
 		var notFound *labNotFoundError
 		if !errors.As(err, &notFound) {
 			if ctx.Err() == nil {
-				log.Debug("Failed to read a C9s lab for container events",
+				log.FromContext(ctx).Debug("Failed to read a C9s lab for container events",
 					"namespace", ref.namespace, "lab", ref.lab, "error", err)
 			}
 

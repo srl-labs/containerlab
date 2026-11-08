@@ -200,7 +200,7 @@ func AllocateManagementIPs(
 			}
 			for i, ok := range available {
 				if !ok {
-					log.Warn(
+					log.FromContext(ctx).Warn(
 						"Duplicate static management address; retaining configured address",
 						"node", explicitAssignments[i].node.ShortName,
 						"address", explicitAddresses[i],

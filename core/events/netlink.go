@@ -266,7 +266,10 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 
 	containerName := firstContainerName(w.container)
 	if w.container.Runtime == nil {
-		log.Debugf("container %s has no runtime, skipping netlink watcher", containerName)
+		log.FromContext(ctx).Debugf(
+			"container %s has no runtime, skipping netlink watcher",
+			containerName,
+		)
 
 		return
 	}
@@ -295,7 +298,7 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 			failures = 0
 			delay = watchRetryDelay
 
-			log.Warnf(
+			log.FromContext(ctx).Warnf(
 				"netlink subscription for container %s ended, resubscribing: %v",
 				containerName,
 				err,
@@ -303,12 +306,16 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		} else {
 			failures++
 			if failures >= watchMaxAttempts {
-				log.Warnf("stopped watching interfaces of container %s: %v", containerName, err)
+				log.FromContext(ctx).Warnf(
+					"stopped watching interfaces of container %s: %v",
+					containerName,
+					err,
+				)
 
 				return
 			}
 
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"failed to watch interfaces of container %s, retrying in %s: %v",
 				containerName,
 				delay,
@@ -359,7 +366,7 @@ func (w *netlinkWatcher) watch(
 	netemQuery := newNetemQuerier(nsHandle)
 	defer netemQuery.Close()
 
-	netemInfos := netemQuery.Query()
+	netemInfos := netemQuery.Query(ctx)
 
 	updates := make(chan netlink.LinkUpdate, 32)
 	done := make(chan struct{})
@@ -376,7 +383,7 @@ func (w *netlinkWatcher) watch(
 		// An interrupted listing is reported here too. It needs no action:
 		// links that changed during the listing also arrive as updates.
 		ErrorCallback: func(err error) {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"netlink subscription for container %s: %v",
 				firstContainerName(w.container),
 				err,
@@ -394,7 +401,7 @@ func (w *netlinkWatcher) watch(
 
 	var vanished map[int]struct{}
 	if len(states) > 0 {
-		vanished = w.removeVanishedLinks(netHandle, states, statsSamples, registry)
+		vanished = w.removeVanishedLinks(ctx, netHandle, states, statsSamples, registry)
 	}
 
 	// Set up netem polling interval (reuse stats interval or default to 1s).
@@ -418,9 +425,9 @@ func (w *netlinkWatcher) watch(
 	for {
 		select {
 		case <-tickerC:
-			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
+			w.collectAndEmitStats(ctx, netHandle, states, statsSamples, registry)
 		case <-netemTicker.C:
-			w.pollNetemChanges(states, registry, netemQuery)
+			w.pollNetemChanges(ctx, states, registry, netemQuery)
 		case <-ctx.Done():
 			return true, nil
 		case update, ok := <-updates:
@@ -451,7 +458,7 @@ func (w *netlinkWatcher) watch(
 				continue
 			}
 
-			w.processUpdate(states, statsSamples, update, registry, netemQuery)
+			w.processUpdate(ctx, states, statsSamples, update, registry, netemQuery)
 		}
 	}
 }
@@ -507,6 +514,7 @@ func (w *netlinkWatcher) processExisting(
 // removeVanishedLinks reports the links that were deleted while no
 // subscription was active and returns their indexes.
 func (w *netlinkWatcher) removeVanishedLinks(
+	ctx context.Context,
 	netHandle *netlink.Handle,
 	states map[int]ifaceSnapshot,
 	statsSamples map[int]ifaceStatsSample,
@@ -514,7 +522,7 @@ func (w *netlinkWatcher) removeVanishedLinks(
 ) map[int]struct{} {
 	current, err := snapshotInterfaces(netHandle)
 	if err != nil {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"failed to list interfaces of container %s: %v",
 			firstContainerName(w.container),
 			err,
@@ -541,6 +549,7 @@ func (w *netlinkWatcher) removeVanishedLinks(
 }
 
 func (w *netlinkWatcher) processUpdate(
+	ctx context.Context,
 	states map[int]ifaceSnapshot,
 	statsSamples map[int]ifaceStatsSample,
 	update netlink.LinkUpdate,
@@ -572,7 +581,7 @@ func (w *netlinkWatcher) processUpdate(
 		registry.emitInterfaceEvent(w.container, "delete", previous)
 	case unix.RTM_NEWLINK:
 		// Query netem info for this interface
-		snapshot = withNetem(snapshot, netemQuery.Query())
+		snapshot = withNetem(snapshot, netemQuery.Query(ctx))
 
 		if exists && snapshot.equal(previous) {
 			return
@@ -595,11 +604,12 @@ func (w *netlinkWatcher) processUpdate(
 
 // pollNetemChanges checks for netem changes and emits update events.
 func (w *netlinkWatcher) pollNetemChanges(
+	ctx context.Context,
 	states map[int]ifaceSnapshot,
 	registry *netlinkRegistry,
 	netemQuery *netemQuerier,
 ) {
-	netemInfos := netemQuery.Query()
+	netemInfos := netemQuery.Query(ctx)
 
 	for idx, snapshot := range states {
 		previous := snapshot
@@ -1035,6 +1045,7 @@ func newStatsSample(snapshot ifaceSnapshot, timestamp time.Time) (ifaceStatsSamp
 }
 
 func (w *netlinkWatcher) collectAndEmitStats(
+	ctx context.Context,
 	netHandle *netlink.Handle,
 	states map[int]ifaceSnapshot,
 	statsSamples map[int]ifaceStatsSample,
@@ -1049,7 +1060,7 @@ func (w *netlinkWatcher) collectAndEmitStats(
 	// per interface to reduce syscall overhead in large labs.
 	currentStates, err := snapshotInterfaces(netHandle)
 	if err != nil {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"failed to collect interface stats snapshot for container %s: %v",
 			firstContainerName(w.container),
 			err,
@@ -1186,12 +1197,12 @@ func (q *netemQuerier) Close() {
 
 // Query queries the TC qdiscs in the namespace and returns a map of
 // interface index to netem data.
-func (q *netemQuerier) Query() map[int]netemInfo {
+func (q *netemQuerier) Query(ctx context.Context) map[int]netemInfo {
 	result := make(map[int]netemInfo)
 
 	qdiscs, err := q.qdiscs()
 	if err != nil {
-		log.Debugf("failed to query tc qdiscs: %v", err)
+		log.FromContext(ctx).Debugf("failed to query tc qdiscs: %v", err)
 		return result
 	}
 

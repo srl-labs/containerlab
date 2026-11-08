@@ -5,6 +5,7 @@
 package juniper_csrx
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -79,7 +80,7 @@ func TestCreateCSRXFilesGeneratesDefaultArtifacts(t *testing.T) {
 		ShortName: "csrx1",
 	})
 
-	if err := createCSRXFiles(node); err != nil {
+	if err := createCSRXFiles(context.Background(), node); err != nil {
 		t.Fatalf("unexpected createCSRXFiles error: %v", err)
 	}
 
@@ -118,7 +119,7 @@ func TestCreateCSRXFilesCopiesStartupConfigAndLicense(t *testing.T) {
 		License:       license,
 	})
 
-	if err := createCSRXFiles(node); err != nil {
+	if err := createCSRXFiles(context.Background(), node); err != nil {
 		t.Fatalf("unexpected createCSRXFiles error: %v", err)
 	}
 

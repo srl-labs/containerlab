@@ -111,16 +111,16 @@ func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	return nil
 }
 
-func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *sonic_vm) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
 
 	n.sshPubKeys = params.SSHPubKeys
 
-	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+	return clabnodes.LoadStartupConfigFileVr(ctx, n, configDirName, startupCfgFName)
 }
 
 func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
@@ -139,7 +139,13 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 		return fmt.Errorf("failed to deploy SSH public keys for node %s: %w", n.Cfg.ShortName, err)
 	}
 
-	log.Info("Deployed SSH public key(s)", "count", len(n.sshPubKeys), "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Info(
+		"Deployed SSH public key(s)",
+		"count",
+		len(n.sshPubKeys),
+		"node",
+		n.Cfg.ShortName,
+	)
 
 	return nil
 }
@@ -149,13 +155,13 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 	commands := buildSSHKeyInjectionCommands(clabutils.MarshalSSHPubKeys(n.sshPubKeys))
 
-	log.Info("Waiting for healthy status. This may take a while",
+	log.FromContext(ctx).Info("Waiting for healthy status. This may take a while",
 		"node", n.Cfg.ShortName)
 
 	for {
 		healthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			log.Debug("health check failed", "node", n.Cfg.ShortName, "error", err)
+			log.FromContext(ctx).Debug("health check failed", "node", n.Cfg.ShortName, "error", err)
 		}
 
 		if !healthy {
@@ -163,7 +169,11 @@ func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 			case <-ctx.Done():
 				return fmt.Errorf("timed out waiting for node to become healthy")
 			default:
-				log.Debug("waiting for node to become healthy", "node", n.Cfg.ShortName)
+				log.FromContext(ctx).Debug(
+					"waiting for node to become healthy",
+					"node",
+					n.Cfg.ShortName,
+				)
 				time.Sleep(readyRetryInterval)
 				continue
 			}
@@ -187,7 +197,7 @@ func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 			}
 
 			if err := driver.Open(); err != nil {
-				log.Debugf("%s: SSH not yet ready - %v", n.Cfg.ShortName, err)
+				log.FromContext(ctx).Debugf("%s: SSH not yet ready - %v", n.Cfg.ShortName, err)
 				time.Sleep(readyRetryInterval)
 				continue
 			}
@@ -231,7 +241,7 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult,
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
-	log.Infof(
+	log.FromContext(ctx).Infof(
 		"saved /etc/sonic/config_db.json backup from %s node to %s\n",
 		n.Cfg.ShortName,
 		confPath,

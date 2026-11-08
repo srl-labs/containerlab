@@ -99,9 +99,9 @@ func (n *vrOpenBSD) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	return nil
 }
 
-func (n *vrOpenBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *vrOpenBSD) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (n *vrOpenBSD) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
-	log.Infof("saved /etc backup from %s node to %s\n", n.Cfg.ShortName, confPath)
+	log.FromContext(ctx).Infof("saved /etc backup from %s node to %s\n", n.Cfg.ShortName, confPath)
 
 	return nil, nil
 }

@@ -87,7 +87,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 	if len(desiredLinks) == 0 {
 		return nil
 	}
-	log.Info(
+	log.FromContext(ctx).Info(
 		"Waiting for C9s links to resolve",
 		"lab", topologyName,
 		"namespace", namespace,
@@ -144,7 +144,7 @@ func (r *Runtime) waitPrimitiveLinksResolved(
 			return len(pending) == 0, nil
 		})
 	if err == nil {
-		log.Info(
+		log.FromContext(ctx).Info(
 			"C9s links are resolved",
 			"namespace", namespace,
 			"links", len(desiredLinks),

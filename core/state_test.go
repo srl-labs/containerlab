@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 		},
 		Nodes: map[string]clabnodes.Node{"node": node},
 	}
-	if err := c.WriteState(); err != nil {
+	if err := c.WriteState(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(paths.StateFile())
@@ -58,7 +59,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	}
 	// A no-op apply can have unpopulated runtime fields; preserve its prior preferences.
 	cfg.MgmtIPv4Address, cfg.MgmtIPv6Address = "", ""
-	if err := c.WriteState(); err != nil {
+	if err := c.WriteState(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	state, err = c.LoadState()
@@ -70,7 +71,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	}
 	// Topology changes do not discard the last allocated address.
 	topology.Nodes["node"].MgmtIPv4 = "192.0.2.9"
-	if err := c.WriteState(); err != nil {
+	if err := c.WriteState(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	state, err = c.LoadState()
@@ -92,7 +93,7 @@ func TestStateStoresPreferredAllocationsSeparatelyFromTopology(t *testing.T) {
 	}
 	// Deleted nodes must not keep preferences indefinitely.
 	delete(c.Nodes, "node")
-	if err := c.WriteState(); err != nil {
+	if err := c.WriteState(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	state, err = c.LoadState()
@@ -114,7 +115,7 @@ func TestStatePreservesNetworksDroppedFromTopology(t *testing.T) {
 	write := func(networks ...*clabtypes.MgmtNet) *LabState {
 		t.Helper()
 		c := &CLab{TopoPaths: paths, Config: &Config{Mgmt: main, MgmtNetworks: networks}}
-		if err := c.WriteState(); err != nil {
+		if err := c.WriteState(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 		state, err := c.LoadState()

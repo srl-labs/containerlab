@@ -4,6 +4,7 @@
 package nodes
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"errors"
@@ -157,7 +158,13 @@ func TestWriteSavedConfig(t *testing.T) {
 	}
 	cfg := &clabtypes.NodeConfig{ShortName: "r1", LabDir: labDir}
 
-	res, err := WriteSavedConfig(cfg, "ftpboot", "config.auto.rsc", []byte("set name=r1\n"))
+	res, err := WriteSavedConfig(
+		context.Background(),
+		cfg,
+		"ftpboot",
+		"config.auto.rsc",
+		[]byte("set name=r1\n"),
+	)
 	if err != nil {
 		t.Fatalf("WriteSavedConfig: %v", err)
 	}
@@ -170,7 +177,7 @@ func TestWriteSavedConfig(t *testing.T) {
 		t.Errorf("written content = %q", got)
 	}
 
-	if _, err := WriteSavedConfig(cfg, "missing", "x.rsc", nil); err == nil {
+	if _, err := WriteSavedConfig(context.Background(), cfg, "missing", "x.rsc", nil); err == nil {
 		t.Error("want an error for a missing directory")
 	}
 }

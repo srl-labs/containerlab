@@ -562,8 +562,8 @@ func (run *captureRun) emit(id uint32, packet *clabcapture.Packet) (bool, error)
 	return run.out.Emit(id, packet)
 }
 
-func (run *captureRun) reportGap(gap clablabruntime.CaptureGap) {
-	clabcapture.ReportGap(run.req.OnGap, gap)
+func (run *captureRun) reportGap(ctx context.Context, gap clablabruntime.CaptureGap) {
+	clabcapture.ReportGap(ctx, run.req.OnGap, gap)
 }
 
 // captureSegment is one clabwire capture process of a chain.
@@ -760,7 +760,7 @@ func (c *captureChain) handle(
 
 	switch {
 	case event.audit != nil:
-		return false, c.handleAudit(segment, event.audit)
+		return false, c.handleAudit(ctx, segment, event.audit)
 	case event.packet != nil:
 		return c.handlePacket(segment, event.packet)
 	case event.done:
@@ -772,7 +772,7 @@ func (c *captureChain) handle(
 			if segment == c.next && segment.started.IsZero() && c.retries < captureStartRetries {
 				// the follow-up did not start; try again while the active one still runs
 				c.retries++
-				log.Warn("Capture follow-up segment failed to start, retrying",
+				log.FromContext(ctx).Warn("Capture follow-up segment failed to start, retrying",
 					"node", c.group.display, "error", event.err)
 				c.next = nil
 				resetTimer(timer, time.Second)
@@ -793,12 +793,25 @@ func (c *captureChain) handle(
 	return false, nil
 }
 
-func (c *captureChain) handleAudit(segment *captureSegment, audit *captureAudit) error {
+func (c *captureChain) handleAudit(
+	ctx context.Context,
+	segment *captureSegment,
+	audit *captureAudit,
+) error {
 	switch audit.Status {
 	case captureAuditStarted:
 		segment.started = audit.Time
-		log.Debug("Capture segment started", "node", c.group.display, "segment", segment.index,
-			"interfaces", strings.Join(c.group.interfaces, ","), "duration", segment.duration)
+		log.FromContext(ctx).Debug(
+			"Capture segment started",
+			"node",
+			c.group.display,
+			"segment",
+			segment.index,
+			"interfaces",
+			strings.Join(c.group.interfaces, ","),
+			"duration",
+			segment.duration,
+		)
 		if segment == c.next && !c.active.started.IsZero() {
 			c.setCut()
 		}
@@ -807,7 +820,7 @@ func (c *captureChain) handleAudit(segment *captureSegment, audit *captureAudit)
 		}
 	case captureAuditSucceeded:
 		segment.ended = audit.Time
-		log.Debug("Capture segment succeeded", "node", c.group.display,
+		log.FromContext(ctx).Debug("Capture segment succeeded", "node", c.group.display,
 			"segment", segment.index, "packets", audit.Packets)
 	case captureAuditDenied, captureAuditFailed:
 		return captureAuditError(c.group.display, audit)
@@ -917,7 +930,7 @@ func (c *captureChain) switchSegments(ctx context.Context, timer *time.Timer) (b
 		if c.next != nil && !c.next.started.IsZero() {
 			gap.To = c.next.started
 		}
-		c.capture.reportGap(gap)
+		c.capture.reportGap(ctx, gap)
 	}
 
 	if c.next != nil && c.next.done && !c.stopping {
@@ -1061,8 +1074,13 @@ func (c *captureChain) start(ctx context.Context, duration time.Duration) *captu
 		select {
 		case <-execDone:
 		case <-grace.C:
-			log.Debug("Capture segment did not end after its stdin closed, cutting the stream",
-				"node", c.group.display, "segment", segment.index)
+			log.FromContext(ctx).Debug(
+				"Capture segment did not end after its stdin closed, cutting the stream",
+				"node",
+				c.group.display,
+				"segment",
+				segment.index,
+			)
 			cancelExec()
 		}
 	}()

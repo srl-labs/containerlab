@@ -329,7 +329,7 @@ func (r *Runtime) DialPort(
 		return nil, err
 	}
 
-	conn, err := r.dialPodPort(location.Namespace, location.Pod, port)
+	conn, err := r.dialPodPort(ctx, location.Namespace, location.Pod, port)
 	if err != nil {
 		return nil, fmt.Errorf("failed to port-forward to port %d of c9s node %s/%s/%s: %w",
 			port, location.Namespace, req.Name, location.NodeName, err)
@@ -340,7 +340,11 @@ func (r *Runtime) DialPort(
 
 // dialPodPort opens a forwarded connection to a pod port over SPDY. The transport is built
 // from the runtime's rest config, so it carries its impersonation headers.
-func (r *Runtime) dialPodPort(namespace, pod string, port int) (net.Conn, error) {
+func (r *Runtime) dialPodPort(
+	ctx context.Context,
+	namespace, pod string,
+	port int,
+) (net.Conn, error) {
 	forwardURL := r.kubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod).
@@ -360,7 +364,7 @@ func (r *Runtime) dialPodPort(namespace, pod string, port int) (net.Conn, error)
 		return nil, err
 	}
 
-	conn, err := newPortForwardConn(streamConn, port)
+	conn, err := newPortForwardConn(ctx, streamConn, port)
 	if err != nil {
 		_ = streamConn.Close()
 
@@ -373,7 +377,11 @@ func (r *Runtime) dialPodPort(namespace, pod string, port int) (net.Conn, error)
 // newPortForwardConn opens the error and data streams of one forwarded connection and returns
 // one end of an in-memory pipe whose other end is copied to and from the data stream. The pipe
 // gives the caller a complete net.Conn, deadlines included.
-func newPortForwardConn(streamConn httpstream.Connection, port int) (net.Conn, error) {
+func newPortForwardConn(
+	ctx context.Context,
+	streamConn httpstream.Connection,
+	port int,
+) (net.Conn, error) {
 	requestID := strconv.FormatInt(portForwardRequestID.Add(1), 10)
 
 	headers := http.Header{}
@@ -410,7 +418,7 @@ func newPortForwardConn(streamConn httpstream.Connection, port int) (net.Conn, e
 		// the API server reports a failure to reach the port on the error stream
 		message, _ := io.ReadAll(errorStream)
 		if len(message) != 0 {
-			log.Warn("Port forward failed", "port", port, "error", string(message))
+			log.FromContext(ctx).Warn("Port forward failed", "port", port, "error", string(message))
 			_ = remote.Close()
 		}
 	}()

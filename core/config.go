@@ -572,7 +572,7 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.verifyTailscaleProxy(); err != nil {
+	if err := c.verifyTailscaleProxy(ctx); err != nil {
 		return err
 	}
 
@@ -653,7 +653,7 @@ func (c *CLab) verifyLinks(
 }
 
 // LoadKernelModules loads containerlab-required kernel modules.
-func (*CLab) loadKernelModules() error {
+func (*CLab) loadKernelModules(ctx context.Context) error {
 	modules := []string{"ip_tables", "ip6_tables"}
 
 	opts := []kmod.Option{
@@ -667,17 +667,17 @@ func (*CLab) loadKernelModules() error {
 		}
 
 		if isLoaded {
-			log.Debugf("kernel module %q is already loaded", m)
+			log.FromContext(ctx).Debugf("kernel module %q is already loaded", m)
 
 			continue
 		}
 
-		log.Debugf("kernel module %q is not loaded. Trying to load", m)
+		log.FromContext(ctx).Debugf("kernel module %q is not loaded. Trying to load", m)
 		// trying to load the kernel modules.
 		km, err := kmod.New(opts...)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				log.Debugf(
+				log.FromContext(ctx).Debugf(
 					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
 					err,
 					m,
@@ -686,7 +686,7 @@ func (*CLab) loadKernelModules() error {
 				return nil
 			}
 
-			log.Warnf("Unable to init module loader: %v. Skipping...", err)
+			log.FromContext(ctx).Warnf("Unable to init module loader: %v. Skipping...", err)
 
 			return nil
 		}
@@ -698,7 +698,7 @@ func (*CLab) loadKernelModules() error {
 			)
 		}
 
-		log.Debugf("kernel module %q loaded successfully", m)
+		log.FromContext(ctx).Debugf("kernel module %q loaded successfully", m)
 	}
 
 	return nil

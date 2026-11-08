@@ -1,6 +1,7 @@
 package dependency_manager
 
 import (
+	"context"
 	"testing"
 )
 
@@ -92,7 +93,11 @@ func Test_recursiveAcyclicityCheck(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isAcyclic(tt.args.dependencies, tt.args.i); got != tt.want {
+			if got := isAcyclic(
+				context.Background(),
+				tt.args.dependencies,
+				tt.args.i,
+			); got != tt.want {
 				t.Errorf("recursiveAcyclicityCheck() = %v, want %v", got, tt.want)
 			}
 		})

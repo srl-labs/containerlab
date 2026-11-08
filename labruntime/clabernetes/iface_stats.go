@@ -196,7 +196,7 @@ func (p *interfacePoller) round(ctx context.Context) {
 
 	states, err := p.r.labStates(ctx, p.scope)
 	if err != nil {
-		log.Debug("failed to list C9s labs for interface events", "error", err)
+		log.FromContext(ctx).Debug("failed to list C9s labs for interface events", "error", err)
 		return
 	}
 
@@ -228,7 +228,7 @@ func (p *interfacePoller) round(ctx context.Context) {
 			return
 		}
 		if sample.err != nil {
-			log.Debug("failed to sample C9s interfaces",
+			log.FromContext(ctx).Debug("failed to sample C9s interfaces",
 				"namespace", sample.target.state.Namespace,
 				"lab", sample.target.state.Name,
 				"node", sample.target.node.Name,
@@ -318,10 +318,14 @@ func (p *interfacePoller) sample(
 		p.noShell[podName] = true
 		p.noShellMu.Unlock()
 
-		log.Debug("C9s device container has no shell; reporting interface statistics only",
-			"namespace", target.state.Namespace,
-			"lab", target.state.Name,
-			"node", target.node.Name,
+		log.FromContext(ctx).Debug(
+			"C9s device container has no shell; reporting interface statistics only",
+			"namespace",
+			target.state.Namespace,
+			"lab",
+			target.state.Name,
+			"node",
+			target.node.Name,
 		)
 
 		stdout, stderr, rc, err = p.r.execInPod(ctx, target.pod, target.node.Container,
