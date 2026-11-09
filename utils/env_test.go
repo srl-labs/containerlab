@@ -249,6 +249,18 @@ func TestSubstituteEnvs(t *testing.T) {
 			in:   "a: ${VAR:=default}",
 			want: "a: default",
 		},
+		// like in a shell, an empty value counts as not set for ":=" and ":-"
+		"empty_value_default": {
+			env:  []string{"VAR="},
+			in:   "a: ${VAR:=default} b: ${VAR:-default}",
+			want: "a: default b: default",
+		},
+		// like with the process environment before, an empty var without a default stays unexpanded
+		"empty_value": {
+			env:  []string{"VAR="},
+			in:   "a: '${VAR}'",
+			want: "a: '$VAR'",
+		},
 		"process_env_ignored": {
 			env:  []string{"VAR=given"},
 			in:   "a: ${CLAB_TEST_PROCESS_VAR}",

@@ -645,8 +645,6 @@ func SubstituteEnvsAndTemplateWithEnv(r io.Reader, data any, env []string) (*byt
 	}
 
 	// expand env vars in `b` if any were set
-	// do not replace vars initialized with defaults
-	// and do not replace vars that are not set
 	b, err = SubstituteEnvs(b, env)
 	if err != nil {
 		return nil, err
