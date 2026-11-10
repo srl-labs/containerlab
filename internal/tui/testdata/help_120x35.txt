@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs            all labs · docker · ● 48/53 nodes · ↓412M ↑413M
+── help ────────────────────────────────────────────────────────────────────────────────────────────────── 1-31 of 82 ──
+ The basics
+   ↑ ↓          move to a lab, a node, an interface
+   ⏎            open it
+   esc          go back
+   a            show what can be done with it, and do it
+   /            find it by typing part of its name
+   q            quit
+
+ Getting around
+   ⏎ or →       go into the selected item: a lab, a node, a job
+   esc or ←     go back out: clear the filter, the marks, then leave
+   [ ]          previous and next: lab, or node when one is open
+   ctrl+k       go to a lab, a node or a view by typing part of its name
+   1 … 6        views: labs, nodes, interfaces, links, map, jobs
+   0            show all labs in the current view
+   :            command line: a view, the name of a lab or node, :theme, :quit
+   q            go back, quit from the list of labs
+   ctrl+c       quit
+
+ Lists
+   ↑ ↓ j k      move
+   pgup pgdn    move a page, ctrl+u and ctrl+d half a page
+   g G          first and last row
+   /            filter; several words must all match, !word excludes
+   < >          sort by the previous or next column, also shift+← →
+   I            invert the sort order
+   space        mark the row, actions then apply to all marked rows
+   ctrl+a       mark or unmark all rows
+   p            show or hide the details pane
+   a            menu of everything that can be done with the selection
+   ctrl+r       reload
+ ↑↓ scroll  g/G top/end  / find  esc back  ? help
+                                                                                                                   demo

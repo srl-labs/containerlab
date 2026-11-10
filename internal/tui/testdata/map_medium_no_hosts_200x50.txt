@@ -1,0 +1,50 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                                                                                         lab: fabric · docker · ● 64/64 nodes · ↓167M ↑167M
+── labs ▸ fabric ▸ map ─────────────────────────────────────────────────────────────────────────────────────────────────────────── layout: tiers ── zoom: compact ── view: no hosts ── 16 of 64 nodes ──
+            [spine1]                          [spine2]                          [spine3]                          [spine4]                                         │ spine1
+    ┌──────────┴┬───────────┬────────┬───────────┬─┴─────────┬────────┬───────────┬─┴──────┬───────────┬───────────┬─┴─────────┐                                   │ ● ready
+[leaf1 +4] [leaf2 +4] [leaf3 +4] [leaf4 +4] [leaf5 +4] [leaf6 +4] [leaf7 +4] [leaf8 +4] [leaf9 +4] [leaf10 +4] [leaf11 +4] [leaf12 +4]                             │ nokia_srlinux
+                                                                                                                                                                   │ 172.20.27.11
+                                                                                                                                                                   │ CPU   23% ▃▃▃▃▂▃▃▃▃▃▂▂▃▃▃▃
+                                                                                                                                                                   │ MEM  707M
+                                                                                                                                                                   │
+                                                                                                                                                                   │ links
+                                                                                                                                                                   │ ● e1-1      leaf1      ↓436k ↑619k
+                                                                                                                                                                   │ ● e1-2      leaf2      ↓1.8M ↑1.7M
+                                                                                                                                                                   │ ● e1-3      leaf3      ↓784k ↑936k
+                                                                                                                                                                   │ ● e1-4      leaf4      ↓1.6M ↑1.7M
+                                                                                                                                                                   │ ● e1-5      leaf5      ↓3.6M ↑3.3M
+                                                                                                                                                                   │ ● e1-6      leaf6      ↓211k ↑189k
+                                                                                                                                                                   │ ● e1-7      leaf7      ↓356k ↑278k
+                                                                                                                                                                   │ ● e1-8      leaf8      ↓2.7M ↑1.5M
+                                                                                                                                                                   │ ● e1-9      leaf9      ↓2.5M ↑882k
+                                                                                                                                                                   │ ● e1-10     leaf10     ↓4.1M ↑1.4M
+                                                                                                                                                                   │ ● e1-11     leaf11     ↓428k ↑913k
+                                                                                                                                                                   │ ● e1-12     leaf12     ↓437k ↑298k
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+ ←↑↓→ node  tab link  ⏎ open  s shell  S ssh  c connect  a actions  / go to  e extent  i names  r rates  + zoom in  - out  f fit  v layout  p panel  ? help
+ • showing: no hosts — 16 of 64 nodes                                                                                                                                                              demo

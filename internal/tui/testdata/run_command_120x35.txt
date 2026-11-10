@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── labs ▸ dc1 ▸ run ─────────────────────────────────────────────────────────────────────────────── 7 ok ── 3 pending ──
+ $ ip -br addr
+
+ ● spine1  exit 0 · 40ms
+   demo output of "ip -br addr" on spine1
+
+ ● spine2  exit 0 · 53ms
+   demo output of "ip -br addr" on spine2
+
+ ● leaf1  exit 0 · 66ms
+   demo output of "ip -br addr" on leaf1
+
+ ● leaf2  exit 0 · 79ms
+   demo output of "ip -br addr" on leaf2
+
+ ● leaf3  exit 0 · 92ms
+   demo output of "ip -br addr" on leaf3
+
+ ● leaf4  exit 0 · 105ms
+   demo output of "ip -br addr" on leaf4
+
+ ● client1  exit 0 · 118ms
+   demo output of "ip -br addr" on client1
+
+ ◐ client2  waiting…
+ ◐ client3  waiting…
+ ◐ client4  waiting…
+
+
+
+
+
+ ↑↓ scroll  r run again  y copy  esc back  ? help
+                                                                                                                   demo
