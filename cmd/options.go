@@ -49,6 +49,7 @@ func GetOptions() *Options {
 				Format: "plain",
 			},
 			Connect: &ConnectOptions{},
+			TUI:     &TUIOptions{},
 			Inspect: &InspectOptions{
 				Format:           "table",
 				InterfacesFormat: "table",
@@ -146,6 +147,7 @@ type Options struct {
 	Save           *SaveOptions
 	Exec           *ExecOptions
 	Connect        *ConnectOptions
+	TUI            *TUIOptions
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
 	Events         *EventsOptions
@@ -408,6 +410,14 @@ type ExecOptions struct {
 type ConnectOptions struct {
 	Shell string
 	SSH   bool
+}
+
+type TUIOptions struct {
+	Theme    string
+	NoMouse  bool
+	ReadOnly bool
+	LabsDirs []string
+	Demo     bool
 }
 
 type LogsOptions struct {

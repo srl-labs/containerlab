@@ -32,6 +32,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		stopCmd,
 		restartCmd,
 		connectCmd,
+		tuiCmd,
 		execCmd,
 		generateCmd,
 		graphCmd,
@@ -56,8 +57,14 @@ func Entrypoint() (*cobra.Command, error) {
 		PersistentPreRunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return preRunFn(cobraCmd, o)
 		},
-		Aliases:      []string{"clab"},
-		SilenceUsage: true,
+		// Without a command containerlab opens its TUI when run in a terminal, and
+		// prints the help otherwise.
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return rootFn(cobraCmd, o)
+		},
+		ValidArgsFunction: cobra.NoFileCompletions,
+		Aliases:           []string{"clab"},
+		SilenceUsage:      true,
 	}
 
 	c.PersistentFlags().CountVarP(
@@ -143,6 +150,12 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 	applyLabRuntimeDefaultTimeout(cobraCmd, o)
 
+	// Without a command and outside of a terminal the help is printed, which needs none
+	// of the preparations below.
+	if !cobraCmd.HasParent() && !bareCommandOpensTUI() {
+		return nil
+	}
+
 	// setting log level
 	switch {
 	case o.Global.DebugCount > 0:
@@ -216,7 +229,8 @@ func commandSkipsRoot(name string) bool {
 // labRuntimeUnsupportedCommands operate on local containers or host networking
 // and have no lab runtime equivalent.
 var labRuntimeUnsupportedCommands = map[string]struct{}{
-	"tools": {},
+	"tools":        {},
+	tuiCommandName: {},
 }
 
 // graphTopologyFileFlags select graph modes that render from the topology file alone, without
