@@ -5,896 +5,129 @@
 package cmd
 
 import (
-	"cmp"
+	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
-	"github.com/sahilm/fuzzy"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuipicker "github.com/srl-labs/containerlab/internal/tui/picker"
+	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
+var errConnectNeedsTerminal = errors.New("interactive connect requires a terminal")
 
-var (
-	connectAccent = lipgloss.Color("212") // hot pink
-
-	// State dot colors: green = running, purple = selected line.
-	connectRunningDotColor  = lipgloss.Color("48")
-	connectSelectedDotColor = lipgloss.Color("141")
-
-	connectPromptStyle = lipgloss.NewStyle().
-				Foreground(connectAccent).
-				Bold(true)
-
-	connectQueryStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("255"))
-
-	connectHelpStyle = lipgloss.NewStyle().
-				Faint(true).
-				Foreground(lipgloss.Color("241"))
-
-	connectDimStyle = lipgloss.NewStyle().
-			Faint(true).
-			Foreground(lipgloss.Color("243"))
-
-	connectSelectedNameStyle = lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color("255"))
-
-	connectDetailBorderStyle = lipgloss.NewStyle().
-					BorderLeft(true).
-					BorderStyle(lipgloss.ThickBorder()).
-					BorderForeground(connectAccent).
-					PaddingLeft(2)
-
-	connectKindColors = map[string]lipgloss.Color{
-		"nokia_srlinux":  lipgloss.Color("48"),  // green
-		"arista_ceos":    lipgloss.Color("214"), // orange
-		"fdio_vpp":       lipgloss.Color("141"), // purple
-		"linux":          lipgloss.Color("81"),  // cyan
-		"vrnetlab":       lipgloss.Color("203"), // salmon
-		"nokia_srsim":    lipgloss.Color("81"),
-		"sonic_vm":       lipgloss.Color("81"),
-		"cisco_xrd":      lipgloss.Color("81"),
-		"juniper_vjunos": lipgloss.Color("81"),
-		"nokia_sros":     lipgloss.Color("81"),
+// connectNode describes a container the way the node picker shows it.
+func connectNode(ct *clabruntime.GenericContainer) clabinternaltuipicker.Node {
+	kind := ct.Labels[clabconstants.NodeKind]
+	if kind == "" {
+		kind = "linux"
 	}
 
-	kindBadgeBaseStyle = lipgloss.NewStyle()
-)
-
-// ---------------------------------------------------------------------------
-// Shared fuzzy helpers
-// ---------------------------------------------------------------------------
-
-// fuzzyMatch returns the indexes of entries in data that fuzzy-match query,
-// sorted by match score (best first).
-func fuzzyMatch(query string, data []string) []int {
-	if strings.TrimSpace(query) == "" {
-		idx := make([]int, len(data))
-		for i := range data {
-			idx[i] = i
-		}
-		return idx
+	lab := ct.Labels[clabconstants.Containerlab]
+	if lab == "" {
+		lab = "-"
 	}
 
-	matches := fuzzy.Find(query, data)
-	out := make([]int, 0, len(matches))
-	for _, m := range matches {
-		out = append(out, m.Index)
+	node := clabinternaltuipicker.Node{
+		Name:  strings.TrimPrefix(ct.Names[0], "/"),
+		Kind:  kind,
+		Lab:   lab,
+		Image: clabinternaltuiui.ShortImage(ct.Image),
+		State: ct.State,
+		Ports: formatConnectPorts(ct.Ports),
 	}
-	return out
+
+	if ip := ct.NetworkSettings.IPv4addr; ip != "" {
+		node.IPv4 = fmt.Sprintf("%s/%d", ip, ct.NetworkSettings.IPv4pLen)
+	}
+
+	if ip := ct.NetworkSettings.IPv6addr; ip != "" {
+		node.IPv6 = fmt.Sprintf("%s/%d", ip, ct.NetworkSettings.IPv6pLen)
+	}
+
+	return node
 }
 
-// highlightMatched renders s with the characters at idx highlighted in the
-// accent color and bold, leaving the rest in baseStyle.
-func highlightMatched(s string, idx []int, matchStyle lipgloss.Style) string {
-	if len(idx) == 0 {
-		return s
-	}
+// formatConnectPorts renders port bindings the way `docker ps` does: published ports as
+// host→container/protocol, exposed ones as container/protocol. Bindings that differ only
+// by the host IP (ie. IPv4 and IPv6) are shown once.
+func formatConnectPorts(bindings []*clabtypes.GenericPortBinding) string {
+	ports := make([]clabinternaltuibackend.Port, 0, len(bindings))
 
-	marked := make(map[int]struct{}, len(idx))
-	for _, i := range idx {
-		if i < len(s) {
-			marked[i] = struct{}{}
-		}
-	}
-
-	var b strings.Builder
-	var run []rune
-	flush := func(style lipgloss.Style) {
-		if len(run) == 0 {
-			return
-		}
-		b.WriteString(style.Render(string(run)))
-		run = run[:0]
-	}
-
-	matchSet := false
-	for i, r := range []rune(s) {
-		_, isMatch := marked[i]
-		if isMatch && !matchSet {
-			flush(lipgloss.NewStyle()) // base is plain
-			matchSet = true
-		} else if !isMatch && matchSet {
-			flush(matchStyle)
-			matchSet = false
-		}
-		run = append(run, r)
-	}
-	if matchSet {
-		flush(matchStyle)
-	} else {
-		flush(lipgloss.NewStyle())
-	}
-
-	return b.String()
-}
-
-// truncateText shortens s to at most width characters, marking the cut with an ellipsis.
-func truncateText(s string, width int) string {
-	r := []rune(s)
-	if len(r) <= width {
-		return s
-	}
-	if width <= 0 {
-		return ""
-	}
-	return string(r[:width-1]) + "…"
-}
-
-// matchIndicesFor returns the fuzzy match indices of query inside s, or nil.
-func matchIndicesFor(query, s string) []int {
-	if strings.TrimSpace(query) == "" {
-		return nil
-	}
-	matches := fuzzy.Find(query, []string{s})
-	if len(matches) == 0 {
-		return nil
-	}
-	return matches[0].MatchedIndexes
-}
-
-// ---------------------------------------------------------------------------
-// Node picker
-// ---------------------------------------------------------------------------
-
-type connectNodeEntry struct {
-	container clabruntime.GenericContainer
-	name      string // long container name (clab-<lab>-<node>)
-	shortName string
-	kind      string
-	lab       string
-	image     string
-	state     string
-	ipv4      string
-	ipv6      string
-	ports     string
-	shell     string // default shell preview
-}
-
-// shortImage returns a human-friendly shortened image name (strip digest,
-// keep the last two path components for readability).
-func shortImage(img string) string {
-	if idx := strings.Index(img, "@"); idx != -1 {
-		img = img[:idx]
-	}
-	parts := strings.Split(img, "/")
-	if len(parts) <= 2 {
-		return img
-	}
-	return strings.Join(parts[len(parts)-2:], "/")
-}
-
-func buildConnectNodeEntries(containers []clabruntime.GenericContainer) []connectNodeEntry {
-	entries := make([]connectNodeEntry, 0, len(containers))
-	for _, ct := range containers {
-		name := strings.TrimPrefix(ct.Names[0], "/")
-		shortName := ct.Labels[clabconstants.NodeName]
-		kind := ct.Labels[clabconstants.NodeKind]
-		if kind == "" {
-			kind = "linux"
-		}
-		lab := ct.Labels[clabconstants.Containerlab]
-		if lab == "" {
-			lab = "-"
-		}
-		ipv4 := ct.NetworkSettings.IPv4addr
-		if ipv4 != "" {
-			ipv4 = fmt.Sprintf("%s/%d", ipv4, ct.NetworkSettings.IPv4pLen)
-		}
-		ipv6 := ct.NetworkSettings.IPv6addr
-		if ipv6 != "" {
-			ipv6 = fmt.Sprintf("%s/%d", ipv6, ct.NetworkSettings.IPv6pLen)
-		}
-		entries = append(entries, connectNodeEntry{
-			container: ct,
-			name:      name,
-			shortName: shortName,
-			kind:      kind,
-			lab:       lab,
-			image:     shortImage(ct.Image),
-			state:     ct.State,
-			ipv4:      ipv4,
-			ipv6:      ipv6,
-			ports:     formatConnectPorts(ct.Ports),
-			shell:     "",
+	for _, b := range bindings {
+		ports = append(ports, clabinternaltuibackend.Port{
+			HostIP:        b.HostIP,
+			HostPort:      b.HostPort,
+			ContainerPort: b.ContainerPort,
+			Protocol:      b.Protocol,
 		})
 	}
-	return entries
+
+	return clabinternaltuiui.Ports(ports)
 }
 
-// formatConnectPorts renders port bindings the way `docker ps` does: published
-// ports as host→container/protocol, exposed ones as container/protocol. Bindings
-// that differ only by the host IP (ie. IPv4 and IPv6) are shown once.
-func formatConnectPorts(bindings []*clabtypes.GenericPortBinding) string {
-	sorted := slices.Clone(bindings)
-	slices.SortStableFunc(sorted, func(a, b *clabtypes.GenericPortBinding) int {
-		return cmp.Or(
-			cmp.Compare(a.ContainerPort, b.ContainerPort),
-			cmp.Compare(a.HostPort, b.HostPort),
-		)
-	})
-
-	ports := make([]string, 0, len(sorted))
-	for _, p := range sorted {
-		port := fmt.Sprintf("%d", p.ContainerPort)
-		if p.HostPort != 0 {
-			port = fmt.Sprintf("%d→%s", p.HostPort, port)
-		}
-		if p.Protocol != "" {
-			port += "/" + p.Protocol
-		}
-		ports = append(ports, port)
-	}
-
-	return strings.Join(slices.Compact(ports), ", ")
+func connectHasTerminal() bool {
+	return term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stderr.Fd())
 }
 
-type nodePickerModel struct {
-	input    textinput.Model
-	entries  []connectNodeEntry
-	names    []string
-	filtered []int
-	cursor   int
-	offset   int
-	chosen   int
-	cancel   bool
-	width    int
-	height   int
-	visible  int
-	// detailWidth is the width of the widest details panel, it keeps the
-	// layout stable while the cursor moves between nodes.
-	detailWidth int
-}
-
-func newNodePicker(entries []connectNodeEntry) nodePickerModel {
-	input := textinput.New()
-	input.Placeholder = "type to fuzzy search nodes…"
-	input.Prompt = "❯ "
-	input.PromptStyle = connectPromptStyle
-	input.TextStyle = connectQueryStyle
-	input.CharLimit = 64
-
-	names := make([]string, len(entries))
-	for i, e := range entries {
-		names[i] = e.name
+// runNodePicker shows the node picker and returns the index of the chosen container in
+// the given slice.
+func runNodePicker(containers []clabruntime.GenericContainer) (int, error) {
+	nodes := make([]clabinternaltuipicker.Node, len(containers))
+	for i := range containers {
+		nodes[i] = connectNode(&containers[i])
 	}
 
-	m := nodePickerModel{
-		input:    input,
-		entries:  entries,
-		names:    names,
-		filtered: fuzzyMatch("", names),
-		chosen:   -1,
-		visible:  10,
-	}
-	for i := range entries {
-		m.detailWidth = max(m.detailWidth, lipgloss.Width(renderNodeDetail(&entries[i])))
-	}
-	m.input.Focus()
-	return m
-}
-
-func (m nodePickerModel) Init() tea.Cmd {
-	return tea.Batch(
-		textinput.Blink,
-		tea.SetWindowTitle("containerlab connect"),
-	)
-}
-
-func (m nodePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		if m.width > 0 {
-			m.input.Width = m.width - 8
-		}
-		return m, nil
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			m.cancel = true
-			return m, tea.Quit
-		case "enter":
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
-				m.chosen = m.filtered[m.cursor]
-				return m, tea.Quit
-			}
-		case "up", "ctrl+p":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-			m.clampOffset()
-			return m, nil
-		case "down", "ctrl+n":
-			if m.cursor < len(m.filtered)-1 {
-				m.cursor++
-			}
-			m.clampOffset()
-			return m, nil
-		case "home", "ctrl+a":
-			m.cursor = 0
-			m.clampOffset()
-			return m, nil
-		case "end", "ctrl+e":
-			m.cursor = max(0, len(m.filtered)-1)
-			m.clampOffset()
-			return m, nil
-		case "pgup", "ctrl+b":
-			m.cursor = max(0, m.cursor-m.visible)
-			m.clampOffset()
-			return m, nil
-		case "pgdown", "ctrl+f":
-			m.cursor = min(len(m.filtered)-1, m.cursor+m.visible)
-			m.clampOffset()
-			return m, nil
-		}
-
-		// default: feed to the input and refilter, a new query starts from the best match
-		query := m.input.Value()
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		if m.input.Value() != query {
-			m.cursor = 0
-			m.offset = 0
-		}
-		m.refilter()
-		return m, cmd
-	}
-
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	m.refilter()
-	return m, cmd
-}
-
-func (m *nodePickerModel) refilter() {
-	m.filtered = fuzzyMatch(m.input.Value(), m.names)
-	if m.cursor >= len(m.filtered) {
-		m.cursor = max(0, len(m.filtered)-1)
-	}
-	m.clampOffset()
-}
-
-func (m *nodePickerModel) clampOffset() {
-	if m.cursor < m.offset {
-		m.offset = m.cursor
-	}
-	if m.cursor >= m.offset+m.visible {
-		m.offset = m.cursor - m.visible + 1
-	}
-	if m.offset < 0 {
-		m.offset = 0
-	}
-}
-
-func (m nodePickerModel) currentEntry() *connectNodeEntry {
-	if len(m.filtered) == 0 || m.cursor >= len(m.filtered) {
-		return nil
-	}
-	return &m.entries[m.filtered[m.cursor]]
-}
-
-// nodeListLayout holds the column widths of the node list. An image width of
-// zero hides the image column.
-type nodeListLayout struct {
-	name, kind, image int
-	showDetail        bool
-}
-
-const (
-	connectRowPrefixWidth = 4 // indent, state dot and a space
-	connectColumnGap      = 2
-	connectMinImageWidth  = 8
-	connectDefaultWidth   = 120 // used until the terminal reports its size
-	connectPortsWidth     = 24
-)
-
-// width returns the total width of a list row.
-func (l nodeListLayout) width() int {
-	w := connectRowPrefixWidth + l.name + connectColumnGap + l.kind
-	if l.image > 0 {
-		w += connectColumnGap + l.image
-	}
-	return w
-}
-
-// layout fits the node list into the terminal width so that rows never wrap.
-// The details panel is hidden when node names and kinds wouldn't fit next to
-// it, and the image column gets whatever space remains.
-func (m nodePickerModel) layout() nodeListLayout {
-	var l nodeListLayout
-	imageWidth := 0
-	for i := range m.entries {
-		l.name = max(l.name, lipgloss.Width(m.entries[i].name))
-		l.kind = max(l.kind, lipgloss.Width(m.entries[i].kind))
-		imageWidth = max(imageWidth, lipgloss.Width(m.entries[i].image))
-	}
-
-	termWidth := m.width
-	if termWidth <= 0 {
-		termWidth = connectDefaultWidth
-	}
-	termWidth-- // the picker's left padding
-
-	required := connectRowPrefixWidth + l.name + connectColumnGap + l.kind
-	available := termWidth - connectColumnGap - m.detailWidth
-	l.showDetail = required <= available
-	if !l.showDetail {
-		available = termWidth
-	}
-
-	l.name = max(1, l.name-max(0, required-available))
-	if room := available - required - connectColumnGap; room >= connectMinImageWidth {
-		l.image = min(imageWidth, room)
-	}
-
-	return l
-}
-
-func (m nodePickerModel) View() string {
-	// Clear the picker from the screen once a choice has been made.
-	if m.cancel || m.chosen >= 0 {
-		return ""
-	}
-
-	var b strings.Builder
-
-	b.WriteString("\n")
-	b.WriteString(m.input.View())
-	b.WriteString("\n\n")
-
-	layout := m.layout()
-
-	// Render the visible slice of the node list.
-	rows := make([]string, 0, m.visible)
-	for i := m.offset; i < min(len(m.filtered), m.offset+m.visible); i++ {
-		idx := m.filtered[i]
-		entry := m.entries[idx]
-		selected := i == m.cursor
-
-		nameText := truncateText(entry.name, layout.name)
-		matched := matchIndicesFor(m.input.Value(), nameText)
-
-		name := highlightMatched(
-			nameText,
-			matched,
-			lipgloss.NewStyle().Bold(true).Foreground(connectAccent),
-		)
-		if selected {
-			name = connectSelectedNameStyle.Render(name)
-		}
-
-		kindBadge := kindBadgeBaseStyle.
-			Foreground(connectKindColor(entry.kind)).
-			Width(layout.kind).
-			Render(entry.kind)
-
-		// Smaller state dot (• instead of ●) so lines stay compact.
-		dot := "•"
-		dotStyle := lipgloss.NewStyle().Foreground(connectRunningDotColor)
-		if entry.state != "running" {
-			dotStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-			if entry.state == "exited" || entry.state == "created" {
-				dotStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-			}
-		}
-		if selected {
-			dotStyle = lipgloss.NewStyle().Foreground(connectSelectedDotColor)
-		}
-
-		// Fixed two-space indent keeps lines perfectly aligned when the
-		// cursor moves — selection is conveyed by the dot color only.
-		line := fmt.Sprintf("  %s %s%s  %s",
-			dotStyle.Render(dot),
-			name,
-			strings.Repeat(" ", layout.name-lipgloss.Width(nameText)),
-			kindBadge,
-		)
-		if layout.image > 0 {
-			line += "  " + connectDimStyle.Render(truncateText(entry.image, layout.image))
-		}
-		rows = append(rows, line)
-	}
-
-	if len(rows) == 0 {
-		rows = append(rows, connectDimStyle.Render("  no nodes match — keep typing…"))
-	}
-
-	// Details panel for the highlighted node.
-	detail := ""
-	if cur := m.currentEntry(); cur != nil && layout.showDetail {
-		detail = renderNodeDetail(cur)
-	}
-
-	left := strings.Join(rows, "\n")
-	if len(m.filtered) > m.visible {
-		left += "\n" + connectDimStyle.Render(
-			fmt.Sprintf("  … %d/%d shown", m.visible, len(m.filtered)),
-		)
-	}
-
-	// Layout: list on the left, details on the right.
-	listBlock := lipgloss.NewStyle().Width(layout.width()).Render(left)
-	detailBlock := lipgloss.NewStyle().Width(0).Render(detail)
-
-	body := listBlock
-	if layout.showDetail {
-		body = lipgloss.JoinHorizontal(lipgloss.Top, listBlock, "  ", detailBlock)
-	}
-	b.WriteString(body)
-	b.WriteString("\n\n")
-	b.WriteString(
-		connectHelpStyle.Render("type to fuzzy search • ↑/↓ move • enter select • esc quit"),
-	)
-
-	return lipgloss.NewStyle().PaddingLeft(1).Render(b.String())
-}
-
-func renderNodeDetail(e *connectNodeEntry) string {
-	var b strings.Builder
-
-	label := connectDimStyle.Render
-	value := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-
-	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(connectAccent).Render("node details"))
-	b.WriteString("\n\n")
-
-	writeDetail := func(k, v string) {
-		if v == "" {
-			v = "—"
-		}
-		fmt.Fprintf(&b, "%s %s\n", label(fmt.Sprintf("%-10s", k)), value.Render(v))
-	}
-
-	writeDetail("name", e.name)
-	writeDetail("kind", e.kind)
-	writeDetail("lab", e.lab)
-	writeDetail("image", e.image)
-	writeDetail("state", e.state)
-	writeDetail("ipv4", e.ipv4)
-	writeDetail("ipv6", e.ipv6)
-	if e.ports != "" {
-		// Long port lists wrap to keep the panel from taking over the list's space.
-		b.WriteString(lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			label(fmt.Sprintf("%-10s", "ports"))+" ",
-			value.Width(connectPortsWidth).Render(e.ports),
-		))
-		b.WriteString("\n")
-	}
-
-	return connectDetailBorderStyle.Render(b.String())
-}
-
-func connectKindColor(kind string) lipgloss.Color {
-	if c, ok := connectKindColors[kind]; ok {
-		return c
-	}
-	return lipgloss.Color("81")
-}
-
-// ---------------------------------------------------------------------------
-// Method picker
-// ---------------------------------------------------------------------------
-
-type connectMethod struct {
-	Label       string
-	Description string
-	Shell       []string
-	SSH         bool
-}
-
-type methodPickerModel struct {
-	input    textinput.Model
-	node     *connectNodeEntry
-	methods  []connectMethod
-	labels   []string
-	filtered []int
-	cursor   int
-	chosen   int
-	cancel   bool
-	width    int
-	// labelWidth is the width of the widest method label, it aligns the descriptions.
-	labelWidth int
-}
-
-func newMethodPicker(node *connectNodeEntry, methods []connectMethod) methodPickerModel {
-	input := textinput.New()
-	input.Placeholder = "filter methods…"
-	input.Prompt = "❯ "
-	input.PromptStyle = connectPromptStyle
-	input.TextStyle = connectQueryStyle
-	input.CharLimit = 64
-
-	labels := make([]string, len(methods))
-	labelWidth := 0
-	for i, m := range methods {
-		labels[i] = m.Label
-		labelWidth = max(labelWidth, lipgloss.Width(m.Label))
-	}
-
-	m := methodPickerModel{
-		input:    input,
-		node:     node,
-		methods:  methods,
-		labels:   labels,
-		filtered: fuzzyMatch("", labels),
-		chosen:   -1,
-
-		labelWidth: labelWidth,
-	}
-	m.input.Focus()
-	return m
-}
-
-func (m methodPickerModel) Init() tea.Cmd {
-	return tea.Batch(
-		textinput.Blink,
-		tea.SetWindowTitle("containerlab connect — pick a method"),
-	)
-}
-
-func (m methodPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		if m.width > 0 {
-			m.input.Width = m.width - 8
-		}
-		return m, nil
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			m.cancel = true
-			return m, tea.Quit
-		case "enter":
-			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
-				m.chosen = m.filtered[m.cursor]
-				return m, tea.Quit
-			}
-		case "up", "ctrl+p":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-			return m, nil
-		case "down", "ctrl+n":
-			if m.cursor < len(m.filtered)-1 {
-				m.cursor++
-			}
-			return m, nil
-		case "home":
-			m.cursor = 0
-			return m, nil
-		case "end":
-			m.cursor = max(0, len(m.filtered)-1)
-			return m, nil
-		}
-
-		// a new query starts from the best match
-		query := m.input.Value()
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		if m.input.Value() != query {
-			m.cursor = 0
-		}
-		m.refilter()
-		return m, cmd
-	}
-
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	m.refilter()
-	return m, cmd
-}
-
-func (m *methodPickerModel) refilter() {
-	m.filtered = fuzzyMatch(m.input.Value(), m.labels)
-	if m.cursor >= len(m.filtered) {
-		m.cursor = max(0, len(m.filtered)-1)
-	}
-}
-
-func (m methodPickerModel) View() string {
-	// Clear the picker from the screen once a choice has been made.
-	if m.cancel || m.chosen >= 0 {
-		return ""
-	}
-
-	var b strings.Builder
-
-	b.WriteString("\n")
-	b.WriteString(m.input.View())
-	b.WriteString("\n\n")
-
-	for i, idx := range m.filtered {
-		method := m.methods[idx]
-		selected := i == m.cursor
-
-		padding := strings.Repeat(" ", m.labelWidth-lipgloss.Width(method.Label))
-		label := method.Label
-		if selected {
-			label = connectSelectedNameStyle.Render(label)
-		}
-		desc := connectDimStyle.Render(method.Description)
-
-		// Fixed two-space indent keeps method lines aligned while navigating —
-		// selection is conveyed by the label styling only.
-		line := fmt.Sprintf("  %s%s  %s", label, padding, desc)
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-
-	if len(m.filtered) == 0 {
-		b.WriteString(connectDimStyle.Render("  no methods match\n"))
-	}
-
-	b.WriteString("\n")
-	if m.node != nil {
-		b.WriteString(
-			connectDimStyle.Render(fmt.Sprintf("target: %s (%s)", m.node.name, m.node.kind)),
-		)
-		b.WriteString("\n")
-	}
-	b.WriteString(connectHelpStyle.Render("type to filter • ↑/↓ move • enter select • esc quit"))
-
-	return lipgloss.NewStyle().PaddingLeft(1).Render(b.String())
-}
-
-// ---------------------------------------------------------------------------
-// Public entrypoints used by connect.go
-// ---------------------------------------------------------------------------
-
-// runNodePicker shows the node picker TUI and returns the index of the chosen
-// container in the original slice.
-func runNodePicker(containers []clabruntime.GenericContainer, _ *clabcore.CLab) (int, error) {
-	if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stderr.Fd()) {
+	if !connectHasTerminal() {
 		// Fall back to a plain, readable listing when there's no TTY.
 		var b strings.Builder
+
 		b.WriteString("multiple nodes matched, please narrow the selection:\n")
-		for _, ct := range containers {
-			name := strings.TrimPrefix(ct.Names[0], "/")
-			fmt.Fprintf(&b, "  %s (%s) [%s]\n", name, shortImage(ct.Image), ct.State)
+
+		for i := range nodes {
+			fmt.Fprintf(&b, "  %s (%s) [%s]\n", nodes[i].Name, nodes[i].Image, nodes[i].State)
 		}
+
 		b.WriteString("\nhint: run with a TTY to get an interactive fuzzy-search picker\n")
 		fmt.Fprint(os.Stderr, b.String())
 
-		return -1, fmt.Errorf("interactive connect requires a terminal")
+		return -1, errConnectNeedsTerminal
 	}
 
-	entries := buildConnectNodeEntries(containers)
-	p := tea.NewProgram(
-		newNodePicker(entries),
-		tea.WithOutput(os.Stderr),
-	)
-	res, err := p.Run()
-	if err != nil {
-		return -1, err
-	}
-
-	m, ok := res.(nodePickerModel)
-	if !ok {
-		return -1, fmt.Errorf("unexpected picker result")
-	}
-	if m.cancel || m.chosen < 0 {
+	idx, err := clabinternaltuipicker.PickNode(nodes, os.Stdin, os.Stderr)
+	if errors.Is(err, clabinternaltuipicker.ErrCancelled) {
 		return -1, errConnectCancelled
 	}
-	return m.chosen, nil
+
+	return idx, err
 }
 
-// runMethodPicker shows the method picker TUI for a single node and returns
-// the selected connection method.
-func runMethodPicker(ct clabruntime.GenericContainer, c *clabcore.CLab) (connectMethod, error) {
-	if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stderr.Fd()) {
-		return connectMethod{}, fmt.Errorf("interactive connect requires a terminal")
+// runMethodPicker shows the method picker for a single node and returns the selected
+// connection method.
+func runMethodPicker(
+	ct clabruntime.GenericContainer, c *clabcore.CLab,
+) (clabinternaltuibackend.ConnectMethod, error) {
+	if !connectHasTerminal() {
+		return clabinternaltuibackend.ConnectMethod{}, errConnectNeedsTerminal
 	}
 
-	// Build the node entry once so the method picker can show target details.
-	containers := []clabruntime.GenericContainer{ct}
-	entries := buildConnectNodeEntries(containers)
-	if len(entries) == 0 {
-		return connectMethod{}, fmt.Errorf("failed to build node entry")
+	node := connectNode(&ct)
+	methods := clabinternaltuibackend.DefaultConnectMethods(resolveConnectShell(c, ct), node.Kind)
+
+	idx, err := clabinternaltuipicker.PickMethod(&node, methods, os.Stdin, os.Stderr)
+	if errors.Is(err, clabinternaltuipicker.ErrCancelled) {
+		return clabinternaltuibackend.ConnectMethod{}, errConnectCancelled
 	}
-	node := &entries[0]
-	node.shell = strings.Join(resolveConnectShell(c, ct), " ")
 
-	defaultShell := resolveConnectShell(c, ct)
-
-	methods := buildConnectMethods(defaultShell, node.kind)
-
-	p := tea.NewProgram(
-		newMethodPicker(node, methods),
-		tea.WithOutput(os.Stderr),
-	)
-	res, err := p.Run()
 	if err != nil {
-		return connectMethod{}, err
+		return clabinternaltuibackend.ConnectMethod{}, err
 	}
 
-	m, ok := res.(methodPickerModel)
-	if !ok {
-		return connectMethod{}, fmt.Errorf("unexpected picker result")
-	}
-	if m.cancel || m.chosen < 0 {
-		return connectMethod{}, errConnectCancelled
-	}
-	return m.methods[m.chosen], nil
-}
-
-// buildConnectMethods assembles the connection options offered for a node, in
-// display order: its default shell, SSH via the lab's ssh config, and common
-// fallback shells.
-func buildConnectMethods(defaultShell []string, kind string) []connectMethod {
-	defaultStr := strings.Join(defaultShell, " ")
-
-	seen := map[string]bool{}
-	var out []connectMethod
-
-	add := func(label, desc string, shell []string, ssh bool) {
-		key := label
-		if ssh {
-			key = "ssh"
-		}
-		if seen[key] {
-			return
-		}
-		seen[key] = true
-		out = append(out, connectMethod{
-			Label:       label,
-			Description: desc,
-			Shell:       shell,
-			SSH:         ssh,
-		})
-	}
-
-	// 1) The kind's default shell.
-	add(defaultStr,
-		fmt.Sprintf("default shell for kind %q", kind),
-		defaultShell, false)
-
-	// 2) SSH via the per-lab ssh config (written by clab deploy).
-	add("ssh",
-		"ssh via per-lab config (/etc/ssh/ssh_config.d/clab-*.conf)",
-		nil, true)
-
-	// 3) Common shells as fallbacks.
-	add("/bin/bash", "bash", []string{"/bin/bash"}, false)
-	add("/bin/bash -l", "bash login shell", []string{"/bin/bash", "-l"}, false)
-	add("/bin/sh", "POSIX sh", []string{"/bin/sh"}, false)
-	add("/bin/ash", "alpine ash", []string{"/bin/ash"}, false)
-
-	return out
+	return methods[idx], nil
 }

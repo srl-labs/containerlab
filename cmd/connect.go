@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"slices"
 	"strings"
 	"syscall"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -113,7 +113,7 @@ func connectFn(ctx context.Context, o *Options, nodeFilter string) error {
 		return err
 	}
 
-	containers = foldInternalContainers(containers)
+	containers = clabcore.FoldInternalContainers(containers)
 
 	// Optional substring pre-filter on the node name (the positional arg).
 	if nodeFilter != "" {
@@ -135,40 +135,12 @@ func connectFn(ctx context.Context, o *Options, nodeFilter string) error {
 		return connectSingle(ctx, o, c, containers[0])
 	default:
 		// Multiple matches: let the user pick the node first.
-		idx, err := runNodePicker(containers, c)
+		idx, err := runNodePicker(containers)
 		if err != nil {
 			return err
 		}
 		return connectSingle(ctx, o, c, containers[idx])
 	}
-}
-
-// foldInternalContainers removes internal containers (ie. netns holders) from the list, as they
-// are not user-facing nodes. A node joining a holder's network namespace has no management
-// addressing of its own, so the holder's network settings and ports are copied over to it.
-func foldInternalContainers(
-	containers []clabruntime.GenericContainer,
-) []clabruntime.GenericContainer {
-	holders := make(map[string]clabruntime.GenericContainer)
-	for _, ct := range containers {
-		if ct.Labels[clabconstants.InternalNode] == "true" {
-			holders[ct.Labels[clabconstants.RootNodeLongName]] = ct
-		}
-	}
-
-	containers = slices.DeleteFunc(containers, func(ct clabruntime.GenericContainer) bool {
-		return ct.Labels[clabconstants.InternalNode] == "true"
-	})
-
-	for i := range containers {
-		if holder, ok := holders[containers[i].Labels[clabconstants.LongName]]; ok {
-			containers[i].NetworkName = holder.NetworkName
-			containers[i].NetworkSettings = holder.NetworkSettings
-			containers[i].Ports = holder.Ports
-		}
-	}
-
-	return containers
 }
 
 // connectSingle opens the connection for exactly one container. When a method
@@ -189,16 +161,16 @@ func connectSingle(
 		forcedMethod = "ssh"
 	}
 
-	var method connectMethod
+	var method clabinternaltuibackend.ConnectMethod
 	switch forcedMethod {
 	case "shell":
-		method = connectMethod{
+		method = clabinternaltuibackend.ConnectMethod{
 			Label:       "forced shell",
 			Description: "explicitly requested via --shell",
 			Shell:       strings.Fields(o.Connect.Shell),
 		}
 	case "ssh":
-		method = connectMethod{
+		method = clabinternaltuibackend.ConnectMethod{
 			Label:       "ssh",
 			Description: "explicitly requested via --ssh",
 			SSH:         true,
