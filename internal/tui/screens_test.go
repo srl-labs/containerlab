@@ -701,6 +701,52 @@ func TestMapLinkLabels(t *testing.T) {
 	}
 }
 
+// TestMapNamesTheLinkOfTwoNodes draws the smallest lab there is: two nodes next to each
+// other. The link between them is given the length its names need, which the gap between
+// two boxes alone does not have.
+func TestMapNamesTheLinkOfTwoNodes(t *testing.T) {
+	m, _ := newTestModel(t, 120, 35)
+	selectLab(t, m, "linux")
+	press(m, "t")
+
+	page, ok := m.top().(*mapPage)
+	if !ok || page.lab != "linux" {
+		t.Fatalf("expected the map of the linux lab, got %T", m.top())
+	}
+
+	link := ""
+
+	for line := range strings.SplitSeq(ansi.Strip(m.render()), "\n") {
+		if strings.Contains(line, "l1") && strings.Contains(line, "l2") {
+			link = line
+		}
+	}
+
+	if strings.Count(link, "eth1") != 2 { // one name at each end
+		t.Fatalf("the link between the two nodes does not name its interfaces:\n%s",
+			ansi.Strip(m.render()))
+	}
+
+	snapshot(t, m, "map_two_nodes_120x35")
+
+	// Without names the nodes move together again.
+	wide, _ := page.layout.Size()
+
+	press(m, "i", "i")
+
+	if narrow, _ := page.layout.Size(); narrow >= wide {
+		t.Errorf("the drawing is %d wide without names and %d with them", narrow, wide)
+	}
+
+	// A window too small for the longer link gets the drawing without the room.
+	page.labels.names = namesAll
+	page.resize(30, 10) // barely room for the two boxes
+
+	if w, _ := page.layout.Size(); w > 30 { // the width of the view
+		t.Errorf("the drawing is %d wide in a view of 30", w)
+	}
+}
+
 // clearNotes drops the boxes of the nodes from the lines of a map, whose second line
 // holds figures that look like rates.
 func clearNotes(lines []string) string {

@@ -302,9 +302,7 @@ func (p *mapPage) compute() {
 	}
 
 	p.graph = reduceGraph(&p.full, p.shown, p.scope(p.shown))
-	p.layout = clabinternaltuitopo.Compute(p.graph, clabinternaltuitopo.Options{
-		Mode: p.mode, Zoom: p.zoom,
-	})
+	p.layout = p.layoutAt(p.zoom)
 
 	// The link in focus is gone when its far end is no longer drawn.
 	if !p.hasEdge(p.edge) {
@@ -338,10 +336,7 @@ func (p *mapPage) fitZoom() {
 	for _, zoom := range []clabinternaltuitopo.Zoom{
 		clabinternaltuitopo.ZoomDetail, clabinternaltuitopo.ZoomNormal, clabinternaltuitopo.ZoomCompact,
 	} {
-		layout := clabinternaltuitopo.Compute(
-			p.graph,
-			clabinternaltuitopo.Options{Mode: p.mode, Zoom: zoom},
-		)
+		layout := p.layoutAt(zoom)
 
 		w, h := layout.Size()
 		if (w <= width && h <= height) || zoom == clabinternaltuitopo.ZoomCompact {
@@ -350,6 +345,117 @@ func (p *mapPage) fitZoom() {
 			return
 		}
 	}
+}
+
+// The room a link between two neighboring nodes needs for what is written on it.
+const (
+	// namesRoom goes with two names: a blank on both sides of each, a piece of the
+	// line in front of each and some more of it between them.
+	namesRoom = 8
+	// rateRoom is a rate with a blank on both sides and some line next to it.
+	rateRoom = 9
+	// badgeRoom is the mark of a link that stands for several.
+	badgeRoom = 3
+	// namedRowGap is the number of lines kept between two rows of nodes for a link
+	// that runs straight down to carry a name at each of its ends.
+	namedRowGap = 2
+	// rateMargin is the room a rate takes next to a link at the edge of the drawing.
+	rateMargin = 4
+)
+
+// layoutAt draws the lab at a zoom. Links get the room that what is written on them
+// asks for, as much of it as the view has to give: a lab that only fits without is
+// better shown whole than with every name in place.
+func (p *mapPage) layoutAt(zoom clabinternaltuitopo.Zoom) *clabinternaltuitopo.Layout {
+	opts := clabinternaltuitopo.Options{Mode: p.mode, Zoom: zoom}
+	plain := clabinternaltuitopo.Compute(p.graph, opts)
+
+	names, rates := p.labels.names != namesOff, p.labels.rates
+	if zoom == clabinternaltuitopo.ZoomCompact || (!names && !rates) {
+		return plain
+	}
+
+	width, height := p.viewSize()
+	if w, h := plain.Size(); w > width || h > height {
+		return plain
+	}
+
+	room, margin := p.linkRoom()
+
+	rowGap := 0
+	if names {
+		rowGap = namedRowGap
+	}
+
+	// From all of the room to the part of it that costs no width.
+	for _, try := range []clabinternaltuitopo.Options{
+		{Room: room, Margin: margin, RowGap: rowGap},
+		{Room: room, RowGap: rowGap},
+		{Margin: margin, RowGap: rowGap},
+		{RowGap: rowGap},
+	} {
+		if len(try.Room) == 0 && try.Margin == 0 && try.RowGap == 0 {
+			continue
+		}
+
+		try.Mode, try.Zoom = p.mode, zoom
+
+		roomy := clabinternaltuitopo.Compute(p.graph, try)
+		if w, h := roomy.Size(); w <= width && h <= height {
+			return roomy
+		}
+	}
+
+	return plain
+}
+
+// linkRoom tells how long the link between two nodes has to be for what is written on
+// it, for every pair of nodes with a link, and how much room a text next to a link at
+// the edge of the drawing takes.
+func (p *mapPage) linkRoom() (room map[[2]string]int, margin int) {
+	pairs := map[[2]string][]int{}
+
+	for i := range p.graph.Links {
+		a, b := p.graph.Links[i].A, p.graph.Links[i].B
+		if a == b {
+			continue
+		}
+
+		if a > b {
+			a, b = b, a
+		}
+
+		pairs[[2]string{a, b}] = append(pairs[[2]string{a, b}], i)
+	}
+
+	room = make(map[[2]string]int, len(pairs))
+
+	if p.labels.rates {
+		margin = rateMargin
+	}
+
+	for pair, links := range pairs {
+		n := 0
+
+		if p.labels.names != namesOff {
+			ends := p.endNames(&clabinternaltuitopo.Edge{A: pair[0], B: pair[1], Links: links})
+			a, b := clabinternaltuiui.Width(ends[0]), clabinternaltuiui.Width(ends[1])
+			n += a + b + namesRoom
+			margin = max(margin, a+1, b+1)
+		}
+
+		if p.labels.rates {
+			n += rateRoom
+		}
+
+		if len(links) > 1 {
+			n += badgeRoom
+		}
+
+		room[pair] = n
+	}
+
+	return room, margin
 }
 
 func (p *mapPage) panelVisible() bool {
@@ -381,6 +487,10 @@ func (p *mapPage) resize(width, height int) {
 		p.compute()
 	case p.fit:
 		p.fitZoom()
+		p.reveal()
+	case changed:
+		// Whether the links get room for their texts depends on the room there is.
+		p.layout = p.layoutAt(p.zoom)
 		p.reveal()
 	default:
 		p.reveal()
@@ -656,9 +766,11 @@ func (p *mapPage) setting(m *Model, key string) bool {
 			p.extent, len(p.graph.Nodes), len(p.full.Nodes))
 	case "r":
 		p.labels.rates = !p.labels.rates
+		p.relabel()
 		m.notifyf(info, "traffic rates on the links: %s", onOff(p.labels.rates))
 	case "i":
 		p.labels.names = (p.labels.names + 1) % (namesOff + 1)
+		p.relabel()
 		m.notifyf(info, "interface names: %s", p.labels.names)
 	default:
 		return false
@@ -731,11 +843,28 @@ func (p *mapPage) setZoom(zoom clabinternaltuitopo.Zoom) {
 	}
 
 	p.zoom, p.fit = zoom, false
-	p.layout = clabinternaltuitopo.Compute(
-		p.graph,
-		clabinternaltuitopo.Options{Mode: p.mode, Zoom: zoom},
-	)
+	p.layout = p.layoutAt(zoom)
 	p.center()
+}
+
+// relabel draws the lab anew after a change of what is written on the links, which
+// changes the room the links are given.
+func (p *mapPage) relabel() {
+	if p.layout == nil {
+		return
+	}
+
+	p.layout = p.layoutAt(p.zoom)
+
+	if p.fit {
+		p.fitZoom()
+	}
+
+	if !p.hasEdge(p.edge) {
+		p.edge = noEdge
+	}
+
+	p.reveal()
 }
 
 func (p *mapPage) cycleMode() {

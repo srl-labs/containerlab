@@ -243,11 +243,22 @@ func (u *unit) sizeBoxes() {
 	}
 }
 
+// room returns the columns asked for on the link between two nodes, zero for none.
+func (l *Layout) room(a, b int) int {
+	if len(l.opts.Room) == 0 {
+		return 0
+	}
+
+	x, y := l.nodes[a].ID, l.nodes[b].ID
+
+	return max(l.opts.Room[[2]string{x, y}], l.opts.Room[[2]string{y, x}])
+}
+
 // gap is the least number of blank columns between two neighbors in a row.
 func (u *unit) gap(a, b *item) int {
 	switch {
 	case !a.lane() && !b.lane():
-		return u.l.spec.gap
+		return max(u.l.spec.gap, u.l.room(a.node, b.node))
 	case a.lane() && b.lane():
 		return 1
 	default:

@@ -139,6 +139,8 @@ Two things are written on the links, and each can be switched off:
 
 A name is written only where it cannot be mistaken: next to the line where it leaves its node, or on the line itself on the side of its node. Where the gap between two nodes is a single row, a small arrow tells the two names apart: `e1-1▴` belongs to the node above, `eth1▾` to the one below. When there is no such place, as with the many links of a spine that share one line, the name is left out; the panel next to the map lists the interfaces of the node in focus in any case.
 
+As long as the drawing still fits the window, links are drawn with the room their texts need: two nodes next to each other move apart far enough for both names and the rate, and nodes below each other get a second line between them. A lab that only just fits is drawn tight instead, and names are then written where they find a place.
+
 The choice is kept when the map moves on to another lab.
 
 With a node in focus the node actions apply (`s` shell, `l` logs, …), with a link in focus the link actions do (`n` impairments, `C` capture).

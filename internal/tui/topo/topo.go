@@ -77,6 +77,18 @@ type Options struct {
 	Mode  Mode
 	Zoom  Zoom
 	ASCII bool // draw with - | + instead of box-drawing characters
+	// Room asks for a number of columns on the link between two nodes, given by
+	// their IDs in either order. It counts where the link runs straight between two
+	// neighboring boxes of a row: such a link is otherwise as short as the gap
+	// between the boxes, which leaves no place for the texts Paint is given.
+	Room map[[2]string]int
+	// RowGap is the least number of lines between two rows of boxes that links
+	// run between, zero for one. Two lines let a link that runs straight down
+	// carry a text at each of its ends.
+	RowGap int
+	// Margin is the number of blank columns kept at the left and at the right of
+	// the drawing, for the texts of links that run along its edge.
+	Margin int
 }
 
 // Edge is one drawn connection: all links between a pair of nodes.
@@ -164,6 +176,7 @@ func Compute(g Graph, o Options) *Layout {
 
 	l.units = units
 	l.pack(units, loose)
+	l.w += max(l.opts.Margin, 0)
 	l.finish()
 
 	return l

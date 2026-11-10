@@ -14,7 +14,8 @@ const (
 // pack places the units left to right, largest first, and the nodes without links
 // in a grid underneath.
 func (l *Layout) pack(units []*unit, loose []int) {
-	x := 0
+	left := max(l.opts.Margin, 0)
+	x := left
 
 	for i, u := range units {
 		// The kinds of columns only matter inside a unit, so each one can
@@ -44,7 +45,7 @@ func (l *Layout) pack(units []*unit, loose []int) {
 	var rows [][]int
 
 	wrap := max(l.w, looseWrap)
-	x, y := 0, l.h
+	x, y := left, l.h
 
 	if l.h > 0 {
 		y++
@@ -55,11 +56,11 @@ func (l *Layout) pack(units []*unit, loose []int) {
 		w := l.labelWidth(b)
 		b.setText(w, &l.spec)
 
-		if x > 0 && x+w > wrap {
-			x, y = 0, y+l.spec.boxH+1
+		if x > left && x+w > wrap {
+			x, y = left, y+l.spec.boxH+1
 		}
 
-		if x == 0 {
+		if x == left {
 			rows = append(rows, nil)
 		}
 

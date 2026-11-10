@@ -62,7 +62,34 @@ func goldenCases() []goldenCase {
 			ifaceNames,
 			none,
 		},
+		{
+			"pair-room",
+			pair(),
+			Options{Zoom: ZoomNormal, Room: map[[2]string]int{{"srl2", "srl1"}: 25}},
+			namesAndRates,
+			none,
+		},
+		{"three-tier-rows", threeTier(), Options{Zoom: ZoomNormal, RowGap: 2}, namesAndRates, none},
+		{
+			"two-components-room",
+			twoComponents(),
+			Options{Zoom: ZoomNormal, RowGap: 2, Margin: 6},
+			namesAndRates,
+			none,
+		},
 	}
+}
+
+// namesAndRates names the ends of every edge and writes a rate on each.
+func namesAndRates(g Graph) State {
+	st := ifaceNames(g)
+	st.EdgeLabels = map[int]string{}
+
+	for id := range st.EndLabels {
+		st.EdgeLabels[id] = "1.2M"
+	}
+
+	return st
 }
 
 // liveState is a fabric in use: one link down, one unknown, rates on some edges.

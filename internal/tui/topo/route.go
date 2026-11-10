@@ -42,6 +42,10 @@ func (u *unit) route() {
 		height := u.tracks[ch]
 		if ch+1 < rows {
 			height = max(height, 1)
+
+			if len(u.nets[ch]) > 0 {
+				height = max(height, u.l.opts.RowGap)
+			}
 		}
 
 		u.rowY[ch] = y

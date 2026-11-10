@@ -301,3 +301,52 @@ func TestEndLabelsPreferTheFocus(t *testing.T) {
 	assert.GreaterOrEqual(t, with, without, "the focus cost leaf2 names")
 	assert.Positive(t, with, "no name is written next to the focused node")
 }
+
+// TestRoomMakesTheTextsFit checks what the room options are for: with them, the link
+// between two neighbors carries a name at each end and a text in the middle, and so
+// does a link that runs straight down from one row to the next.
+func TestRoomMakesTheTextsFit(t *testing.T) {
+	texts := func(g Graph, opts Options) (ends int, mid bool) {
+		l := Compute(g, opts)
+		grid := l.Paint(namesAndRates(g), Selection{Edge: -1})
+
+		return len(placedEnds(grid)), strings.Contains(strings.Join(grid.Lines(), "\n"), "1.2M")
+	}
+
+	// Two neighbors: the gap between the boxes is too short for any text.
+	ends, mid := texts(pair(), Options{Zoom: ZoomNormal})
+	assert.Zero(t, ends, "the fixture is of no use, the names fit without room")
+	assert.False(t, mid)
+
+	ends, mid = texts(pair(), Options{
+		Zoom: ZoomNormal, Room: map[[2]string]int{{"srl1", "srl2"}: 25},
+	})
+	assert.Equal(t, 2, ends, "names on the link between two neighbors")
+	assert.True(t, mid, "the text in the middle of the link between two neighbors")
+
+	// The order of the two nodes in the key does not matter.
+	ends, _ = texts(pair(), Options{
+		Zoom: ZoomNormal, Room: map[[2]string]int{{"srl2", "srl1"}: 25},
+	})
+	assert.Equal(t, 2, ends, "names with the nodes given the other way round")
+
+	// One node above the other: a single line between the rows holds two of the
+	// three texts, a second line all of them.
+	var b builder
+
+	b.g.Nodes = []Node{{ID: "up", Level: 1}, {ID: "down", Level: 2}}
+	b.link("up", "down")
+
+	// A drawing as narrow as its boxes has no place beside the link at all.
+	ends, mid = texts(b.g, Options{Zoom: ZoomNormal})
+	assert.Zero(t, ends, "the fixture is of no use, the names fit without room")
+	assert.False(t, mid)
+
+	ends, mid = texts(b.g, Options{Zoom: ZoomNormal, Margin: 6})
+	assert.True(t, mid)
+	assert.Less(t, ends, 2, "the fixture is of no use, the names fit in one line")
+
+	ends, mid = texts(b.g, Options{Zoom: ZoomNormal, RowGap: 2, Margin: 6})
+	assert.Equal(t, 2, ends, "names on a link that runs straight down")
+	assert.True(t, mid, "the text in the middle of a link that runs straight down")
+}

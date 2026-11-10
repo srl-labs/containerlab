@@ -301,7 +301,7 @@ func (u *unit) placeSaved() {
 			}
 
 			if prev != nil && it.key > prev.key {
-				need := float64(prev.w+it.w)/2 + float64(u.l.spec.gap) //nolint:mnd
+				need := float64(prev.w+it.w)/2 + float64(u.gap(prev, it)) //nolint:mnd
 				scale = math.Max(scale, need/(it.key-prev.key))
 			}
 
