@@ -28,8 +28,11 @@ func testColumns() []Column {
 
 func testRow(name, kind string, cpu float64, image string) Row {
 	return Row{Key: name, Cells: []Cell{
-		{Text: "●"}, {Text: name}, {Text: kind},
-		{Text: fmt.Sprintf("%.0f%%", cpu), Num: cpu}, {Text: image},
+		{Text: "●"},
+		{Text: name},
+		{Text: kind},
+		{Text: fmt.Sprintf("%.0f%%", cpu), Num: cpu},
+		{Text: image},
 	}}
 }
 

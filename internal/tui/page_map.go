@@ -682,7 +682,8 @@ func (p *mapPage) actions(m *Model) (string, []action) {
 
 		_, list := m.interfaceActions(p.edgeInterfaces(false))
 
-		return links[0].A + " ↔ " + links[0].B, linkActions(m, list, p.edgeInterfaces(true))
+		return links[0].A + " ↔ " + links[0].B,
+			linkActions(m, list, p.edgeInterfaces(true))
 	}
 
 	n := p.current(m)
@@ -1328,7 +1329,8 @@ func (p *mapPage) edgePanel(m *Model) []string {
 		m.th.Title.Render(clabinternaltuiui.Sanitize(links[0].A + " ↔ " + links[0].B)),
 	}
 	if len(links) > 1 {
-		lines = append(lines, m.th.Muted.Render(fmt.Sprintf("%d parallel links", len(links))))
+		lines = append(lines, m.th.Muted.Render(
+			fmt.Sprintf("%d parallel links", len(links))))
 	}
 
 	for _, l := range links {

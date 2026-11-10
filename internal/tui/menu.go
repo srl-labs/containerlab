@@ -250,8 +250,13 @@ func (d *menuDialog) paste(text string) {
 
 func (d *menuDialog) hints() []hint {
 	if d.keyed && !d.searching {
-		return []hint{{"key", "choose"}, {"↑↓", "move"}, {"⏎", "select"}, {"/", "search"},
-			{keyEsc, "cancel"}}
+		return []hint{
+			{"key", "choose"},
+			{"↑↓", "move"},
+			{"⏎", "select"},
+			{"/", "search"},
+			{keyEsc, "cancel"},
+		}
 	}
 
 	return []hint{{"↑↓", "move"}, {"⏎", "select"}, {keyEsc, "cancel"}}

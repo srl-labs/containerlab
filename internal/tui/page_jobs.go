@@ -73,8 +73,10 @@ func newJobsPage(m *Model) *jobsPage {
 
 func (*jobsPage) tab() tabID                        { return tabJobs }
 func (p *jobsPage) table() *clabinternaltuiui.Table { return p.tbl }
-func (p *jobsPage) crumbs(*Model) []string          { return []string{"jobs " + tableCount(p.tbl)} }
-func (p *jobsPage) info(*Model) []string            { return tableInfo(p.tbl) }
+func (p *jobsPage) crumbs(*Model) []string {
+	return []string{"jobs " + tableCount(p.tbl)}
+}
+func (p *jobsPage) info(*Model) []string { return tableInfo(p.tbl) }
 
 func (p *jobsPage) resize(width, height int) {
 	p.basePage.resize(width, height)

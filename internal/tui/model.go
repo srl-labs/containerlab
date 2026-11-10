@@ -320,7 +320,8 @@ func (m *Model) announceJobs() {
 		case clabinternaltuibackend.JobSucceeded:
 			m.notifyf(clabinternaltuitheme.LevelSuccess, "%s done (%s)", job.Title, took)
 		case clabinternaltuibackend.JobFailed:
-			m.notifyf(clabinternaltuitheme.LevelError, "%s failed: %s — see the jobs view (6)",
+			m.notifyf(clabinternaltuitheme.LevelError,
+				"%s failed: %s — see the jobs view (6)",
 				job.Title, job.Err)
 		case clabinternaltuibackend.JobCancelled:
 			m.notifyf(clabinternaltuitheme.LevelWarning, "%s cancelled", job.Title)

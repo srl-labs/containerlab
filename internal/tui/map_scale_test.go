@@ -58,12 +58,16 @@ func TestMapScale(t *testing.T) {
 			clabinternaltuitopo.ZoomNormal, clabinternaltuitopo.ZoomCompact,
 		} {
 			start := time.Now()
-			layout := clabinternaltuitopo.Compute(g, clabinternaltuitopo.Options{Zoom: zoom})
+			layout := clabinternaltuitopo.Compute(g, clabinternaltuitopo.Options{
+				Zoom: zoom,
+			})
 			computed := time.Since(start)
 
 			start = time.Now()
 
-			layout.Paint(clabinternaltuitopo.State{}, clabinternaltuitopo.Selection{Edge: -1})
+			layout.Paint(clabinternaltuitopo.State{}, clabinternaltuitopo.Selection{
+				Edge: -1,
+			})
 
 			painted := time.Since(start)
 

@@ -214,7 +214,9 @@ func TestUnknownNodeGoesBetweenItsNeighbors(t *testing.T) {
 
 func sorted(rows [][]string) [][]string {
 	for _, r := range rows {
-		sort.Slice(r, func(i, j int) bool { return natLess(roleKey(r[i]), roleKey(r[j])) })
+		sort.Slice(r, func(i, j int) bool {
+			return natLess(roleKey(r[i]), roleKey(r[j]))
+		})
 	}
 
 	return rows
@@ -288,8 +290,12 @@ func TestEdges(t *testing.T) {
 	g := Graph{
 		Nodes: []Node{{ID: "b"}, {ID: "a"}, {ID: "c"}, {ID: "a"}},
 		Links: []Link{
-			{A: "b", B: "a"}, {A: "a", B: "b"}, {A: "c", B: "a"},
-			{A: "a", B: "ghost"}, {A: "c", B: "c"}, {A: "a", B: "b"},
+			{A: "b", B: "a"},
+			{A: "a", B: "b"},
+			{A: "c", B: "a"},
+			{A: "a", B: "ghost"},
+			{A: "c", B: "c"},
+			{A: "a", B: "b"},
 		},
 	}
 	l := Compute(g, Options{Zoom: ZoomNormal})

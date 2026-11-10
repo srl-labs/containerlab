@@ -467,7 +467,8 @@ func (d *formDialog) view(m *Model, maxWidth, _ int) string {
 	}
 
 	if d.problem != "" {
-		lines = append(lines, "", m.th.Error.Render(clabinternaltuiui.Truncate(d.problem, width)))
+		lines = append(lines, "", m.th.Error.Render(
+			clabinternaltuiui.Truncate(d.problem, width)))
 	}
 
 	d.buttonLine = len(lines) + 1

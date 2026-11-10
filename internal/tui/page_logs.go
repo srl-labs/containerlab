@@ -201,9 +201,17 @@ func (p *logsPage) view(*Model) string { return p.log.View() }
 
 func (*logsPage) hints(*Model) []hint {
 	return []hint{
-		{"f", "follow"}, {"w", "wrap"}, {"T", "time"}, {"/", "find"}, {"n/N", "next/prev"},
-		{"[ ]", "other node"}, {"s", "save"}, {"y", "copy"}, {"r", "reload"},
-		{keyEsc, "back"}, {"?", "help"},
+		{"f", "follow"},
+		{"w", "wrap"},
+		{"T", "time"},
+		{"/", "find"},
+		{"n/N", "next/prev"},
+		{"[ ]", "other node"},
+		{"s", "save"},
+		{"y", "copy"},
+		{"r", "reload"},
+		{keyEsc, "back"},
+		{"?", "help"},
 	}
 }
 

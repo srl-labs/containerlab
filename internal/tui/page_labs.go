@@ -185,7 +185,9 @@ func (p *labsPage) row(m *Model, lab *clabinternaltuibackend.Lab) clabinternaltu
 
 		row.Cells = []clabinternaltuiui.Cell{
 			m.levelCell(glyph, level), m.mutedCell(lab.Name), m.levelCell(stateText, level),
-			m.mutedCell(nodes), m.dash(), {}, m.dash(), m.dash(), m.dash(), m.dash(), m.dash(),
+			m.mutedCell(nodes), m.dash(),
+			{},
+			m.dash(), m.dash(), m.dash(), m.dash(), m.dash(),
 			m.mutedCell(clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)),
 		}
 
@@ -316,7 +318,8 @@ func (p *labsPage) view(m *Model) string {
 func (p *labsPage) pane(m *Model) string {
 	lab := p.current(m)
 	if lab == nil {
-		return paneRule(m, "", p.width) + "\n" + clabinternaltuiui.FitLines("", p.width, paneRows)
+		return paneRule(m, "", p.width) + "\n" +
+			clabinternaltuiui.FitLines("", p.width, paneRows)
 	}
 
 	state := lab.State()

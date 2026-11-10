@@ -346,7 +346,8 @@ func (m *Model) captureForm(ifaces []*clabinternaltuibackend.Interface) tea.Cmd 
 	}
 
 	if len(targets) == 0 {
-		m.notifyf(clabinternaltuitheme.LevelWarning, "only the interfaces of links can be captured")
+		m.notifyf(clabinternaltuitheme.LevelWarning,
+			"only the interfaces of links can be captured")
 
 		return nil
 	}

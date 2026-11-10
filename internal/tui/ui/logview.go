@@ -289,7 +289,8 @@ func foldPositions(text, query string) []int {
 
 	var positions []int
 
-	for at := indexRunes(lower, needle, 0); at >= 0; at = indexRunes(lower, needle, at+len(needle)) {
+	for at := indexRunes(lower, needle, 0); at >= 0; at =
+		indexRunes(lower, needle, at+len(needle)) {
 		for k := range needle {
 			positions = append(positions, at+k)
 		}

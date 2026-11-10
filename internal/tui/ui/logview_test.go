@@ -89,7 +89,10 @@ func TestLogViewAlwaysFillsItsSize(t *testing.T) {
 			v := newTestLog(width, 6)
 			v.Wrap = wrap
 			v.Timestamps = true
-			v.Append(LogLine{Time: time.Unix(0, 0), Text: strings.Repeat("a long line ", 12)},
+			v.Append(LogLine{
+				Time: time.Unix(0, 0),
+				Text: strings.Repeat("a long line ", 12),
+			},
 				LogLine{Stderr: true, Level: "ERRO", Text: "short"})
 
 			lines := strings.Split(v.View(), "\n")

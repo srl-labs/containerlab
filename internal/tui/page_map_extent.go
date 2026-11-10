@@ -245,7 +245,8 @@ func busiestNode(g *clabinternaltuitopo.Graph) string {
 		switch {
 		case best == "", len(neighbors[id]) > len(neighbors[best]):
 			best = id
-		case len(neighbors[id]) == len(neighbors[best]) && clabinternaltuiui.NaturalLess(id, best):
+		case len(neighbors[id]) == len(neighbors[best]) &&
+			clabinternaltuiui.NaturalLess(id, best):
 			best = id
 		}
 	}

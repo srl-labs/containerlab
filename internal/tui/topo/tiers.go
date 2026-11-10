@@ -222,7 +222,8 @@ func commonTier(t, group []int) (int, bool) {
 
 		count[t[n]]++
 
-		if best < 0 || count[t[n]] > count[best] || (count[t[n]] == count[best] && t[n] < best) {
+		if best < 0 || count[t[n]] > count[best] ||
+			(count[t[n]] == count[best] && t[n] < best) {
 			best = t[n]
 		}
 	}

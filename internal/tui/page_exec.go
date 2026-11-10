@@ -157,7 +157,8 @@ func (p *execPage) render(m *Model) {
 	lines := []string{" " + m.th.Muted.Render("$ "+clabinternaltuiui.Sanitize(p.command)), ""}
 
 	if p.failure != "" {
-		lines = append(lines, " "+m.th.Error.Render("✗ "+clabinternaltuiui.Sanitize(p.failure)))
+		lines = append(lines, " "+m.th.Error.Render(
+			"✗ "+clabinternaltuiui.Sanitize(p.failure)))
 	}
 
 	for i := range p.nodes {
