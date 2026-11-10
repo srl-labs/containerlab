@@ -1,0 +1,25 @@
+name: fabric
+
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+  nodes:
+    spine1:
+      labels:
+        graph-level: "1"
+        graph-icon: spine
+    leaf1:
+      group: rack1
+      labels:
+        graph-level: "2"
+        topoViewer-role: leaf
+        graph-group: fabric
+    leaf2:
+      group: rack2
+    client1:
+  links:
+    - endpoints: ["leaf1:eth1", "spine1:eth1"]
+    - endpoints: ["leaf2:eth1", "spine1:eth2"]
+    - endpoints: ["client1:eth1", "leaf1:eth2"]
+    - endpoints: ["leaf1:eth3", "host:leaf1-eth3"]
