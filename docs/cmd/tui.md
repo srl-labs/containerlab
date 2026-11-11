@@ -27,6 +27,25 @@ The UI itself needs no more than access to the container runtime. Everything tha
 
 When root privileges cannot be obtained — containerlab is neither installed with the SUID bit nor run with `sudo` — the UI still starts and can be used to watch labs, read logs, run commands in nodes and open sessions. The operations that need root are then unavailable and say so, and the status line shows `read-only (no root)`.
 
+## Labs in a Kubernetes cluster
+
+With the [c9s runtime](../manual/clabernetes/runtime.md) the UI shows the labs that run in a Kubernetes cluster instead of the ones of this host:
+
+```bash
+containerlab -r c9s tui
+```
+
+It lists the labs of every namespace you may read, or of one namespace with the global `--namespace` flag, and uses the cluster your kubeconfig selects, like the other commands do. Nothing needs root privileges: what you can do is what the cluster lets you do.
+
+The views and the keys are the same. A few things differ, because the nodes are pods and not containers of this host:
+
+* The state and the traffic of the interfaces are read from inside the nodes every two seconds. CPU and memory use come from the metrics of the cluster and are missing when it serves none (no metrics-server).
+* A shell on a node is opened through the cluster. SSH connects through a port forwarded to the node, as the user the kind of the node logs in with by default.
+* A lab that was deployed from another computer has no topology file here. Its links are the ones the cluster reports for the running nodes, and it can be watched, stopped, saved, captured on and destroyed, but not redeployed.
+* Destroying a lab keeps the saved configuration of its nodes in the cluster, unless you tick the option to remove it.
+* Link impairments and terminal sharing work on the containers and the network of this host. They are not available, and say so.
+* Two labs of the same name in different namespaces are listed as `name@namespace`.
+
 ## Navigating
 
 The first line holds the views, the second one tells where you are, and the last two list the keys of the current context and show notifications.
@@ -225,4 +244,7 @@ containerlab tui --name srl02 --theme light
 
 # have a look without any lab
 containerlab tui --demo
+
+# watch and operate the labs of a Kubernetes cluster
+containerlab -r c9s tui
 ```
