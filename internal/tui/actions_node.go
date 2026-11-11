@@ -204,6 +204,32 @@ func interfaceNames(ifaces []*clabinternaltuibackend.Interface) []string {
 	return names
 }
 
+// interfacesByLab groups interfaces by the lab they belong to, keeping the labs in the order
+// they come in. A lab runs one job at a time, so what is done to several of its interfaces
+// has to be a single job.
+func interfacesByLab(
+	ifaces []*clabinternaltuibackend.Interface,
+) [][]clabinternaltuibackend.InterfaceRef {
+	var groups [][]clabinternaltuibackend.InterfaceRef
+
+	index := map[string]int{}
+
+	for _, iface := range ifaces {
+		i, seen := index[iface.Node.Lab]
+		if !seen {
+			i = len(groups)
+			index[iface.Node.Lab] = i
+			groups = append(groups, nil)
+		}
+
+		groups[i] = append(groups[i], clabinternaltuibackend.InterfaceRef{
+			Node: iface.Node, Name: iface.Name,
+		})
+	}
+
+	return groups
+}
+
 // netemForm edits the impairments of interfaces. The form starts from what is set on the
 // first of them and writes all values at once, as the underlying command replaces them.
 func (m *Model) netemForm(ifaces []*clabinternaltuibackend.Interface) tea.Cmd {
@@ -238,9 +264,9 @@ func (m *Model) netemForm(ifaces []*clabinternaltuibackend.Interface) tea.Cmd {
 	}
 
 	submit := func(v formValues) tea.Cmd {
-		for _, iface := range ifaces {
+		for _, refs := range interfacesByLab(ifaces) {
 			id, err := m.be.SetNetem(clabinternaltuibackend.NetemRequest{
-				Node: iface.Node, Interface: iface.Name, Impairment: read(v),
+				Interfaces: refs, Impairment: read(v),
 			})
 			m.started(id, err, false)
 		}
@@ -317,8 +343,8 @@ func (m *Model) netemReset(ifaces []*clabinternaltuibackend.Interface) tea.Cmd {
 	}
 
 	submit := func(formValues) tea.Cmd {
-		for _, iface := range ifaces {
-			id, err := m.be.ResetNetem(iface.Node, iface.Name)
+		for _, refs := range interfacesByLab(ifaces) {
+			id, err := m.be.ResetNetem(refs)
 			m.started(id, err, false)
 		}
 

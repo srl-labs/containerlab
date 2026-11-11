@@ -12,6 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 )
 
 // The tests in this file walk through what users come to do, key by key, starting from
@@ -330,6 +331,112 @@ func TestImpairALink(t *testing.T) {
 	}
 
 	t.Error("the interface was not found")
+}
+
+// TestImpairSeveralLinks marks interfaces of a node and sets a delay on all of them. A lab
+// runs one job at a time, so they are worked on by a single job, and so is clearing them.
+func TestImpairSeveralLinks(t *testing.T) {
+	m, be := newTestModel(t, 120, 35)
+
+	press(m, "ctrl+k")
+	typeText(m, "leaf2")
+	press(m, "enter", "down", "space", "space")
+
+	page, ok := m.top().(*nodePage)
+	if !ok {
+		t.Fatalf("expected the page of a node, got %T", m.top())
+	}
+
+	marked := map[string]bool{}
+	for _, iface := range page.selection() {
+		marked[iface.Name] = true
+	}
+
+	if len(marked) != 2 {
+		t.Fatalf("%d interfaces are marked, want 2", len(marked))
+	}
+
+	leaf2 := clabinternaltuibackend.NodeRef{Lab: "dc1", Name: "leaf2", Container: "clab-dc1-leaf2"}
+
+	impaired := func() int {
+		count := 0
+
+		for _, iface := range be.Interfaces(leaf2) {
+			if marked[iface.Name] && iface.Netem != nil && iface.Netem.Delay.String() == "20ms" {
+				count++
+			}
+		}
+
+		return count
+	}
+
+	press(m, "n")
+	typeText(m, "20ms")
+	press(m, "enter")
+
+	jobs := be.Jobs()
+	if len(jobs) != 1 || jobs[0].Lab != "dc1" || jobs[0].Title != "netem dc1 (2 interfaces)" {
+		t.Fatalf("setting the delay started %+v, want one job for the lab", jobs)
+	}
+
+	if m.toast.level == clabinternaltuitheme.LevelError {
+		t.Errorf("setting the delay failed: %s", m.toast.text)
+	}
+
+	advance(m, be, 3)
+
+	if got := impaired(); got != len(marked) {
+		t.Errorf("the delay was set on %d of %d interfaces", got, len(marked))
+	}
+
+	press(m, "N", "enter")
+
+	jobs = be.Jobs()
+	if len(jobs) != 2 || jobs[0].Title != "netem reset dc1 (2 interfaces)" {
+		t.Fatalf("clearing the delay started %+v, want one more job for the lab", jobs)
+	}
+
+	if m.toast.level == clabinternaltuitheme.LevelError {
+		t.Errorf("clearing the delay failed: %s", m.toast.text)
+	}
+
+	advance(m, be, 3)
+
+	if got := impaired(); got != 0 {
+		t.Errorf("the delay is left on %d interfaces", got)
+	}
+}
+
+// TestInterfacesAreGroupedByLab pins down that interfaces of several labs make one request
+// per lab, in the order the labs come in.
+func TestInterfacesAreGroupedByLab(t *testing.T) {
+	iface := func(lab, node, name string) *clabinternaltuibackend.Interface {
+		return &clabinternaltuibackend.Interface{
+			Node: clabinternaltuibackend.NodeRef{Lab: lab, Name: node}, Name: name,
+		}
+	}
+
+	groups := interfacesByLab([]*clabinternaltuibackend.Interface{
+		iface("dc1", "leaf1", "e1-1"),
+		iface("sp-core", "pe1", "eth1"),
+		iface("dc1", "leaf2", "e1-1"),
+	})
+
+	var got []string
+
+	for _, group := range groups {
+		names := make([]string, len(group))
+		for i, ref := range group {
+			names[i] = ref.Node.Lab + "/" + ref.Node.Name + ":" + ref.Name
+		}
+
+		got = append(got, strings.Join(names, " "))
+	}
+
+	want := []string{"dc1/leaf1:e1-1 dc1/leaf2:e1-1", "sp-core/pe1:eth1"}
+	if !slices.Equal(got, want) {
+		t.Errorf("groups = %q, want %q", got, want)
+	}
 }
 
 // TestUnavailableActionsSayWhy presses the key of an action that does not apply.

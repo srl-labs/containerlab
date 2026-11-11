@@ -114,16 +114,20 @@ func saveArgs(rt string, req *clabinternaltuibackend.SaveRequest) []string {
 // netemSetArgs always names every impairment, also the ones that are off: the command
 // replaces what is set on the interface, and naming them all keeps a default taken from the
 // environment from slipping in.
-func netemSetArgs(rt string, req *clabinternaltuibackend.NetemRequest) []string {
+func netemSetArgs(
+	rt string,
+	target *clabinternaltuibackend.InterfaceRef,
+	netem *clabinternaltuibackend.Impairment,
+) []string {
 	return []string{
 		cmdTools, "netem", "set", flagRuntime, rt,
-		"-n", req.Node.Container,
-		flagInterface, req.Interface,
-		"--delay", req.Delay.String(),
-		"--jitter", req.Jitter.String(),
-		"--loss", formatPercent(req.LossPct),
-		"--rate", strconv.FormatUint(req.RateKbit, 10),
-		"--corruption", formatPercent(req.CorruptionPct),
+		"-n", target.Node.Container,
+		flagInterface, target.Name,
+		"--delay", netem.Delay.String(),
+		"--jitter", netem.Jitter.String(),
+		"--loss", formatPercent(netem.LossPct),
+		"--rate", strconv.FormatUint(netem.RateKbit, 10),
+		"--corruption", formatPercent(netem.CorruptionPct),
 	}
 }
 

@@ -332,6 +332,18 @@ func newTestBackend(t *testing.T, adjust ...func(o *Options, d *deps)) *testBack
 	return &testBackend{Backend: b, run: run, clock: clock}
 }
 
+// interfaceRefs returns the references of interfaces of a node.
+func interfaceRefs(
+	node clabinternaltuibackend.NodeRef, names ...string,
+) []clabinternaltuibackend.InterfaceRef {
+	refs := make([]clabinternaltuibackend.InterfaceRef, len(names))
+	for i, name := range names {
+		refs[i] = clabinternaltuibackend.InterfaceRef{Node: node, Name: name}
+	}
+
+	return refs
+}
+
 // desktopEnv is the environment of a desktop session, as far as the backend looks at it.
 func desktopEnv(key string) string {
 	if key == "WAYLAND_DISPLAY" {

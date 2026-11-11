@@ -193,11 +193,10 @@ func TestNetemArgs(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			req := clabinternaltuibackend.NetemRequest{
-				Node: node, Interface: "e1-1", Impairment: tt.netem,
-			}
+			target := clabinternaltuibackend.InterfaceRef{Node: node, Name: "e1-1"}
 
-			if diff := cmp.Diff(argv(tt.want), netemSetArgs("docker", &req)); diff != "" {
+			got := netemSetArgs("docker", &target, &tt.netem)
+			if diff := cmp.Diff(argv(tt.want), got); diff != "" {
 				t.Errorf("unexpected arguments (-want +got):\n%s", diff)
 			}
 		})

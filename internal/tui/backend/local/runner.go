@@ -157,6 +157,87 @@ func (p *execProcess) wait() (int, error) {
 	}
 }
 
+// sequence runs commands one after another and passes for a single process. The commands do
+// not depend on each other: one that fails does not keep the ones after it from running,
+// and the sequence exits with the first failure. Once a signal was sent no further command
+// is started.
+type sequence struct {
+	run runner
+	// rest are the commands that follow the one that runs already.
+	rest []*procSpec
+	// announce is called ahead of each of them, with its position among them.
+	announce func(i int)
+
+	mu sync.Mutex
+	// current is the command that runs, or the last one that ran.
+	current process
+	stopped bool
+}
+
+func (*sequence) stdin() io.WriteCloser { return nil }
+
+func (s *sequence) signal(sig syscall.Signal) error {
+	s.mu.Lock()
+	s.stopped = true
+	current := s.current
+	s.mu.Unlock()
+
+	return current.signal(sig)
+}
+
+func (s *sequence) wait() (int, error) {
+	s.mu.Lock()
+	proc := s.current
+	s.mu.Unlock()
+
+	code, err := proc.wait()
+
+	for i := range s.rest {
+		proc, started, startErr := s.start(i)
+		if !started {
+			// What was left out makes the sequence one that was ended by a signal, also
+			// if the command that received the signal completed.
+			if code == 0 && err == nil {
+				code = -1
+			}
+
+			break
+		}
+
+		stepCode, stepErr := -1, startErr
+		if startErr == nil {
+			stepCode, stepErr = proc.wait()
+		}
+
+		if code == 0 && err == nil {
+			code, err = stepCode, stepErr
+		}
+	}
+
+	return code, err
+}
+
+// start starts a command of the rest, unless the sequence was stopped.
+func (s *sequence) start(i int) (proc process, started bool, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.stopped {
+		return nil, false, nil
+	}
+
+	s.announce(i)
+
+	proc, err = s.run.start(s.rest[i])
+	if err != nil {
+		return nil, true, err
+	}
+
+	s.current = proc
+
+	return proc, true, nil
+}
+
 // childEnv returns the environment of a containerlab child process, derived from the given
 // one: the topology selection is removed and the version check, which would add its notice
 // to every output, is turned off.

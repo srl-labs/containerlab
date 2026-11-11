@@ -51,12 +51,10 @@ func TestCommandLinesMatchTheCLI(t *testing.T) {
 			Lab: "lab1", Nodes: []string{"srl1"}, CopyTo: "/tmp/configs",
 		}),
 		"netem set": clabinternaltuibackendlocal.NetemSetArgs(
-			rt, &clabinternaltuibackend.NetemRequest{
-				Node: node, Interface: "e1-1",
-				Impairment: clabinternaltuibackend.Impairment{
-					Delay: 50 * time.Millisecond, Jitter: 5 * time.Millisecond,
-					LossPct: 1.5, RateKbit: 1000, CorruptionPct: 0.1,
-				},
+			rt, &clabinternaltuibackend.InterfaceRef{Node: node, Name: "e1-1"},
+			&clabinternaltuibackend.Impairment{
+				Delay: 50 * time.Millisecond, Jitter: 5 * time.Millisecond,
+				LossPct: 1.5, RateKbit: 1000, CorruptionPct: 0.1,
 			}),
 		"netem reset": clabinternaltuibackendlocal.NetemResetArgs(rt, node.Container, "e1-1"),
 		"capture": clabinternaltuibackendlocal.CaptureArgs(

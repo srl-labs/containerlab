@@ -104,8 +104,9 @@ type Backend interface {
 	Redeploy(req RedeployRequest) (JobID, error)
 	NodeAction(req NodeActionRequest) (JobID, error)
 	Save(req SaveRequest) (JobID, error)
+	// SetNetem and ResetNetem work on interfaces of one lab, all of them in a single job.
 	SetNetem(req NetemRequest) (JobID, error)
-	ResetNetem(node NodeRef, iface string) (JobID, error)
+	ResetNetem(interfaces []InterfaceRef) (JobID, error)
 	Share(req ShareRequest) (JobID, error)
 	Capture(req CaptureRequest) (JobID, error)
 
@@ -649,10 +650,16 @@ type SaveRequest struct {
 	CopyTo string
 }
 
-// NetemRequest sets the impairments of an interface. It replaces whatever was set before.
+// InterfaceRef identifies an interface of a node.
+type InterfaceRef struct {
+	Node NodeRef
+	Name string
+}
+
+// NetemRequest sets the impairments of interfaces of one lab. It replaces whatever was set
+// on them before.
 type NetemRequest struct {
-	Node      NodeRef
-	Interface string
+	Interfaces []InterfaceRef
 	Impairment
 }
 

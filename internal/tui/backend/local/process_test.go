@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	"golang.org/x/sys/unix"
 )
@@ -361,6 +362,80 @@ func TestProcessInterrupt(t *testing.T) {
 	// The command cleaned up and exited with success, which makes the job one.
 	info := b.awaitJob(t, id)
 	if info.State != clabinternaltuibackend.JobSucceeded || info.ExitCode != 0 {
+		t.Errorf("unexpected job: %+v", info)
+	}
+
+	want := []string{"ready", "received interrupt", "cleaned up"}
+	if diff := cmp.Diff(want, outputTexts(b.JobOutput(id, 0), true)); diff != "" {
+		t.Errorf("unexpected output (-want +got):\n%s", diff)
+	}
+}
+
+func TestProcessesOfAJobRunInTurn(t *testing.T) {
+	b := newProcessBackend(t, "partial")
+
+	j, err := b.jobs.start(&jobSpec{
+		lab:  "lab1",
+		args: []string{"netem", "first"},
+		then: [][]string{{"netem", "second"}, {"netem", "third"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info := b.awaitJob(t, j.info.ID)
+	if info.State != clabinternaltuibackend.JobSucceeded || info.ExitCode != 0 {
+		t.Errorf("unexpected job: %+v", info)
+	}
+
+	var got []string
+	for _, line := range b.JobOutput(info.ID, 0) {
+		got = append(got, line.Text)
+	}
+
+	// Each command printed a last line without line break to both of its outputs, which
+	// arrive in no particular order. They do not run into the output of the next command.
+	want := []string{
+		"$ containerlab netem first", "binary�", "no line break",
+		"$ containerlab netem second", "binary�", "no line break",
+		"$ containerlab netem third", "binary�", "no line break",
+	}
+
+	sorted := func(a, b string) bool { return a < b }
+	if diff := cmp.Diff(want, got, cmpopts.SortSlices(sorted)); diff != "" {
+		t.Errorf("unexpected output (-want +got):\n%s", diff)
+	}
+
+	for i, text := range got {
+		if strings.HasPrefix(text, "$ ") != (i%3 == 0) {
+			t.Errorf("the output of the commands is mixed up: %q", got)
+
+			break
+		}
+	}
+}
+
+func TestProcessesOfAJobStopAtAnInterrupt(t *testing.T) {
+	b := newProcessBackend(t, "interrupt")
+
+	j, err := b.jobs.start(&jobSpec{
+		lab:  "lab1",
+		args: []string{"netem", "first"},
+		then: [][]string{{"netem", "second"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id := j.info.ID
+
+	awaitOutput(t, b, id, "ready")
+	b.CancelJob(id)
+
+	// The command that ran cleaned up and exited with success. The one after it was left
+	// out, so the job did not do its work.
+	info := b.awaitJob(t, id)
+	if info.State != clabinternaltuibackend.JobCancelled {
 		t.Errorf("unexpected job: %+v", info)
 	}
 

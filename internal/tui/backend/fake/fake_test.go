@@ -264,7 +264,7 @@ func TestNetemAndCancel(t *testing.T) {
 	leaf2 := dc1.Node("leaf2").NodeRef
 
 	id, err := b.SetNetem(clabinternaltuibackend.NetemRequest{
-		Node: leaf2, Interface: "e1-49",
+		Interfaces: []clabinternaltuibackend.InterfaceRef{{Node: leaf2, Name: "e1-49"}},
 		Impairment: clabinternaltuibackend.Impairment{Delay: 20 * time.Millisecond},
 	})
 	if err != nil {
@@ -287,7 +287,7 @@ func TestNetemAndCancel(t *testing.T) {
 		t.Errorf("the impairment was not set: %+v", got)
 	}
 
-	id, _ = b.ResetNetem(leaf2, "e1-49")
+	id, _ = b.ResetNetem([]clabinternaltuibackend.InterfaceRef{{Node: leaf2, Name: "e1-49"}})
 	tickUntilDone(t, b, id)
 
 	if got := netem(); got != nil {

@@ -259,28 +259,72 @@ func (b *Backend) Save(
 	})
 }
 
-// netemTarget resolves the node of an impairment request to its running container.
-func (b *Backend) netemTarget(
-	ref clabinternaltuibackend.NodeRef,
-	iface string,
-) (*clabinternaltuibackend.Node, error) {
-	if iface == "" {
-		return nil, errors.New("no interface given")
+// netemTargets resolves the interfaces of an impairment request to the running containers
+// they belong to, and returns the lab of them. All of them are checked before anything is
+// changed, and they must be of one lab: the job that works on them holds the lock of it.
+func (b *Backend) netemTargets(
+	refs []clabinternaltuibackend.InterfaceRef,
+) (string, []clabinternaltuibackend.InterfaceRef, error) {
+	if len(refs) == 0 {
+		return "", nil, errors.New("no interface given")
 	}
 
-	_, node, _ := b.inv.find(ref)
-	if node == nil {
-		return nil, fmt.Errorf("node %q of lab %q not found", ref.Name, ref.Lab)
+	targets := make([]clabinternaltuibackend.InterfaceRef, 0, len(refs))
+
+	for _, ref := range refs {
+		if ref.Name == "" {
+			return "", nil, errors.New("no interface given")
+		}
+
+		_, node, _ := b.inv.find(ref.Node)
+		if node == nil {
+			return "", nil, fmt.Errorf("node %q of lab %q not found", ref.Node.Name, ref.Node.Lab)
+		}
+
+		if !node.Readiness().Running() {
+			return "", nil, fmt.Errorf("node %q is not running", node.Name)
+		}
+
+		if len(targets) > 0 && node.Lab != targets[0].Node.Lab {
+			return "", nil, errors.New("the interfaces belong to more than one lab")
+		}
+
+		targets = append(targets, clabinternaltuibackend.InterfaceRef{
+			Node: node.NodeRef, Name: ref.Name,
+		})
 	}
 
-	if !node.Readiness().Running() {
-		return nil, fmt.Errorf("node %q is not running", node.Name)
-	}
-
-	return node, nil
+	return targets[0].Node.Lab, targets, nil
 }
 
-// SetNetem sets the impairments of an interface, replacing what was set before.
+// runNetem starts the job that works on the impairments of interfaces of a lab. The command
+// takes one interface, so it runs once for each of them: one after the other in a single
+// job, as the lab allows one job at a time.
+func (b *Backend) runNetem(
+	verb, lab string,
+	targets []clabinternaltuibackend.InterfaceRef,
+	args func(target *clabinternaltuibackend.InterfaceRef) []string,
+) (clabinternaltuibackend.JobID, error) {
+	title := verb + " " + targets[0].Node.Name + ":" + targets[0].Name
+	if len(targets) > 1 {
+		title = fmt.Sprintf("%s %s (%d interfaces)", verb, lab, len(targets))
+	}
+
+	runs := make([][]string, len(targets))
+	for i := range targets {
+		runs[i] = args(&targets[i])
+	}
+
+	return b.runJob(&jobSpec{
+		kind:  clabinternaltuibackend.JobNetem,
+		lab:   lab,
+		title: title,
+		args:  runs[0],
+		then:  runs[1:],
+	})
+}
+
+// SetNetem sets the impairments of interfaces of a lab, replacing what was set before.
 func (b *Backend) SetNetem(
 	req clabinternaltuibackend.NetemRequest,
 ) (clabinternaltuibackend.JobID, error) {
@@ -301,41 +345,34 @@ func (b *Backend) SetNetem(
 		return 0, errors.New("packet corruption must be between 0 and 100 percent")
 	}
 
-	node, err := b.netemTarget(req.Node, req.Interface)
+	lab, targets, err := b.netemTargets(req.Interfaces)
 	if err != nil {
 		return 0, err
 	}
 
-	req.Node = node.NodeRef
-
-	return b.runJob(&jobSpec{
-		kind:  clabinternaltuibackend.JobNetem,
-		lab:   node.Lab,
-		title: "netem " + node.Name + ":" + req.Interface,
-		args:  netemSetArgs(b.rtName, &req),
-	})
+	return b.runNetem("netem", lab, targets,
+		func(target *clabinternaltuibackend.InterfaceRef) []string {
+			return netemSetArgs(b.rtName, target, &req.Impairment)
+		})
 }
 
-// ResetNetem removes the impairments of an interface.
+// ResetNetem removes the impairments of interfaces of a lab.
 func (b *Backend) ResetNetem(
-	ref clabinternaltuibackend.NodeRef,
-	iface string,
+	interfaces []clabinternaltuibackend.InterfaceRef,
 ) (clabinternaltuibackend.JobID, error) {
 	if err := b.allow(true); err != nil {
 		return 0, err
 	}
 
-	node, err := b.netemTarget(ref, iface)
+	lab, targets, err := b.netemTargets(interfaces)
 	if err != nil {
 		return 0, err
 	}
 
-	return b.runJob(&jobSpec{
-		kind:  clabinternaltuibackend.JobNetem,
-		lab:   node.Lab,
-		title: "netem reset " + node.Name + ":" + iface,
-		args:  netemResetArgs(b.rtName, node.Container, iface),
-	})
+	return b.runNetem("netem reset", lab, targets,
+		func(target *clabinternaltuibackend.InterfaceRef) []string {
+			return netemResetArgs(b.rtName, target.Node.Container, target.Name)
+		})
 }
 
 // Share attaches a terminal sharing session to a deployed lab, or detaches it.

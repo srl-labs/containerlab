@@ -34,9 +34,9 @@ func everyOperation(t *testing.T, b *testBackend) map[string]error {
 	})
 	_, errs["save"] = b.Save(clabinternaltuibackend.SaveRequest{Lab: "fabric"})
 	_, errs["set netem"] = b.SetNetem(clabinternaltuibackend.NetemRequest{
-		Node: leaf1, Interface: "e1-1",
+		Interfaces: interfaceRefs(leaf1, "e1-1"),
 	})
-	_, errs["reset netem"] = b.ResetNetem(leaf1, "e1-1")
+	_, errs["reset netem"] = b.ResetNetem(interfaceRefs(leaf1, "e1-1"))
 	_, errs["share"] = b.Share(clabinternaltuibackend.ShareRequest{
 		Lab: "fabric", Tool: clabinternaltuibackend.ShareSSHX,
 		Action: clabinternaltuibackend.ShareAttach,
@@ -210,7 +210,7 @@ func TestEveryOperationRunsItsCommand(t *testing.T) {
 		{
 			run: func() (clabinternaltuibackend.JobID, error) {
 				return b.SetNetem(clabinternaltuibackend.NetemRequest{
-					Node: leaf1, Interface: "e1-1",
+					Interfaces: interfaceRefs(leaf1, "e1-1"),
 					Impairment: clabinternaltuibackend.Impairment{
 						Delay: 50 * time.Millisecond, LossPct: 0.5,
 					},
@@ -224,7 +224,7 @@ func TestEveryOperationRunsItsCommand(t *testing.T) {
 		},
 		{
 			run: func() (clabinternaltuibackend.JobID, error) {
-				return b.ResetNetem(leaf1, "e1-1")
+				return b.ResetNetem(interfaceRefs(leaf1, "e1-1"))
 			},
 			wantKind:  clabinternaltuibackend.JobNetem,
 			wantTitle: "netem reset leaf1:e1-1",
@@ -284,6 +284,207 @@ func TestEveryOperationRunsItsCommand(t *testing.T) {
 	if want := "containerlab tools gotty attach -r docker -l fabric --port 9090 " +
 		"--username admin --password ******"; b.Jobs()[0].Command != want {
 		t.Errorf("command = %q, want %q", b.Jobs()[0].Command, want)
+	}
+}
+
+// netemOperations are the two operations on the impairments of interfaces, with the
+// arguments of the command each of them runs for an interface.
+var netemOperations = map[string]struct {
+	start func(
+		b *testBackend, refs []clabinternaltuibackend.InterfaceRef,
+	) (clabinternaltuibackend.JobID, error)
+	wantTitle string
+	wantArgs  func(container, iface string) string
+}{
+	"set": {
+		start: func(
+			b *testBackend, refs []clabinternaltuibackend.InterfaceRef,
+		) (clabinternaltuibackend.JobID, error) {
+			return b.SetNetem(clabinternaltuibackend.NetemRequest{
+				Interfaces: refs,
+				Impairment: clabinternaltuibackend.Impairment{Delay: 50 * time.Millisecond},
+			})
+		},
+		wantTitle: "netem fabric (3 interfaces)",
+		wantArgs: func(container, iface string) string {
+			return "tools netem set -r docker -n " + container + " -i " + iface +
+				" --delay 50ms --jitter 0s --loss 0 --rate 0 --corruption 0"
+		},
+	},
+	"reset": {
+		start: func(
+			b *testBackend, refs []clabinternaltuibackend.InterfaceRef,
+		) (clabinternaltuibackend.JobID, error) {
+			return b.ResetNetem(refs)
+		},
+		wantTitle: "netem reset fabric (3 interfaces)",
+		wantArgs: func(container, iface string) string {
+			return "tools netem reset -r docker -n " + container + " -i " + iface
+		},
+	},
+}
+
+// fabricInterfaces returns three interfaces of two nodes of the fabric lab, and the
+// containers and interfaces the commands for them name.
+func fabricInterfaces() (refs []clabinternaltuibackend.InterfaceRef, targets [][2]string) {
+	leaf1 := clabinternaltuibackend.NodeRef{Lab: "fabric", Name: "leaf1"}
+	leaf2 := clabinternaltuibackend.NodeRef{Lab: "fabric", Name: "leaf2"}
+
+	return append(interfaceRefs(leaf1, "e1-1", "e1-2"), interfaceRefs(leaf2, "e1-1")...),
+		[][2]string{
+			{"clab-fabric-leaf1", "e1-1"},
+			{"clab-fabric-leaf1", "e1-2"},
+			{"clab-fabric-leaf2", "e1-1"},
+		}
+}
+
+// The command behind the impairments takes one interface and a lab runs one job at a time.
+// Interfaces of a lab are therefore worked on by one job, one after the other.
+func TestNetemOnSeveralInterfacesIsOneJob(t *testing.T) {
+	for name, op := range netemOperations {
+		t.Run(name, func(t *testing.T) {
+			b := newTestBackend(t)
+			b.setLabs(fabricContainers(t)...)
+
+			refs, targets := fabricInterfaces()
+
+			id, err := op.start(b, refs)
+			if err != nil {
+				t.Fatalf("the interfaces of one lab were not taken together: %v", err)
+			}
+
+			commands := make([]string, len(targets))
+
+			for i, target := range targets {
+				// The command of an interface starts once the one before it is through.
+				proc := b.run.proc(t, i)
+				if b.run.count() != i+1 {
+					t.Fatalf("%d commands run at once", b.run.count()-i)
+				}
+
+				want := op.wantArgs(target[0], target[1])
+				commands[i] = "containerlab " + want
+
+				if diff := cmp.Diff(argv(want), proc.spec.args); diff != "" {
+					t.Errorf("command %d: unexpected arguments (-want +got):\n%s", i, diff)
+				}
+
+				// The lab stays locked from the first interface to the last.
+				if info, _ := b.Job(id); info.State != clabinternaltuibackend.JobRunning {
+					t.Fatalf("command %d: the job is %s", i, info.State)
+				}
+
+				_, err := b.Destroy(clabinternaltuibackend.DestroyRequest{Lab: "fabric"})
+				if !errors.Is(err, clabinternaltuibackend.ErrLabBusy) {
+					t.Errorf("command %d: another job for the lab: err = %v", i, err)
+				}
+
+				proc.stdout("done " + target[1] + "\n")
+				proc.exitWith(0)
+			}
+
+			info := b.awaitJob(t, id)
+			if info.State != clabinternaltuibackend.JobSucceeded || info.Lab != "fabric" ||
+				info.Title != op.wantTitle || len(b.Jobs()) != 1 {
+				t.Errorf("unexpected job: %+v", info)
+			}
+
+			if want := strings.Join(commands, "; "); info.Command != want {
+				t.Errorf("command = %q, want %q", info.Command, want)
+			}
+
+			// The output tells which command printed what.
+			var got []string
+			for _, line := range b.JobOutput(id, 0) {
+				got = append(got, line.Text)
+			}
+
+			want := []string{
+				"$ " + commands[0], "done e1-1",
+				"$ " + commands[1], "done e1-2",
+				"$ " + commands[2], "done e1-1",
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("unexpected output (-want +got):\n%s", diff)
+			}
+
+			// The lab is free again.
+			if _, err := op.start(b, refs[:1]); err != nil {
+				t.Errorf("the lab is still locked: %v", err)
+			}
+		})
+	}
+}
+
+func TestNetemGoesOnAfterAnInterfaceFailed(t *testing.T) {
+	for name, op := range netemOperations {
+		t.Run(name, func(t *testing.T) {
+			b := newTestBackend(t)
+			b.setLabs(fabricContainers(t)...)
+
+			refs, targets := fabricInterfaces()
+
+			id, err := op.start(b, refs)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			first := b.run.proc(t, 0)
+			first.stderr("10:00:00 ERRO no such interface\n")
+			first.exitWith(1)
+
+			// The other interfaces are independent of the one that failed.
+			for i := 1; i < len(targets); i++ {
+				proc := b.run.proc(t, i)
+
+				want := op.wantArgs(targets[i][0], targets[i][1])
+				if diff := cmp.Diff(argv(want), proc.spec.args); diff != "" {
+					t.Errorf("command %d: unexpected arguments (-want +got):\n%s", i, diff)
+				}
+
+				proc.exitWith(0)
+			}
+
+			info := b.awaitJob(t, id)
+			if info.State != clabinternaltuibackend.JobFailed || info.ExitCode != 1 ||
+				info.Err != "no such interface" {
+				t.Errorf("a failed interface did not fail the job: %+v", info)
+			}
+		})
+	}
+}
+
+func TestStoppedNetemLeavesTheOtherInterfacesAlone(t *testing.T) {
+	for name, op := range netemOperations {
+		t.Run(name, func(t *testing.T) {
+			b := newTestBackend(t)
+			b.setLabs(fabricContainers(t)...)
+
+			refs, _ := fabricInterfaces()
+
+			id, err := op.start(b, refs)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			proc := b.run.proc(t, 0)
+
+			b.CancelJob(id)
+			proc.awaitSignals(t, 1)
+
+			// The command that runs completes, the ones after it do not start: the job did
+			// not do all of its work.
+			proc.exitWith(0)
+
+			info := b.awaitJob(t, id)
+			if info.State != clabinternaltuibackend.JobCancelled {
+				t.Errorf("unexpected job: %+v", info)
+			}
+
+			if b.run.count() != 1 {
+				t.Errorf("%d commands ran, want 1", b.run.count())
+			}
+		})
 	}
 }
 
@@ -374,26 +575,55 @@ func TestRequestsThatCannotRun(t *testing.T) {
 		},
 		"netem without an interface": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
-				return b.SetNetem(clabinternaltuibackend.NetemRequest{Node: leaf1})
+				return b.SetNetem(clabinternaltuibackend.NetemRequest{
+					Interfaces: interfaceRefs(leaf1, ""),
+				})
 			},
 			wantErr: "no interface given",
 		},
+		"netem without interfaces": {
+			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
+				return b.SetNetem(clabinternaltuibackend.NetemRequest{})
+			},
+			wantErr: "no interface given",
+		},
+		"netem on interfaces of two labs": {
+			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
+				other := clabinternaltuibackend.NodeRef{Lab: "orphan", Name: "n1"}
+
+				return b.ResetNetem(
+					append(interfaceRefs(leaf1, "e1-1"), interfaceRefs(other, "eth1")...),
+				)
+			},
+			wantErr: "more than one lab",
+		},
+		// Every interface is checked before the first one is changed.
+		"netem on interfaces of which one cannot be changed": {
+			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
+				return b.ResetNetem(
+					append(interfaceRefs(leaf1, "e1-1"), interfaceRefs(stopped, "eth1")...),
+				)
+			},
+			wantErr: "not running",
+		},
 		"netem on an unknown node": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
-				return b.ResetNetem(clabinternaltuibackend.NodeRef{Lab: "fabric", Name: "x"}, "e1")
+				unknown := clabinternaltuibackend.NodeRef{Lab: "fabric", Name: "x"}
+
+				return b.ResetNetem(interfaceRefs(unknown, "e1"))
 			},
 			wantErr: "not found",
 		},
 		"netem on a stopped node": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
-				return b.ResetNetem(stopped, "eth1")
+				return b.ResetNetem(interfaceRefs(stopped, "eth1"))
 			},
 			wantErr: "not running",
 		},
 		"jitter without delay": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
 				return b.SetNetem(clabinternaltuibackend.NetemRequest{
-					Node: leaf1, Interface: "e1-1",
+					Interfaces: interfaceRefs(leaf1, "e1-1"),
 					Impairment: clabinternaltuibackend.Impairment{Jitter: time.Millisecond},
 				})
 			},
@@ -402,7 +632,7 @@ func TestRequestsThatCannotRun(t *testing.T) {
 		"loss beyond everything": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
 				return b.SetNetem(clabinternaltuibackend.NetemRequest{
-					Node: leaf1, Interface: "e1-1",
+					Interfaces: interfaceRefs(leaf1, "e1-1"),
 					Impairment: clabinternaltuibackend.Impairment{LossPct: 100.5},
 				})
 			},
@@ -411,7 +641,7 @@ func TestRequestsThatCannotRun(t *testing.T) {
 		"negative delay": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
 				return b.SetNetem(clabinternaltuibackend.NetemRequest{
-					Node: leaf1, Interface: "e1-1",
+					Interfaces: interfaceRefs(leaf1, "e1-1"),
 					Impairment: clabinternaltuibackend.Impairment{Delay: -time.Second},
 				})
 			},
@@ -420,7 +650,7 @@ func TestRequestsThatCannotRun(t *testing.T) {
 		"negative corruption": {
 			run: func(b *testBackend) (clabinternaltuibackend.JobID, error) {
 				return b.SetNetem(clabinternaltuibackend.NetemRequest{
-					Node: leaf1, Interface: "e1-1",
+					Interfaces: interfaceRefs(leaf1, "e1-1"),
 					Impairment: clabinternaltuibackend.Impairment{CorruptionPct: -1},
 				})
 			},

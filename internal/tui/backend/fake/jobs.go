@@ -480,44 +480,70 @@ func (b *Backend) setImpairment(
 	b.ifaces[node.Container] = list
 }
 
+// netemJob starts the job that works on the impairments of interfaces of one lab, with a
+// command and a line of output for each of them.
+func (b *Backend) netemJob(
+	verb, action, output string,
+	targets []clabinternaltuibackend.InterfaceRef,
+	netem *clabinternaltuibackend.Impairment,
+) (clabinternaltuibackend.JobID, error) {
+	if len(targets) == 0 {
+		return 0, fmt.Errorf("no interface given")
+	}
+
+	lab := targets[0].Node.Lab
+	title := verb + " " + targets[0].Node.Name + ":" + targets[0].Name
+
+	if len(targets) > 1 {
+		title = fmt.Sprintf("%s %s (%d interfaces)", verb, lab, len(targets))
+	}
+
+	commands := make([]string, len(targets))
+	script := make([]string, len(targets))
+
+	for i, target := range targets {
+		if target.Node.Lab != lab {
+			return 0, fmt.Errorf("the interfaces belong to more than one lab")
+		}
+
+		commands[i] = fmt.Sprintf("containerlab tools netem %s -n %s -i %s",
+			action, target.Node.Container, target.Name)
+		script[i] = output + " node=" + target.Node.Name + " interface=" + target.Name
+	}
+
+	return b.startJob(clabinternaltuibackend.JobNetem, lab, title,
+		strings.Join(commands, "; "), script,
+		func() {
+			for _, target := range targets {
+				if netem == nil {
+					b.setImpairment(target.Node, target.Name, nil)
+
+					continue
+				}
+
+				set := *netem
+				b.setImpairment(target.Node, target.Name, &set)
+			}
+		})
+}
+
 // SetNetem implements clabinternaltuibackend.Backend.
 func (b *Backend) SetNetem(
 	req clabinternaltuibackend.NetemRequest,
 ) (clabinternaltuibackend.JobID, error) {
-	netem := req.Impairment
-	command := fmt.Sprintf(
-		"containerlab tools netem set -n %s -i %s",
-		req.Node.Container,
-		req.Interface,
-	)
+	var netem *clabinternaltuibackend.Impairment
+	if !req.IsZero() {
+		netem = &req.Impairment
+	}
 
-	return b.startJob(
-		clabinternaltuibackend.JobNetem,
-		"",
-		"netem "+req.Node.Name+":"+req.Interface,
-		command,
-		[]string{"Setting impairments node=" + req.Node.Name + " interface=" + req.Interface},
-		func() {
-			if netem.IsZero() {
-				b.setImpairment(req.Node, req.Interface, nil)
-
-				return
-			}
-
-			b.setImpairment(req.Node, req.Interface, &netem)
-		},
-	)
+	return b.netemJob("netem", "set", "Setting impairments", req.Interfaces, netem)
 }
 
 // ResetNetem implements clabinternaltuibackend.Backend.
 func (b *Backend) ResetNetem(
-	node clabinternaltuibackend.NodeRef, iface string,
+	interfaces []clabinternaltuibackend.InterfaceRef,
 ) (clabinternaltuibackend.JobID, error) {
-	command := fmt.Sprintf("containerlab tools netem reset -n %s -i %s", node.Container, iface)
-
-	return b.startJob(clabinternaltuibackend.JobNetem, "", "netem reset "+node.Name+":"+iface,
-		command, []string{"Reset impairments node=" + node.Name + " interface=" + iface},
-		func() { b.setImpairment(node, iface, nil) })
+	return b.netemJob("netem reset", "reset", "Reset impairments", interfaces, nil)
 }
 
 // Share implements clabinternaltuibackend.Backend.

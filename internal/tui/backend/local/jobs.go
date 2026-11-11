@@ -80,6 +80,9 @@ type jobSpec struct {
 	// directory of the file, as the paths in a topology are relative to it.
 	topo string
 	args []string
+	// then holds the arguments of further runs of the command. They follow one another in
+	// the same job, which holds the lock of its lab for all of them.
+	then [][]string
 	// pipedTo is the command line of the program the output of the command is piped
 	// into, if any. It is only used to show what is run.
 	pipedTo string
@@ -155,6 +158,19 @@ func (j *job) note(now time.Time, level, text string) {
 	defer j.mu.Unlock()
 
 	j.lines.add(clabinternaltuibackend.LogLine{Time: now, Level: level, Text: text})
+	j.info.Lines = j.lines.total
+}
+
+// announce adds the command that runs next to the output of a job that runs several. What
+// was read of the error output of the command before does not carry over to it.
+func (j *job) announce(now time.Time, command string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	j.inBanner = false
+	j.tail = ""
+
+	j.lines.add(clabinternaltuibackend.LogLine{Time: now, Level: levelInfo, Text: "$ " + command})
 	j.info.Lines = j.lines.total
 }
 
@@ -309,12 +325,19 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 
 	m.mu.Unlock()
 
-	args := spec.args
-	if m.debug {
-		args = append([]string{"--debug"}, args...)
+	runs := make([][]string, 0, 1+len(spec.then))
+	commands := make([]string, 0, cap(runs))
+
+	for _, args := range append([][]string{spec.args}, spec.then...) {
+		if m.debug {
+			args = append([]string{"--debug"}, args...)
+		}
+
+		runs = append(runs, args)
+		commands = append(commands, commandLine(programName, args))
 	}
 
-	command := commandLine(programName, args)
+	command := strings.Join(commands, "; ")
 	if spec.pipedTo != "" {
 		command += " | " + spec.pipedTo
 	}
@@ -348,20 +371,48 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 		stdout = lines
 	}
 
-	proc, err := m.run.start(&procSpec{
-		path:   m.exe,
-		args:   args,
-		dir:    workDir(spec.topo),
-		env:    childEnv(m.environ()),
-		stdout: stdout,
-		stderr: stderr,
-	})
+	procs := make([]*procSpec, len(runs))
+	for i, args := range runs {
+		procs[i] = &procSpec{
+			path:   m.exe,
+			args:   args,
+			dir:    workDir(spec.topo),
+			env:    childEnv(m.environ()),
+			stdout: stdout,
+			stderr: stderr,
+		}
+	}
+
+	// The output of a job that runs several commands tells which one printed what.
+	if len(runs) > 1 {
+		j.announce(m.clock.Now(), commands[0])
+	}
+
+	proc, err := m.run.start(procs[0])
 	if err != nil {
 		m.mu.Lock()
 		delete(m.locks, key)
 		m.mu.Unlock()
 
 		return nil, fmt.Errorf("failed to run %s: %w", m.exe, err)
+	}
+
+	if len(runs) > 1 {
+		proc = &sequence{
+			run:     m.run,
+			rest:    procs[1:],
+			current: proc,
+			announce: func(i int) {
+				// The command before is through, what is left of its output is a last line
+				// without line break.
+				for _, w := range writers {
+					w.close()
+				}
+
+				j.announce(m.clock.Now(), commands[i+1])
+				m.output.poke()
+			},
+		}
 	}
 
 	j.proc = proc
