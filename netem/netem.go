@@ -31,13 +31,37 @@ func NewTC(ns int) (*tc.Tc, error) {
 	return tcnl, nil
 }
 
-// SetImpairments sets the impairments on the given interface of a node.
+// SetImpairments sets the impairments on the given interface of a node and returns its qdisc.
 func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, jitter time.Duration,
 	loss float64, rate uint64, probability float64,
 ) (*tc.Object, error) {
+	err := ReplaceImpairments(tcnl, link, delay, jitter, loss, rate, probability)
+	if err != nil {
+		return nil, err
+	}
+
+	// get qdisc of an interface after we set it
+	qdiscs, err := tcnl.Qdisc().Get()
+	if err != nil {
+		return nil, fmt.Errorf("could not get all qdiscs: %v", err)
+	}
+
+	for idx := range qdiscs {
+		if qdiscs[idx].Ifindex == uint32(link.Index) {
+			return &qdiscs[idx], nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find qdisc for interface %q", link.Name)
+}
+
+// ReplaceImpairments sets the impairments on the given interface, replacing the ones it has.
+func ReplaceImpairments(tcnl *tc.Tc, link *net.Interface, delay, jitter time.Duration,
+	loss float64, rate uint64, probability float64,
+) error {
 	err := tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
-		return nil, fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
+		return fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
 	}
 
 	qdisc := tc.Object{
@@ -58,10 +82,7 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 		},
 	}
 
-	err = setDelay(&qdisc, delay, jitter)
-	if err != nil {
-		return nil, err
-	}
+	setDelay(&qdisc, delay, jitter)
 
 	setLoss(&qdisc, loss)
 
@@ -70,24 +91,7 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 	// Always set the corruption field (even if probability is 0) to allow resetting.
 	setCorruption(&qdisc, probability)
 
-	err = tcnl.Qdisc().Replace(&qdisc)
-	if err != nil {
-		return nil, err
-	}
-
-	// get qdisc of an interface after we set it
-	qdiscs, err := tcnl.Qdisc().Get()
-	if err != nil {
-		return nil, fmt.Errorf("could not get all qdiscs: %v", err)
-	}
-
-	for idx := range qdiscs {
-		if qdiscs[idx].Ifindex == uint32(link.Index) {
-			return &qdiscs[idx], nil
-		}
-	}
-
-	return nil, fmt.Errorf("could not find qdisc for interface %q", link.Name)
+	return tcnl.Qdisc().Replace(&qdisc)
 }
 
 // DeleteImpairments deletes the netem impairments from the given interface.
@@ -109,26 +113,12 @@ func DeleteImpairments(tcnl *tc.Tc, link *net.Interface) error {
 }
 
 // setDelay sets delay and jitter to the qdisc.
-func setDelay(qdisc *tc.Object, delay, jitter time.Duration) error {
-	delayTcTime, err := core.Duration2TcTime(delay)
-	if err != nil {
-		return err
-	}
+func setDelay(qdisc *tc.Object, delay, jitter time.Duration) {
+	delayNs := delay.Nanoseconds()
+	jitterNs := jitter.Nanoseconds()
 
-	delayTicks := core.Time2Tick(delayTcTime)
-
-	qdisc.Attribute.Netem.Qopt.Latency = delayTicks
-
-	jitterTcTime, err := core.Duration2TcTime(jitter)
-	if err != nil {
-		return err
-	}
-
-	jitterTicks := core.Time2Tick(jitterTcTime)
-
-	qdisc.Attribute.Netem.Qopt.Jitter = jitterTicks
-
-	return err
+	qdisc.Attribute.Netem.Latency64 = &delayNs
+	qdisc.Attribute.Netem.Jitter64 = &jitterNs
 }
 
 // setLoss sets the loss to the qdisc.
@@ -142,7 +132,11 @@ func setRate(qdisc *tc.Object, rate uint64) {
 	// convert to bytes
 	byteRate := rate * 1000 / 8
 	qdisc.Attribute.Netem.Rate = &tc.NetemRate{
-		Rate: uint32(byteRate),
+		Rate: uint32(min(byteRate, math.MaxUint32)),
+	}
+
+	if byteRate > math.MaxUint32 {
+		qdisc.Attribute.Netem.Rate64 = &byteRate
 	}
 }
 

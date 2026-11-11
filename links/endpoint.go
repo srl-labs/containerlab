@@ -27,6 +27,7 @@ type Endpoint interface {
 	GetMac() net.HardwareAddr
 	GetIPv4Addr() netip.Prefix
 	GetIPv6Addr() netip.Prefix
+	GetNetem() *Netem
 	String() string
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
@@ -64,6 +65,7 @@ type EndpointGeneric struct {
 	IPv4     netip.Prefix
 	IPv6     netip.Prefix
 	Vars     map[string]any
+	Netem    *Netem
 }
 
 func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
@@ -116,6 +118,10 @@ func (e *EndpointGeneric) GetIPv4Addr() netip.Prefix {
 
 func (e *EndpointGeneric) GetIPv6Addr() netip.Prefix {
 	return e.IPv6
+}
+
+func (e *EndpointGeneric) GetNetem() *Netem {
+	return e.Netem
 }
 
 func (e *EndpointGeneric) GetVars() map[string]any {

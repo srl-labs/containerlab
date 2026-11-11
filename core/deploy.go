@@ -267,6 +267,10 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 	_ = linkPostDeployWorkers.Wait()
 
+	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+		return nil, err
+	}
+
 	execCollection.Log()
 
 	return c.finalize(ctx, options.exportTemplate, options.graph)
