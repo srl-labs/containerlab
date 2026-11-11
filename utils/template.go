@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-
-	"github.com/hellt/envsubst"
 )
 
 func CreateFuncs() template.FuncMap {
@@ -635,15 +633,19 @@ func (nf *NetFuncs) CIDRHost(hostnum any, prefix any) (string, error) {
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
 // with the `data` template data.
 func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
+	return SubstituteEnvsAndTemplateWithEnv(r, data, nil)
+}
+
+// SubstituteEnvsAndTemplateWithEnv is like SubstituteEnvsAndTemplate, but expands env vars
+// with the values of env (key=value entries). A nil env uses the process environment.
+func SubstituteEnvsAndTemplateWithEnv(r io.Reader, data any, env []string) (*bytes.Buffer, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// expand env vars in `b` if any were set
-	// do not replace vars initialized with defaults
-	// and do not replace vars that are not set
-	b, err = envsubst.BytesRestrictedNoReplace(b, false, false, true, true)
+	b, err = SubstituteEnvs(b, env)
 	if err != nil {
 		return nil, err
 	}

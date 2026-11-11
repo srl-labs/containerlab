@@ -154,6 +154,11 @@ func (c *CLab) makeCopyForDestroy(
 		WithSkippedMgmtNetLinksCheck(),
 	}
 
+	// the copy must expand the topology with the same env vars as the deployment did
+	if c.topologyEnv != nil {
+		newOpts = append(newOpts, WithTopologyEnv(c.topologyEnv))
+	}
+
 	// Try to load topology file if it exists, otherwise use lab name only.
 	// This allows destroying labs even when the topology file has been deleted.
 	// WithTopoPath / WithLabNameOnly must run before WithNodeFilter so filterClabNodes

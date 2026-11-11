@@ -282,6 +282,24 @@ func WithTopologyVarsFiles(varsFiles []string) ClabOption {
 	}
 }
 
+// WithTopologyEnv sets the env vars (key=value entries) that are used instead of the
+// process environment to expand env vars in the topology and in startup config templates,
+// and that __IMPORT_ENVS imports. This keeps the environment of a program that embeds
+// containerlab, e.g. its secrets, out of the topologies it deploys.
+// It must precede the options that load the topology.
+func WithTopologyEnv(env []string) ClabOption {
+	return func(c *CLab) error {
+		if c.TopoPaths.TopologyFileIsSet() {
+			return errors.New("topology env must be set before the topology is loaded")
+		}
+
+		// copy into a non-nil slice, so that an empty env doesn't fall back to the process env
+		c.topologyEnv = append(make([]string, 0, len(env)), env...)
+
+		return nil
+	}
+}
+
 func WithTopoPath(path string, varsFiles []string) ClabOption {
 	return func(c *CLab) error {
 		file, err := c.ProcessTopoPath(path)

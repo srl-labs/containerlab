@@ -690,7 +690,11 @@ func (d *DefaultNode) GenerateConfig(ctx context.Context, dst, t string) error {
 			d.Cfg.StartupConfig,
 		)
 
-		cfgBuf, err := clabutils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
+		cfgBuf, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+			strings.NewReader(t),
+			d.Cfg,
+			d.Cfg.TopologyEnv,
+		)
 		if err != nil {
 			return err
 		}

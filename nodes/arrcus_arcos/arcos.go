@@ -87,7 +87,11 @@ func (n *arcos) createARCOSFiles(ctx context.Context) error {
 	}
 
 	// If not specified, explicitly expand and write the embedded template
-	cfgBuf, err := clabutils.SubstituteEnvsAndTemplate(strings.NewReader(cfgTemplate), n.Cfg)
+	cfgBuf, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+		strings.NewReader(cfgTemplate),
+		n.Cfg,
+		n.Cfg.TopologyEnv,
+	)
 	if err != nil {
 		return err
 	}

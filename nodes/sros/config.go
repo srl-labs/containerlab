@@ -128,7 +128,11 @@ func (n *sros) buildStartupConfig(ctx context.Context, isPartial bool) (string, 
 			return "", err
 		}
 
-		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+			bytes.NewReader(c),
+			n.Cfg,
+			n.Cfg.TopologyEnv,
+		)
 		if err != nil {
 			return "", err
 		}
@@ -310,7 +314,11 @@ func (n *sros) addPartialConfig(ctx context.Context) error {
 				return err
 			}
 
-			configContent, err := clabutils.SubstituteEnvsAndTemplate(b, n.Cfg)
+			configContent, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+				b,
+				n.Cfg,
+				n.Cfg.TopologyEnv,
+			)
 			if err != nil {
 				return err
 			}

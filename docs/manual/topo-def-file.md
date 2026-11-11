@@ -790,6 +790,10 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 | `${var:+$OTHER}`   | If var set, evaluate expression as $OTHER, otherwise as empty string |
 | `$$var`            | Escape expressions. Result will be `$var`.                           |
 
+/// note
+Programs that use containerlab as a Go library can pass the environment variables to expand with the `core.WithTopologyEnv` option. The topology, the startup-config templates and `__IMPORT_ENVS` then use only these variables instead of the environment of the program, which keeps the program's own settings, such as secrets, out of the topologies it deploys. The variables are only used by the program that passes them and aren't stored with the lab, so commands run later from a shell, such as `containerlab destroy -t <topology>`, expand the topology with the environment of that shell and need the same variables to be set.
+///
+
 ## Magic Variables
 
 Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (`__variable__`) and can be seen in some of the advanced topology examples.

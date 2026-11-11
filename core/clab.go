@@ -73,6 +73,9 @@ type CLab struct {
 	// managementNetworkOverridden reports whether a management network setting was
 	// explicitly overridden through a ClabOption rather than read from the topology.
 	managementNetworkOverridden bool
+	// topologyEnv holds the env vars (key=value) the topology and the startup config
+	// templates are expanded with; nil means the process environment.
+	topologyEnv []string
 	// gitBranch and gitHash cache Git repository information
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string

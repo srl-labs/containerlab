@@ -359,7 +359,11 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	configContent, err := clabutils.SubstituteEnvsAndTemplate(config, s.Cfg)
+	configContent, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+		config,
+		s.Cfg,
+		s.Cfg.TopologyEnv,
+	)
 	if err != nil {
 		return err
 	}

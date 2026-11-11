@@ -1369,3 +1369,20 @@ func TestNetCIDRHost(t *testing.T) {
 		})
 	}
 }
+
+func TestSubstituteEnvsAndTemplateWithEnv(t *testing.T) {
+	t.Setenv("CLAB_TEST_PROCESS_VAR", "process")
+
+	got, err := SubstituteEnvsAndTemplateWithEnv(
+		strings.NewReader("${VAR} ${CLAB_TEST_PROCESS_VAR:=unset} {{ .Name }}"),
+		struct{ Name string }{Name: "srl1"},
+		[]string{"VAR=given"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if d := cmp.Diff("given unset srl1", got.String()); d != "" {
+		t.Fatalf("rendered template mismatch (-want +got):\n%s", d)
+	}
+}
