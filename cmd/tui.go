@@ -68,6 +68,13 @@ instead of the ones of this host.`,
 		o.TUI.NoMouse,
 		"do not capture the mouse",
 	)
+	c.Flags().StringVar(
+		&o.TUI.Graphics,
+		"graphics",
+		o.TUI.Graphics,
+		"draw panels, controls and charts as pixels on terminals that speak the kitty "+
+			"graphics protocol; one of ["+strings.Join(clabinternaltui.GraphicsModes(), ", ")+"]",
+	)
 	c.Flags().BoolVar(
 		&o.TUI.ReadOnly,
 		"read-only",
@@ -154,10 +161,11 @@ func tuiFn(ctx context.Context, o *Options) error {
 	defer restoreLog()
 
 	err = clabinternaltui.Run(ctx, be, clabinternaltui.Options{
-		Theme:   o.TUI.Theme,
-		Lab:     o.Global.TopologyName,
-		NoMouse: o.TUI.NoMouse,
-		Running: running.Store,
+		Theme:    o.TUI.Theme,
+		Lab:      o.Global.TopologyName,
+		NoMouse:  o.TUI.NoMouse,
+		Running:  running.Store,
+		Graphics: o.TUI.Graphics,
 	})
 	if err != nil {
 		return fmt.Errorf("the TUI stopped: %w", err)

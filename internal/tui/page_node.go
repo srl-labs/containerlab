@@ -215,11 +215,21 @@ func (p *nodePage) selection() []*clabinternaltuibackend.Interface {
 
 func (p *nodePage) resize(width, height int) {
 	p.basePage.resize(width, height)
-	p.tbl.SetSize(width, height-summaryRows-1)
+	p.tbl.SetSize(width, height-p.tableLine())
+}
+
+// tableLine is the line of the body the table starts at: below the summary and the rule
+// with its title, or with the pixel layer below the card of the summary and a gap.
+func (p *nodePage) tableLine() int {
+	if p.pix {
+		return summaryRows + 2 //nolint:mnd // the gap between the two cards
+	}
+
+	return summaryRows + 1
 }
 
 func (p *nodePage) click(_ *Model, x, y int, _ bool) {
-	p.tbl.Click(x, y-summaryRows-1)
+	p.tbl.Click(x, y-p.tableLine())
 }
 
 func (p *nodePage) key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd) {
@@ -264,6 +274,14 @@ func (p *nodePage) view(m *Model) string {
 	if n == nil {
 		return clabinternaltuiui.FitLines(
 			"\n "+m.th.Muted.Render("this node no longer exists"), p.width, p.height)
+	}
+
+	if p.pix {
+		if sc := m.scene(); sc != nil {
+			m.card(sc, pixelBodyTop, summaryRows)
+		}
+
+		return p.summary(m, n) + "\n\n\n" + p.tbl.View()
 	}
 
 	return p.summary(m, n) + "\n" + p.rule(m) + "\n" + p.tbl.View()

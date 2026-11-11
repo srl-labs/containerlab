@@ -17,6 +17,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuigfx "github.com/srl-labs/containerlab/internal/tui/gfx"
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 )
 
@@ -38,12 +39,28 @@ type Options struct {
 	// Running, when set, is told true once the UI takes the terminal over, and false once
 	// it handed it back.
 	Running func(bool)
+	// Graphics tells whether to draw the pixel layer on terminals that speak the kitty
+	// graphics protocol: GraphicsAuto, GraphicsOn or GraphicsOff. Empty means auto.
+	Graphics string
+
+	// pixels and screen are the output the pixel layer is sent through, set by Run.
+	pixels *clabinternaltuigfx.Output
+	screen *clabinternaltuigfx.Screen
 }
 
 // Run starts the backend and runs the TUI until the user quits or ctx is done.
 func Run(ctx context.Context, be clabinternaltuibackend.Backend, opts Options) error {
 	if _, err := clabinternaltuitheme.New(opts.Theme, true); err != nil {
 		return err
+	}
+
+	switch opts.Graphics {
+	case "":
+		opts.Graphics = GraphicsAuto
+	case GraphicsAuto, GraphicsOn, GraphicsOff:
+	default:
+		return fmt.Errorf("unknown graphics mode %q, available modes: %s",
+			opts.Graphics, strings.Join(GraphicsModes(), ", "))
 	}
 
 	if opts.Home == "" {
@@ -73,6 +90,11 @@ func Run(ctx context.Context, be clabinternaltuibackend.Backend, opts Options) e
 
 	if opts.Output != nil {
 		programOpts = append(programOpts, tea.WithOutput(opts.Output))
+	} else if opts.Graphics != GraphicsOff {
+		// The pixel layer travels with the frames of text: see gfx.Output.
+		opts.screen = clabinternaltuigfx.NewScreen()
+		opts.pixels = clabinternaltuigfx.NewOutput(os.Stdout, opts.screen)
+		programOpts = append(programOpts, tea.WithOutput(opts.pixels))
 	}
 
 	opts.Running(true)

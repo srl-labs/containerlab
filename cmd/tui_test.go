@@ -27,7 +27,7 @@ func TestTUICommandIsRegistered(t *testing.T) {
 		t.Fatalf("the tui command is not registered: %v", err)
 	}
 
-	for _, flag := range []string{"theme", "no-mouse", "read-only", "labs-dir", "demo"} {
+	for _, flag := range []string{"theme", "no-mouse", "read-only", "labs-dir", "demo", "graphics"} {
 		if tui.Flags().Lookup(flag) == nil {
 			t.Errorf("the tui command has no --%s flag", flag)
 		}

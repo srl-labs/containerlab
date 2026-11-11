@@ -261,6 +261,11 @@ func (p *labsPage) resize(width, height int) {
 		height -= paneLines
 	}
 
+	if p.pix && p.paneVisible() {
+		// Two blank lines keep the card of the pane clear of the card of the table.
+		height -= 2
+	}
+
 	p.tbl.SetSize(width, height)
 }
 
@@ -311,14 +316,28 @@ func (p *labsPage) view(m *Model) string {
 		return p.tbl.View()
 	}
 
+	if p.pix {
+		return p.tbl.View() + "\n\n\n" + p.pane(m)
+	}
+
 	return p.tbl.View() + "\n" + p.pane(m)
+}
+
+// rule returns the first line of the pane: its title set in a rule, or with the pixel
+// layer the title of the card the pane sits on.
+func (p *labsPage) rule(m *Model, title string) string {
+	if p.pix {
+		return m.pixelPane(title, p.width, p.height-paneLines)
+	}
+
+	return paneRule(m, title, p.width)
 }
 
 // pane describes the lab under the cursor.
 func (p *labsPage) pane(m *Model) string {
 	lab := p.current(m)
 	if lab == nil {
-		return paneRule(m, "", p.width) + "\n" +
+		return p.rule(m, "") + "\n" +
 			clabinternaltuiui.FitLines("", p.width, paneRows)
 	}
 
@@ -354,7 +373,7 @@ func (p *labsPage) pane(m *Model) string {
 		fields[1] = clabinternaltuiui.Field{Label: "namespace", Value: lab.Namespace}
 	}
 
-	return paneRule(m, lab.Name, p.width) + "\n" +
+	return p.rule(m, lab.Name) + "\n" +
 		clabinternaltuiui.Fields(m.th, fields, p.width, paneRows)
 }
 

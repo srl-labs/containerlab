@@ -195,7 +195,23 @@ A drawing of a large lab is many times wider than a terminal. The map therefore 
 
 `e` switches between these by hand; the whole lab can always be drawn and panned through. The drawing is centered on the node in focus whenever it changes.
 
+## Graphics
+
+In a terminal that speaks the [kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/) the UI draws its surfaces as pixels: the views sit on cards, the tabs and the buttons look like ones, states are dots and pills, the load and the traffic are drawn as charts, and the topology map gets cards for its nodes and smooth lines for its links. The text stays text: it is drawn by the terminal in its own font, and can be selected and searched as before. Nothing else changes, every key does what it does in the plain look.
+
+The UI asks the terminal whether it shows images when it starts, and keeps the plain look when there is no answer, when the window is smaller than 72 by 20 cells, or over a connection that does not pass the answer on, ie. inside tmux.
+
+The pixels are drawn at twice the size the terminal reports, which keeps them sharp on high resolution displays. `CLAB_TUI_GRAPHICS_SCALE` changes that factor, from `1` to `4`: `1` sends a quarter of the data, which helps over a slow connection.
+
 ## Flags
+
+### graphics
+
+`--graphics` tells whether the UI draws pixels, see [Graphics](#graphics):
+
+* `auto`, the default, draws them when the terminal says it shows images.
+* `on` draws them without asking, for a terminal that shows images but does not answer.
+* `off` keeps the plain look.
 
 ### theme
 
@@ -228,7 +244,7 @@ With the global `--name` flag the UI opens on the nodes of the given lab.
 
 ### Environment variables
 
-Like for other commands, the flags can be set with environment variables: `CLAB_TUI_THEME`, `CLAB_TUI_LABS_DIR`, `CLAB_TUI_READ_ONLY`, `CLAB_TUI_NO_MOUSE`.
+Like for other commands, the flags can be set with environment variables: `CLAB_TUI_THEME`, `CLAB_TUI_GRAPHICS`, `CLAB_TUI_LABS_DIR`, `CLAB_TUI_READ_ONLY`, `CLAB_TUI_NO_MOUSE`.
 
 ## Examples
 

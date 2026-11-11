@@ -415,7 +415,15 @@ func (m *Model) handleClick(msg tea.MouseClickMsg) tea.Cmd {
 		return nil
 	}
 
-	if mouse.Y == 0 {
+	if m.px != nil {
+		for _, z := range m.px.zones {
+			if z.contains(mouse.X, mouse.Y) {
+				return m.handleKey(z.key)
+			}
+		}
+	}
+
+	if mouse.Y == 0 || (m.graphical() && mouse.Y < pixelCrumbLine) {
 		for _, z := range m.tabZones {
 			if mouse.X >= z.from && mouse.X < z.to {
 				m.goTo(z.tab)
@@ -438,7 +446,7 @@ func (m *Model) handleClick(msg tea.MouseClickMsg) tea.Cmd {
 		return nil
 	}
 
-	y := mouse.Y - bodyTop
+	y := mouse.Y - m.bodyLine()
 	if y < 0 || y >= m.bodyHeight() {
 		return nil
 	}
@@ -453,15 +461,16 @@ func (m *Model) handleClick(msg tea.MouseClickMsg) tea.Cmd {
 	}
 
 	m.drag = &[2]int{mouse.X, mouse.Y}
+	x := mouse.X - m.bodyLeft()
 
 	if c, ok := m.top().(clicker); ok {
-		c.click(m, mouse.X, y, double)
+		c.click(m, x, y, double)
 
 		return nil
 	}
 
 	t := m.top().table()
-	if t == nil || !t.Click(mouse.X, y) || y == 0 {
+	if t == nil || !t.Click(x, y) || y == 0 {
 		return nil
 	}
 
@@ -478,15 +487,15 @@ func (m *Model) handleClick(msg tea.MouseClickMsg) tea.Cmd {
 // contextMenu opens the action menu for what was clicked with the right button: the row
 // under the pointer becomes the selection first.
 func (m *Model) contextMenu(mouse tea.Mouse) tea.Cmd {
-	y := mouse.Y - bodyTop
+	y := mouse.Y - m.bodyLine()
 	if y < 0 || y >= m.bodyHeight() {
 		return nil
 	}
 
 	if c, ok := m.top().(clicker); ok {
-		c.click(m, mouse.X, y, false)
+		c.click(m, mouse.X-m.bodyLeft(), y, false)
 	} else if t := m.top().table(); t != nil && y > 0 {
-		t.Click(mouse.X, y)
+		t.Click(mouse.X-m.bodyLeft(), y)
 	}
 
 	return m.openActionMenu()

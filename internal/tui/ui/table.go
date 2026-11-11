@@ -71,6 +71,8 @@ type Cell struct {
 	Style lipgloss.Style
 	// Num is the sort value of the cell in a numeric column.
 	Num float64
+	// Deco is what the pixel layer draws for the cell, when there is one.
+	Deco Deco
 }
 
 // Row is a table row. Its key identifies it across updates, which is what keeps the cursor
@@ -108,6 +110,9 @@ type Table struct {
 	// scrollbar is set while the table has more rows than fit, which takes one column
 	// at the right edge for the scrollbar.
 	scrollbar bool
+	// pixels is set while a pixel layer draws the cursor, the marks and the
+	// decorations of the cells, which the text then leaves out.
+	pixels bool
 
 	// drawn holds the rows as last rendered, by key. Styling a row is what drawing a
 	// table costs, and most rows look the same from one frame to the next: moving the
@@ -141,6 +146,26 @@ type rowState struct {
 // how every row looks: the rows themselves, the layout, the filter or the theme.
 func (t *Table) forget() {
 	clear(t.drawn)
+}
+
+// SetPixels tells the table whether a pixel layer draws its decorations, see Paint.
+func (t *Table) SetPixels(on bool) {
+	if on == t.pixels {
+		return
+	}
+
+	t.pixels = on
+	t.stale = true
+}
+
+// gutter is the width of what comes in front of every row: the cursor bar and the mark,
+// or with a pixel layer the room its cursor bar and its checkbox take.
+func (t *Table) gutter() int {
+	if t.pixels {
+		return pixelGutter
+	}
+
+	return tableGutter
 }
 
 // gapAfter returns the space that follows a column.
@@ -655,7 +680,7 @@ func (t *Table) Click(x, y int) bool {
 func (t *Table) clickHeader(x int) bool {
 	t.ensureLayout()
 
-	pos := tableGutter
+	pos := t.gutter()
 
 	for k, c := range t.layout.cols {
 		span := t.layout.widths[k] + t.gapAfter(c)
@@ -700,7 +725,7 @@ func (t *Table) computeLayout() tableLayout {
 		visible[i] = i
 	}
 
-	avail := t.rowWidth() - tableGutter
+	avail := t.rowWidth() - t.gutter()
 
 	for t.minWidth(visible) > avail {
 		drop := -1
@@ -779,7 +804,7 @@ func (t *Table) rowWidth() int {
 // syncScrollbar shows the scrollbar when the rows do not fit and hides it when they do.
 // It takes a column, so the layout is worked out again when that changes.
 func (t *Table) syncScrollbar() {
-	need := t.width > tableGutter+1 && len(t.shown) > t.bodyHeight() && t.bodyHeight() > 0
+	need := t.width > t.gutter()+1 && len(t.shown) > t.bodyHeight() && t.bodyHeight() > 0
 	if need != t.scrollbar {
 		t.scrollbar = need
 		t.stale = true
@@ -847,7 +872,7 @@ func (t *Table) View() string {
 
 		for i := range lines {
 			bar := " "
-			if row := i - 1; row >= from && row < to {
+			if row := i - 1; !t.pixels && row >= from && row < to {
 				bar = t.th.Muted.Render(scrollThumb)
 			}
 
@@ -883,9 +908,9 @@ func (t *Table) renderEmpty(body int) []string {
 func (t *Table) renderHeader() string {
 	var b strings.Builder
 
-	b.WriteString(strings.Repeat(" ", tableGutter))
+	b.WriteString(strings.Repeat(" ", t.gutter()))
 
-	used := tableGutter
+	used := t.gutter()
 
 	for k, c := range t.layout.cols {
 		if k > 0 {
@@ -946,26 +971,32 @@ func (t *Table) renderRow(i int) string {
 func (t *Table) drawRow(i int, row *Row, marked bool) string {
 	selected := i == t.cursor && t.Focused
 
+	// With a pixel layer the highlight of the row, its cursor bar and its mark are
+	// drawn there.
 	fill := lipgloss.NewStyle()
-	if selected {
+	if selected && !t.pixels {
 		fill = fill.Background(t.th.Selection)
 	}
 
 	var b strings.Builder
 
-	bar, mark := " ", " "
-	if i == t.cursor {
-		bar = cursorBar
+	if t.pixels {
+		b.WriteString(strings.Repeat(" ", t.gutter()))
+	} else {
+		bar, mark := " ", " "
+		if i == t.cursor {
+			bar = cursorBar
+		}
+
+		if marked {
+			mark = markSign
+		}
+
+		b.WriteString(t.th.Accent.Inherit(fill).Render(bar))
+		b.WriteString(t.th.Mark.Inherit(fill).Render(mark))
 	}
 
-	if marked {
-		mark = markSign
-	}
-
-	b.WriteString(t.th.Accent.Inherit(fill).Render(bar))
-	b.WriteString(t.th.Mark.Inherit(fill).Render(mark))
-
-	used := tableGutter
+	used := t.gutter()
 
 	for k, c := range t.layout.cols {
 		if k > 0 {
@@ -987,6 +1018,10 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 	c := t.cell(row, col)
 
 	text := c.Text
+	if t.pixels && c.Deco.replacesText() {
+		text = ""
+	}
+
 	if t.cols[col].TruncLeft {
 		text = TruncateLeft(text, width)
 	} else {
@@ -994,7 +1029,10 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 	}
 
 	style, match := c.Style, t.th.Match
-	if selected {
+	switch {
+	case selected && t.pixels:
+		style = style.Bold(true)
+	case selected:
 		style = style.Inherit(t.th.Selected)
 		match = match.Inherit(fill)
 	}

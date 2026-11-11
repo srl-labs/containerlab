@@ -31,8 +31,27 @@ func (m *Model) mutedCell(text string) clabinternaltuiui.Cell {
 	return clabinternaltuiui.Cell{Text: clabinternaltuiui.Sanitize(text), Style: m.th.Muted}
 }
 
+// levelCell shows a state in the color of its severity. With the pixel layer the glyph of
+// a state is drawn as a dot, and a state in words sits on a tinted pill.
 func (m *Model) levelCell(text string, level clabinternaltuitheme.Level) clabinternaltuiui.Cell {
-	return clabinternaltuiui.Cell{Text: text, Style: m.th.LevelStyle(level)}
+	style := m.th.LevelStyle(level)
+	deco := clabinternaltuiui.Deco{Color: style.GetForeground()}
+
+	switch text {
+	case glyphReady:
+		deco.Kind = clabinternaltuiui.DecoDot
+	case glyphPartial:
+		deco.Kind = clabinternaltuiui.DecoSpinner
+	case glyphDown, glyphNone:
+		deco.Kind = clabinternaltuiui.DecoRing
+	case "", clabinternaltuiui.Dash:
+	default:
+		if level != clabinternaltuitheme.LevelNone {
+			deco.Kind = clabinternaltuiui.DecoPill
+		}
+	}
+
+	return clabinternaltuiui.Cell{Text: text, Style: style, Deco: deco}
 }
 
 func (m *Model) styledCell(text string, style lipgloss.Style) clabinternaltuiui.Cell {
@@ -121,6 +140,12 @@ func (m *Model) sparkCell(
 	return clabinternaltuiui.Cell{
 		Text:  clabinternaltuiui.Sparkline(series, sparkWidth, limit),
 		Style: style,
+		Deco: clabinternaltuiui.Deco{
+			Kind:   clabinternaltuiui.DecoChart,
+			Color:  m.th.Palette.Accent,
+			Series: series,
+			Limit:  limit,
+		},
 	}
 }
 

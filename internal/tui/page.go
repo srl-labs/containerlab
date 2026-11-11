@@ -61,6 +61,9 @@ type page interface {
 	// refresh re-reads the data the page shows after the given topics changed.
 	refresh(m *Model, topics clabinternaltuibackend.Topic)
 	resize(width, height int)
+	// setPixels tells the page whether the window is drawn with the pixel layer,
+	// before it is given its size.
+	setPixels(on bool)
 	// key handles a key press and reports whether it used it.
 	key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd)
 	// update handles any other message.
@@ -79,7 +82,11 @@ type page interface {
 type basePage struct {
 	width  int
 	height int
+	// pix is set while the window is drawn with the pixel layer.
+	pix bool
 }
+
+func (p *basePage) setPixels(on bool) { p.pix = on }
 
 func (p *basePage) resize(width, height int)      { p.width, p.height = width, height }
 func (*basePage) update(*Model, tea.Msg) tea.Cmd  { return nil }

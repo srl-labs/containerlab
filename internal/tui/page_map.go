@@ -59,6 +59,8 @@ type mapPage struct {
 	grid     *clabinternaltuitopo.Grid
 	gridFor  mapPainted
 	revision int
+	// paintedState is the state of the lab the grid was painted with.
+	paintedState clabinternaltuitopo.State
 
 	mode clabinternaltuitopo.Mode
 	zoom clabinternaltuitopo.Zoom
@@ -1047,6 +1049,10 @@ func linkMapState(a, b *clabinternaltuibackend.Interface) clabinternaltuitopo.Li
 }
 
 func (p *mapPage) view(m *Model) string {
+	if p.pix {
+		return p.viewPixels(m)
+	}
+
 	if p.layout == nil || len(p.graph.Nodes) == 0 {
 		return p.empty(m)
 	}
@@ -1082,7 +1088,8 @@ func (p *mapPage) painted(m *Model) *clabinternaltuitopo.Grid {
 	}
 
 	if p.grid == nil || p.gridFor != want {
-		p.grid = p.layout.Paint(p.state(m),
+		p.paintedState = p.state(m)
+		p.grid = p.layout.Paint(p.paintedState,
 			clabinternaltuitopo.Selection{Node: p.node, Edge: p.edge})
 		p.gridFor = want
 	}
@@ -1137,6 +1144,11 @@ func (p *mapPage) renderRow(m *Model, grid *clabinternaltuitopo.Grid, y, width i
 
 		if cell.Rune == 0 {
 			cell.Rune = ' '
+		}
+
+		// The pixel layer draws the boxes and the lines.
+		if p.pix && lineArt(cell.Class) {
+			cell = clabinternaltuitopo.Cell{Rune: ' '}
 		}
 
 		style := p.cellStyle(m, cell)

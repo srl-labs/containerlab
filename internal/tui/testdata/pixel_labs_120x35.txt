@@ -1,0 +1,35 @@
+
+        1 Labs   2 Nodes   3 Interfaces   4 Links   5 Map   6 Jobs            all labs · docker     48/53  ↓412M ↑413M
+
+  labs  8
+
+        NAME      STATE       NODES   CPU             MEM   ↓ RX   ↑ TX  AGE   OWNER  TOPOLOGY
+        campus    running     14/14  250%             12G    82M    82M  2d    demo   ~/labs/campus/campus.clab.yml
+        metro     running     12/12  110%            5.6G    54M    54M  6h    demo   ~/labs/metro/metro-ring.clab.yml
+        dc1       partial     9/10   298%            4.2G   147M   147M  3h    demo   ~/labs/dc1/dc1.clab.yml
+        sp-core   partial     13/14  413%             23G   130M   130M  41m   demo   ~/labs/sp-core/sp-core.clab.yml
+        evpn-poc  stopped     0/3       —               —      —      —  —     demo   ~/labs/evpn-poc/evpn.clab.yml
+        clos      undeployed  —/6       —               —      —      —  —     —      ~/labs/clos.clab.yml
+        fabric    undeployed  —/164     —               —      —      —  —     —      ~/labs/fabric/fabric.clab.yml
+        linux     undeployed  —/2       —               —      —      —  —     —      ~/labs/linux.clab.yml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   dc1                                                                                                         p hide
+   topology ~/labs/dc1/dc1.clab.yml                           state partial · 9/10 nodes ready
+   lab dir  ~/labs/dc1/clab-dc1                               nodes 6 nokia_srlinux · 4 linux
+   sharing  sshx https://sshx.io/s/Ab3xQk91#k9wPz2Lm          owner demo
+
+  ⏎ open   a actions   t map   D deploy   X destroy   R redeploy   W save   x run   U start   O stop   ? help
+  • ↑↓ move · ⏎ open · esc back · a what can I do here · ? all keys · q quit                                      demo

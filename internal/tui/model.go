@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuigfx "github.com/srl-labs/containerlab/internal/tui/gfx"
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
 )
@@ -91,6 +92,9 @@ type Model struct {
 	quitting bool
 
 	flushPending bool
+
+	// px is the pixel layer, nil when the UI was started without one.
+	px *pixels
 }
 
 var _ tea.Model = (*Model)(nil)
@@ -113,6 +117,11 @@ func New(be clabinternaltuibackend.Backend, opts Options) *Model {
 		watched: map[clabinternaltuibackend.JobID]bool{},
 		roots:   map[tabID]page{},
 	}
+
+	if opts.pixels != nil {
+		m.px = newPixels(opts.pixels, opts.screen, opts.Graphics)
+	}
+
 	m.load()
 
 	start := tabLabs
@@ -137,7 +146,7 @@ func New(be clabinternaltuibackend.Backend, opts Options) *Model {
 
 // Init implements tea.Model.
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(waitBackend(m.be), tea.RequestBackgroundColor, tick())
+	return tea.Batch(waitBackend(m.be), tea.RequestBackgroundColor, tick(), m.pixelInit())
 }
 
 func waitBackend(be clabinternaltuibackend.Backend) tea.Cmd {
@@ -194,8 +203,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.layout()
 
+		if m.px != nil {
+			// The cells may have another size now, ie. after zooming.
+			return m, tea.Raw(pixelSizeQuery)
+		}
+
 		return m, nil
 	case tea.BackgroundColorMsg:
+		m.setBackground(clabinternaltuigfx.RGB(msg.Color))
 		m.setDark(msg.IsDark())
 
 		return m, nil
@@ -234,6 +249,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case describeMsg:
 		m.described(msg)
 
+		return m, nil
+	}
+
+	if m.pixelUpdate(msg) {
 		return m, nil
 	}
 
@@ -376,18 +395,56 @@ func (m *Model) setTheme(th *clabinternaltuitheme.Theme) {
 }
 
 func (m *Model) bodyHeight() int {
+	if m.graphical() {
+		return max(0, m.height-pixelChrome)
+	}
+
 	return max(0, m.height-chromeLines)
+}
+
+// bodyLine is the screen line the body starts at.
+func (m *Model) bodyLine() int {
+	if m.graphical() {
+		return pixelBodyTop
+	}
+
+	return bodyTop
+}
+
+// bodyLeft is the column the body starts at, and bodyWidth how wide it is. With the pixel
+// layer it sits in a card, a little in from the edges of the window.
+func (m *Model) bodyLeft() int {
+	if m.graphical() {
+		return pixelInset
+	}
+
+	return 0
+}
+
+func (m *Model) bodyWidth() int {
+	return max(0, m.width-2*m.bodyLeft()) // the same on both sides
 }
 
 func (m *Model) layout() {
 	for _, p := range m.stack {
-		p.resize(m.width, m.bodyHeight())
+		m.fit(p)
 	}
+}
+
+// fit gives a page the room it has, and tells it how the window is drawn.
+func (m *Model) fit(p page) {
+	p.setPixels(m.graphical())
+
+	if t := p.table(); t != nil {
+		t.SetPixels(m.graphical())
+	}
+
+	p.resize(m.bodyWidth(), m.bodyHeight())
 }
 
 // push opens a page on top of the current one.
 func (m *Model) push(p page) {
-	p.resize(m.width, m.bodyHeight())
+	m.fit(p)
 	m.stack = append(m.stack, p)
 	m.be.SetFocus(p.focus(m))
 }
@@ -423,7 +480,7 @@ func (m *Model) goTo(id tabID) {
 	}
 
 	root := m.root(id)
-	root.resize(m.width, m.bodyHeight())
+	m.fit(root)
 	root.refresh(m, clabinternaltuibackend.TopicAll)
 
 	m.stack = append(m.stack[:0], root)
@@ -482,6 +539,9 @@ func (m *Model) View() tea.View {
 		v.MouseMode = tea.MouseModeCellMotion
 	}
 
+	// The pixel layer is put back when the terminal comes into view again.
+	v.ReportFocus = m.px != nil
+
 	return v
 }
 
@@ -490,6 +550,12 @@ func (m *Model) render() string {
 	if m.width == 0 || m.height == 0 {
 		return ""
 	}
+
+	if m.graphical() {
+		return m.renderPixels()
+	}
+
+	m.hidePixels()
 
 	if m.width < minWidth || m.height < minHeight {
 		return clabinternaltuiui.FitLines(
@@ -520,12 +586,23 @@ func (m *Model) compose(screen string) string {
 
 	m.overlayRects = m.overlayRects[:0]
 
+	if sc := m.scene(); sc != nil {
+		// Dim the whole window; each dialog then clears its own area again.
+		sc.On(clabinternaltuigfx.Over).
+			Rect(0, 0, float64(m.width), float64(m.height), m.skin().Scrim)
+		sc.On(clabinternaltuigfx.Under)
+	}
+
 	for i, o := range m.overlays {
 		box := o.view(m, m.width-4, m.height-2) //nolint:mnd // keep a margin around dialogs
 		w, h := lipgloss.Size(box)
 		x, y := max(0, (m.width-w)/2), max(0, (m.height-h)/2) //nolint:mnd // centered
 
 		m.overlayRects = append(m.overlayRects, rect{x: x, y: y, w: w, h: h})
+
+		if m.scene() != nil {
+			box = m.pixelDialog(box, x, y, w, h)
+		}
 
 		layers = append(layers, lipgloss.NewLayer(box).X(x).Y(y).Z(i+1))
 	}

@@ -7,6 +7,7 @@ package tui
 import (
 	tea "charm.land/bubbletea/v2"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
 )
 
@@ -144,7 +145,17 @@ func (*nodesPage) row(
 	readiness := n.Readiness()
 	glyph, level := readinessLook(readiness)
 
-	cells := []clabinternaltuiui.Cell{m.levelCell(glyph, level), m.cell(n.Name)}
+	dot := m.levelCell(glyph, level)
+	state := m.levelCell(readiness.String(), level)
+
+	// The chart of the load is drawn in the accent color, and in the color of the
+	// load once that is high.
+	spark := m.sparkCell(n.CPUSeries, cpuLimit(n.CPUSeries, 1), m.th.Muted)
+	if lvl := cpuLevel(n.CPUPercent); n.HasStats && lvl != clabinternaltuitheme.LevelSuccess {
+		spark.Deco.Color = m.th.LevelStyle(lvl).GetForeground()
+	}
+
+	cells := []clabinternaltuiui.Cell{dot, m.cell(n.Name)}
 	if allLabs {
 		cells = append(cells, m.mutedCell(n.Lab))
 	}
@@ -161,11 +172,11 @@ func (*nodesPage) row(
 
 	cells = append(cells,
 		m.styledCell(n.Kind, m.th.Text.Foreground(m.th.Hue(n.Kind))),
-		m.levelCell(readiness.String(), level),
+		state,
 		ipv4,
 		m.mutedCell(clabinternaltuiui.ShortImage(n.Image)),
 		m.cpuCell(n.CPUPercent, n.HasStats),
-		m.sparkCell(n.CPUSeries, cpuLimit(n.CPUSeries, 1), m.th.Muted),
+		spark,
 		m.memCell(n.MemBytes, n.HasStats),
 		m.rateCell(n.RxBps, n.HasStats),
 		m.rateCell(n.TxBps, n.HasStats),
@@ -218,6 +229,16 @@ func (p *nodesPage) resize(width, height int) {
 		return
 	}
 
+	if p.pix {
+		if p.pixelPane() {
+			height -= nodePaneLines
+		}
+
+		p.tbl.SetSize(width, height)
+
+		return
+	}
+
 	if p.paneVisible() {
 		height -= paneLines
 	}
@@ -253,6 +274,10 @@ func (p *nodesPage) actions(m *Model) (string, []action) {
 }
 
 func (p *nodesPage) view(m *Model) string {
+	if p.pix {
+		return p.viewPixels(m)
+	}
+
 	if !p.paneVisible() {
 		return p.tbl.View()
 	}
