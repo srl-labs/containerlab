@@ -128,7 +128,7 @@ func (b *Backend) captureToWireshark(
 
 	relay := &captureRelay{}
 
-	spec.args = captureArgs(b.rtName, req, "-")
+	spec.args = b.captureCommand(req, "-")
 	spec.pipedTo = commandLine(wiresharkBinary, wiresharkArgs())
 	spec.needsSink = true
 	spec.output = func(j *job) io.Writer {

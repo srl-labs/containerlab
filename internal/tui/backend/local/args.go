@@ -18,6 +18,7 @@ const (
 	cmdTools      = "tools"
 	flagRuntime   = "-r"
 	flagTopo      = "-t"
+	flagName      = "--name"
 	flagInterface = "-i"
 )
 
@@ -50,7 +51,7 @@ func destroyArgs(rt string, req *clabinternaltuibackend.DestroyRequest) []string
 	args := []string{"destroy", flagRuntime, rt}
 
 	if req.Lab != "" {
-		args = append(args, "--name", req.Lab)
+		args = append(args, flagName, req.Lab)
 	} else {
 		args = append(args, flagTopo, req.TopoFile)
 	}
@@ -88,7 +89,7 @@ func appendDestroyFlags(args []string, cleanup, graceful, keepMgmtNet bool) []st
 // nodeActionArgs builds a start, stop or restart command. Without nodes the command acts on
 // every node of the lab.
 func nodeActionArgs(rt string, req *clabinternaltuibackend.NodeActionRequest) []string {
-	args := []string{string(req.Action), flagRuntime, rt, "--name", req.Lab}
+	args := []string{string(req.Action), flagRuntime, rt, flagName, req.Lab}
 
 	if len(req.Nodes) > 0 {
 		args = append(args, "--node", strings.Join(req.Nodes, ","))
@@ -98,7 +99,7 @@ func nodeActionArgs(rt string, req *clabinternaltuibackend.NodeActionRequest) []
 }
 
 func saveArgs(rt string, req *clabinternaltuibackend.SaveRequest) []string {
-	args := []string{"save", flagRuntime, rt, "--name", req.Lab}
+	args := []string{"save", flagRuntime, rt, flagName, req.Lab}
 
 	if len(req.Nodes) > 0 {
 		args = append(args, "--node-filter", strings.Join(req.Nodes, ","))
@@ -182,9 +183,15 @@ func shareArgs(rt string, req *clabinternaltuibackend.ShareRequest) []string {
 }
 
 // captureArgs builds a capture command writing to sink, a file or "-" for the standard
-// output.
+// output. The lab is selected by its topology file, or by its name when no file is given.
 func captureArgs(rt string, req *clabinternaltuibackend.CaptureRequest, sink string) []string {
-	args := []string{"capture", flagRuntime, rt, flagTopo, req.TopoFile}
+	args := []string{"capture", flagRuntime, rt}
+
+	if req.TopoFile != "" {
+		args = append(args, flagTopo, req.TopoFile)
+	} else {
+		args = append(args, flagName, req.Lab)
+	}
 
 	for _, target := range req.Targets {
 		args = append(args, "--target", target.Node+":"+strings.Join(target.Interfaces, ","))

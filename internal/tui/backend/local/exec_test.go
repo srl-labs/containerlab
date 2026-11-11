@@ -607,10 +607,17 @@ func TestInteractive(t *testing.T) {
 			b := newTestBackend(t, func(_ *Options, d *deps) { d.rtName = tt.runtime })
 			b.setLabs(fabricContainers(t)...)
 
-			cmd, err := b.Interactive(tt.ref, tt.method)
+			session, err := b.Interactive(tt.ref, tt.method)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			command, ok := session.(*clabinternaltuibackend.CommandSession)
+			if !ok {
+				t.Fatalf("the session is a %T, not a command", session)
+			}
+
+			cmd := command.Cmd
 
 			if got := strings.Join(cmd.Args, " "); got != tt.want || cmd.Path != cmd.Args[0] {
 				t.Errorf("got %q (path %q), want %q", got, cmd.Path, tt.want)

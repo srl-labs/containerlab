@@ -349,6 +349,11 @@ func (p *labsPage) pane(m *Model) string {
 		{Label: "owner", Value: lab.Owner},
 	}
 
+	// A lab in a cluster has a namespace there where a local lab has its directory.
+	if m.host.Cluster {
+		fields[1] = clabinternaltuiui.Field{Label: "namespace", Value: lab.Namespace}
+	}
+
 	return paneRule(m, lab.Name, p.width) + "\n" +
 		clabinternaltuiui.Fields(m.th, fields, p.width, paneRows)
 }

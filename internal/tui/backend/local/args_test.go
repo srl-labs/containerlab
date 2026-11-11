@@ -301,6 +301,17 @@ func TestCaptureArgs(t *testing.T) {
 				"--target spine1:ethernet-1/1 --duration 30s --packet-limit 500 " +
 				"-w /tmp/lab.pcapng",
 		},
+		// Without a topology file the lab is selected by its name.
+		"of a lab by its name": {
+			req: clabinternaltuibackend.CaptureRequest{
+				Lab: "lab1",
+				Targets: []clabinternaltuibackend.CaptureTarget{
+					{Node: "leaf1", Interfaces: []string{"e1-1"}},
+				},
+			},
+			sink: "-",
+			want: "capture -r docker --name lab1 --target leaf1:e1-1 -w -",
+		},
 	}
 
 	for name, tt := range tests {

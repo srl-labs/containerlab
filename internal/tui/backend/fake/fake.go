@@ -465,7 +465,7 @@ func (*Backend) ConnectMethods(
 // so the session only tells what would have been run.
 func (b *Backend) Interactive(
 	node clabinternaltuibackend.NodeRef, method clabinternaltuibackend.ConnectMethod,
-) (*exec.Cmd, error) {
+) (clabinternaltuibackend.Session, error) {
 	what := "docker exec -it " + node.Container + " " + strings.Join(method.Shell, " ")
 	if method.SSH {
 		what = "ssh " + node.Container
@@ -478,14 +478,14 @@ func (b *Backend) Interactive(
 	const script = `printf 'demo mode: this would run\n\n  %s\n\n' "$1"; ` +
 		`printf 'press enter to return '; read -r _`
 
-	return exec.CommandContext(
+	return clabinternaltuibackend.NewCommandSession(exec.CommandContext(
 		context.Background(),
 		"sh",
 		"-c",
 		script,
 		"sh",
 		what,
-	), nil //nolint:gosec
+	)), nil //nolint:gosec
 }
 
 // Sessions returns the commands of the interactive sessions that were asked for, in order.

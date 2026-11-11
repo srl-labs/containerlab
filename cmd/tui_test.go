@@ -90,7 +90,7 @@ func TestTUINeedsATerminal(t *testing.T) {
 	}
 }
 
-func TestTUIIsNotOfferedForLabRuntimes(t *testing.T) {
+func TestTUIIsOfferedForLabRuntimes(t *testing.T) {
 	optionsInstance = nil
 
 	root, err := Entrypoint()
@@ -103,8 +103,8 @@ func TestTUIIsNotOfferedForLabRuntimes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkLabRuntimeCommandSupport(tui, "c9s"); err == nil {
-		t.Error("the tui command should be rejected with a lab runtime")
+	if err := checkLabRuntimeCommandSupport(tui, "c9s"); err != nil {
+		t.Errorf("the tui command is rejected with a lab runtime: %v", err)
 	}
 }
 

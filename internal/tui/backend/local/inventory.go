@@ -30,6 +30,12 @@ type labRecord struct {
 	// lab holds what the inventory knows of the lab. The sampled values, the busy flag and
 	// the number of defined nodes are added when the lab is handed to the UI.
 	lab clabinternaltuibackend.Lab
+	// name is what the runtime calls the lab. A lab runtime can run labs of the same name
+	// in several namespaces, which are then listed under names that tell them apart.
+	name string
+	// namespace is the Kubernetes namespace of a lab that a lab runtime runs, empty for
+	// the labs of this host.
+	namespace string
 	// topoReal is the topology file with symbolic links resolved, empty when it is missing.
 	topoReal string
 	// containers holds the containers of the nodes by their name.
@@ -50,7 +56,10 @@ type inventoryEnv struct {
 // buildLabs groups containers into labs. The containers are expected to have their
 // network namespace holders folded in already.
 func buildLabs(containers []clabruntime.GenericContainer, env *inventoryEnv) []*labRecord {
-	byName := map[string]*labRecord{}
+	// A lab runtime tells its labs apart by their namespace and name.
+	type labKey struct{ namespace, name string }
+
+	byName := map[labKey]*labRecord{}
 
 	for i := range containers {
 		ctr := &containers[i]
@@ -60,13 +69,19 @@ func buildLabs(containers []clabruntime.GenericContainer, env *inventoryEnv) []*
 			continue
 		}
 
-		rec := byName[name]
+		key := labKey{namespace: workloadNamespace(ctr), name: name}
+
+		rec := byName[key]
 		if rec == nil {
 			rec = &labRecord{
-				lab:        clabinternaltuibackend.Lab{Name: name, Deployed: true},
+				lab: clabinternaltuibackend.Lab{
+					Name: name, Namespace: key.namespace, Deployed: true,
+				},
+				name:       name,
+				namespace:  key.namespace,
 				containers: map[string]*clabruntime.GenericContainer{},
 			}
-			byName[name] = rec
+			byName[key] = rec
 		}
 
 		// Tool containers serve a lab without being part of its topology.
@@ -93,11 +108,78 @@ func buildLabs(containers []clabruntime.GenericContainer, env *inventoryEnv) []*
 		labs = append(labs, rec)
 	}
 
+	tellApart(labs)
+
 	slices.SortFunc(labs, func(a, b *labRecord) int {
 		return naturalCompare(a.lab.Name, b.lab.Name)
 	})
 
 	return labs
+}
+
+// workloadNamespace returns the Kubernetes namespace of a node that a lab runtime runs,
+// empty for a container of this host.
+func workloadNamespace(ctr *clabruntime.GenericContainer) string {
+	if ctr.Workload == nil {
+		return ""
+	}
+
+	return ctr.Workload.Namespace
+}
+
+// tellApart renames the labs that share their name with a lab of another namespace: the
+// UI knows a lab by its name. Such a lab is listed as name@namespace, and so are its
+// containers.
+func tellApart(labs []*labRecord) {
+	count := map[string]int{}
+	for _, rec := range labs {
+		count[rec.name]++
+	}
+
+	for _, rec := range labs {
+		if count[rec.name] < 2 || rec.namespace == "" {
+			continue
+		}
+
+		lab := &rec.lab
+		lab.Name = rec.name + "@" + rec.namespace
+
+		containers := make(map[string]*clabruntime.GenericContainer, len(rec.containers))
+
+		for i := range lab.Nodes {
+			node := &lab.Nodes[i]
+			ctr := rec.containers[node.Container]
+
+			node.Lab = lab.Name
+			node.Container = lab.Name + "-" + node.Name
+			containers[node.Container] = ctr
+		}
+
+		rec.containers = containers
+	}
+}
+
+// stateKey returns what the sampled values and the interface state of a node are filed
+// under: the name of its container, or the ID a lab runtime knows the node by, which is
+// what the events of that runtime carry.
+func (rec *labRecord) stateKey(container string) string {
+	if ctr := rec.containers[container]; ctr != nil && rec.namespace != "" {
+		return ctr.ID
+	}
+
+	return container
+}
+
+// runtimeNode returns the name a lab runtime knows a node by. That is not always the name
+// in the topology: a name the cluster cannot carry is changed.
+func (rec *labRecord) runtimeNode(node *clabinternaltuibackend.Node) string {
+	if ctr := rec.containers[node.Container]; ctr != nil {
+		if i := strings.LastIndexByte(ctr.ID, '/'); i >= 0 && rec.namespace != "" {
+			return ctr.ID[i+1:]
+		}
+	}
+
+	return node.Name
 }
 
 // finish derives the properties of the lab from its containers.
@@ -124,6 +206,12 @@ func (rec *labRecord) finish(env *inventoryEnv) {
 		if lab.Owner == "" {
 			lab.Owner = labels[clabconstants.Owner]
 		}
+	}
+
+	// A lab that was not deployed from a file is listed with the place its definition is
+	// kept at in the cluster, which is no file.
+	if strings.Contains(lab.TopoFile, "://") {
+		lab.TopoFile = ""
 	}
 
 	// Without its topology file a lab can still be inspected and destroyed, not more.
@@ -354,12 +442,34 @@ func (inv *inventory) find(
 	return nil, nil, nil
 }
 
-// running returns the running containers of a lab, or of every lab for an empty name.
+// runningKeys returns what the state of the running nodes is filed under.
+func (inv *inventory) runningKeys() map[string]struct{} {
+	keys := map[string]struct{}{}
+
+	for _, rec := range inv.records() {
+		for i := range rec.lab.Nodes {
+			node := &rec.lab.Nodes[i]
+
+			// A container of this host is only read while it has a process.
+			if !strings.EqualFold(node.State, stateRunning) ||
+				(rec.namespace == "" && node.Pid <= 0) {
+				continue
+			}
+
+			keys[rec.stateKey(node.Container)] = struct{}{}
+		}
+	}
+
+	return keys
+}
+
+// running returns the running containers of a lab of this host, or of every such lab for
+// an empty name.
 func (inv *inventory) running(lab string) []sampleTarget {
 	var targets []sampleTarget
 
 	for _, rec := range inv.records() {
-		if lab != "" && rec.lab.Name != lab {
+		if (lab != "" && rec.lab.Name != lab) || rec.namespace != "" {
 			continue
 		}
 
@@ -380,32 +490,43 @@ func (inv *inventory) running(lab string) []sampleTarget {
 	return targets
 }
 
+// listContainers lists the containers of all labs: the ones of the container runtime of
+// this host, or the nodes of every lab the lab runtime runs.
+func (b *Backend) listContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
+	if b.lrt != nil {
+		return b.clab.ListLabRuntimeContainers(ctx, true)
+	}
+
+	containers, err := b.clab.ListContainers(ctx, clabcore.WithListclabLabelExists())
+	if err != nil {
+		return nil, err
+	}
+
+	// A node that joined the network namespace of a holder container takes its addressing.
+	return clabcore.FoldInternalContainers(containers), nil
+}
+
 // reload lists the containers of all labs and replaces the inventory with the result.
 func (b *Backend) reload(ctx context.Context) error {
 	b.reloadMu.Lock()
 	defer b.reloadMu.Unlock()
 
-	ctx, cancel := context.WithTimeout(ctx, b.opts.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, b.readTimeout())
 	defer cancel()
 
-	containers, err := b.clab.ListContainers(ctx, clabcore.WithListclabLabelExists())
+	containers, err := b.listContainers(ctx)
 	if err != nil {
 		return err
 	}
 
-	// A node that joined the network namespace of a holder container takes its addressing.
-	labs := buildLabs(clabcore.FoldInternalContainers(containers), &inventoryEnv{
+	labs := buildLabs(containers, &inventoryEnv{
 		hostname: b.hostname,
 		exists:   fileExists,
 		sshxLink: b.shares.link,
 	})
 
 	changed, membership := b.inv.replace(labs)
-
-	running := map[string]struct{}{}
-	for _, t := range b.inv.running("") {
-		running[t.container] = struct{}{}
-	}
+	running := b.inv.runningKeys()
 
 	b.stats.retain(running)
 
@@ -446,7 +567,7 @@ func (b *Backend) Labs() []clabinternaltuibackend.Lab {
 		lab := cloneLab(&rec.lab)
 
 		for i := range lab.Nodes {
-			b.stats.fill(&lab.Nodes[i])
+			b.stats.fill(rec.stateKey(lab.Nodes[i].Container), &lab.Nodes[i])
 		}
 
 		for i := range files {

@@ -13,7 +13,7 @@ import (
 )
 
 // newTUIBackend creates the data source of the TUI: the simulated labs of the demo mode,
-// or the container runtime of this host.
+// the container runtime of this host, or the lab runtime that was asked for.
 func newTUIBackend(o *Options) (clabinternaltuibackend.Backend, error) {
 	if o.TUI.Demo {
 		return clabinternaltuibackendfake.New(clabinternaltuibackendfake.Options{
@@ -23,10 +23,11 @@ func newTUIBackend(o *Options) (clabinternaltuibackend.Backend, error) {
 	}
 
 	return clabinternaltuibackendlocal.New(clabinternaltuibackendlocal.Options{
-		Runtime:  o.Global.Runtime,
-		Timeout:  o.Global.Timeout,
-		LabsDirs: o.TUI.LabsDirs,
-		ReadOnly: o.TUI.ReadOnly,
-		Debug:    o.Global.DebugCount > 0,
+		Runtime:   o.Global.Runtime,
+		Namespace: o.Global.Namespace,
+		Timeout:   o.Global.Timeout,
+		LabsDirs:  o.TUI.LabsDirs,
+		ReadOnly:  o.TUI.ReadOnly,
+		Debug:     o.Global.DebugCount > 0,
 	})
 }

@@ -63,6 +63,8 @@ type nodeSample struct {
 	rxBps, txBps       float64
 	rxSeries, txSeries []float64
 	ifaces             map[string]*ifaceSample
+	// fresh is set when a lab runtime reported counters that are not summed up yet.
+	fresh bool
 }
 
 // reading is what one sampling round read for a container.
@@ -276,12 +278,12 @@ func (s *sampler) retain(running map[string]struct{}) {
 	}
 }
 
-// fill sets the sampled values of a node.
-func (s *sampler) fill(node *clabinternaltuibackend.Node) {
+// fill sets the sampled values of a node, which are filed under the given key.
+func (s *sampler) fill(key string, node *clabinternaltuibackend.Node) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	sample := s.nodes[node.Container]
+	sample := s.nodes[key]
 	if sample == nil {
 		return
 	}
@@ -297,12 +299,12 @@ func (s *sampler) fill(node *clabinternaltuibackend.Node) {
 	node.TxSeries = slices.Clone(sample.txSeries)
 }
 
-// interfaces returns the sampled interfaces of a container, keyed by their name.
-func (s *sampler) interfaces(container string) map[string]clabinternaltuibackend.Interface {
+// interfaces returns the sampled interfaces of a node, keyed by their name.
+func (s *sampler) interfaces(key string) map[string]clabinternaltuibackend.Interface {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	sample := s.nodes[container]
+	sample := s.nodes[key]
 	if sample == nil {
 		return nil
 	}

@@ -90,7 +90,7 @@ func (b *Backend) execInNode(
 ) clabinternaltuibackend.ExecResult {
 	result := clabinternaltuibackend.ExecResult{Node: ref}
 
-	_, node, ctr := b.inv.find(ref)
+	rec, node, ctr := b.inv.find(ref)
 	if node == nil {
 		result.Err = fmt.Errorf("node %q of lab %q not found", ref.Name, ref.Lab)
 
@@ -100,8 +100,17 @@ func (b *Backend) execInNode(
 	result.Node = node.NodeRef
 	started := b.clock.Now()
 
+	var (
+		out *clabexec.ExecResult
+		err error
+	)
+
 	// Every node gets a command of its own, the runtime may keep hold of it.
-	out, err := ctr.RunExec(ctx, clabexec.NewExecCmdFromSlice(slices.Clone(command)))
+	if b.lrt != nil {
+		out, err = b.execInLabRuntime(ctx, rec, node, slices.Clone(command))
+	} else {
+		out, err = ctr.RunExec(ctx, clabexec.NewExecCmdFromSlice(slices.Clone(command)))
+	}
 
 	result.Duration = b.clock.Now().Sub(started)
 
@@ -154,7 +163,16 @@ func (b *Backend) ConnectMethods(
 		kind = node.Kind
 	}
 
-	return clabinternaltuibackend.DefaultConnectMethods(b.kindShell(kind), kind)
+	methods := clabinternaltuibackend.DefaultConnectMethods(b.kindShell(kind), kind)
+
+	// The SSH configuration of a lab is only written for the nodes of this host.
+	for i := range methods {
+		if methods[i].SSH && b.lrt != nil {
+			methods[i].Description = "ssh through a port forwarded to the node"
+		}
+	}
+
+	return methods
 }
 
 // kindShell returns the interactive shell of a node kind. Kinds are asked once: the answer
@@ -187,16 +205,27 @@ func (b *Backend) kindShell(kind string) []string {
 	return slices.Clone(shell)
 }
 
-// Interactive prepares the command of an interactive session on a node: a shell started
-// through the runtime's command line client, or SSH to the node, which the SSH
-// configuration written at deployment makes reachable under its container name. The
-// standard streams are left unset, the caller connects them to the terminal.
+// Interactive prepares an interactive session on a node: a shell started through the
+// runtime's command line client, or SSH to the node, which the SSH configuration written
+// at deployment makes reachable under its container name. The standard streams are left
+// unset, the caller connects them to the terminal. A node that a lab runtime runs is
+// reached through that runtime instead.
 func (b *Backend) Interactive(
 	ref clabinternaltuibackend.NodeRef,
 	method clabinternaltuibackend.ConnectMethod,
-) (*exec.Cmd, error) {
+) (clabinternaltuibackend.Session, error) {
+	rec, node, _ := b.inv.find(ref)
+
+	if b.lrt != nil {
+		if node == nil {
+			return nil, fmt.Errorf("node %q of lab %q not found", ref.Name, ref.Lab)
+		}
+
+		return b.labRuntimeSession(rec, node, method)
+	}
+
 	container := ref.Container
-	if _, node, _ := b.inv.find(ref); node != nil {
+	if node != nil {
 		container = node.Container
 	}
 
@@ -210,7 +239,8 @@ func (b *Backend) Interactive(
 			return nil, fmt.Errorf("ssh executable not found in PATH: %w", err)
 		}
 
-		return exec.Command(path, container), nil //nolint:noctx // ends with the session
+		//nolint:noctx // ends with the session
+		return clabinternaltuibackend.NewCommandSession(exec.Command(path, container)), nil
 	}
 
 	client := runtimeClient(b.rtName)
@@ -227,7 +257,8 @@ func (b *Backend) Interactive(
 
 	args := append([]string{"exec", "-it", container}, shell...)
 
-	return exec.Command(path, args...), nil //nolint:noctx // ends with the session
+	//nolint:noctx // ends with the session
+	return clabinternaltuibackend.NewCommandSession(exec.Command(path, args...)), nil
 }
 
 // runtimeClient returns the command line client of a runtime.

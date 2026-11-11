@@ -143,23 +143,33 @@ func (s *ifaceStates) apply(ev *streamEvent) bool {
 		return false
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if ev.Type != eventTypeInterface {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
 		return s.applyContainerEvent(container, ev.Action)
 	}
 
 	st := ifaceStateFromAttributes(ev.Attributes)
+
+	return s.applyInterface(container, ev.Action, &st)
+}
+
+// applyInterface updates the state of an interface of a container with what an event of
+// the given action told about it, and reports whether that changed something.
+func (s *ifaceStates) applyInterface(container, action string, st *ifaceState) bool {
 	if st.name == "" {
 		return false
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ifaces := s.containers[container]
 
-	switch ev.Action {
+	switch action {
 	case ifaceActionStats:
-		// The counters are sampled from /proc, the state did not change.
+		// The counters are kept elsewhere, the state did not change.
 		return false
 	case ifaceActionDelete:
 		if _, ok := ifaces[st.name]; !ok {
@@ -171,7 +181,7 @@ func (s *ifaceStates) apply(ev *streamEvent) bool {
 		return true
 	}
 
-	if previous, ok := ifaces[st.name]; ok && sameIfaceState(&previous, &st) {
+	if previous, ok := ifaces[st.name]; ok && sameIfaceState(&previous, st) {
 		return false
 	}
 
@@ -184,7 +194,7 @@ func (s *ifaceStates) apply(ev *streamEvent) bool {
 		s.containers[container] = ifaces
 	}
 
-	ifaces[st.name] = st
+	ifaces[st.name] = *st
 
 	return true
 }
@@ -334,7 +344,8 @@ func mergeInterfaces(
 
 // Interfaces returns the interfaces of a node: the counters and rates sampled from /proc,
 // the state and impairments reported by the event stream, and the far end of the link each
-// interface belongs to.
+// interface belongs to. For a node that a lab runtime runs, the counters come with the
+// events of that runtime as well.
 func (b *Backend) Interfaces(
 	ref clabinternaltuibackend.NodeRef,
 ) []clabinternaltuibackend.Interface {
@@ -343,8 +354,9 @@ func (b *Backend) Interfaces(
 		return nil
 	}
 
-	ifaces := mergeInterfaces(node.NodeRef,
-		b.stats.interfaces(node.Container), b.ifaces.of(node.Container))
+	key := rec.stateKey(node.Container)
+
+	ifaces := mergeInterfaces(node.NodeRef, b.stats.interfaces(key), b.ifaces.of(key))
 	if len(ifaces) == 0 {
 		return ifaces
 	}

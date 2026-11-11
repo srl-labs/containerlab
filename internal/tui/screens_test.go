@@ -643,6 +643,56 @@ func TestActionsNeedTheirCapability(t *testing.T) {
 	}
 }
 
+// TestLabsOfAClusterAreOfferedWhatAppliesToThem runs the UI on a backend whose labs run in
+// a cluster: the commands shown name the runtime, and what only exists for the labs of
+// this host is not offered.
+func TestLabsOfAClusterAreOfferedWhatAppliesToThem(t *testing.T) {
+	m, be := newTestModel(t, 120, 35)
+	m.host.Cluster = true
+	m.host.Runtime = "c9s"
+	m.host.Caps.Share = false
+	m.host.Caps.Reasons = map[string]string{"share": "not possible with the c9s runtime"}
+
+	if screen := ansi.Strip(m.render()); !strings.Contains(screen, "namespace") ||
+		strings.Contains(screen, "lab dir") {
+		t.Errorf("the lab is not described as one of a cluster:\n%s", screen)
+	}
+
+	press(m, "X")
+
+	dialog := ansi.Strip(m.render())
+	for _, want := range []string{
+		"containerlab -r c9s destroy --name dc1", "saved node storage",
+	} {
+		if !strings.Contains(dialog, want) {
+			t.Errorf("the destroy dialog lacks %q:\n%s", want, dialog)
+		}
+	}
+
+	// How the nodes are stopped is not up to the user in a cluster.
+	if strings.Contains(dialog, "graceful") {
+		t.Errorf("the destroy dialog offers a graceful stop:\n%s", dialog)
+	}
+
+	press(m, "esc", "H")
+
+	if len(m.overlays) != 0 || !strings.Contains(m.toast.text, "c9s runtime") {
+		t.Errorf("sharing was offered, or refused without the reason: %q", m.toast.text)
+	}
+
+	// The name of a node is no host name the SSH client of this host knows.
+	press(m, "enter", "y")
+
+	if menu := ansi.Strip(m.render()); !strings.Contains(menu, "container name") ||
+		strings.Contains(menu, "ssh command") {
+		t.Errorf("unexpected copy menu:\n%s", menu)
+	}
+
+	if len(be.Jobs()) != 0 {
+		t.Error("a job was started")
+	}
+}
+
 func TestScreenMap(t *testing.T) {
 	m, _ := newTestModel(t, 120, 35)
 	press(m, "enter", "5", "down", "tab")

@@ -504,6 +504,11 @@ func (b *Backend) Topology(lab string) clabinternaltuibackend.Topology {
 func (b *Backend) deployedTopology(rec *labRecord) clabinternaltuibackend.Topology {
 	lab := &rec.lab
 
+	// A lab in a cluster has no lab directory with an export on this host.
+	if rec.namespace != "" {
+		return b.labRuntimeTopology(rec)
+	}
+
 	var dataPath, annPath string
 
 	if lab.LabDir != "" {
@@ -592,13 +597,24 @@ func (b *Backend) parseTopology(key, lab, file string, stamps []fileStamp) {
 // loadTopologyFile parses a topology file the way the containerlab commands do. Bind paths
 // are not checked, they only matter once the lab is deployed.
 func (b *Backend) loadTopologyFile(file string) (*clabcore.CLab, error) {
-	return clabcore.NewContainerLab(
+	c, err := clabcore.NewContainerLab(
 		clabcore.WithTimeout(b.opts.Timeout),
 		clabcore.WithRuntime(b.rtName, &clabruntime.RuntimeConfig{
-			Timeout: b.opts.Timeout,
-			Debug:   b.opts.Debug,
+			Timeout:      b.opts.Timeout,
+			Debug:        b.opts.Debug,
+			LabNamespace: b.opts.Namespace,
 		}),
 		clabcore.WithSkippedBindsPathsCheck(),
 		clabcore.WithTopoPath(file, nil),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// For a lab runtime the nodes and links of a topology are only built on request.
+	if err := c.LoadTopologyNodes(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

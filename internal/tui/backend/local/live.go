@@ -114,7 +114,7 @@ func (b *Backend) captureLive(
 		}
 	}
 
-	spec.args = captureArgs(b.rtName, req, "-")
+	spec.args = b.captureCommand(req, "-")
 	spec.live = true
 	spec.output = func(j *job) io.Writer {
 		feed.count = func(n int) { b.jobs.addBytes(j, n) }

@@ -2,13 +2,19 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-// Package local implements the TUI backend for the labs of the local container runtime.
+// Package local implements the TUI backend for the labs this host manages: the ones of its
+// container runtime, or the ones a lab runtime such as c9s runs in a Kubernetes cluster.
 //
 // Reading is done in this process and needs no more than access to the runtime: the
 // inventory comes from the runtime API, resource usage and traffic counters from /proc and
 // the cgroup file system. Whatever changes a lab or needs root privileges is delegated to
 // containerlab commands run as child processes, which obtain their privileges the way they
 // do when run from a shell. The process itself never changes the user it runs as.
+//
+// With a lab runtime the nodes are not containers of this host, so what is read from the
+// host otherwise is asked from the runtime: the inventory, the state and the counters of
+// the interfaces, the resource usage, the logs and the sessions. Nothing needs root
+// privileges then, and the commands are the same ones, run for that runtime.
 package local
 
 import (
@@ -29,6 +35,7 @@ import (
 
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -51,8 +58,12 @@ const (
 
 // Options configures the backend.
 type Options struct {
-	// Runtime is the name of the container runtime, the default one when empty.
+	// Runtime is the name of the container runtime or of the lab runtime, the default
+	// container runtime when empty.
 	Runtime string
+	// Namespace limits a lab runtime to the labs of one Kubernetes namespace, which is
+	// also where it deploys labs to then. It is the --namespace option of the commands.
+	Namespace string
 	// Timeout is the timeout of runtime API requests.
 	Timeout time.Duration
 	// Executable is the containerlab binary run for child commands, the binary of this
@@ -75,7 +86,10 @@ type Backend struct {
 	rtName string
 	clab   *clabcore.CLab
 	rt     clabruntime.ContainerRuntime
-	priv   privilege
+	// lrt is the lab runtime that runs the labs, nil when they are the ones of the
+	// container runtime of this host.
+	lrt  clablabruntime.LabRuntime
+	priv privilege
 	// hostname is the name of the host, as used in links to services published on it.
 	hostname string
 	// fsRoot is where the file systems of the kernel are found, the root directory
@@ -120,8 +134,10 @@ type Backend struct {
 	stats  *sampler
 	ifaces ifaceStates
 	topo   topologies
-	files  topoFiles
-	jobs   *jobManager
+	// links holds the links a lab runtime reported for its labs.
+	links runtimeLinks
+	files topoFiles
+	jobs  *jobManager
 
 	// reloadCh carries the requests for a debounced reload of the inventory, refreshCh the
 	// ones for an immediate reload. reloadMu serializes the reloads.
@@ -146,6 +162,7 @@ var _ clabinternaltuibackend.Backend = (*Backend)(nil)
 type deps struct {
 	clab     *clabcore.CLab
 	rt       clabruntime.ContainerRuntime
+	lrt      clablabruntime.LabRuntime
 	rtName   string
 	exe      string
 	priv     privilege
@@ -159,8 +176,9 @@ type deps struct {
 	version  func(ctx context.Context) (string, error)
 }
 
-// New returns a backend for the labs of the local container runtime. It connects to the
-// runtime and fails when that is not possible.
+// New returns a backend for the labs of the local container runtime, or of a lab runtime
+// when the options name one. It connects to the container runtime and fails when that is
+// not possible; a lab runtime is only contacted when the backend is started.
 func New(o Options) (*Backend, error) {
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout
@@ -174,12 +192,27 @@ func New(o Options) (*Backend, error) {
 	c, err := clabcore.NewContainerLab(
 		clabcore.WithTimeout(o.Timeout),
 		clabcore.WithRuntime(o.Runtime, &clabruntime.RuntimeConfig{
-			Timeout: o.Timeout,
-			Debug:   o.Debug,
+			Timeout:      o.Timeout,
+			Debug:        o.Debug,
+			LabNamespace: o.Namespace,
 		}),
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if c.LabRuntime != nil {
+		silenceClusterClient()
+
+		// A lab runtime is reached through the API of its cluster as the user, which is
+		// all the commands need as well.
+		return newBackend(&o, &deps{
+			clab:   c,
+			lrt:    c.LabRuntime,
+			rtName: labRuntimeName(o.Runtime),
+			exe:    exe,
+			priv:   privilege{ok: true, setuid: isSetuidRoot(exe)},
+		}), nil
 	}
 
 	// The option initialized exactly one runtime, under its resolved name.
@@ -237,6 +270,7 @@ func newBackend(opts *Options, d *deps) *Backend {
 		rtName:    d.rtName,
 		clab:      d.clab,
 		rt:        d.rt,
+		lrt:       d.lrt,
 		priv:      d.priv,
 		run:       d.run,
 		clock:     d.clock,
@@ -268,9 +302,16 @@ func newBackend(opts *Options, d *deps) *Backend {
 		Hostname:   b.hostname,
 		User:       currentUser(b.getenv),
 		Privileged: b.priv.ok,
+		Cluster:    b.lrt != nil,
 		Caps:       b.capabilities(),
 	}
 	b.host.SSH = sshDestination(b.host.User, b.sshConnection())
+
+	graces := defaultJobGraces
+	if b.lrt != nil {
+		// Rolling a deployment back means waiting for the cluster to remove it.
+		graces.rollback = labRuntimeRollbackGrace
+	}
 
 	b.jobs = &jobManager{
 		exe:      b.exe,
@@ -278,7 +319,7 @@ func newBackend(opts *Options, d *deps) *Backend {
 		run:      b.run,
 		clock:    b.clock,
 		environ:  b.environ,
-		graces:   defaultJobGraces,
+		graces:   graces,
 		mark:     b.mark,
 		spawn:    b.spawn,
 		finished: b.jobFinished,
@@ -350,18 +391,26 @@ func (b *Backend) Start(ctx context.Context) error {
 	}
 
 	if err := b.reload(ctx); err != nil {
-		return fmt.Errorf("failed to list the lab containers: %w", err)
+		return fmt.Errorf("failed to list the %s: %w", b.listed(), err)
 	}
 
 	context.AfterFunc(ctx, b.cancel)
 
 	b.loop("inventory watcher", b.watch)
-	b.loop("runtime event stream", b.streamEvents)
-	b.loop("statistics sampler", b.sampleLoop)
 	b.loop("topology file scan", b.scanLoop)
 
-	if b.priv.ok {
-		b.loop("interface state stream", b.ifaceStream)
+	switch {
+	case b.lrt != nil:
+		// The events of a lab runtime tell about the nodes and their interfaces alike.
+		b.loop("lab runtime event stream", b.streamLabRuntime)
+		b.loop("lab runtime usage sampler", b.sampleLabRuntime)
+	default:
+		b.loop("runtime event stream", b.streamEvents)
+		b.loop("statistics sampler", b.sampleLoop)
+
+		if b.priv.ok {
+			b.loop("interface state stream", b.ifaceStream)
+		}
 	}
 
 	b.spawn("version lookup", b.lookupVersion)

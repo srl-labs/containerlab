@@ -5,6 +5,8 @@
 package backend
 
 import (
+	"bytes"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -132,5 +134,29 @@ func TestLabState(t *testing.T) {
 	lab := Lab{Deployed: true, Nodes: []Node{up, starting, stopped}}
 	if got := lab.ReadyNodes(); got != 1 {
 		t.Errorf("ReadyNodes() = %d, want 1", got)
+	}
+}
+
+// TestCommandSession runs a command as a session: it gets the streams the session is
+// given, except for the ones that were set on the command already.
+func TestCommandSession(t *testing.T) {
+	var own, given bytes.Buffer
+
+	cmd := exec.CommandContext(t.Context(), "sh", "-c", "cat; echo problem >&2")
+	cmd.Stderr = &own
+
+	var session Session = NewCommandSession(cmd)
+
+	session.SetStdin(strings.NewReader("typed"))
+	session.SetStdout(&given)
+	session.SetStderr(&given)
+
+	if err := session.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	if given.String() != "typed" || own.String() != "problem\n" {
+		t.Errorf("the session wrote %q, and %q to the stream the command had",
+			given.String(), own.String())
 	}
 }

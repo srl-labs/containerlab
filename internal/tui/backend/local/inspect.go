@@ -65,6 +65,7 @@ func (b *Backend) Inspect(
 	var r report
 
 	inspectNode(&r, node)
+	inspectWorkload(&r, ctr)
 	inspectNetwork(&r, node, ctr)
 	inspectPaths(&r, &rec.lab, node)
 	inspectExport(&r, rec, node)
@@ -102,7 +103,12 @@ func inspectNetwork(
 	net := &ctr.NetworkSettings
 
 	r.section("Management network")
-	r.field("network", ctr.NetworkName)
+
+	// A lab runtime names the namespace of the node where a network is named otherwise.
+	if ctr.Workload == nil {
+		r.field("network", ctr.NetworkName)
+	}
+
 	r.field("ipv4", withPrefixLen(net.IPv4addr, net.IPv4pLen))
 	r.field("ipv4 gateway", net.IPv4Gw)
 	r.field("ipv6", withPrefixLen(net.IPv6addr, net.IPv6pLen))

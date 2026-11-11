@@ -22,6 +22,22 @@ const (
 	reasonReadOnly = "disabled in read-only mode"
 )
 
+// hostOnlyReason explains why an operation that works on this host is not available for
+// the labs of a lab runtime.
+func (b *Backend) hostOnlyReason(capability string) string {
+	what := "this"
+
+	switch capability {
+	case capNetem:
+		what = "impairing links"
+	case capShare:
+		what = "sharing a terminal"
+	}
+
+	return fmt.Sprintf("%s is not possible with the %s runtime, whose nodes are not "+
+		"containers of this host", what, b.rtName)
+}
+
 // Names of the capabilities, as used for the reasons they are unavailable.
 const (
 	capLifecycle = "lifecycle"
@@ -129,6 +145,13 @@ func (b *Backend) capabilities() clabinternaltuibackend.Capabilities {
 		}
 	default:
 		caps.Lifecycle, caps.Netem, caps.Capture, caps.Share = true, true, true, true
+	}
+
+	// Impairments and shared terminals are set up on this host.
+	if b.lrt != nil {
+		caps.Netem, caps.Share = false, false
+		caps.Reasons[capNetem] = b.hostOnlyReason(capNetem)
+		caps.Reasons[capShare] = b.hostOnlyReason(capShare)
 	}
 
 	// The state of the interfaces becomes known once its stream runs.

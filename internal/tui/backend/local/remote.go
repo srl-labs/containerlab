@@ -138,7 +138,7 @@ func (b *Backend) RemoteCapture(req clabinternaltuibackend.CaptureRequest) (stri
 		return "", err
 	}
 
-	remote := commandLine(b.remoteProgram(host.User), captureArgs(b.rtName, &req, "-"))
+	remote := commandLine(b.remoteProgram(host.User), b.captureCommand(&req, "-"))
 
 	return "ssh " + host.SSH + " " + shellQuote(remote) + " | " +
 		commandLine(wiresharkBinary, wiresharkArgs()), nil
@@ -154,7 +154,8 @@ func (b *Backend) remoteProgram(user string) string {
 		program = programName
 	}
 
-	if !b.priv.setuid && user != rootUser {
+	// A lab runtime is reached as the user, with the access to the cluster the user has.
+	if !b.priv.setuid && user != rootUser && b.lrt == nil {
 		program = "sudo " + program
 	}
 

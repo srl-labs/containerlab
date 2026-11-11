@@ -121,6 +121,17 @@ func (m *Model) capReason(ok bool, capability string) string {
 	return m.host.Caps.Reason(capability)
 }
 
+// hostOnly returns why a group of operations that only exists for the labs of this host is
+// unavailable for the labs of a cluster, empty otherwise: whether such an operation can
+// run here is told when it is asked for.
+func (m *Model) hostOnly(ok bool, capability string) string {
+	if ok || !m.host.Cluster {
+		return ""
+	}
+
+	return m.host.Caps.Reason(capability)
+}
+
 // showMap opens the topology map of a lab.
 func (m *Model) showMap(lab string) tea.Cmd {
 	m.scope = lab
@@ -183,7 +194,8 @@ func (m *Model) labActions(lab *clabinternaltuibackend.Lab) (string, []action) {
 			run: func() tea.Cmd { return m.labNodeAction(lab, clabinternaltuibackend.NodeStop) },
 		},
 		{
-			key: "H", name: "share", desc: "share a terminal with sshx or gotty", off: deployed,
+			key: "H", name: "share", desc: "share a terminal with sshx or gotty",
+			off: firstOf(deployed, m.hostOnly(m.host.Caps.Share, "share")),
 			run: func() tea.Cmd { return m.shareMenu(lab) },
 		},
 		{
@@ -263,7 +275,7 @@ func (m *Model) nodeActions(
 			run: func() tea.Cmd { return m.nodeAction(clabinternaltuibackend.NodeStart, nodes) },
 		},
 		{
-			key: "W", name: "save", desc: "save the running configuration to the lab directory",
+			key: "W", name: "save", desc: m.saveDescription(),
 			off: unless(anyRunning, "no running node selected"),
 			run: func() tea.Cmd { return m.saveSelected(nodes) },
 		},
@@ -276,6 +288,15 @@ func (m *Model) nodeActions(
 			run: func() tea.Cmd { return m.copyNodeMenu(current) },
 		},
 	}
+}
+
+// saveDescription tells where the saved configuration of a node goes.
+func (m *Model) saveDescription() string {
+	if m.host.Cluster {
+		return "save the running configuration to the storage of the node"
+	}
+
+	return "save the running configuration to the lab directory"
 }
 
 // interfaceActions returns what can be done with interfaces.

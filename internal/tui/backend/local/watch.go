@@ -78,6 +78,7 @@ func (b *Backend) watch(ctx context.Context) {
 			continue
 		case <-b.refreshCh:
 			b.files.request()
+			b.links.forget()
 		case <-timer.C:
 		case <-safety.C:
 		}
@@ -95,9 +96,9 @@ func (b *Backend) reloadLogged(ctx context.Context) {
 	switch {
 	case ctx.Err() != nil:
 	case err != nil && !b.reloadFailing:
-		b.logf(levelError, "failed to list the lab containers: %v", err)
+		b.logf(levelError, "failed to list the %s: %v", b.listed(), err)
 	case err == nil && b.reloadFailing:
-		b.logf(levelInfo, "listing the lab containers works again")
+		b.logf(levelInfo, "listing the %s works again", b.listed())
 	}
 
 	b.reloadFailing = err != nil

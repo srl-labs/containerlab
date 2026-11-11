@@ -234,7 +234,7 @@ func TestSamplerRates(t *testing.T) {
 	node := func() clabinternaltuibackend.Node {
 		n := clabinternaltuibackend.Node{}
 		n.Container = "clab-lab1-leaf1"
-		s.fill(&n)
+		s.fill(n.Container, &n)
 
 		return n
 	}
@@ -333,7 +333,7 @@ func TestSamplerKeepsBoundedSeries(t *testing.T) {
 	var node clabinternaltuibackend.Node
 
 	node.Container = "clab-lab1-leaf1"
-	s.fill(&node)
+	s.fill(node.Container, &node)
 
 	if len(node.CPUSeries) != seriesLen || len(node.RxSeries) != seriesLen ||
 		len(node.TxSeries) != seriesLen {
@@ -377,7 +377,7 @@ func TestSamplerWithoutCgroupAccess(t *testing.T) {
 	var node clabinternaltuibackend.Node
 
 	node.Container = "clab-lab1-leaf1"
-	s.fill(&node)
+	s.fill(node.Container, &node)
 
 	if node.HasStats || node.CPUPercent != 0 || node.MemBytes != 0 {
 		t.Errorf("usage reported without access to the cgroup: %+v", node)
@@ -411,7 +411,7 @@ func TestSamplerRestartedContainer(t *testing.T) {
 	var node clabinternaltuibackend.Node
 
 	node.Container = "clab-lab1-leaf1"
-	s.fill(&node)
+	s.fill(node.Container, &node)
 
 	if node.CPUPercent != 0 || node.RxBps != 0 || len(node.RxSeries) != 0 {
 		t.Errorf("values of the previous run were carried over: %+v", node)

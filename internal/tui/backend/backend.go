@@ -10,7 +10,6 @@ package backend
 import (
 	"context"
 	"errors"
-	"os/exec"
 	"time"
 )
 
@@ -94,9 +93,9 @@ type Backend interface {
 	// ConnectMethods lists the ways to open an interactive session on a node, the
 	// preferred one first.
 	ConnectMethods(node *Node) []ConnectMethod
-	// Interactive prepares the command of an interactive session. The caller hands the
-	// terminal over to it.
-	Interactive(node NodeRef, method ConnectMethod) (*exec.Cmd, error)
+	// Interactive prepares an interactive session. The caller hands the terminal over to
+	// it.
+	Interactive(node NodeRef, method ConnectMethod) (Session, error)
 
 	// The operations below change state. They run as jobs and return at once.
 	Deploy(req DeployRequest) (JobID, error)
@@ -151,6 +150,10 @@ type Host struct {
 	Privileged bool
 	// Demo is set when the data is simulated.
 	Demo bool
+	// Cluster is set when the labs run in a Kubernetes cluster rather than on this host:
+	// the nodes are pods then, and what works on the containers and the network of this
+	// host does not apply.
+	Cluster bool
 	// SSH is how the computer of the user reaches this host, as the arguments of the ssh
 	// command. It is empty when the UI is not used through SSH.
 	SSH  string
@@ -194,6 +197,8 @@ type NodeRef struct {
 // Lab is a deployed lab or a topology file that is not deployed.
 type Lab struct {
 	Name string
+	// Namespace is the Kubernetes namespace of a lab that runs in a cluster.
+	Namespace string
 	// TopoFile is the absolute path of the topology file, empty when unknown.
 	TopoFile string
 	LabDir   string

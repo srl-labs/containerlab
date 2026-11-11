@@ -228,8 +228,7 @@ func commandSkipsRoot(name string) bool {
 // labRuntimeUnsupportedCommands operate on local containers or host networking
 // and have no lab runtime equivalent.
 var labRuntimeUnsupportedCommands = map[string]struct{}{
-	"tools":        {},
-	tuiCommandName: {},
+	"tools": {},
 }
 
 // graphTopologyFileFlags select graph modes that render from the topology file alone, without

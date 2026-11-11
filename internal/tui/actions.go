@@ -70,6 +70,26 @@ func (m *Model) started(id clabinternaltuibackend.JobID, err error, show bool) {
 	}
 }
 
+// program returns how the containerlab command starts in the command lines shown: with
+// the runtime when the labs are not the ones of the container runtime of this host.
+func (m *Model) program() string {
+	if m.host.Cluster && m.host.Runtime != "" {
+		return "containerlab -r " + m.host.Runtime
+	}
+
+	return "containerlab"
+}
+
+// cleanupLabel describes what the cleanup option of destroy removes. A lab in a cluster
+// keeps the saved configuration of its nodes in the storage of the cluster.
+func (m *Model) cleanupLabel() string {
+	if m.host.Cluster {
+		return "also remove the saved node storage (--cleanup)"
+	}
+
+	return "also remove the lab directory (--cleanup)"
+}
+
 func (m *Model) deployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 	if !m.allowed(m.host.Caps.Lifecycle, "lifecycle") {
 		return nil
@@ -86,7 +106,7 @@ func (m *Model) deployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 	}
 
 	command := func(v formValues) string {
-		line := "containerlab deploy -t " + clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)
+		line := m.program() + " deploy -t " + clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)
 		if v.Bool("reconfigure") {
 			line += " --reconfigure"
 		}
@@ -106,10 +126,16 @@ func (m *Model) deployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 	form := newForm("Deploy "+lab.Name, "Deploy", submit).withPreview(command)
 
 	if lab.Deployed {
+		reconfigure := "start over: regenerate the lab directory (--reconfigure)"
+		if m.host.Cluster {
+			reconfigure = "start over: remove the lab and its saved node storage first " +
+				"(--reconfigure)"
+		}
+
 		form.text(
 			"The lab is deployed. Deploying again applies the changes made to the",
 			"topology file, leaving the nodes that did not change alone.",
-		).toggle("reconfigure", "start over: regenerate the lab directory (--reconfigure)")
+		).toggle("reconfigure", reconfigure)
 	} else {
 		form.text(fmt.Sprintf("Deploy the %d nodes of this topology.", lab.DefinedNodes))
 	}
@@ -129,7 +155,7 @@ func (m *Model) destroyLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 	}
 
 	command := func(v formValues) string {
-		line := "containerlab destroy --name " + lab.Name
+		line := m.program() + " destroy --name " + lab.Name
 		if v.Bool("cleanup") {
 			line += " --cleanup"
 		}
@@ -151,13 +177,18 @@ func (m *Model) destroyLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 		return nil
 	}
 
-	return m.ask(newForm("Destroy "+lab.Name, "Destroy", submit).
+	form := newForm("Destroy "+lab.Name, "Destroy", submit).
 		dangerous().
 		text(fmt.Sprintf("%d nodes will be removed. Configuration that was not saved is lost.",
 			len(lab.Nodes))).
-		toggle("cleanup", "also remove the lab directory (--cleanup)").
-		toggle("graceful", "stop the nodes gracefully first (--graceful)").
-		withPreview(command))
+		toggle("cleanup", m.cleanupLabel())
+
+	// How the nodes of a cluster are stopped is up to the cluster.
+	if !m.host.Cluster {
+		form.toggle("graceful", "stop the nodes gracefully first (--graceful)")
+	}
+
+	return m.ask(form.withPreview(command))
 }
 
 func (m *Model) redeployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
@@ -170,7 +201,8 @@ func (m *Model) redeployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 	}
 
 	command := func(v formValues) string {
-		line := "containerlab redeploy -t " + clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)
+		line := m.program() + " redeploy -t " +
+			clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)
 		if v.Bool("cleanup") {
 			line += " --cleanup"
 		}
@@ -193,7 +225,7 @@ func (m *Model) redeployLab(lab *clabinternaltuibackend.Lab) tea.Cmd {
 			fmt.Sprintf("The %d nodes are destroyed and deployed again.", len(lab.Nodes)),
 			"Configuration that was not saved is lost.",
 		).
-		toggle("cleanup", "also remove the lab directory (--cleanup)").
+		toggle("cleanup", m.cleanupLabel()).
 		withPreview(command))
 }
 
@@ -258,8 +290,8 @@ func (m *Model) nodeAction(
 	form := newForm(fmt.Sprintf("%s %d node(s)", verb, len(nodes)), verb, submit).
 		text(targetList(nodeNames(nodes))).
 		withPreview(func(formValues) string {
-			return fmt.Sprintf("containerlab %s --name %s --node %s",
-				action, labs[0], strings.Join(grouped[labs[0]], ","))
+			return fmt.Sprintf("%s %s --name %s --node %s",
+				m.program(), action, labs[0], strings.Join(grouped[labs[0]], ","))
 		})
 
 	if action != clabinternaltuibackend.NodeStart {
@@ -305,7 +337,7 @@ func (m *Model) saveNodes(lab *clabinternaltuibackend.Lab, nodes []string) tea.C
 	return m.ask(newForm("Save configuration", "Save", submit).
 		text("Save the running configuration of " + what + ".").
 		withPreview(func(formValues) string {
-			line := "containerlab save --name " + lab.Name
+			line := m.program() + " save --name " + lab.Name
 			if len(nodes) > 0 {
 				line += " --node-filter " + strings.Join(nodes, ",")
 			}
@@ -376,7 +408,7 @@ func (m *Model) connectMenu(n *clabinternaltuibackend.Node) tea.Cmd {
 func (m *Model) connect(
 	n *clabinternaltuibackend.Node, method clabinternaltuibackend.ConnectMethod,
 ) tea.Cmd {
-	cmd, err := m.be.Interactive(n.NodeRef, method)
+	session, err := m.be.Interactive(n.NodeRef, method)
 	if err != nil {
 		m.notifyf(clabinternaltuitheme.LevelError, "cannot connect to %s: %v", n.Name, err)
 
@@ -385,7 +417,7 @@ func (m *Model) connect(
 
 	node, started := n.Name, m.now()
 
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+	return tea.Exec(session, func(err error) tea.Msg {
 		return sessionEndedMsg{node: node, err: err, started: started}
 	})
 }
@@ -428,6 +460,12 @@ func (m *Model) copyNodeMenu(n *clabinternaltuibackend.Node) tea.Cmd {
 		{"i", "image", n.Image},
 		{"d", "container ID", n.ID},
 		{"s", "ssh command", "ssh " + n.Container},
+	}
+
+	// The name of a node only leads to it where the SSH configuration of the lab was
+	// written, which is on the host that runs the nodes.
+	if m.host.Cluster {
+		values = values[:len(values)-1]
 	}
 
 	items := make([]menuItem, 0, len(values))

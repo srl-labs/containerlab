@@ -40,7 +40,10 @@ shell and SSH sessions, logs, link impairments, packet captures and more. Press 
 the UI for the list of keys.
 
 Operations that change a lab run the corresponding containerlab command in the background
-and need the same privileges it does. Without them the UI still works for watching.`,
+and need the same privileges it does. Without them the UI still works for watching.
+
+With a lab runtime, ie. --runtime c9s, the UI shows the labs of the Kubernetes cluster
+instead of the ones of this host.`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return tuiFn(cobraCmd.Context(), o)

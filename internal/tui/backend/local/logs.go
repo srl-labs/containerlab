@@ -7,6 +7,7 @@ package local
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -55,19 +56,20 @@ func (s *logStream) setErr(err error) {
 	s.err = err
 }
 
-// Logs streams the log of a node's container, read through the runtime API.
+// Logs streams the log of a node's container, read through the runtime API. A lab runtime
+// writes all of the log as one stream.
 func (b *Backend) Logs(
 	ctx context.Context,
 	ref clabinternaltuibackend.NodeRef,
 	opts clabinternaltuibackend.LogOptions,
 ) (clabinternaltuibackend.LogStream, error) {
 	writer, ok := b.rt.(clabruntime.ContainerLogWriter)
-	if !ok {
+	if !ok && b.lrt == nil {
 		return nil, fmt.Errorf("%w: the %s runtime cannot read container logs",
 			clabinternaltuibackend.ErrUnavailable, b.rtName)
 	}
 
-	_, node, _ := b.inv.find(ref)
+	rec, node, _ := b.inv.find(ref)
 	if node == nil {
 		return nil, fmt.Errorf("node %q of lab %q not found", ref.Name, ref.Lab)
 	}
@@ -79,6 +81,14 @@ func (b *Backend) Logs(
 		logOpts.Tail = &tail
 	}
 
+	write := func(ctx context.Context, stdout, stderr io.Writer) error {
+		if b.lrt != nil {
+			return b.writeLabRuntimeLogs(ctx, rec, node, &logOpts, stdout)
+		}
+
+		return writer.WriteContainerLogs(ctx, node.Container, logOpts, stdout, stderr)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	// The stream also ends when the backend is closed.
 	stop := context.AfterFunc(b.ctx, cancel)
@@ -88,7 +98,6 @@ func (b *Backend) Logs(
 		cancel:  cancel,
 	}
 	lines := make(chan clabinternaltuibackend.LogLine, logBacklog)
-	container := node.Container
 
 	b.spawn("log reader", func() {
 		// Closing the lines ends the batcher, which must see the error by then.
@@ -97,7 +106,7 @@ func (b *Backend) Logs(
 		stdout := newLogLineWriter(ctx, lines, opts.Timestamps, false)
 		stderr := newLogLineWriter(ctx, lines, opts.Timestamps, true)
 
-		err := writer.WriteContainerLogs(ctx, container, logOpts, stdout, stderr)
+		err := write(ctx, stdout, stderr)
 
 		stdout.close()
 		stderr.close()

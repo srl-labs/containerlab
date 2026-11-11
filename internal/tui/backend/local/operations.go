@@ -37,6 +37,18 @@ func (b *Backend) allow(needsRoot bool) error {
 	return nil
 }
 
+// allowOnHost reports whether an operation may run that works on the containers and the
+// network of this host, with root privileges. The nodes of a lab runtime are out of its
+// reach.
+func (b *Backend) allowOnHost(capability string) error {
+	if b.lrt != nil {
+		return fmt.Errorf("%w: %s", clabinternaltuibackend.ErrUnavailable,
+			b.hostOnlyReason(capability))
+	}
+
+	return b.allow(true)
+}
+
 // runJob starts a job and returns its ID.
 func (b *Backend) runJob(spec *jobSpec) (clabinternaltuibackend.JobID, error) {
 	j, err := b.jobs.start(spec)
@@ -76,14 +88,15 @@ func (b *Backend) topologyFile(lab, file string) (string, error) {
 
 // deployedLab returns a deployed lab whose topology file still exists. The commands that
 // work on the nodes of a lab find them through that file: without it they find no nodes
-// and succeed without doing anything, which would pass for success.
+// and succeed without doing anything, which would pass for success. A lab runtime knows
+// the nodes of its labs without the file.
 func (b *Backend) deployedLab(name, purpose string) (*labRecord, error) {
 	rec := b.inv.record(name)
 	if rec == nil {
 		return nil, fmt.Errorf("lab %q is not deployed", name)
 	}
 
-	if rec.lab.TopoMissing {
+	if rec.lab.TopoMissing && b.lrt == nil {
 		return nil, fmt.Errorf("cannot %s lab %q: its topology file %s is missing",
 			purpose, name, describePath(rec.lab.TopoFile))
 	}
@@ -124,7 +137,7 @@ func (b *Backend) Deploy(
 		lab:   lab,
 		title: "deploy " + lab,
 		topo:  topo,
-		args:  deployArgs(b.rtName, &req),
+		args:  b.inNamespace(b.inv.record(lab), deployArgs(b.rtName, &req)),
 	})
 }
 
@@ -150,12 +163,17 @@ func (b *Backend) Destroy(
 		req.TopoFile = topo
 	}
 
+	// The command takes the name the runtime knows the lab by.
+	rec := b.inv.record(req.Lab)
+	named := req
+	named.Lab = labName(rec, req.Lab)
+
 	return b.runJob(&jobSpec{
 		kind:  clabinternaltuibackend.JobDestroy,
 		lab:   req.Lab,
 		title: "destroy " + labOrFile(req.Lab, topo),
 		topo:  topo,
-		args:  destroyArgs(b.rtName, &req),
+		args:  b.inNamespace(rec, destroyArgs(b.rtName, &named)),
 	})
 }
 
@@ -187,7 +205,7 @@ func (b *Backend) Redeploy(
 		lab:   req.Lab,
 		title: "redeploy " + labOrFile(req.Lab, topo),
 		topo:  topo,
-		args:  redeployArgs(b.rtName, &req),
+		args:  b.inNamespace(b.inv.record(req.Lab), redeployArgs(b.rtName, &req)),
 	})
 }
 
@@ -216,12 +234,15 @@ func (b *Backend) NodeAction(
 		count = len(rec.lab.Nodes)
 	}
 
+	named := req
+	named.Lab = rec.name
+
 	return b.runJob(&jobSpec{
 		kind:  clabinternaltuibackend.JobKind(req.Action),
 		lab:   req.Lab,
 		title: fmt.Sprintf("%s %s (%d nodes)", req.Action, req.Lab, count),
 		topo:  rec.lab.TopoFile,
-		args:  nodeActionArgs(b.rtName, &req),
+		args:  b.inNamespace(rec, nodeActionArgs(b.rtName, &named)),
 	})
 }
 
@@ -249,12 +270,15 @@ func (b *Backend) Save(
 		}
 	}
 
+	named := req
+	named.Lab = rec.name
+
 	return b.runJob(&jobSpec{
 		kind:           clabinternaltuibackend.JobSave,
 		lab:            req.Lab,
 		title:          "save " + req.Lab,
 		topo:           rec.lab.TopoFile,
-		args:           saveArgs(b.rtName, &req),
+		args:           b.inNamespace(rec, saveArgs(b.rtName, &named)),
 		errorLinesFail: true,
 	})
 }
@@ -328,7 +352,7 @@ func (b *Backend) runNetem(
 func (b *Backend) SetNetem(
 	req clabinternaltuibackend.NetemRequest,
 ) (clabinternaltuibackend.JobID, error) {
-	if err := b.allow(true); err != nil {
+	if err := b.allowOnHost(capNetem); err != nil {
 		return 0, err
 	}
 
@@ -360,7 +384,7 @@ func (b *Backend) SetNetem(
 func (b *Backend) ResetNetem(
 	interfaces []clabinternaltuibackend.InterfaceRef,
 ) (clabinternaltuibackend.JobID, error) {
-	if err := b.allow(true); err != nil {
+	if err := b.allowOnHost(capNetem); err != nil {
 		return 0, err
 	}
 
@@ -379,7 +403,7 @@ func (b *Backend) ResetNetem(
 func (b *Backend) Share(
 	req clabinternaltuibackend.ShareRequest,
 ) (clabinternaltuibackend.JobID, error) {
-	if err := b.allow(true); err != nil {
+	if err := b.allowOnHost(capShare); err != nil {
 		return 0, err
 	}
 
@@ -432,6 +456,15 @@ func (b *Backend) prepareCapture(req *clabinternaltuibackend.CaptureRequest) ([]
 		return nil, errors.New("no interfaces selected")
 	}
 
+	// A lab runtime knows the interfaces of its labs, which are found by their name.
+	if b.lrt != nil {
+		if b.inv.record(req.Lab) == nil {
+			return nil, fmt.Errorf("cannot capture: lab %q is not deployed", req.Lab)
+		}
+
+		return targets, nil
+	}
+
 	// The capture command finds the interfaces through the links of the topology.
 	topo, err := b.topologyFile(req.Lab, req.TopoFile)
 	if err != nil {
@@ -441,6 +474,21 @@ func (b *Backend) prepareCapture(req *clabinternaltuibackend.CaptureRequest) ([]
 	req.TopoFile = topo
 
 	return targets, nil
+}
+
+// captureCommand builds the arguments of the capture command for a request that
+// prepareCapture checked, writing to sink. A lab of a lab runtime is named to the command,
+// which needs no topology file then.
+func (b *Backend) captureCommand(req *clabinternaltuibackend.CaptureRequest, sink string) []string {
+	if b.lrt == nil {
+		return captureArgs(b.rtName, req, sink)
+	}
+
+	rec := b.inv.record(req.Lab)
+	named := *req
+	named.Lab, named.TopoFile = labName(rec, req.Lab), ""
+
+	return b.inNamespace(rec, captureArgs(b.rtName, &named, sink))
 }
 
 // Capture captures packets on interfaces of nodes: into a file, into Wireshark or for the
@@ -482,7 +530,7 @@ func (b *Backend) Capture(
 		return 0, err
 	}
 
-	spec.args = captureArgs(b.rtName, &req, file)
+	spec.args = b.captureCommand(&req, file)
 
 	j, err := b.jobs.start(spec)
 	if err != nil {
