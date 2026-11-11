@@ -251,8 +251,8 @@ type Node interface {
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
 	// ExecInteractiveShell returns the argv for the interactive shell to use
-	// when the user runs 'exec --interactive'. Nodes override this to provide
-	// their NOS CLI or a specific shell invocation.
+	// when the user opens a session on the node from the TUI. Nodes override
+	// this to provide their NOS CLI or a specific shell invocation.
 	ExecInteractiveShell() []string
 	// ComputeDiff diffs old node cfg with the new one and
 	// returns the diff.

@@ -122,7 +122,6 @@ nav:
       - capture: cmd/capture.md
       - save: cmd/save.md
       - exec: cmd/exec.md
-      - connect: cmd/connect.md
       - tui: cmd/tui.md
       - generate: cmd/generate.md
       - graph: cmd/graph.md
