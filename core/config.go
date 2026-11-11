@@ -346,6 +346,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
 		Exec:            c.Config.Topology.GetNodeExec(nodeName),
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
+		TopologyEnv:     c.topologyEnv,
 		NetworkMode:     c.Config.Topology.GetNodeNetworkMode(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),

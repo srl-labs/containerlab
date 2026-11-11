@@ -418,7 +418,7 @@ func (n *srl) Deploy(ctx context.Context, params *clabnodes.DeployParams) error 
 }
 
 func (n *srl) Start(ctx context.Context) error {
-	if n.netnsNode == nil {
+	if n.netnsNode == nil || n.deployedWithoutNetnsNode(ctx) {
 		return n.DefaultNode.Start(ctx)
 	}
 
@@ -744,7 +744,11 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
-		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+			bytes.NewReader(c),
+			n.Cfg,
+			n.Cfg.TopologyEnv,
+		)
 		if err != nil {
 			return err
 		}

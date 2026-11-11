@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"
 )
 
@@ -87,5 +88,46 @@ pid-offset: 5
 			back.KindSpecificConfig,
 			b,
 		)
+	}
+}
+
+func TestNodeDefinitionImportEnvsFrom(t *testing.T) {
+	tests := map[string]struct {
+		nodeEnv map[string]string
+		env     []string
+		want    map[string]string
+	}{
+		"import_env": {
+			nodeEnv: map[string]string{importEnvsKey: "true", "KEEP": "node"},
+			env:     []string{"GIVEN=value", "KEEP=env"},
+			want:    map[string]string{importEnvsKey: "true", "KEEP": "node", "GIVEN": "value"},
+		},
+		"no_import_key": {
+			nodeEnv: map[string]string{"KEEP": "node"},
+			env:     []string{"GIVEN=value"},
+			want:    map[string]string{"KEEP": "node"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			n := &NodeDefinition{Env: tc.nodeEnv}
+			n.ImportEnvsFrom(tc.env)
+
+			if d := cmp.Diff(tc.want, n.Env); d != "" {
+				t.Fatalf("env vars mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}
+
+func TestNodeDefinitionImportEnvsFromProcessEnv(t *testing.T) {
+	t.Setenv("CLAB_TEST_PROCESS_VAR", "process")
+
+	n := &NodeDefinition{Env: map[string]string{importEnvsKey: "true"}}
+	n.ImportEnvsFrom(nil)
+
+	if d := cmp.Diff("process", n.Env["CLAB_TEST_PROCESS_VAR"]); d != "" {
+		t.Fatalf("imported env var mismatch (-want +got):\n%s", d)
 	}
 }

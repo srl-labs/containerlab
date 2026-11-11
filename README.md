@@ -62,6 +62,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Check Point Cloudguard](https://containerlab.dev/manual/kinds/checkpoint_cloudguard/)
 * [Fortinet Fortigate](https://containerlab.dev/manual/kinds/fortinet_fortigate/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
+* [ALE OmniSwitch vAOS](https://containerlab.dev/manual/kinds/ale_vaos/)
 * [Huawei VRP](https://containerlab.dev/manual/kinds/huawei_vrp)
 * [Ciena SAOS 10](https://containerlab.dev/manual/kinds/ciena_saos/)
 * [F5 BIG-IP VE](https://containerlab.dev/manual/kinds/f5_bigipve/)

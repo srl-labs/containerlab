@@ -80,13 +80,16 @@ func getFieldPtr[T any, P ptrTo[T]](
 	}
 
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if nodeDefintion == nil || !ok {
+	if !ok {
 		return finalDefault
 	}
 
-	fieldNode := getFieldNode(nodeDefintion)
-	if isSet(fieldNode) {
-		return *fieldNode
+	// Check node's own field (if the node definition is not nil)
+	if nodeDefintion != nil {
+		fieldNode := getFieldNode(nodeDefintion)
+		if isSet(fieldNode) {
+			return *fieldNode
+		}
 	}
 
 	group := topo.GetGroup(topo.GetNodeGroup(nodeName))
@@ -230,18 +233,23 @@ func (t *Topology) GetKind(kind string) *NodeDefinition {
 		return new(NodeDefinition)
 	}
 
-	if kdef, ok := t.Kinds[kind]; ok {
-		return kdef
-	}
-
-	// kind names are case-insensitive, an exact match takes precedence
-	for _, name := range slices.Sorted(maps.Keys(t.Kinds)) {
-		if strings.EqualFold(name, kind) {
-			return t.Kinds[name]
+	kdef, ok := t.Kinds[kind]
+	if !ok {
+		// kind names are case-insensitive, an exact match takes precedence
+		for _, name := range slices.Sorted(maps.Keys(t.Kinds)) {
+			if strings.EqualFold(name, kind) {
+				kdef = t.Kinds[name]
+				break
+			}
 		}
 	}
 
-	return new(NodeDefinition)
+	// unknown kinds and kinds defined without a body have no definition
+	if kdef == nil {
+		return new(NodeDefinition)
+	}
+
+	return kdef
 }
 
 // GetKinds returns all kinds defined in the topology.
@@ -293,7 +301,7 @@ func (t *Topology) GetNodeKind(nodeName string) string {
 		}
 	}
 
-	defaults := t.GetGroup(t.Defaults.Group)
+	defaults := t.GetGroup(t.GetDefaults().Group)
 	if defaults != nil && defaults.Kind != "" {
 		return defaults.Kind
 	}
@@ -305,11 +313,11 @@ func (t *Topology) GetNodeGroup(nodeName string) string {
 	defaultGroup := t.GetDefaults().Group
 
 	nodeDefinition, ok := t.Nodes[nodeName]
-	if nodeDefinition == nil || !ok {
+	if !ok {
 		return defaultGroup
 	}
 
-	if nodeDefinition.Group != "" {
+	if nodeDefinition != nil && nodeDefinition.Group != "" {
 		return nodeDefinition.Group
 	}
 
@@ -924,12 +932,11 @@ func (t *Topology) GetNodeVolumes(name string) ([]string, error) {
 }
 
 func (t *Topology) GetNodeConfigDispatcher(nodeName string) *ConfigDispatcher {
-	nodeDefintion, ok := t.Nodes[nodeName]
-	if nodeDefintion == nil || !ok {
+	if _, ok := t.Nodes[nodeName]; !ok {
 		return nil
 	}
 
-	vars := t.Defaults.Config.GetVars()
+	vars := t.GetDefaults().Config.GetVars()
 
 	kind := t.GetKind(t.GetNodeKind(nodeName))
 	if kind != nil && kind.Config != nil {
@@ -984,18 +991,24 @@ func (t *Topology) GetStages(nodeName string) (*Stages, error) {
 }
 
 func (t *Topology) ImportEnvs() {
-	t.Defaults.ImportEnvs()
+	t.ImportEnvsFrom(nil)
+}
+
+// ImportEnvsFrom imports the env vars of env (key=value entries) on every level
+// that sets __IMPORT_ENVS to true. A nil env imports the process environment.
+func (t *Topology) ImportEnvsFrom(env []string) {
+	t.Defaults.ImportEnvsFrom(env)
 
 	for _, k := range t.Kinds {
-		k.ImportEnvs()
+		k.ImportEnvsFrom(env)
 	}
 
 	for _, g := range t.Groups {
-		g.ImportEnvs()
+		g.ImportEnvsFrom(env)
 	}
 
 	for _, n := range t.Nodes {
-		n.ImportEnvs()
+		n.ImportEnvsFrom(env)
 	}
 }
 

@@ -12,7 +12,7 @@
         "aarch64-linux"
       ];
       forAll = f: nixpkgs.lib.genAttrs systems (s: f nixpkgs.legacyPackages.${s});
-      version = "0.82.0";
+      version = "0.83.0";
     in
     {
       packages = forAll (pkgs: rec {
@@ -20,7 +20,7 @@
           pname = "containerlab";
           inherit version;
           src = ./.;
-          vendorHash = "sha256-Sx9sngL86I1df3mOmybryO+0fTFZaamMaw0xlnSZA2c=";
+          vendorHash = "sha256-NPZpOFb0TXJOnVJVs0ap58m7uoITN9IaiRQTxUWX7m8=";
           env = {
             CGO_ENABLED = 0;
           };

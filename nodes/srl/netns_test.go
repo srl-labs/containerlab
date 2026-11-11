@@ -219,9 +219,50 @@ func TestStartRequiresNetnsNode(t *testing.T) {
 	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
 	n := newSRLTestNode(t, newSRLTestConfig(t), rt)
 
-	rt.EXPECT().GetContainerStatus(ctx, testNetnsName).Return(clabruntime.NotFound)
+	rt.EXPECT().GetContainerStatus(ctx, testNetnsName).Return(clabruntime.NotFound).AnyTimes()
+	rt.EXPECT().GetContainerStatus(ctx, testNodeName).Return(clabruntime.NotFound).AnyTimes()
 
 	err := n.Start(ctx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "recreate the node")
+}
+
+func TestGetNSPathUsesNetnsNode(t *testing.T) {
+	ctx := context.Background()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n := newSRLTestNode(t, newSRLTestConfig(t), rt)
+
+	rt.EXPECT().GetContainerStatus(ctx, testNetnsName).Return(clabruntime.Running)
+	rt.EXPECT().GetNSPath(ctx, testNetnsName).Return("/proc/1/ns/net", nil)
+
+	nsPath, err := n.GetNSPath(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "/proc/1/ns/net", nsPath)
+}
+
+// A node deployed before the holder existed keeps working until it is recreated.
+func TestGetNSPathOfNodeDeployedWithoutNetnsNode(t *testing.T) {
+	ctx := context.Background()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n := newSRLTestNode(t, newSRLTestConfig(t), rt)
+
+	rt.EXPECT().GetContainerStatus(ctx, testNetnsName).Return(clabruntime.NotFound)
+	rt.EXPECT().GetContainerStatus(ctx, testNodeName).Return(clabruntime.Running)
+	rt.EXPECT().GetNSPath(ctx, testNodeName).Return("/proc/2/ns/net", nil)
+
+	nsPath, err := n.GetNSPath(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "/proc/2/ns/net", nsPath)
+}
+
+func TestStartOfNodeDeployedWithoutNetnsNode(t *testing.T) {
+	ctx := context.Background()
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n := newSRLTestNode(t, newSRLTestConfig(t), rt)
+
+	rt.EXPECT().GetContainerStatus(ctx, testNetnsName).Return(clabruntime.NotFound).AnyTimes()
+	rt.EXPECT().GetContainerStatus(ctx, testNodeName).Return(clabruntime.Stopped).AnyTimes()
+	rt.EXPECT().StartContainer(ctx, testNodeName, gomock.Any()).Return(nil, nil)
+
+	require.NoError(t, n.Start(ctx))
 }

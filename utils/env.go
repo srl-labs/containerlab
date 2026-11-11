@@ -11,8 +11,26 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hellt/envsubst/parse"
 	"github.com/joho/godotenv"
 )
+
+// SubstituteEnvs expands env vars in b with the values of env (key=value entries).
+// A nil env uses the process environment. Vars that are not set get their default value
+// or are left unexpanded.
+func SubstituteEnvs(b []byte, env []string) ([]byte, error) {
+	if env == nil {
+		env = os.Environ()
+	}
+
+	s, err := parse.New("bytes", env, &parse.Restrictions{NoDigit: true, NoReplace: true}).
+		Parse(string(b))
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(s), nil
+}
 
 // ConvertEnvs converts env variables passed as a map to a list of them.
 func ConvertEnvs(m map[string]string) []string {
