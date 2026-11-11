@@ -180,9 +180,10 @@ A drawing of a large lab is many times wider than a terminal. The map therefore 
 
 ### theme
 
-`--theme` selects the color theme. The default, `auto`, keeps the background of the terminal and picks light or dark colors to match it. The named themes paint their own background:
+The UI keeps the background and the text color of the terminal and only adds colors that read well on top of them. `--theme` tells whether those are picked for a dark or a light background:
 
-`dark`, `light`, `catppuccin-latte`, `catppuccin-mocha`, `dracula`, `github-dark`, `github-light`, `gruvbox-dark`, `gruvbox-light`, `monokai`, `nord`, `one-dark`, `paper`, `solarized-dark`, `solarized-light`, `tokyo-night`.
+* `auto`, the default, asks the terminal.
+* `dark` and `light` force one of the two, for a terminal that does not answer or answers wrong, which shows as text that is hard to read.
 
 The theme can also be changed from within the UI with `:theme <name>`.
 
@@ -219,8 +220,8 @@ containerlab tui
 # the same, a bare command in a terminal opens the UI
 containerlab
 
-# open the UI on the nodes of one lab, in a named theme
-containerlab tui --name srl02 --theme nord
+# open the UI on the nodes of one lab, with the colors for a light terminal
+containerlab tui --name srl02 --theme light
 
 # have a look without any lab
 containerlab tui --demo

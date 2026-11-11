@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-func TestEveryNamedThemeBuilds(t *testing.T) {
+func TestEveryThemeBuilds(t *testing.T) {
 	names := Names()
-	if len(names) < 3 || names[0] != Auto {
+	if len(names) != 3 || names[0] != Auto {
 		t.Fatalf("unexpected theme names: %v", names)
 	}
 
@@ -58,13 +58,13 @@ func TestAutoThemeFollowsTheTerminal(t *testing.T) {
 			dark.Dark, light.Dark)
 	}
 
-	// The automatic themes keep the terminal's own background, the named ones paint theirs.
-	if dark.Opaque() || light.Opaque() {
-		t.Error("the automatic themes should not paint the background")
+	// A terminal that does not tell its background can be overruled.
+	if forced, _ := New("dark", false); !forced.Dark {
+		t.Error("the dark theme should be dark, whatever the terminal")
 	}
 
-	if named, _ := New("nord", false); !named.Opaque() || !named.Dark {
-		t.Error("a named theme should paint its background, whatever the terminal")
+	if forced, _ := New(" Light ", true); forced.Dark {
+		t.Error("the light theme should be light, whatever the terminal")
 	}
 
 	if !IsAuto("") || !IsAuto(" Auto ") || IsAuto("dark") {

@@ -49,6 +49,9 @@ type Model struct {
 	be   clabinternaltuibackend.Backend
 	opts Options
 	th   *clabinternaltuitheme.Theme
+	// dark is what the terminal said about its background, which the automatic theme
+	// follows. It is assumed to be dark until the terminal answers.
+	dark bool
 
 	width  int
 	height int
@@ -104,7 +107,7 @@ func New(be clabinternaltuibackend.Backend, opts Options) *Model {
 	}
 
 	m := &Model{
-		be: be, opts: opts, th: th, scope: opts.Lab,
+		be: be, opts: opts, th: th, dark: true, scope: opts.Lab,
 		watched: map[clabinternaltuibackend.JobID]bool{},
 		roots:   map[tabID]page{},
 	}
@@ -338,6 +341,8 @@ func (m *Model) announceJobs() {
 }
 
 func (m *Model) setDark(dark bool) {
+	m.dark = dark
+
 	if !clabinternaltuitheme.IsAuto(m.opts.Theme) {
 		return
 	}
@@ -473,11 +478,6 @@ func (m *Model) View() tea.View {
 
 	if !m.opts.NoMouse {
 		v.MouseMode = tea.MouseModeCellMotion
-	}
-
-	if m.th.Opaque() {
-		v.BackgroundColor = m.th.Background
-		v.ForegroundColor = m.th.Foreground
 	}
 
 	return v

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"image/color"
-	"sort"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -49,7 +48,6 @@ type Theme struct {
 	// Chrome.
 	Border      lipgloss.Style
 	FocusBorder lipgloss.Style
-	Bar         lipgloss.Style
 	Chip        lipgloss.Style
 	ChipActive  lipgloss.Style
 	Key         lipgloss.Style
@@ -58,18 +56,12 @@ type Theme struct {
 
 // Names returns the names accepted by New, the automatic theme first.
 func Names() []string {
-	names := make([]string, 0, len(definitions))
-	for i := range definitions {
-		names = append(names, definitions[i].id)
-	}
-
-	sort.Strings(names)
-
-	return append([]string{Auto, defaultDark.id, defaultLight.id}, names...)
+	return []string{Auto, defaultDark.id, defaultLight.id}
 }
 
 // New builds the theme with the given name. The automatic theme, also selected by an
-// empty name, resolves to the default dark or light theme depending on darkBackground.
+// empty name, resolves to the dark or light theme depending on darkBackground. The other
+// two names force one of them, for a terminal that does not tell its background.
 func New(name string, darkBackground bool) (*Theme, error) {
 	name = strings.ToLower(strings.TrimSpace(name))
 
@@ -84,12 +76,6 @@ func New(name string, darkBackground bool) (*Theme, error) {
 		return build(&defaultDark), nil
 	case defaultLight.id:
 		return build(&defaultLight), nil
-	}
-
-	for i := range definitions {
-		if definitions[i].id == name {
-			return build(&definitions[i]), nil
-		}
 	}
 
 	return nil, fmt.Errorf("unknown theme %q, available themes: %s",
@@ -113,15 +99,8 @@ func IsAuto(name string) bool {
 func build(d *definition) *Theme {
 	p := d.palette
 
+	// Plain text keeps the terminal's own color.
 	base := lipgloss.NewStyle()
-	if p.Foreground != nil {
-		base = base.Foreground(p.Foreground)
-	}
-
-	bar := lipgloss.NewStyle()
-	if p.Surface != nil {
-		bar = bar.Background(p.Surface)
-	}
 
 	t := &Theme{
 		ID:      d.id,
@@ -148,7 +127,6 @@ func build(d *definition) *Theme {
 
 		Border:      lipgloss.NewStyle().Foreground(p.Border),
 		FocusBorder: lipgloss.NewStyle().Foreground(p.Accent),
-		Bar:         bar,
 		Chip:        base.Background(p.Raised).Padding(0, 1),
 		ChipActive: lipgloss.NewStyle().
 			Foreground(p.OnAccent).Background(p.Accent).Bold(true).Padding(0, 1),
@@ -157,12 +135,6 @@ func build(d *definition) *Theme {
 	}
 
 	return t
-}
-
-// Opaque reports whether the theme paints its own background instead of keeping the
-// terminal's.
-func (t *Theme) Opaque() bool {
-	return t.Background != nil
 }
 
 // familyHues pins the families of node kinds seen most often to a hue each, so that they
@@ -225,23 +197,5 @@ func (t *Theme) LevelStyle(l Level) lipgloss.Style {
 		return t.Muted
 	default:
 		return t.Text
-	}
-}
-
-// LevelColor returns the color of a severity level.
-func (t *Theme) LevelColor(l Level) color.Color {
-	switch l {
-	case LevelSuccess:
-		return t.Palette.Success
-	case LevelWarning:
-		return t.Palette.Warning
-	case LevelError:
-		return t.Palette.Error
-	case LevelInfo:
-		return t.Palette.Info
-	case LevelMuted:
-		return t.Palette.Muted
-	default:
-		return t.Palette.Foreground
 	}
 }

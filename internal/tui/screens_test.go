@@ -447,9 +447,35 @@ func TestThemesRender(t *testing.T) {
 			t.Errorf("theme %s changes the text on the screen", name)
 		}
 
-		if view := m.View(); m.th.Opaque() != (view.BackgroundColor != nil) {
-			t.Errorf("theme %s: the window background does not follow the theme", name)
+		// The background and the text color are always left to the terminal.
+		if view := m.View(); view.BackgroundColor != nil || view.ForegroundColor != nil {
+			t.Errorf("theme %s paints over the colors of the terminal", name)
 		}
+	}
+}
+
+// TestAutoThemeFollowsTheTerminalAgain makes sure that a forced theme can be given up for
+// what the terminal reports, also when the report came in while the theme was forced.
+func TestAutoThemeFollowsTheTerminalAgain(t *testing.T) {
+	m, _ := newTestModel(t, 120, 35)
+
+	m.runCommand("theme light")
+	m.setDark(true)
+
+	if m.th.Dark {
+		t.Fatal("the terminal overruled a forced theme")
+	}
+
+	m.runCommand("theme auto")
+
+	if !m.th.Dark {
+		t.Error("the automatic theme does not follow the dark terminal")
+	}
+
+	m.setDark(false)
+
+	if m.th.Dark {
+		t.Error("the automatic theme does not follow the terminal turning light")
 	}
 }
 

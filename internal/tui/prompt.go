@@ -330,7 +330,7 @@ func (m *Model) commandTheme(name string) {
 		return
 	}
 
-	th, err := clabinternaltuitheme.New(name, m.th.Dark)
+	th, err := clabinternaltuitheme.New(name, m.dark)
 	if err != nil {
 		m.notifyf(clabinternaltuitheme.LevelWarning, "%v", err)
 
