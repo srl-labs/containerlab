@@ -25,7 +25,9 @@ const (
 
 // logBatchMsg carries a batch of lines of a log stream to the page that reads it.
 type logBatchMsg struct {
-	page  *logsPage
+	page *logsPage
+	// gen is the generation of the stream the batch was read from.
+	gen   int
 	lines []clabinternaltuibackend.LogLine
 	// done is set when the stream has ended.
 	done bool
@@ -39,6 +41,9 @@ type logsPage struct {
 	log    *clabinternaltuiui.LogView
 	stream clabinternaltuibackend.LogStream
 	cancel context.CancelFunc
+	// gen counts the streams the page opened and closed. A stream that was replaced or
+	// closed may still deliver a batch or its end, which is told apart by it.
+	gen int
 	// ended tells why the stream stopped, empty while it runs.
 	ended string
 }
@@ -53,6 +58,8 @@ func (m *Model) openLogs(ref clabinternaltuibackend.NodeRef) tea.Cmd {
 
 // start opens the stream and returns the command that reads from it.
 func (p *logsPage) start(m *Model) tea.Cmd {
+	p.gen++
+
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 
@@ -75,12 +82,12 @@ func (p *logsPage) start(m *Model) tea.Cmd {
 
 // next waits for the next batch of lines.
 func (p *logsPage) next() tea.Cmd {
-	stream := p.stream
+	stream, gen := p.stream, p.gen
 
 	return func() tea.Msg {
 		lines, ok := <-stream.Lines()
 
-		return logBatchMsg{page: p, lines: lines, done: !ok}
+		return logBatchMsg{page: p, gen: gen, lines: lines, done: !ok}
 	}
 }
 
@@ -116,7 +123,7 @@ func (p *logsPage) find(query string) { p.log.SetQuery(query) }
 
 func (p *logsPage) update(_ *Model, msg tea.Msg) tea.Cmd {
 	batch, ok := msg.(logBatchMsg)
-	if !ok || batch.page != p {
+	if !ok || batch.page != p || batch.gen != p.gen {
 		return nil
 	}
 
@@ -216,6 +223,8 @@ func (*logsPage) hints(*Model) []hint {
 }
 
 func (p *logsPage) close() {
+	p.gen++
+
 	if p.cancel != nil {
 		p.cancel()
 		p.cancel = nil
