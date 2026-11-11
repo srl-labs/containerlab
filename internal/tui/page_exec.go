@@ -294,3 +294,6 @@ func (p *execPage) close() {
 		p.cancel = nil
 	}
 }
+
+// monospaced tells that the body of the page is literal text.
+func (*execPage) monospaced() bool { return true }

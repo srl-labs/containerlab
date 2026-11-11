@@ -353,3 +353,6 @@ func newMessagesPage(m *Model) *textPage {
 		reload: messageLines,
 	}
 }
+
+// monospaced tells that the body of the page is literal text.
+func (*textPage) monospaced() bool { return true }

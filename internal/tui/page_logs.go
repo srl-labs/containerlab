@@ -234,3 +234,6 @@ func (p *logsPage) close() {
 		p.stream.Close()
 	}
 }
+
+// monospaced tells that the body of the page is literal text.
+func (*logsPage) monospaced() bool { return true }

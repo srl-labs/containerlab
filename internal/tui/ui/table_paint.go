@@ -22,6 +22,10 @@ type Skin struct {
 	// Card is the fill of a panel and CardEdge its border.
 	Card     clabinternaltuigfx.Color
 	CardEdge clabinternaltuigfx.Color
+	// Font is set when the layer writes the text itself, at TextSize points: what is
+	// drawn around a text then follows the width the font gives it.
+	Font     *clabinternaltuigfx.Font
+	TextSize float64
 	// Ink is the color of text on the background.
 	Ink clabinternaltuigfx.Color
 	// Line separates areas, RowLine the rows of a table.
@@ -98,6 +102,8 @@ const (
 	checkWidth   = 1.7
 	checkHeight  = 0.74
 	tintOpacity  = 0.16
+	pillFill     = 0.1
+	pillEdge     = 0.55
 	trackOpacity = 0.4
 )
 
@@ -145,7 +151,7 @@ func (t *Table) Paint(sc *clabinternaltuigfx.Scene, x, y float64, sk *Skin) {
 		}
 
 		t.paintMark(sc, x+1, ry, row, sk)
-		t.paintCells(sc, x, ry, row)
+		t.paintCells(sc, x, ry, row, sk, cursor)
 	}
 
 	if from, to := t.thumb(); to > from {
@@ -177,7 +183,9 @@ func (t *Table) paintMark(sc *clabinternaltuigfx.Scene, x, ry float64, row *Row,
 // paintCells draws the decorations of the cells of a row.
 //
 //nolint:mnd // sizes and positions of what is drawn, in cells and points
-func (t *Table) paintCells(sc *clabinternaltuigfx.Scene, x, ry float64, row *Row) {
+func (t *Table) paintCells(
+	sc *clabinternaltuigfx.Scene, x, ry float64, row *Row, sk *Skin, bold bool,
+) {
 	pos := float64(t.gutter())
 
 	for k, c := range t.layout.cols {
@@ -207,8 +215,16 @@ func (t *Table) paintCells(sc *clabinternaltuigfx.Scene, x, ry float64, row *Row
 		case DecoRing:
 			sc.Ring(cx+0.5, mid, ringRadius, ringWidth, tint) // the middle of the cell
 		case DecoPill:
-			tw := float64(Width(Truncate(cell.Text, t.layout.widths[k])))
-			sc.Fill(cx-0.8, ry+0.08, tw+1.6, 0.84, pillRadius, tint.Alpha(tintOpacity))
+			text := Truncate(cell.Text, t.layout.widths[k])
+
+			tw := float64(Width(text))
+			if sk.Font != nil {
+				tw = sc.TextWidth(sk.Font, sk.TextSize, bold, text)
+			}
+
+			// An outlined pill around the text, as wide as the text is.
+			sc.Box(cx-0.75, ry+0.08, tw+1.5, 0.84, pillRadius,
+				tint.Alpha(pillFill), tint.Alpha(pillEdge), 1)
 		case DecoSwatch:
 			sc.Fill(cx, ry+0.24, 1.2, 0.52, 3, tint) // a small square
 		case DecoChart:

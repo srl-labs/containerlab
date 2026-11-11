@@ -7,6 +7,7 @@ package tui
 import (
 	"strings"
 
+	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	clabinternaltuigfx "github.com/srl-labs/containerlab/internal/tui/gfx"
 	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
 )
@@ -42,16 +43,26 @@ func (p *nodesPage) viewPixels(m *Model) string {
 	return p.tbl.View() + "\n\n" + strings.Join(pane, "\n")
 }
 
-// kindIcon picks the icon that stands for a kind of node.
-func kindIcon(kind string) clabinternaltuigfx.Icon {
-	switch {
-	case kind == "linux" || strings.Contains(kind, "host"):
-		return clabinternaltuigfx.IconHost
-	case strings.Contains(kind, "bridge") || strings.Contains(kind, "ovs"):
-		return clabinternaltuigfx.IconSwitch
-	default:
-		return clabinternaltuigfx.IconRouter
+// role returns the role the topology of its lab gives a node, which decides its icon. The
+// topology of a lab is read once and kept until another node list is built.
+func (p *nodesPage) role(m *Model, n *clabinternaltuibackend.Node) string {
+	if p.roles == nil {
+		p.roles = map[string]map[string]string{}
 	}
+
+	roles, ok := p.roles[n.Lab]
+	if !ok {
+		roles = map[string]string{}
+
+		topology := m.be.Topology(n.Lab)
+		for i := range topology.Nodes {
+			roles[topology.Nodes[i].Name] = topology.Nodes[i].Role
+		}
+
+		p.roles[n.Lab] = roles
+	}
+
+	return roles[n.Name]
 }
 
 // nodePane draws the details of the node under the cursor as two cards: what it is and
@@ -79,9 +90,7 @@ func (p *nodesPage) nodePane(m *Model, sc *clabinternaltuigfx.Scene, top int) []
 	}
 
 	// The left card: what the node is.
-	hue := clabinternaltuigfx.RGB(m.th.Hue(n.Kind))
-	sc.Box(3, y+1.05, 4.6, 1.9, tileRound, hue.Alpha(tintAlpha), hue.Alpha(0.4), 1)
-	sc.Icon(kindIcon(n.Kind), 5.3, y+2, 22, 1.5, hue)
+	sc.NodeIcon(nodeSymbol(p.role(m, n), n.Kind), 5.3, y+2, 40, appIconColor, m.iconInk())
 
 	readiness := n.Readiness()
 	_, level := readinessLook(readiness)
@@ -93,7 +102,7 @@ func (p *nodesPage) nodePane(m *Model, sc *clabinternaltuigfx.Scene, top int) []
 		clabinternaltuiui.Sanitize(n.Container), stateCol-12)))
 	sc.Fill(float64(stateCol)-0.8, y+1.08, float64(clabinternaltuiui.Width(state))+1.6, 0.84,
 		chipRound, tint.Alpha(tintAlpha))
-	rows[1].at(stateCol, m.th.LevelStyle(level).Render(state))
+	rows[1].at(stateCol, clabinternaltuiui.MarkCenter(m.th.LevelStyle(level).Render(state)))
 
 	sub := clabinternaltuiui.Sanitize(n.Kind)
 	if n.Status != "" {
@@ -228,10 +237,16 @@ func (p *nodesPage) nodeButtons(
 			// pixels, but it is what the terminal measures the contrast of the text
 			// against.
 			on := m.th.ChipActive.UnsetPadding()
-			row.at(x+1, on.Render(label+"  ")+on.Bold(false).Render(a.key))
+			row.at(
+				x+1,
+				clabinternaltuiui.MarkCenter(on.Render(label+"  ")+on.Bold(false).Render(a.key)),
+			)
 		} else {
 			sc.Box(fx, fy, float64(w), 1.6, buttonRound, sk.Raised, sk.RaisedEdge, 1)
-			row.at(x+1, m.th.Text.Render(label)+"  "+m.th.Muted.Render(a.key))
+			row.at(
+				x+1,
+				clabinternaltuiui.MarkCenter(m.th.Text.Render(label)+"  "+m.th.Muted.Render(a.key)),
+			)
 		}
 
 		if key, ok := hintKey(hint{key: a.key}); ok {

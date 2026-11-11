@@ -20,6 +20,8 @@ type nodesPage struct {
 	// allLabs tells whether the table was built with the lab column.
 	allLabs bool
 	byKey   map[string]*clabinternaltuibackend.Node
+	// roles holds the role of every node by lab, which decides the icon of a node.
+	roles map[string]map[string]string
 }
 
 //nolint:mnd // the widths of the columns are what they are

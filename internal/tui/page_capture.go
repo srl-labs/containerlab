@@ -560,3 +560,6 @@ func wrapWords(text string, width int) []string {
 
 	return lines
 }
+
+// monospaced tells that the body of the page is literal text.
+func (*capturePage) monospaced() bool { return true }

@@ -17,6 +17,7 @@ import (
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
 	clabinternaltuigfx "github.com/srl-labs/containerlab/internal/tui/gfx"
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
@@ -41,8 +42,10 @@ const (
 	// terminal reports. Terminals report sizes without the scale of the display, so on
 	// a high resolution display the layer is only sharp when drawn larger.
 	graphicsScaleEnv = "CLAB_TUI_GRAPHICS_SCALE"
-	defaultScale     = 2
-	maxScale         = 4
+	// graphicsTextEnv set to off leaves the text to the terminal.
+	graphicsTextEnv = "CLAB_TUI_GRAPHICS_TEXT"
+	defaultScale    = 2
+	maxScale        = 4
 	// pixelBudget is the most pixels the layer is drawn with, 32 MB of image memory,
 	// and minScale how far the scale is taken down to stay within it.
 	pixelBudget = 8_000_000
@@ -86,6 +89,8 @@ type pixels struct {
 	skin  clabinternaltuiui.Skin
 	// shown is set while the layer is on screen.
 	shown bool
+	// text is set when the layer writes the text as well, in a font of its own.
+	text bool
 	// scene is the frame being drawn, drawn the one drawn last, and zones what can be
 	// clicked in it.
 	scene *clabinternaltuigfx.Scene
@@ -96,6 +101,32 @@ type pixels struct {
 // tablePlacer is implemented by the pages whose table does not start at the top of the
 // body. It tells the line it starts at.
 type tablePlacer interface{ tableLine() int }
+
+// monospaced is implemented by the pages whose body is literal text, which the terminal
+// keeps drawing in its fixed width font.
+type monospaced interface{ monospaced() bool }
+
+// pixelOverlays draws the dialogs with the pixel layer, text included: each on its card,
+// over a window that is dimmed.
+func (m *Model) pixelOverlays(sc *clabinternaltuigfx.Scene) {
+	m.overlayRects = m.overlayRects[:0]
+
+	sc.On(clabinternaltuigfx.Over).
+		Rect(0, 0, float64(m.width), float64(m.height), m.skin().Scrim)
+	sc.On(clabinternaltuigfx.Under)
+
+	for _, o := range m.overlays {
+		box := o.view(m, m.width-4, m.height-2) //nolint:mnd // keep a margin around dialogs
+		w, h := lipgloss.Size(box)
+		x, y := max(0, (m.width-w)/2), max(0, (m.height-h)/2) //nolint:mnd // centered
+
+		m.overlayRects = append(m.overlayRects, rect{x: x, y: y, w: w, h: h})
+
+		for i, line := range strings.Split(m.pixelDialog(box, x, y, w, h), "\n") {
+			m.pixelLine(sc, y+i, x, line, true)
+		}
+	}
+}
 
 // selfFramed is implemented by the pages that draw the cards of their body themselves.
 type selfFramed interface{ framesItself() bool }
@@ -116,7 +147,10 @@ func newPixels(
 		scale = n
 	}
 
-	return &pixels{out: out, screen: screen, supported: mode == GraphicsOn, scale: scale}
+	return &pixels{
+		out: out, screen: screen, supported: mode == GraphicsOn, scale: scale,
+		text: os.Getenv(graphicsTextEnv) != "off" && uiFont() != nil,
+	}
 }
 
 // graphical reports whether the window is drawn with the pixel layer.
@@ -251,12 +285,14 @@ func (m *Model) buildSkin() {
 
 	//nolint:mnd // how far each surface is from the background
 	px.skin = clabinternaltuiui.Skin{
+		Font:       m.textFont(),
 		Bar:        lift(0.022),
 		Card:       lift(0.045),
 		CardEdge:   lift(0.13),
 		Line:       lift(0.09),
 		RowLine:    ink.Alpha(0.04),
 		Ink:        ink,
+		TextSize:   textSize,
 		Raised:     clabinternaltuigfx.RGB(p.Raised),
 		RaisedEdge: ink.Alpha(0.09),
 		Control:    clabinternaltuigfx.RGB(p.Border),
@@ -267,6 +303,15 @@ func (m *Model) buildSkin() {
 		Shadow:     black.Alpha(0.5),
 		Scrim:      black.Alpha(shade),
 	}
+}
+
+// textFont returns the font the layer writes text with, nil when the terminal does.
+func (m *Model) textFont() *clabinternaltuigfx.Font {
+	if m.px == nil || !m.px.text {
+		return nil
+	}
+
+	return uiFont()
 }
 
 // hidePixels takes the layer off the screen, when the window is drawn plain again.
@@ -384,9 +429,33 @@ func (m *Model) renderPixels() string {
 
 	lines = append(lines, blank, m.pixelHints(sc), m.pixelStatus())
 
-	screen := strings.Join(lines, "\n")
-	if len(m.overlays) > 0 {
-		screen = m.compose(screen)
+	// With its own font the layer writes the text as well, and the terminal is left
+	// with blank lines. The body of a page of literal text, ie. a log, stays with
+	// the terminal: it wants its fixed width, and to be selected and copied.
+	mono := false
+	if lit, ok := p.(monospaced); ok {
+		mono = lit.monospaced()
+	}
+
+	if px.text {
+		for i := range lines {
+			if mono && i >= pixelBodyTop && i < pixelBodyTop+m.bodyHeight() {
+				continue
+			}
+
+			m.pixelLine(sc, i, 0, lines[i], false)
+			lines[i] = blank
+		}
+	}
+
+	screen := clabinternaltuiui.StripMarks(strings.Join(lines, "\n"))
+
+	switch {
+	case len(m.overlays) == 0:
+	case px.text && !mono:
+		m.pixelOverlays(sc)
+	default:
+		screen = clabinternaltuiui.StripMarks(m.compose(screen))
 	}
 
 	px.out.Queue(px.screen.Update(sc))
@@ -498,7 +567,7 @@ func (m *Model) pixelContext(detail int) []pixelSegment {
 	chipWidth := clabinternaltuiui.Width(chip) + 2 // a cell of padding on each side
 
 	segs := []pixelSegment{{
-		text: " " + chip + " ", width: chipWidth,
+		text: clabinternaltuiui.MarkCenter(" " + chip + " "), width: chipWidth,
 		draw: func(sc *clabinternaltuigfx.Scene, x float64) {
 			sc.Box(x-0.3, 0.8, float64(chipWidth)+0.6, 1.4, pillRound, sk.Raised, sk.RaisedEdge, 1)
 		},
@@ -637,7 +706,8 @@ func (m *Model) pixelHeader(sc *clabinternaltuigfx.Scene) string {
 			keyStyle, titleStyle = m.th.Accent, m.th.Title
 		}
 
-		row.at(b.x+1, keyStyle.Render(b.def.key)+" "+titleStyle.Render(b.title))
+		row.at(b.x+1, clabinternaltuiui.MarkCenter(
+			keyStyle.Render(b.def.key)+" "+titleStyle.Render(b.title)))
 		m.tabZones = append(m.tabZones, zone{from: b.x, to: b.x + b.w, tab: b.def.id})
 	}
 
@@ -708,7 +778,7 @@ func (m *Model) pixelCrumbs(sc *clabinternaltuigfx.Scene) string {
 		if badge != "" {
 			w := clabinternaltuiui.Width(badge)
 			sc.Fill(float64(x)+0.2, y+0.08, float64(w)+1.6, 0.84, chipRound, sk.Raised)
-			row.at(x+1, m.th.Text.Render(badge))
+			row.at(x+1, clabinternaltuiui.MarkCenter(m.th.Text.Render(badge)))
 		}
 	}
 
@@ -743,7 +813,7 @@ func (m *Model) pixelInfo(sc *clabinternaltuigfx.Scene, row *textRow, info []str
 				chipRound, // around the text
 				m.skin().Accent.Alpha(tintAlpha),
 			)
-			row.at(x, m.th.Accent.Render(seg))
+			row.at(x, clabinternaltuiui.MarkCenter(m.th.Accent.Render(seg)))
 		}
 
 		x += w + chip
@@ -794,8 +864,27 @@ func (m *Model) pixelHints(sc *clabinternaltuigfx.Scene) string {
 		}
 
 		kw := clabinternaltuiui.Width(h.key)
-		sc.Box(float64(x)-0.5, y+0.05, float64(kw)+1, 0.9, capRound, sk.Raised, sk.RaisedEdge, 1)
-		row.at(x, m.th.Bold.Render(h.key)+" "+m.th.KeyDesc.Render(h.desc))
+
+		// The cap is as wide as its cells, or as the key when the font draws that wider.
+		capWidth := float64(kw) + 1
+		if font := m.textFont(); font != nil {
+			capWidth = max(capWidth, sc.TextWidth(font, textSize, true, h.key)+0.9)
+		}
+
+		sc.Box(
+			float64(x)+float64(kw)/2-capWidth/2,
+			y+0.05,
+			capWidth,
+			0.9,
+			capRound,
+			sk.Raised,
+			sk.RaisedEdge,
+			1,
+		)
+		row.at(
+			x,
+			clabinternaltuiui.MarkCenter(m.th.Bold.Render(h.key))+" "+m.th.KeyDesc.Render(h.desc),
+		)
 
 		if key, ok := hintKey(h); ok {
 			m.hintZones = append(m.hintZones, hintZone{from: x - 1, to: x + width(h), key: key})

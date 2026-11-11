@@ -7,6 +7,7 @@ package gfx
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"testing"
@@ -321,5 +322,110 @@ func TestDisturbs(t *testing.T) {
 		if got := disturbs([]byte(seq)); got != want {
 			t.Errorf("disturbs(%q) is %v, want %v", seq, got, want)
 		}
+	}
+}
+
+func TestEverySymbolHasArt(t *testing.T) {
+	frame, arts := symbolArts()
+
+	if len(frame) != 1 || frame[0][0] != frame[0][len(frame[0])-1] {
+		t.Errorf("the frame is %d lines, want one closed line", len(frame))
+	}
+
+	if len(arts) != 16 {
+		t.Errorf("there are %d symbols, want the 16 of the app", len(arts))
+	}
+
+	for name, art := range arts {
+		if len(art.lines) == 0 {
+			t.Errorf("the symbol %q has no lines", name)
+		}
+
+		for _, line := range art.lines {
+			for _, p := range line {
+				if p[0] < 8 || p[0] > 56 || p[1] < 8 || p[1] > 56 {
+					t.Errorf("the symbol %q leaves the frame at %v", name, p)
+				}
+			}
+		}
+	}
+
+	if !HasSymbol("spine") || HasSymbol("nothing") {
+		t.Error("HasSymbol does not tell the symbols apart")
+	}
+}
+
+func TestPathsAreFlattened(t *testing.T) {
+	// A move, lines given as further pairs, a horizontal and a vertical one.
+	lines := flattenPath("M1 2 3 4H10V20M0 0L5 5")
+	if len(lines) != 2 || len(lines[0]) != 4 || lines[0][3] != [2]float64{10, 20} {
+		t.Fatalf("the path became %v", lines)
+	}
+
+	// Half a circle from the left to the right of a center, over the top.
+	arc := flattenArc([2]float64{0, 10}, [2]float64{20, 10}, 10, 10, false, true)
+	end := arc[len(arc)-1]
+
+	if math.Abs(end[0]-20) > 1e-6 || math.Abs(end[1]-10) > 1e-6 {
+		t.Errorf("the arc ends at %v, want 20,10", end)
+	}
+
+	for _, p := range arc {
+		if r := math.Hypot(p[0]-10, p[1]-10); math.Abs(r-10) > 1e-6 {
+			t.Errorf("the point %v is %f from the center, want 10", p, r)
+		}
+
+		if p[1] > 10+1e-6 {
+			t.Errorf("the arc runs below its end points at %v", p)
+		}
+	}
+}
+
+func TestNodeIconDrawsFrameAndSymbol(t *testing.T) {
+	sc := NewScene(testMetrics())
+	sc.NodeIcon(SymbolLeaf, 5, 2, 40, red, white)
+
+	img := sc.Image(Under)
+	reds, whites := 0, 0
+
+	for y := range 80 {
+		for x := range 100 {
+			switch c := img.NRGBAAt(x, y); {
+			case c.A == 0:
+			case c.G > 200:
+				whites++
+			case c.R > 200:
+				reds++
+			}
+		}
+	}
+
+	if reds < 20 || whites < 40 {
+		t.Errorf("the icon has %d pixels of the symbol and %d of the frame", reds, whites)
+	}
+
+	// The middle of the hexagon is not filled.
+	if a := img.NRGBAAt(
+		50,
+		28,
+	).A; a != 0 && img.NRGBAAt(51, 29).A != 0 &&
+		img.NRGBAAt(49, 27).A != 0 {
+		t.Error("the icon is filled")
+	}
+}
+
+func TestDotsMakeAGrid(t *testing.T) {
+	sc := NewScene(testMetrics())
+	sc.Dots(0, 0, 10, 4, 10, 1, white)
+
+	// A point is a little more than a pixel here: the dots are 11 pixels apart.
+	img := sc.Image(Under)
+
+	if img.NRGBAAt(5, 5).A == 0 || img.NRGBAAt(16, 16).A == 0 || img.NRGBAAt(27, 5).A == 0 {
+		t.Error("there is no dot in the middle of a grid cell")
+	}
+
+	if img.NRGBAAt(0, 0).A != 0 || img.NRGBAAt(11, 11).A != 0 || img.NRGBAAt(5, 11).A != 0 {
+		t.Error("there is a dot between the grid cells")
 	}
 }

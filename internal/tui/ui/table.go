@@ -943,7 +943,11 @@ func (t *Table) renderHeader() string {
 			title = PadRight(title, w)
 		}
 
-		b.WriteString(style.Render(title))
+		if t.pixels && t.cols[c].Align == AlignRight {
+			b.WriteString(MarkRight(style.Render(title)))
+		} else {
+			b.WriteString(style.Render(title))
+		}
 
 		used += w
 	}
@@ -1048,6 +1052,10 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 	pad := fill.Render(strings.Repeat(" ", max(0, width-Width(text))))
 
 	if t.cols[col].Align == AlignRight {
+		if t.pixels {
+			return MarkRight(pad + content)
+		}
+
 		return pad + content
 	}
 

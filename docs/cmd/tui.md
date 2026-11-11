@@ -197,7 +197,9 @@ A drawing of a large lab is many times wider than a terminal. The map therefore 
 
 ## Graphics
 
-In a terminal that speaks the [kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/) the UI draws its surfaces as pixels: the views sit on cards, the tabs and the buttons look like ones, states are dots and pills, the load and the traffic are drawn as charts, and the topology map gets cards for its nodes and smooth lines for its links. The text stays text: it is drawn by the terminal in its own font, and can be selected and searched as before. Nothing else changes, every key does what it does in the plain look.
+In a terminal that speaks the [kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/) the UI draws its surfaces as pixels: the views sit on cards, the tabs and the buttons look like ones, states are dots and pills, the load and the traffic are drawn as charts, and the topology map gets cards for its nodes and smooth lines for its links. The node icons, the colors of the links and the badges of nodes that do not run are the ones of the Containerlab app. Nothing else changes, every key does what it does in the plain look.
+
+The text is drawn as pixels as well, in a proportional font the UI brings along, which is what makes it look like an application rather than a terminal. Such text cannot be selected or searched with the terminal. What a node or a command printed is the exception: logs, the output of commands and of jobs, descriptions and captured packets stay text of the terminal, in its fixed width font, and can be selected and copied. Set `CLAB_TUI_GRAPHICS_TEXT=off` to leave all text to the terminal.
 
 The UI asks the terminal whether it shows images when it starts, and keeps the plain look when there is no answer, when the window is smaller than 72 by 20 cells, or over a connection that does not pass the answer on, ie. inside tmux.
 

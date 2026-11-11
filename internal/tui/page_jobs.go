@@ -381,3 +381,6 @@ func (p *jobPage) hints(m *Model) []hint {
 
 	return append(hints, hint{keyEsc, "back"}, hint{"?", "help"})
 }
+
+// monospaced tells that the body of the page is literal text.
+func (*jobPage) monospaced() bool { return true }

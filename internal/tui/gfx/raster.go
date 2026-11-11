@@ -90,6 +90,37 @@ func (b *strip) span(row, x0, x1 int, c Color, erase bool) {
 	}
 }
 
+// dots draws a grid of dots. Each pixel is measured against the dot of the grid cell it
+// lies in.
+func (b *strip) dots(sh *shape) {
+	y0, y1 := b.rows(sh)
+	x0, x1 := b.columns(sh)
+	step := sh.sw
+	half := step / 2 //nolint:mnd // the middle of a grid cell
+
+	for y := y0; y < y1; y++ {
+		dy := float32(
+			math.Mod(float64(float32(y)+0.5-sh.y0), float64(step)),
+		) - half // pixel center
+		if abs32(dy) > sh.r+1 {
+			continue
+		}
+
+		for x := x0; x < x1; x++ {
+			dx := float32(
+				math.Mod(float64(float32(x)+0.5-sh.x0), float64(step)),
+			) - half // pixel center
+			if abs32(dx) > sh.r+1 {
+				continue
+			}
+
+			if c := clamp01(sh.r + 0.5 - sqrt32(dx*dx+dy*dy)); c > 0 { // anti-aliasing
+				b.put(((y-b.oy)*b.w+x)*bytesPerPixel, sh.fill, c, false)
+			}
+		}
+	}
+}
+
 // rows returns the pixel rows of the strip a shape can touch, as scene coordinates.
 func (b *strip) rows(sh *shape) (from, to int) {
 	return max(
@@ -116,6 +147,10 @@ func (b *strip) draw(sh *shape) {
 		b.area(sh)
 	case kindMask:
 		b.stamp(sh)
+	case kindText:
+		b.write(sh)
+	case kindDots:
+		b.dots(sh)
 	}
 }
 

@@ -116,6 +116,11 @@ const (
 	kindArea
 	// kindMask is a mask scaled to the box.
 	kindMask
+	// kindDots is a grid of dots: r is their radius and sw the distance between them.
+	kindDots
+	// kindText is a line of text: x0 is where it starts and y0 its baseline, r its
+	// size in pixels.
+	kindText
 )
 
 // shape is one drawing instruction, in pixels.
@@ -130,6 +135,9 @@ type shape struct {
 	// pts holds the segments as x1, y1, x2, y2, or the curve of an area as x, y.
 	pts  []float32
 	mask *Mask
+	font *Font
+	text string
+	bold bool
 	hash uint64
 }
 
@@ -323,6 +331,39 @@ func (s *Scene) rectPx(x0, y0, x1, y1 float64, c Color) {
 		x0:   f32(x0), y0: f32(y0), x1: f32(x1), y1: f32(y1),
 		bx0: f32(x0), by0: f32(y0), bx1: f32(x1), by1: f32(y1),
 		fill: c,
+	})
+}
+
+// Dots fills a rectangle given in cells with a grid of dots, the way a canvas is marked.
+// The distance between the dots and their radius are in points.
+func (s *Scene) Dots(x, y, w, h, step, radius float64, c Color) {
+	if c.A == 0 {
+		return
+	}
+
+	x0, y0, x1, y1 := math.Round(
+		s.X(x),
+	), math.Round(
+		s.Y(y),
+	), math.Round(
+		s.X(x+w),
+	), math.Round(
+		s.Y(y+h),
+	)
+
+	s.add(&shape{
+		kind: kindDots,
+		fill: c,
+		r:    f32(s.Pt(radius)),
+		sw:   f32(math.Max(2, math.Round(s.Pt(step)))), //nolint:mnd // at least two pixels apart
+		x0:   f32(x0),
+		y0:   f32(y0),
+		x1:   f32(x1),
+		y1:   f32(y1),
+		bx0:  f32(x0),
+		by0:  f32(y0),
+		bx1:  f32(x1),
+		by1:  f32(y1),
 	})
 }
 
@@ -612,6 +653,16 @@ func hashShape(sh *shape) uint64 {
 	if sh.mask != nil {
 		binary.LittleEndian.PutUint64(buf[:], sh.mask.id)
 		_, _ = h.Write(buf[:])
+	}
+
+	if sh.font != nil {
+		binary.LittleEndian.PutUint64(buf[:], sh.font.id)
+		_, _ = h.Write(buf[:])
+		_, _ = h.Write([]byte(sh.text))
+
+		if sh.bold {
+			_, _ = h.Write([]byte{1})
+		}
 	}
 
 	return h.Sum64()

@@ -61,6 +61,8 @@ type mapPage struct {
 	revision int
 	// paintedState is the state of the lab the grid was painted with.
 	paintedState clabinternaltuitopo.State
+	// ownText is set while the pixel layer writes the names of the nodes itself.
+	ownText bool
 
 	mode clabinternaltuitopo.Mode
 	zoom clabinternaltuitopo.Zoom
@@ -1126,14 +1128,26 @@ func (p *mapPage) renderRow(m *Model, grid *clabinternaltuitopo.Grid, y, width i
 		b       strings.Builder
 		run     []rune
 		current lipgloss.Style
+		class   clabinternaltuitopo.Class
 		started bool
 	)
 
 	flush := func() {
-		if len(run) > 0 {
-			b.WriteString(current.Render(string(run)))
-			run = run[:0]
+		if len(run) == 0 {
+			return
 		}
+
+		text := current.Render(string(run))
+
+		// A text on a link stays centered on the spot it marks.
+		if p.pix && (class == clabinternaltuitopo.ClassEdgeLabel ||
+			class == clabinternaltuitopo.ClassEndLabel) {
+			text = clabinternaltuiui.MarkCenter(text)
+		}
+
+		b.WriteString(text)
+
+		run = run[:0]
 	}
 
 	for x := range width {
@@ -1146,16 +1160,17 @@ func (p *mapPage) renderRow(m *Model, grid *clabinternaltuitopo.Grid, y, width i
 			cell.Rune = ' '
 		}
 
-		// The pixel layer draws the boxes and the lines.
-		if p.pix && lineArt(cell.Class) {
+		// The pixel layer draws the boxes and the lines, and with a font of its own
+		// what is written in the boxes as well.
+		if p.pix && (lineArt(cell.Class) || (p.ownText && nodeText(cell.Class))) {
 			cell = clabinternaltuitopo.Cell{Rune: ' '}
 		}
 
 		style := p.cellStyle(m, cell)
-		if !started || !sameStyle(style, current) {
+		if !started || !sameStyle(style, current) || cell.Class != class {
 			flush()
 
-			current, started = style, true
+			current, class, started = style, cell.Class, true
 		}
 
 		run = append(run, cell.Rune)

@@ -9,10 +9,7 @@ type Icon int
 
 // The icons.
 const (
-	IconRouter Icon = iota
-	IconSwitch
-	IconHost
-	IconCheck
+	IconCheck Icon = iota
 )
 
 // iconGrid is the size of the square the icons are designed in.
@@ -28,26 +25,6 @@ type iconArt struct {
 
 // icons holds the drawings, in coordinates on the design grid.
 var icons = map[Icon]iconArt{
-	IconRouter: {
-		circles: [][3]float64{{8, 8, 6.6}},
-		lines: [][]float64{
-			{8, 4, 8, 12},
-			{4, 8, 12, 8},
-			{6.4, 5.6, 8, 4, 9.6, 5.6},
-			{6.4, 10.4, 8, 12, 9.6, 10.4},
-		},
-	},
-	IconSwitch: {
-		rects: [][5]float64{{1.4, 3.6, 13.2, 8.8, 2}},
-		lines: [][]float64{
-			{4.5, 6.8, 11, 6.8, 9.4, 5.2},
-			{11.5, 9.4, 5, 9.4, 6.6, 11},
-		},
-	},
-	IconHost: {
-		rects: [][5]float64{{2, 2.8, 12, 8, 1.5}},
-		lines: [][]float64{{5.5, 13.4, 10.5, 13.4}, {8, 10.8, 8, 13.4}},
-	},
 	IconCheck: {
 		lines: [][]float64{{3.4, 8.4, 6.6, 11.6, 12.6, 4.8}},
 	},
