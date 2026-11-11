@@ -97,6 +97,8 @@ type jobSpec struct {
 	// needsSink marks a job whose output is useless until a consumer was attached to it: if
 	// the command exits before that, the job failed.
 	needsSink bool
+	// live marks a capture whose packets are decoded for the UI.
+	live bool
 }
 
 // lockKey names what a job locks: its lab, or its topology file for a lab without name.
@@ -138,6 +140,8 @@ type job struct {
 	failure string
 	// sinkAttached is set once the consumer of the command's output runs.
 	sinkAttached bool
+	// packets holds the most recent packets of a live capture.
+	packets ring[livePacket]
 }
 
 // record adds a line of output to the job. The lock must be held.
@@ -344,9 +348,10 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 
 	// The job is complete before its command starts: output may arrive right away.
 	j := &job{
-		spec:  *spec,
-		done:  make(chan struct{}),
-		lines: newLineRing(maxJobLines),
+		spec:    *spec,
+		done:    make(chan struct{}),
+		lines:   newLineRing(maxJobLines),
+		packets: ring[livePacket]{limit: maxLivePackets},
 		info: clabinternaltuibackend.JobInfo{
 			ID:      id,
 			Kind:    spec.kind,
@@ -355,6 +360,7 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 			Command: command,
 			State:   clabinternaltuibackend.JobRunning,
 			Started: m.clock.Now(),
+			Live:    spec.live,
 		},
 	}
 

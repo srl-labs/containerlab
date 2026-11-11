@@ -262,7 +262,15 @@ func helpGroups() []helpGroup {
 		{"Interfaces and links", []hint{
 			{"n", "impair a link: delay, jitter, loss, rate limit, corruption"},
 			{"N", "remove the impairments"},
-			{"C", "capture packets into Wireshark or a file"},
+			{"C", "capture packets: watch them live here or in Wireshark, or keep a file"},
+		}},
+		{"Live capture", []hint{
+			{"↑ ↓", "look at earlier packets, which pauses the view"},
+			{"f", "pause, or follow the newest packet again; also space and G"},
+			{"⏎", "the headers and the bytes of the packet"},
+			{"/", "filter, ie. bgp, an address or !lldp"},
+			{"C", "stop the capture, the packets stay"},
+			{"l", "what the capture command logged"},
 		}},
 		{"Map", []hint{
 			{"← ↑ ↓ →", "move the focus from node to node"},

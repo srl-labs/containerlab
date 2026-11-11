@@ -118,6 +118,17 @@ type Backend interface {
 	JobOutput(id JobID, from int) []LogLine
 	// CancelJob asks a running job to stop.
 	CancelJob(id JobID)
+
+	// Packets returns the packets of a live capture starting at the given position, which
+	// counts the packets from zero in the order they arrived. The oldest packets of a
+	// capture that saw more than is kept are gone.
+	Packets(id JobID, from int) []Packet
+	// PacketDetail returns everything known about one packet of a live capture, by its
+	// number.
+	PacketDetail(id JobID, number int) (PacketDetail, bool)
+	// RemoteCapture returns the command line that runs a capture from the computer of a
+	// user who works on this host through SSH, and shows it in the Wireshark there.
+	RemoteCapture(req CaptureRequest) (string, error)
 }
 
 // Focus describes what the UI currently shows.
@@ -140,6 +151,9 @@ type Host struct {
 	Privileged bool
 	// Demo is set when the data is simulated.
 	Demo bool
+	// SSH is how the computer of the user reaches this host, as the arguments of the ssh
+	// command. It is empty when the UI is not used through SSH.
+	SSH  string
 	Caps Capabilities
 }
 
@@ -581,6 +595,10 @@ type JobInfo struct {
 	Errors   int
 	// Bytes is the amount of data a capture has written so far.
 	Bytes uint64
+	// Live is set for a capture whose packets are decoded for the UI, Packets is how many
+	// of them arrived so far.
+	Live    bool
+	Packets int
 }
 
 // Duration returns how long the job has been running, or ran.
@@ -698,10 +716,52 @@ type CaptureRequest struct {
 	Lab      string
 	TopoFile string
 	Targets  []CaptureTarget
-	// Wireshark opens the capture in a local Wireshark. Otherwise it is written to File.
+	// Wireshark opens the capture in a local Wireshark and Live decodes it for the UI,
+	// which reads the packets with Packets. Otherwise the capture is written to File. A
+	// live capture is written to File as well when one is given.
 	Wireshark bool
+	Live      bool
 	File      string
 	// Duration and PacketLimit stop the capture, zero means no limit.
 	Duration    time.Duration
 	PacketLimit int
+}
+
+// Packet is a captured packet, summed up in one line.
+type Packet struct {
+	// Number counts the packets of a capture from one.
+	Number int
+	Time   time.Time
+	// Interface is where the packet was captured, as node:interface.
+	Interface string
+	// Source and Destination are the addresses of the highest layer that has some.
+	Source      string
+	Destination string
+	// Protocol is the name of the highest protocol that was recognized.
+	Protocol string
+	// Length is the size of the packet on the wire, in bytes.
+	Length int
+	Info   string
+}
+
+// PacketField is a named value of a protocol header.
+type PacketField struct {
+	Name  string
+	Value string
+}
+
+// PacketLayer is one protocol header of a packet.
+type PacketLayer struct {
+	Name   string
+	Fields []PacketField
+}
+
+// PacketDetail is a packet with its protocol headers, the outermost first.
+type PacketDetail struct {
+	Packet
+	Layers []PacketLayer
+	// Data holds the bytes of the packet that were kept, Captured tells how many there
+	// were. A capture keeps the start of large packets only.
+	Data     []byte
+	Captured int
 }

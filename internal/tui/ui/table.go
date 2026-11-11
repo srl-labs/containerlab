@@ -468,6 +468,16 @@ func (t *Table) restoreCursor(key string) {
 	t.clamp()
 }
 
+// AtEnd reports whether the cursor is on the last row shown, or there are no rows.
+func (t *Table) AtEnd() bool {
+	return t.cursor >= len(t.shown)-1
+}
+
+// MoveToEnd moves the cursor to the last row shown.
+func (t *Table) MoveToEnd() {
+	t.Move(len(t.shown))
+}
+
 // Move moves the cursor by delta rows.
 func (t *Table) Move(delta int) {
 	t.cursor += delta

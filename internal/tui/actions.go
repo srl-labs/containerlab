@@ -60,7 +60,7 @@ func (m *Model) started(id clabinternaltuibackend.JobID, err error, show bool) {
 	m.watched[id] = true
 
 	if show {
-		m.push(newJobPage(m, id))
+		m.push(m.jobView(id))
 
 		return
 	}

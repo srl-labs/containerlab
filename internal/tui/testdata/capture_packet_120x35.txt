@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs·1           lab: dc1 · docker · ● 9/10 nodes · ↓145M ↑145M
+── jobs ▸ #1 ▸ packet 20 ───────────────────────────────────────────────────────────────────────────────────────────────
+ Packet 20 · 12:04:14.600000 · spine1:e1-1 · 85 bytes on the wire
+ 10.1.2.2 → 10.1.2.1  BGP  KEEPALIVE
+
+ Ethernet
+   type  IPv4
+
+ IPv4
+   source       10.1.2.2
+   destination  10.1.2.1
+   ttl          64
+
+ BGP
+   summary  KEEPALIVE
+
+ Bytes (85)
+   0000  14 1b 22 29 30 37 3e 45  4c 53 5a 61 68 6f 76 7d  ..")07>ELSZahov}
+   0010  84 8b 92 99 a0 a7 ae b5  bc c3 ca d1 d8 df e6 ed  ................
+   0020  f4 fb 02 09 10 17 1e 25  2c 33 3a 41 48 4f 56 5d  .......%,3:AHOV]
+   0030  64 6b 72 79 80 87 8e 95  9c a3 aa b1 b8 bf c6 cd  dkry............
+   0040  d4 db e2 e9 f0 f7 fe 05  0c 13 1a 21 28 2f 36 3d  ...........!(/6=
+   0050  44 4b 52 59 60                                    DKRY`
+
+
+
+
+
+
+
+
+
+
+ ↑↓ scroll  g/G top/end  / find  y copy  esc back  ? help
+                                                                                                                   demo

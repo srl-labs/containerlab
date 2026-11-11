@@ -36,32 +36,35 @@ const (
 	c1CSI = 0x9b
 )
 
-// lineRing keeps the most recent lines of an output and remembers how many were added in
-// total, so that readers can address lines by their absolute number.
-type lineRing struct {
-	buf   []clabinternaltuibackend.LogLine
+// ring keeps the most recent items of a sequence and remembers how many were added in
+// total, so that readers can address items by their absolute number.
+type ring[T any] struct {
+	buf   []T
 	limit int
-	// start is the position of the oldest line once the buffer is full.
+	// start is the position of the oldest item once the buffer is full.
 	start int
 	total int
 }
 
+// lineRing keeps the most recent lines of an output.
+type lineRing = ring[clabinternaltuibackend.LogLine]
+
 func newLineRing(limit int) lineRing { return lineRing{limit: limit} }
 
-func (r *lineRing) add(line clabinternaltuibackend.LogLine) {
+func (r *ring[T]) add(item T) {
 	if len(r.buf) < r.limit {
-		r.buf = append(r.buf, line)
+		r.buf = append(r.buf, item)
 	} else {
-		r.buf[r.start] = line
+		r.buf[r.start] = item
 		r.start = (r.start + 1) % r.limit
 	}
 
 	r.total++
 }
 
-// from returns a copy of the lines numbered n and up. Lines that were dropped already are
+// from returns a copy of the items numbered n and up. Items that were dropped already are
 // skipped.
-func (r *lineRing) from(n int) []clabinternaltuibackend.LogLine {
+func (r *ring[T]) from(n int) []T {
 	oldest := r.total - len(r.buf)
 	n = max(n, oldest)
 
@@ -69,12 +72,22 @@ func (r *lineRing) from(n int) []clabinternaltuibackend.LogLine {
 		return nil
 	}
 
-	out := make([]clabinternaltuibackend.LogLine, 0, r.total-n)
+	out := make([]T, 0, r.total-n)
 	for i := n; i < r.total; i++ {
 		out = append(out, r.buf[(r.start+i-oldest)%len(r.buf)])
 	}
 
 	return out
+}
+
+// at returns the item numbered n, if it is still kept.
+func (r *ring[T]) at(n int) (item T, ok bool) {
+	oldest := r.total - len(r.buf)
+	if n < oldest || n >= r.total {
+		return item, false
+	}
+
+	return r.buf[(r.start+n-oldest)%len(r.buf)], true
 }
 
 // lineWriter splits what is written to it into lines and hands them to emit without the

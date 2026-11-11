@@ -31,6 +31,9 @@ type job struct {
 	apply  func()
 	// endless jobs run until they are cancelled, like a packet capture.
 	endless bool
+	// targets are the interfaces a live capture listens on, packets what it saw.
+	targets []string
+	packets []clabinternaltuibackend.Packet
 }
 
 // labBusy reports whether a job is running for the lab. The lock must be held.
@@ -95,7 +98,11 @@ func (b *Backend) advanceJobs() {
 		if j.endless {
 			j.info.Bytes += captureBytesPerTick
 
-			b.signal(clabinternaltuibackend.TopicJobs)
+			if j.info.Live {
+				b.capturePackets(j)
+			}
+
+			b.signal(clabinternaltuibackend.TopicJobs | clabinternaltuibackend.TopicJobOutput)
 
 			continue
 		}
@@ -590,27 +597,64 @@ func (b *Backend) Share(
 		})
 }
 
-// Capture implements clabinternaltuibackend.Backend.
-func (b *Backend) Capture(
-	req clabinternaltuibackend.CaptureRequest,
-) (clabinternaltuibackend.JobID, error) {
-	targets := make([]string, 0, len(req.Targets))
+// captureCommand renders the capture command of a request writing to sink.
+func captureCommand(
+	req *clabinternaltuibackend.CaptureRequest, sink string,
+) (command string, targets []string) {
+	targets = make([]string, 0, len(req.Targets))
 	for _, t := range req.Targets {
 		targets = append(targets, t.Node+":"+strings.Join(t.Interfaces, ","))
 	}
 
 	if len(targets) == 0 {
-		return 0, fmt.Errorf("no interfaces selected")
+		return "", nil
 	}
 
+	return fmt.Sprintf("containerlab capture --name %s --target %s -w %s",
+		req.Lab, strings.Join(targets, " --target "), sink), targets
+}
+
+// Capture implements clabinternaltuibackend.Backend.
+func (b *Backend) Capture(
+	req clabinternaltuibackend.CaptureRequest,
+) (clabinternaltuibackend.JobID, error) {
 	sink := "-"
-	if !req.Wireshark {
+	if !req.Wireshark && !req.Live {
 		sink = req.File
 	}
 
-	command := fmt.Sprintf("containerlab capture --name %s --target %s -w %s",
-		req.Lab, strings.Join(targets, " --target "), sink)
+	command, targets := captureCommand(&req, sink)
+	if len(targets) == 0 {
+		return 0, fmt.Errorf("no interfaces selected")
+	}
 
-	return b.startJob(clabinternaltuibackend.JobCapture, req.Lab,
+	id, err := b.startJob(clabinternaltuibackend.JobCapture, req.Lab,
 		"capture "+strings.Join(targets, " "), command, nil, nil)
+	if err != nil || !req.Live {
+		return id, err
+	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	j := b.job(id)
+	j.info.Live = true
+
+	for _, t := range req.Targets {
+		for _, iface := range t.Interfaces {
+			j.targets = append(j.targets, t.Node+":"+iface)
+		}
+	}
+
+	return id, nil
+}
+
+// RemoteCapture implements clabinternaltuibackend.Backend.
+func (*Backend) RemoteCapture(req clabinternaltuibackend.CaptureRequest) (string, error) {
+	command, targets := captureCommand(&req, "-")
+	if len(targets) == 0 {
+		return "", fmt.Errorf("no interfaces selected")
+	}
+
+	return "ssh " + demoSSH + " '" + command + "' | wireshark -k -i -", nil
 }

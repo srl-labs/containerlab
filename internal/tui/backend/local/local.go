@@ -78,6 +78,9 @@ type Backend struct {
 	priv   privilege
 	// hostname is the name of the host, as used in links to services published on it.
 	hostname string
+	// fsRoot is where the file systems of the kernel are found, the root directory
+	// outside of tests.
+	fsRoot string
 
 	run      runner
 	clock    clock
@@ -244,6 +247,7 @@ func newBackend(opts *Options, d *deps) *Backend {
 		version:   d.version,
 		notify:    make(chan struct{}, 1),
 		messages:  newLineRing(maxMessages),
+		fsRoot:    cmp.Or(d.fsRoot, string(filepath.Separator)),
 		stats:     newSampler(cmp.Or(d.fsRoot, string(filepath.Separator))),
 		files:     topoFiles{wanted: make(chan struct{}, 1)},
 		reloadCh:  make(chan struct{}, 1),
@@ -266,6 +270,7 @@ func newBackend(opts *Options, d *deps) *Backend {
 		Privileged: b.priv.ok,
 		Caps:       b.capabilities(),
 	}
+	b.host.SSH = sshDestination(b.host.User, b.sshConnection())
 
 	b.jobs = &jobManager{
 		exe:      b.exe,

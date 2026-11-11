@@ -415,8 +415,36 @@ func (b *Backend) Share(
 	return b.runJob(spec)
 }
 
-// Capture captures packets on interfaces of nodes, into a file or into Wireshark. A
-// capture changes nothing in its lab and runs next to other jobs.
+// prepareCapture checks a capture request and fills in its topology file. It returns the
+// targets the way the capture command takes them.
+func (b *Backend) prepareCapture(req *clabinternaltuibackend.CaptureRequest) ([]string, error) {
+	targets := make([]string, 0, len(req.Targets))
+
+	for _, target := range req.Targets {
+		if target.Node == "" || len(target.Interfaces) == 0 {
+			return nil, errors.New("a capture target needs a node and at least one interface")
+		}
+
+		targets = append(targets, target.Node+":"+strings.Join(target.Interfaces, ","))
+	}
+
+	if len(targets) == 0 {
+		return nil, errors.New("no interfaces selected")
+	}
+
+	// The capture command finds the interfaces through the links of the topology.
+	topo, err := b.topologyFile(req.Lab, req.TopoFile)
+	if err != nil {
+		return nil, fmt.Errorf("cannot capture: %w", err)
+	}
+
+	req.TopoFile = topo
+
+	return targets, nil
+}
+
+// Capture captures packets on interfaces of nodes: into a file, into Wireshark or for the
+// UI to show. A capture changes nothing in its lab and runs next to other jobs.
 func (b *Backend) Capture(
 	req clabinternaltuibackend.CaptureRequest,
 ) (clabinternaltuibackend.JobID, error) {
@@ -424,38 +452,24 @@ func (b *Backend) Capture(
 		return 0, err
 	}
 
-	targets := make([]string, 0, len(req.Targets))
-
-	for _, target := range req.Targets {
-		if target.Node == "" || len(target.Interfaces) == 0 {
-			return 0, errors.New("a capture target needs a node and at least one interface")
-		}
-
-		targets = append(targets, target.Node+":"+strings.Join(target.Interfaces, ","))
-	}
-
-	if len(targets) == 0 {
-		return 0, errors.New("no interfaces selected")
-	}
-
-	// The capture command finds the interfaces through the links of the topology.
-	topo, err := b.topologyFile(req.Lab, req.TopoFile)
+	targets, err := b.prepareCapture(&req)
 	if err != nil {
-		return 0, fmt.Errorf("cannot capture: %w", err)
+		return 0, err
 	}
-
-	req.TopoFile = topo
 
 	spec := &jobSpec{
 		kind:   clabinternaltuibackend.JobCapture,
 		lab:    req.Lab,
 		title:  "capture " + strings.Join(targets, " "),
-		topo:   topo,
+		topo:   req.TopoFile,
 		shared: true,
 	}
 
-	if req.Wireshark {
+	switch {
+	case req.Wireshark:
 		return b.captureToWireshark(&req, spec)
+	case req.Live:
+		return b.captureLive(&req, spec)
 	}
 
 	if req.File == "" {

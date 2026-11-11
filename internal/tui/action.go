@@ -311,9 +311,11 @@ func (m *Model) interfaceActions(ifaces []*clabinternaltuibackend.Interface) (st
 			run: func() tea.Cmd { return m.netemReset(ifaces) },
 		},
 		{
-			key: "C", name: "capture", desc: "capture packets into Wireshark or a file",
-			off: m.capReason(m.host.Caps.Capture, "capture"),
-			run: func() tea.Cmd { return m.captureForm(ifaces) },
+			key:  "C",
+			name: "capture",
+			desc: "capture packets: watch them live or keep them in a file",
+			off:  m.capReason(m.host.Caps.Capture, "capture"),
+			run:  func() tea.Cmd { return m.captureForm(ifaces) },
 		},
 		{
 			key: "m", name: "copy mac", desc: "copy the MAC address",

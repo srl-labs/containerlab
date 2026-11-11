@@ -107,6 +107,10 @@ func (p *jobsPage) rebuild(m *Model) {
 		took := job.Duration(m.now())
 		what := job.Title
 
+		if job.Live {
+			what += " · " + packetCount(job.Packets)
+		}
+
 		if job.Kind == clabinternaltuibackend.JobCapture && job.Bytes > 0 {
 			what += " · " + clabinternaltuiui.Bytes(job.Bytes)
 		}
@@ -150,7 +154,7 @@ func (p *jobsPage) key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd) {
 
 	switch msg.String() {
 	case keyEnter:
-		m.push(newJobPage(m, id))
+		m.push(m.jobView(id))
 
 		return true, nil
 	case "C":
@@ -158,6 +162,16 @@ func (p *jobsPage) key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	}
 
 	return false, nil
+}
+
+// jobView returns the page that shows a job: its packets for a live capture, its output
+// for every other job.
+func (m *Model) jobView(id clabinternaltuibackend.JobID) page {
+	if job, ok := m.be.Job(id); ok && job.Live {
+		return newCapturePage(m, id)
+	}
+
+	return newJobPage(m, id)
 }
 
 func (p *jobsPage) view(m *Model) string {

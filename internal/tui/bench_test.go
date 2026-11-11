@@ -124,3 +124,37 @@ func BenchmarkSwitchView(b *testing.B) {
 		m.render()
 	}
 }
+
+// BenchmarkLiveCaptureUpdate measures taking in new packets and drawing them while the
+// live view of a capture holds as many packets as it keeps. The lab is a small one, for
+// the simulation of its traffic not to be what is measured.
+func BenchmarkLiveCaptureUpdate(b *testing.B) {
+	be := clabinternaltuibackendfake.New(
+		clabinternaltuibackendfake.Options{Now: fixedClock, Seed: 1},
+	)
+	m := New(be, Options{Now: fixedClock, Lab: "dc1"})
+	m.Update(tea.WindowSizeMsg{Width: 200, Height: 60})
+	press(m, "4", "C", "tab", "space", "enter")
+
+	page, ok := m.top().(*capturePage)
+	if !ok {
+		b.Fatalf("expected the live view of a capture, got %T", m.top())
+	}
+
+	for len(page.packets) < maxShownPackets {
+		for range 100 {
+			be.Tick()
+		}
+
+		m.Update(flushMsg{})
+	}
+
+	for b.Loop() {
+		b.StopTimer()
+		be.Tick()
+		b.StartTimer()
+
+		m.Update(flushMsg{})
+		m.render()
+	}
+}

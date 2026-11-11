@@ -25,6 +25,9 @@ const (
 	percentMax = 100
 
 	sinkWireshark = "wireshark"
+	sinkLive      = "live view"
+	sinkLiveFile  = "live view + file"
+	sinkRemote    = "my computer"
 	sinkFile      = "file"
 )
 
@@ -394,30 +397,47 @@ func (m *Model) captureForm(ifaces []*clabinternaltuibackend.Interface) tea.Cmd 
 		}
 	}
 
-	sinks := []string{sinkWireshark, sinkFile}
-	note := "Wireshark opens on this computer and shows the packets live."
+	sinks := m.captureSinks()
+	names, notes := make([]string, len(sinks)), make([]string, len(sinks))
 
+	for i, sink := range sinks {
+		names[i], notes[i] = sink.name, sink.note
+	}
+
+	body := []string{targetList(interfaceNames(targets))}
 	if !m.host.Caps.Wireshark {
-		sinks = []string{sinkFile}
-		note = "Wireshark is not available here (" + m.host.Caps.Reason("wireshark") + ")."
+		body = append(body, wrapWords(
+			"Wireshark is not available here: "+m.host.Caps.Reason("wireshark")+".",
+			dialogMaxWidth-clabinternaltuiui.FrameOverhead)...)
 	}
 
 	file := fmt.Sprintf("./%s-%s.pcapng", lab.Name, m.now().Format("20060102-150405"))
 
 	submit := func(v formValues) tea.Cmd {
 		duration, _ := parseDuration(v.Text("duration"))
+		sink := v.Text("sink")
 
-		id, err := m.be.Capture(clabinternaltuibackend.CaptureRequest{
+		req := clabinternaltuibackend.CaptureRequest{
 			Lab:       lab.Name,
 			TopoFile:  lab.TopoFile,
 			Targets:   captureTargets(targets),
-			Wireshark: v.Text("sink") == sinkWireshark,
-			File:      v.Text("file"),
+			Wireshark: sink == sinkWireshark,
+			Live:      sink == sinkLive || sink == sinkLiveFile,
 			Duration:  duration,
-		})
-		m.started(id, err, false)
+		}
 
-		if err == nil {
+		if sink == sinkFile || sink == sinkLiveFile {
+			req.File = v.Text("file")
+		}
+
+		if sink == sinkRemote {
+			return m.remoteCapture(&req)
+		}
+
+		id, err := m.be.Capture(req)
+		m.started(id, err, req.Live)
+
+		if err == nil && !req.Live {
 			m.notifyf(clabinternaltuitheme.LevelInfo,
 				"capture running — stop it with C in the jobs view (6)")
 		}
@@ -426,10 +446,39 @@ func (m *Model) captureForm(ifaces []*clabinternaltuibackend.Interface) tea.Cmd 
 	}
 
 	return m.ask(newForm(fmt.Sprintf("Capture %d interface(s)", len(targets)), "Start", submit).
-		text(targetList(interfaceNames(targets)), note).
-		choice("sink", "send to", sinks, 0).
-		input("file", "file", file, "used when sending to a file", nil).
+		text(body...).
+		choice("sink", "send to", names, 0).describe(notes...).
+		input("file", "file", file, "used when the packets go to a file", nil).
 		input("duration", "stop after", "", "empty: until stopped", checkWith(parseDuration)))
+}
+
+// captureSink is a place the packets of a capture can go to.
+type captureSink struct {
+	name, note string
+}
+
+// captureSinks lists where a capture can go here, the preferred place first.
+func (m *Model) captureSinks() []captureSink {
+	var sinks []captureSink
+
+	if m.host.Caps.Wireshark {
+		sinks = append(sinks, captureSink{
+			sinkWireshark,
+			"opens here and shows the packets live",
+		})
+	}
+
+	sinks = append(sinks,
+		captureSink{sinkLive, "shows the packets in this window, live"},
+		captureSink{sinkLiveFile, "the same, and keeps them in the file"},
+		captureSink{sinkFile, "a pcapng file, to open in Wireshark later"})
+
+	if m.host.SSH != "" {
+		sinks = append(sinks,
+			captureSink{sinkRemote, "gives the command for Wireshark on your computer"})
+	}
+
+	return sinks
 }
 
 // captureTargets groups interfaces by node, the way the capture command takes them.

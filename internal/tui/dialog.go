@@ -41,6 +41,8 @@ type field struct {
 	on      bool
 	choices []string
 	choice  int
+	// choiceNotes explain the choices, one each, next to the one that is selected.
+	choiceNotes []string
 
 	// note is shown next to a text field: its current value or what it expects.
 	note string
@@ -128,6 +130,15 @@ func (d *formDialog) choice(key, label string, choices []string, selected int) *
 	d.fields = append(d.fields, &field{
 		key: key, label: label, kind: fieldChoice, choices: choices, choice: selected,
 	})
+
+	return d
+}
+
+// describe adds an explanation to each choice of the field that was added last.
+func (d *formDialog) describe(notes ...string) *formDialog {
+	if len(d.fields) > 0 {
+		d.fields[len(d.fields)-1].choiceNotes = notes
+	}
 
 	return d
 }
@@ -510,8 +521,14 @@ func (d *formDialog) renderFields(m *Model, width int) []string {
 
 			lines = append(lines, marker+box+" "+m.th.Text.Render(f.label))
 		case fieldChoice:
-			lines = append(lines, marker+label+"  "+m.th.Muted.Render("‹ ")+
-				m.th.Accent.Render(f.choices[f.choice])+m.th.Muted.Render(" ›"))
+			line := marker + label + "  " + m.th.Muted.Render("‹ ") +
+				m.th.Accent.Render(f.choices[f.choice]) + m.th.Muted.Render(" ›")
+
+			if f.choice < len(f.choiceNotes) {
+				line += "  " + m.th.Muted.Render(f.choiceNotes[f.choice])
+			}
+
+			lines = append(lines, clabinternaltuiui.Truncate(line, width))
 		case fieldText:
 			value := clabinternaltuiui.PadRight(f.input.View(), inputWidth+1)
 			line := marker + label + "  " + m.th.Border.Render(

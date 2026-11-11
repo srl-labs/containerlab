@@ -37,6 +37,9 @@ type privilege struct {
 	ok bool
 	// reason explains why they cannot.
 	reason string
+	// setuid is set when the containerlab binary escalates on its own, for every user who
+	// may use it.
+	setuid bool
 }
 
 // adminGroupCheck reports whether the group that guards the setuid containerlab binary
@@ -72,7 +75,10 @@ func detectPrivilege(euid, suid int, setuidBinary bool, check adminGroupCheck) p
 func currentPrivilege(exe string) privilege {
 	_, euid, suid := unix.Getresuid()
 
-	return detectPrivilege(euid, suid, isSetuidRoot(exe), adminGroupMembership)
+	priv := detectPrivilege(euid, suid, isSetuidRoot(exe), adminGroupMembership)
+	priv.setuid = isSetuidRoot(exe)
+
+	return priv
 }
 
 // isSetuidRoot reports whether running the file gives the process root privileges.

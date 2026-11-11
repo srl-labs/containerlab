@@ -310,8 +310,15 @@ func (m *Model) announceJobs() {
 
 		delete(m.watched, job.ID)
 
-		if p, viewing := m.top().(*jobPage); viewing && p.id == job.ID {
-			continue
+		switch p := m.top().(type) {
+		case *jobPage:
+			if p.id == job.ID {
+				continue
+			}
+		case *capturePage:
+			if p.id == job.ID {
+				continue
+			}
 		}
 
 		took := clabinternaltuiui.Duration(job.Duration(m.now()))

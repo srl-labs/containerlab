@@ -314,6 +314,7 @@ func (*Backend) Host() clabinternaltuibackend.Host {
 		User:       demoOwner,
 		Privileged: true,
 		Demo:       true,
+		SSH:        demoSSH,
 		Caps: clabinternaltuibackend.Capabilities{
 			Lifecycle: true,
 			Netem:     true,
