@@ -38,8 +38,11 @@ type File interface {
 type Output struct {
 	File
 
-	mu      sync.Mutex
-	screen  *Screen
+	mu     sync.Mutex
+	screen *Screen
+	// early is what is queued to go in front of the next frame of text, pending what
+	// goes after it.
+	early   []byte
 	pending []byte
 	timer   *time.Timer
 	// shown is set while the terminal is on the alternate screen, the only place the
@@ -54,10 +57,11 @@ func NewOutput(f File, screen *Screen) *Output {
 	return &Output{File: f, screen: screen}
 }
 
-// Queue schedules sequences of the pixel layer. They go out with the next frame of text,
-// or shortly after when none comes.
-func (o *Output) Queue(seq []byte) {
-	if len(seq) == 0 {
+// Queue schedules sequences of the pixel layer: the ones that take something away, which
+// go in front of the next frame of text so that they cannot erase what that frame writes,
+// and the ones that draw, which go after it. Without a frame they go out shortly after.
+func (o *Output) Queue(before, after []byte) {
+	if len(before) == 0 && len(after) == 0 {
 		return
 	}
 
@@ -68,7 +72,8 @@ func (o *Output) Queue(seq []byte) {
 		return
 	}
 
-	o.pending = append(o.pending, seq...)
+	o.early = append(o.early, before...)
+	o.pending = append(o.pending, after...)
 
 	if o.timer == nil {
 		o.timer = time.AfterFunc(lonelyDelay, o.flush)
@@ -81,11 +86,25 @@ func (o *Output) Stop() {
 	defer o.mu.Unlock()
 
 	o.off = true
-	o.pending = nil
+	o.early, o.pending = nil, nil
 
 	if o.shown {
-		_, _ = o.File.Write(settled(o.screen.Hide()))
+		_, _ = o.File.Write(settled(guarded(o.screen.Hide())))
 	}
+}
+
+// guarded wraps sequences that move the cursor or change how text is drawn, so that both
+// are as they were afterwards.
+func guarded(seq []byte) []byte {
+	if len(seq) == 0 {
+		return nil
+	}
+
+	out := make([]byte, 0, len(seq)+len(saveCursor)+len(restoreCur))
+	out = append(out, saveCursor...)
+	out = append(out, seq...)
+
+	return append(out, restoreCur...)
 }
 
 // settled returns what is written to the terminal with the end of a synchronized update
@@ -110,17 +129,18 @@ func (o *Output) flush() {
 
 	o.timer = nil
 
-	if len(o.pending) == 0 || !o.shown {
+	if (len(o.early) == 0 && len(o.pending) == 0) || !o.shown {
 		return
 	}
 
 	var buf bytes.Buffer
 
 	buf.WriteString(syncStart + saveCursor)
+	buf.Write(o.early)
 	buf.Write(o.pending)
 	buf.WriteString(restoreCur + syncEnd)
 
-	o.pending = o.pending[:0]
+	o.early, o.pending = o.early[:0], o.pending[:0]
 
 	_, _ = o.File.Write(buf.Bytes())
 }
@@ -137,52 +157,54 @@ func (o *Output) Write(p []byte) (int, error) {
 		return o.File.Write(p)
 	}
 
-	var extra []byte
+	var before, after []byte
 
 	switch {
+	case leaves && !enters:
+		// The pixel layer does not belong on the screen the terminal goes back to.
+		before = o.screen.Hide()
+		o.shown = false
 	case enters || disturbs(p):
 		// The images are gone or out of place: put all of them back.
-		extra = o.screen.All()
-		o.pending = o.pending[:0]
-	case len(o.pending) > 0:
-		extra = append(extra, o.pending...)
-		o.pending = o.pending[:0]
+		before, after = o.screen.Repair()
+		o.shown = true
+	default:
+		before, after = o.early, o.pending
+		o.shown = true
 	}
 
 	var buf bytes.Buffer
 
-	if leaves && o.shown {
-		// The pixel layer does not belong on the screen the terminal goes back to.
-		buf.Write(o.screen.Hide())
+	// What takes images away comes first: in a terminal that erases them with the
+	// text of their cells, it would erase what the frame writes otherwise. It goes
+	// inside the synchronized update of the frame when that starts with one.
+	frame := p
+
+	if bytes.HasPrefix(p, []byte(syncStart)) && len(before) > 0 {
+		buf.WriteString(syncStart)
+
+		frame = p[len(syncStart):]
 	}
 
-	switch {
-	case leaves && !enters:
-		o.shown = false
+	buf.Write(guarded(before))
 
-		buf.Write(p)
-	case len(extra) == 0:
-		o.shown = true
-
-		buf.Write(p)
+	// What draws comes last, and inside the synchronized update as well, so that the
+	// terminal shows text and pixels in one go.
+	switch i := bytes.LastIndex(frame, []byte(syncEnd)); {
+	case len(after) == 0:
+		buf.Write(frame)
+	case i >= 0:
+		buf.Write(frame[:i])
+		buf.Write(guarded(after))
+		buf.Write(frame[i:])
 	default:
-		o.shown = true
-
-		// Inside the synchronized update of the frame when there is one, so that the
-		// terminal shows text and pixels in one go.
-		if i := bytes.LastIndex(p, []byte(syncEnd)); i >= 0 {
-			buf.Write(p[:i])
-			buf.WriteString(saveCursor)
-			buf.Write(extra)
-			buf.WriteString(restoreCur)
-			buf.Write(p[i:])
-		} else {
-			buf.Write(p)
-			buf.WriteString(syncStart + saveCursor)
-			buf.Write(extra)
-			buf.WriteString(restoreCur + syncEnd)
-		}
+		buf.Write(frame)
+		buf.WriteString(syncStart)
+		buf.Write(guarded(after))
+		buf.WriteString(syncEnd)
 	}
+
+	o.early, o.pending = o.early[:0], o.pending[:0]
 
 	if _, err := o.File.Write(settled(buf.Bytes())); err != nil {
 		return 0, err

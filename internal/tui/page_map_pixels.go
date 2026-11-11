@@ -62,7 +62,7 @@ func nodeText(class clabinternaltuitopo.Class) bool {
 func (p *mapPage) viewPixels(m *Model) string {
 	sc := m.scene()
 	if sc == nil {
-		sc = clabinternaltuigfx.NewScene(m.metrics())
+		sc = m.newScene()
 	}
 
 	sk := m.skin()

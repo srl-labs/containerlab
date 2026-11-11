@@ -201,6 +201,8 @@ In a terminal that speaks the [kitty graphics protocol](https://sw.kovidgoyal.ne
 
 The text is drawn as pixels as well, in a proportional font the UI brings along, which is what makes it look like an application rather than a terminal. Such text cannot be selected or searched with the terminal. What a node or a command printed is the exception: logs, the output of commands and of jobs, descriptions and captured packets stay text of the terminal, in its fixed width font, and can be selected and copied. Set `CLAB_TUI_GRAPHICS_TEXT=off` to leave all text to the terminal.
 
+The terminal of VS Code shows such images as well, once `terminal.integrated.enableImages` is set, but only on top of its text and not below it. The UI is drawn there in one layer that holds all of the text, also what a node printed, in a font of fixed width: nothing can be selected with the terminal there. Without that setting VS Code gets the plain look.
+
 The UI asks the terminal whether it shows images when it starts, and keeps the plain look when there is no answer, when the window is smaller than 72 by 20 cells, or over a connection that does not pass the answer on, ie. inside tmux.
 
 The pixels are drawn at twice the size the terminal reports, which keeps them sharp on high resolution displays. `CLAB_TUI_GRAPHICS_SCALE` changes that factor, from `1` to `4`: `1` sends a quarter of the data, which helps over a slow connection.

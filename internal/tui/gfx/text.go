@@ -228,6 +228,39 @@ func (s *Scene) Text(
 	})
 }
 
+// overhang is how far, in pixels, a glyph may reach beyond the room it is given.
+const overhang = 2
+
+// Cells writes a line of text with every character in a cell of its own, from a column
+// on, the way a terminal sets text: for what was printed in columns. A character that is
+// narrower than its cell sits in the middle of it.
+func (s *Scene) Cells(f *Font, x, y, size float64, bold bool, text string, c Color) {
+	if f == nil || text == "" || c.A == 0 {
+		return
+	}
+
+	px := f32(s.Pt(size))
+	left := math.Round(s.X(x)*subpixels) / subpixels
+	base := math.Round(s.Y(y+0.5) + float64(px)*textBaseline) //nolint:mnd // the middle of the line
+	// The box leaves room for glyphs that reach beyond their cells.
+	right := left + s.cw*float64(len([]rune(text))) + overhang
+	top, bottom := base-float64(px)*textAscent, base+float64(px)*textDescent
+
+	s.add(&shape{
+		kind: kindText, font: f, text: text, bold: bold, fill: c, adv: f32(s.cw),
+		x0: f32(left), y0: f32(base), r: px,
+		bx0: f32(left - 1), by0: f32(top), bx1: f32(right), by1: f32(bottom),
+	})
+}
+
+// Advance returns how far a character of the regular cut moves the pen, as a part of the
+// size of the text. For a font of fixed width that is the width of every character.
+func (f *Font) Advance(r rune) float64 {
+	const size = 64
+
+	return float64(f.measure(cutRegular, size, string(r))) / size
+}
+
 // Texts returns the texts written on a layer, in the order they were written. It is there
 // for tests, which cannot read pixels.
 func (s *Scene) Texts(l Layer) []string {
@@ -257,8 +290,14 @@ func (b *strip) write(sh *shape) {
 	base := int(sh.y0)
 
 	for _, r := range sh.text {
-		whole := float32(math.Floor(float64(pen)))
-		g := f.glyph(cutOf(sh.bold), sh.r, r, uint8((pen-whole)*subpixels))
+		at := pen
+		if sh.adv > 0 {
+			// One character a cell, in the middle of it.
+			at += (sh.adv - f.glyph(cutOf(sh.bold), sh.r, r, 0).advance) / 2 //nolint:mnd // centered
+		}
+
+		whole := float32(math.Floor(float64(at)))
+		g := f.glyph(cutOf(sh.bold), sh.r, r, uint8((at-whole)*subpixels))
 
 		gx, gy := int(whole)+g.left, base+g.top
 
@@ -274,6 +313,10 @@ func (b *strip) write(sh *shape) {
 			}
 		}
 
-		pen += g.advance
+		if sh.adv > 0 {
+			pen += sh.adv
+		} else {
+			pen += g.advance
+		}
 	}
 }

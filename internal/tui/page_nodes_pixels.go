@@ -30,7 +30,7 @@ func (p *nodesPage) pixelPane() bool {
 func (p *nodesPage) viewPixels(m *Model) string {
 	sc := m.scene()
 	if sc == nil {
-		sc = clabinternaltuigfx.NewScene(m.metrics())
+		sc = m.newScene()
 	}
 
 	if !p.pixelPane() {

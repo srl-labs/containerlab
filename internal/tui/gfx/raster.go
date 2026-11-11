@@ -419,6 +419,24 @@ func (b *strip) render(shapes []shape) bool {
 	return false
 }
 
+// opaque is the alpha of a pixel that lets nothing through.
+const opaque = 255
+
+// blend lays another strip of the same size on top of this one.
+func (b *strip) blend(top *strip) {
+	for i := 0; i+3 < len(b.pix) && i+3 < len(top.pix); i += bytesPerPixel {
+		a := uint32(top.pix[i+3])
+		if a == 0 {
+			continue
+		}
+
+		for k := range bytesPerPixel {
+			under := uint32(b.pix[i+k]) * (opaque - a) / opaque
+			b.pix[i+k] = uint8(min(opaque, uint32(top.pix[i+k])+under))
+		}
+	}
+}
+
 // straight returns the pixels with straight alpha, the form the terminal expects. It
 // converts in place.
 //

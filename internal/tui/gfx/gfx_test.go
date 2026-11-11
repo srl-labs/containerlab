@@ -8,6 +8,9 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -81,6 +84,9 @@ func TestPunchMakesAHole(t *testing.T) {
 	}
 }
 
+// drawn returns what an update draws, for the tests that take nothing away.
+func drawn(_, after []byte) []byte { return after }
+
 // images returns the numbers of the images a sequence transmits.
 func images(seq []byte) []string {
 	var ids []string
@@ -102,7 +108,7 @@ func TestScreenSendsOnlyWhatChanged(t *testing.T) {
 	first := NewScene(testMetrics())
 	first.Fill(0, 0, 10, 4, 0, white)
 
-	seq := screen.Update(first)
+	seq := drawn(screen.Update(first))
 	if got := images(seq); len(got) != 4 {
 		t.Fatalf("the first frame sent the strips %v, want one for each of the 4 rows", got)
 	}
@@ -114,7 +120,7 @@ func TestScreenSendsOnlyWhatChanged(t *testing.T) {
 	same := NewScene(testMetrics())
 	same.Fill(0, 0, 10, 4, 0, white)
 
-	if seq := screen.Update(same); len(seq) != 0 {
+	if seq := drawn(screen.Update(same)); len(seq) != 0 {
 		t.Errorf("a frame that looks the same sent %q", seq)
 	}
 
@@ -123,13 +129,24 @@ func TestScreenSendsOnlyWhatChanged(t *testing.T) {
 	dotted.Fill(0, 0, 10, 4, 0, white)
 	dotted.Dot(5, 2.5, 3, red)
 
-	if got, want := images(screen.Update(dotted)), fmt.Sprint(imageID(Under, 2)); len(got) != 1 ||
+	if got, want := images(
+		drawn(screen.Update(dotted)),
+	), fmt.Sprint(
+		imageID(Under, 2),
+	); len(
+		got,
+	) != 1 ||
 		got[0] != want {
 		t.Errorf("the dot sent the strips %v, want only %s", got, want)
 	}
 
 	// A strip that empties is taken away by a blank image under its number.
-	if seq := string(screen.Update(NewScene(testMetrics()))); strings.Count(seq, "a=t") != 4 ||
+	if seq := string(
+		drawn(screen.Update(NewScene(testMetrics()))),
+	); strings.Count(
+		seq,
+		"a=t",
+	) != 4 ||
 		strings.Contains(seq, "a=T") {
 		t.Errorf("an empty frame sent %q, want four blank images", seq)
 	}
@@ -145,7 +162,9 @@ func TestScreenStartsOverAfterAResize(t *testing.T) {
 	wider := NewScene(Metrics{Cols: 12, Rows: 2, Width: 120, Height: 40})
 	wider.Fill(0, 0, 12, 1, 0, white)
 
-	seq := string(screen.Update(wider))
+	before, after := screen.Update(wider)
+
+	seq := string(before) + string(after)
 	if strings.Count(seq, "a=t") != 4 || strings.Count(seq, "a=T") != 1 {
 		t.Errorf("after a resize %q was sent, want the four old strips hidden and one new", seq)
 	}
@@ -200,7 +219,7 @@ func shownOutput(t *testing.T) (*Output, *Screen, *terminal) {
 func TestOutputAddsThePixelsToAFrame(t *testing.T) {
 	out, _, term := shownOutput(t)
 
-	out.Queue([]byte("<pixels>"))
+	out.Queue(nil, []byte("<pixels>"))
 
 	frame := syncStart + "text" + syncEnd
 	if n, err := out.Write([]byte(frame)); err != nil || n != len(frame) {
@@ -231,7 +250,7 @@ func TestOutputAddsThePixelsToAFrame(t *testing.T) {
 func TestOutputSendsLonelyPixelsOnTheirOwn(t *testing.T) {
 	out, _, term := shownOutput(t)
 
-	out.Queue([]byte("<pixels>"))
+	out.Queue(nil, []byte("<pixels>"))
 
 	deadline := time.Now().Add(2 * time.Second)
 	for term.Len() == 0 && time.Now().Before(deadline) {
@@ -279,12 +298,12 @@ func TestOutputHidesThePixelsOutsideTheUI(t *testing.T) {
 	// Leaving the alternate screen, ie. to run a shell, takes the layer away first.
 	_, _ = out.Write([]byte(altScreenOff))
 
-	if got := term.take(); got != hide+altScreenOff+syncEnd {
+	if got := term.take(); got != saveCursor+hide+restoreCur+altScreenOff+syncEnd {
 		t.Errorf("leaving sent %q, want the strip hidden first", got)
 	}
 
 	// Outside nothing is drawn.
-	out.Queue([]byte("<pixels>"))
+	out.Queue(nil, []byte("<pixels>"))
 	_, _ = out.Write([]byte("shell output"))
 
 	if got := term.take(); got != "shell output" {
@@ -300,7 +319,7 @@ func TestOutputHidesThePixelsOutsideTheUI(t *testing.T) {
 
 	out.Stop()
 
-	if got := term.take(); got != hide+syncEnd {
+	if got := term.take(); got != saveCursor+hide+restoreCur+syncEnd {
 		t.Errorf("stopping sent %q, want the strip hidden", got)
 	}
 }
@@ -428,4 +447,178 @@ func TestDotsMakeAGrid(t *testing.T) {
 	if img.NRGBAAt(0, 0).A != 0 || img.NRGBAAt(11, 11).A != 0 || img.NRGBAAt(5, 11).A != 0 {
 		t.Error("there is a dot between the grid cells")
 	}
+}
+
+// flatRows returns the rows a sequence sends an image for, in order.
+func flatRows(seq []byte) []string {
+	sends := regexp.MustCompile(`\x1b\[(\d+);1H\x1b_Ga=T`).FindAllSubmatch(seq, -1)
+	rows := make([]string, 0, len(sends))
+
+	for _, m := range sends {
+		rows = append(rows, string(m[1]))
+	}
+
+	return rows
+}
+
+// TestFlatScreenSendsOneImageARow draws for a terminal that shows one image a cell, on
+// top of its text: both layers go into one image a row, placed over the text.
+func TestFlatScreenSendsOneImageARow(t *testing.T) {
+	screen := NewScreen()
+
+	sc := NewFlatScene(testMetrics())
+	sc.Fill(0, 0, 10, 3, 0, white)
+	sc.On(Over).Rect(0, 0, 10, 1, red.Alpha(0.5))
+	sc.On(Under)
+
+	before, after := screen.Update(sc)
+	if len(before) != 0 {
+		t.Errorf("the first frame takes something away: %q", before)
+	}
+
+	if got := flatRows(after); strings.Join(got, ",") != "1,2,3" {
+		t.Errorf("the first frame sent the rows %v, want 1, 2 and 3", got)
+	}
+
+	if !bytes.Contains(after, []byte(",z=0,")) || bytes.Contains(after, []byte("z=-")) {
+		t.Error("the images are not placed on top of the text")
+	}
+
+	// An image that fits one sequence says nothing about chunks, and none is sent
+	// under a number that was used before.
+	if bytes.Contains(after, []byte("m=0")) {
+		t.Error("an image of one sequence is marked as the last chunk")
+	}
+
+	if ids := images(after); len(ids) != 3 || ids[0] == ids[1] || ids[1] == ids[2] {
+		t.Errorf("the images have the numbers %v", ids)
+	}
+
+	// Sending a row takes the image of the row below it away in such a terminal: the
+	// rows under a changed one are sent again, down to the first that shows nothing.
+	changed := NewFlatScene(testMetrics())
+	changed.Fill(0, 0, 10, 3, 0, white)
+	changed.Dot(5, 1.5, 3, red)
+
+	before, after = screen.Update(changed)
+	if got := flatRows(after); strings.Join(got, ",") != "1,2,3" {
+		t.Errorf(
+			"a change took the rows %v, want 1 for the layer on top that went, then 2 and 3",
+			got,
+		)
+	}
+
+	if len(before) != 0 {
+		t.Errorf("a change takes something away: %q", before)
+	}
+
+	one := NewFlatScene(testMetrics())
+	one.Fill(0, 0, 10, 3, 0, white)
+	one.Dot(5, 2.5, 3, red)
+
+	if got := flatRows(drawn(screen.Update(one))); strings.Join(got, ",") != "2,3" {
+		t.Errorf("a change in the second and third row sent the rows %v", got)
+	}
+
+	// A row that empties is erased, in front of the frame of text.
+	less := NewFlatScene(testMetrics())
+	less.Fill(0, 0, 10, 2, 0, white)
+	less.Dot(5, 1.5, 3, red)
+
+	before, _ = screen.Update(less)
+	if string(before) != eraseRow(2) {
+		t.Errorf("the emptied row was taken away with %q", before)
+	}
+
+	// The whole layer is taken away by clearing the screen, and put back by sending
+	// every row under a new number.
+	if got := string(screen.Hide()); got != eraseAll {
+		t.Errorf("hiding sent %q", got)
+	}
+
+	before, after = screen.Repair()
+	if string(before) != eraseAll || strings.Join(flatRows(after), ",") != "1,2" {
+		t.Errorf("a repair sent %q and the rows %v", before, flatRows(after))
+	}
+}
+
+// TestFlatScreenKeepsTheLastRowFromScrolling sends an image for the last row: the region
+// that scrolls is taken off that row around it.
+func TestFlatScreenKeepsTheLastRowFromScrolling(t *testing.T) {
+	screen := NewScreen()
+
+	sc := NewFlatScene(testMetrics())
+	sc.Fill(0, 3, 10, 1, 0, white)
+
+	_, after := screen.Update(sc)
+	if !bytes.HasPrefix(after, []byte("\x1b[1;3r\x1b[4;1H")) ||
+		!bytes.HasSuffix(after, []byte("\x1b[r")) {
+		t.Errorf("the last row was sent as %q…%q", after[:20], after[len(after)-8:])
+	}
+}
+
+func TestOutputTakesAwayBeforeTheFrame(t *testing.T) {
+	out, _, term := shownOutput(t)
+
+	out.Queue([]byte("<erase>"), []byte("<pixels>"))
+
+	_, _ = out.Write([]byte(syncStart + "text" + syncEnd))
+
+	want := syncStart + saveCursor + "<erase>" + restoreCur + "text" +
+		saveCursor + "<pixels>" + restoreCur + syncEnd
+	if got := term.take(); got != want {
+		t.Errorf("the terminal got %q, want %q", got, want)
+	}
+}
+
+func TestTextIsSetOneCharacterACell(t *testing.T) {
+	font, err := NewFont(
+		testFont(t, "Inter-400.ttf"),
+		testFont(t, "Inter-600.ttf"),
+		testFont(t, "DejaVuSans.ttf"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sc := NewScene(testMetrics())
+	sc.Cells(font, 2, 1, 12, false, "iii", white)
+
+	img := sc.Image(Under)
+
+	// Three narrow letters, each in the middle of its cell of ten pixels.
+	for cell := range 3 {
+		inked := false
+
+		for x := 20 + cell*10; x < 30+cell*10; x++ {
+			for y := 20; y < 40; y++ {
+				if img.NRGBAAt(x, y).A > 100 {
+					inked = true
+
+					if x < 22+cell*10 || x > 27+cell*10 {
+						t.Errorf(
+							"the letter of cell %d has ink at the edge of the cell, at %d",
+							cell,
+							x,
+						)
+					}
+				}
+			}
+		}
+
+		if !inked {
+			t.Errorf("the cell %d holds no letter", cell)
+		}
+	}
+}
+
+func testFont(t *testing.T, name string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("..", "assets", "fonts", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return data
 }

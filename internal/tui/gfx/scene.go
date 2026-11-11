@@ -138,6 +138,8 @@ type shape struct {
 	font *Font
 	text string
 	bold bool
+	// adv is the room every character of a text takes, when they are set one a cell.
+	adv  float32
 	hash uint64
 }
 
@@ -171,6 +173,9 @@ type Scene struct {
 	u      float64
 	layer  Layer
 	shapes [layerCount][]shape
+	// flat is set for a terminal that shows one image a cell, on top of its text: the
+	// layers are then merged into one.
+	flat bool
 	// clip bounds what the shapes that follow can touch, in pixels, when clipped is set.
 	clip    [4]float32
 	clipped bool
@@ -180,6 +185,16 @@ type Scene struct {
 func NewScene(m Metrics) *Scene {
 	s := &Scene{}
 	s.ms[Under], s.ms[Over] = m, m.coarse()
+
+	return s.On(Under)
+}
+
+// NewFlatScene starts an empty frame for a terminal that cannot stack images and text:
+// it shows one image a cell, on top of whatever text is there. Both layers are drawn with
+// the same pixels and sent as one image, and no text is left to the terminal.
+func NewFlatScene(m Metrics) *Scene {
+	s := &Scene{flat: true}
+	s.ms[Under], s.ms[Over] = m, m
 
 	return s.On(Under)
 }
@@ -641,7 +656,7 @@ func hashShape(sh *shape) uint64 {
 	})
 
 	for _, v := range [...]float32{
-		sh.x0, sh.y0, sh.x1, sh.y1, sh.bx0, sh.by0, sh.bx1, sh.by1, sh.r, sh.sw, sh.blur,
+		sh.x0, sh.y0, sh.x1, sh.y1, sh.bx0, sh.by0, sh.bx1, sh.by1, sh.r, sh.sw, sh.blur, sh.adv,
 	} {
 		put(v)
 	}

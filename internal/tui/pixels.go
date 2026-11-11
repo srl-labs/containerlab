@@ -54,6 +54,10 @@ const (
 	// graphicsQuery asks the terminal whether it shows images of the kitty graphics
 	// protocol, with an image of one pixel that is not kept.
 	graphicsQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"
+	// versionQuery asks the terminal for its name and version, and flatTerminal is
+	// the name of the terminals that show one image a cell, on top of the text.
+	versionQuery = "\x1b[>0q"
+	flatTerminal = "xterm.js"
 	// pixelSizeQuery asks for the size of the text area in pixels.
 	pixelSizeQuery = "\x1b[14t"
 
@@ -91,6 +95,12 @@ type pixels struct {
 	shown bool
 	// text is set when the layer writes the text as well, in a font of its own.
 	text bool
+	// flat is set for a terminal that shows one image a cell, on top of its text, and
+	// nothing below it: the terminal of VS Code and whatever else is built on
+	// xterm.js. The layer is then sent as one image a row and writes all of the
+	// text, also what a node printed, which it sets in a font of fixed width.
+	flat bool
+
 	// scene is the frame being drawn, drawn the one drawn last, and zones what can be
 	// clicked in it.
 	scene *clabinternaltuigfx.Scene
@@ -150,6 +160,7 @@ func newPixels(
 	return &pixels{
 		out: out, screen: screen, supported: mode == GraphicsOn, scale: scale,
 		text: os.Getenv(graphicsTextEnv) != "off" && uiFont() != nil,
+		flat: os.Getenv("TERM_PROGRAM") == "vscode",
 	}
 }
 
@@ -158,7 +169,9 @@ func (m *Model) graphical() bool {
 	px := m.px
 
 	return px != nil && px.supported && px.w > 0 && px.h > 0 && px.cols > 0 && px.rows > 0 &&
-		m.width >= pixelMinWidth && m.height >= pixelMinHeight
+		m.width >= pixelMinWidth && m.height >= pixelMinHeight &&
+		// A terminal that cannot draw under its text needs the layer to write it.
+		(px.text || !px.flat)
 }
 
 // scene returns the frame of the pixel layer being drawn, nil when there is none.
@@ -178,7 +191,9 @@ func (m *Model) pixelInit() tea.Cmd {
 		return nil
 	}
 
-	return tea.Raw(graphicsQuery + pixelSizeQuery)
+	// The terminal is asked who it is first: the answers come in the order of the
+	// questions, so it is known what kind of terminal says that it shows images.
+	return tea.Raw(versionQuery + graphicsQuery + pixelSizeQuery)
 }
 
 // pixelUpdate handles what the terminal answers. It reports whether the message was one
@@ -189,6 +204,13 @@ func (m *Model) pixelUpdate(msg tea.Msg) bool {
 	}
 
 	switch msg := msg.(type) {
+	case tea.TerminalVersionMsg:
+		if strings.HasPrefix(strings.ToLower(msg.Name), flatTerminal) && !m.px.flat {
+			m.px.flat = true
+			m.layout()
+		}
+
+		return true
 	case uv.KittyGraphicsEvent:
 		if bytes.HasPrefix(msg.Payload, []byte("OK")) {
 			m.px.supported = true
@@ -199,8 +221,8 @@ func (m *Model) pixelUpdate(msg tea.Msg) bool {
 	case tea.FocusMsg:
 		// A terminal may drop images of a window that is not in view, to save
 		// memory: put the layer back when the window is looked at again.
-		if m.graphical() && m.px.shown {
-			m.px.out.Queue(m.px.screen.All())
+		if m.graphical() && m.px.shown && !m.px.flat {
+			m.px.out.Queue(nil, m.px.screen.All())
 		}
 
 		return true
@@ -305,6 +327,15 @@ func (m *Model) buildSkin() {
 	}
 }
 
+// newScene starts the frame of the pixel layer for the kind of terminal there is.
+func (m *Model) newScene() *clabinternaltuigfx.Scene {
+	if m.px.flat {
+		return clabinternaltuigfx.NewFlatScene(m.metrics())
+	}
+
+	return clabinternaltuigfx.NewScene(m.metrics())
+}
+
 // textFont returns the font the layer writes text with, nil when the terminal does.
 func (m *Model) textFont() *clabinternaltuigfx.Font {
 	if m.px == nil || !m.px.text {
@@ -323,7 +354,7 @@ func (m *Model) hidePixels() {
 
 	px.shown, px.scene = false, nil
 	px.zones = px.zones[:0]
-	px.out.Queue(px.screen.Hide())
+	px.out.Queue(px.screen.Hide(), nil)
 	px.screen.Forget()
 }
 
@@ -399,7 +430,7 @@ func (m *Model) renderPixels() string {
 	px := m.px
 	m.buildSkin()
 
-	sc := clabinternaltuigfx.NewScene(m.metrics())
+	sc := m.newScene()
 	px.scene, px.shown = sc, true
 	px.zones = px.zones[:0]
 
@@ -439,11 +470,17 @@ func (m *Model) renderPixels() string {
 
 	if px.text {
 		for i := range lines {
-			if mono && i >= pixelBodyTop && i < pixelBodyTop+m.bodyHeight() {
+			switch body := i >= pixelBodyTop && i < pixelBodyTop+m.bodyHeight(); {
+			case mono && body && !px.flat:
 				continue
+			case mono && body:
+				// Where images hide the text of the terminal, the layer writes
+				// this text too, in a font of fixed width.
+				m.pixelCells(sc, i, 0, lines[i])
+			default:
+				m.pixelLine(sc, i, 0, lines[i], false)
 			}
 
-			m.pixelLine(sc, i, 0, lines[i], false)
 			lines[i] = blank
 		}
 	}
@@ -452,7 +489,7 @@ func (m *Model) renderPixels() string {
 
 	switch {
 	case len(m.overlays) == 0:
-	case px.text && !mono:
+	case px.text && (!mono || px.flat):
 		m.pixelOverlays(sc)
 	default:
 		screen = clabinternaltuiui.StripMarks(m.compose(screen))

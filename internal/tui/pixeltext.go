@@ -25,6 +25,23 @@ var fontBold []byte
 //go:embed assets/fonts/DejaVuSans.ttf
 var fontSymbols []byte
 
+//go:embed assets/fonts/JetBrainsMono-400.ttf
+var fontMono []byte
+
+//go:embed assets/fonts/JetBrainsMono-700.ttf
+var fontMonoBold []byte
+
+// monoFont is the typeface of fixed width the pixel layer sets literal text in, where
+// the terminal cannot show it.
+var monoFont = sync.OnceValue(func() *clabinternaltuigfx.Font {
+	f, err := clabinternaltuigfx.NewFont(fontMono, fontMonoBold, fontSymbols)
+	if err != nil {
+		return nil
+	}
+
+	return f
+})
+
 // uiFont is the typeface the pixel layer writes text with.
 var uiFont = sync.OnceValue(func() *clabinternaltuigfx.Font {
 	f, err := clabinternaltuigfx.NewFont(fontRegular, fontBold, fontSymbols)
@@ -299,6 +316,73 @@ func (m *Model) pixelLine(sc *clabinternaltuigfx.Scene, row, col int, line strin
 
 		end := fieldEnd(cells, i)
 		free = m.pixelField(sc, row, col+i, cells[i:end], free) + textGap
+		i = end
+	}
+}
+
+// pixelCells writes a line the way the terminal would: every character in its cell, in a
+// font of fixed width. It is how the layer sets what a node or a command printed.
+func (m *Model) pixelCells(sc *clabinternaltuigfx.Scene, row, col int, line string) {
+	font := monoFont()
+	if font == nil {
+		return
+	}
+
+	sk := m.skin()
+	ink := clabinternaltuigfx.Mix(sk.Ink, sk.Card, 0.1) //nolint:mnd // a little softer than pure
+
+	// As large as fits the width of a cell, and no larger than the other text.
+	size := min(textSize, sc.X(1)/sc.Pt(1)/font.Advance('0'))
+	cells := parseLine(line)
+
+	for i := 0; i < len(cells); {
+		if cells[i].blank() || cells[i].r == 0 {
+			i++
+
+			continue
+		}
+
+		// A run of cells of one look.
+		end := i + 1
+		for end < len(cells) && cells[end].st == cells[i].st && !cells[end].blank() {
+			end++
+		}
+
+		var text strings.Builder
+
+		for k := i; k < end; k++ {
+			if cells[k].r == 0 {
+				text.WriteRune(' ')
+			} else {
+				text.WriteRune(cells[k].r)
+			}
+		}
+
+		st := &cells[i].st
+		fg, bg := ink, clabinternaltuigfx.Color{}
+
+		if st.hasFG {
+			fg = st.fg
+		}
+
+		if st.hasBG {
+			bg = st.bg
+		}
+
+		if st.reverse {
+			fg, bg = sk.Card, fg
+		}
+
+		if bg.A != 0 {
+			sc.Rect(float64(col+i), float64(row), float64(end-i), 1, bg)
+		}
+
+		if st.faint {
+			fg = fg.Alpha(0.6) //nolint:mnd // dimmed
+		}
+
+		sc.Cells(font, float64(col+i), float64(row), size, st.bold, text.String(), fg)
+
 		i = end
 	}
 }

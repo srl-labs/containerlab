@@ -394,3 +394,59 @@ func TestNodeSymbolFollowsRoleThenKind(t *testing.T) {
 		}
 	}
 }
+
+// TestPixelLayerForTerminalsThatShowImagesOverText draws for the terminal of VS Code,
+// which shows one image a cell on top of its text: the layer writes all of the text
+// there, also what a node printed, and nothing is placed below the text.
+func TestPixelLayerForTerminalsThatShowImagesOverText(t *testing.T) {
+	m, term := newPixelTextModel(t, 120, 35)
+
+	if m.px.flat {
+		t.Fatal("the terminal is taken for one built on xterm.js without it saying so")
+	}
+
+	m.Update(tea.TerminalVersionMsg{Name: "xterm.js(6.1.0-beta.304)"})
+
+	if !m.px.flat || !m.graphical() {
+		t.Fatal("the terminal that says it is xterm.js is not drawn for as one")
+	}
+
+	press(m, "enter")
+	pressRun(m, "l")
+
+	if _, ok := m.top().(*logsPage); !ok {
+		t.Fatalf("expected the logs, got %T", m.top())
+	}
+
+	screen := m.render()
+	assertScreenFits(t, m, screen)
+
+	if text := strings.TrimSpace(ansi.Strip(screen)); text != "" {
+		t.Errorf("the terminal gets text, which its images hide:\n%s", text)
+	}
+
+	if written := strings.Join(
+		m.px.drawn.Texts(clabinternaltuigfx.Under),
+		"\n",
+	); !strings.Contains(
+		written,
+		"sr_",
+	) {
+		t.Errorf("the layer does not write the log:\n%s", written)
+	}
+
+	// Sent with a frame of text, no image goes below the text.
+	_, _ = m.px.out.Write([]byte("\x1b[?1049h"))
+
+	if sent := term.String(); !strings.Contains(sent, "a=T") || strings.Contains(sent, "z=-") {
+		t.Errorf("the images are missing or placed below the text (%d bytes sent)", len(sent))
+	}
+
+	// Without a font of its own the layer cannot do without the terminal's text, and
+	// the window is drawn plain.
+	m.px.text = false
+
+	if m.graphical() {
+		t.Error("the pixel layer is drawn although the terminal would hide the text under it")
+	}
+}
