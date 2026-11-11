@@ -8,10 +8,10 @@ package ui
 
 import (
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 )
 
 // Ellipsis marks text that was cut short.
@@ -99,42 +99,8 @@ func Center(s string, width int) string {
 }
 
 // Sanitize makes text from outside sources, such as container output and labels, safe to
-// show: escape sequences are removed and control characters replaced, so that it cannot
-// move the cursor or change the terminal's state.
-func Sanitize(s string) string {
-	if !needsSanitizing(s) {
-		return s
-	}
-
-	s = ansi.Strip(s)
-
-	var b strings.Builder
-
-	b.Grow(len(s))
-
-	for _, r := range s {
-		switch {
-		case r == '\t':
-			b.WriteString("    ")
-		case unicode.IsControl(r):
-			// Dropped: a control character has no place in a single line of text.
-		default:
-			b.WriteRune(r)
-		}
-	}
-
-	return b.String()
-}
-
-func needsSanitizing(s string) bool {
-	for _, r := range s {
-		if unicode.IsControl(r) {
-			return true
-		}
-	}
-
-	return false
-}
+// show: see clabinternaltuitermtext.Sanitize, which the backend uses as well.
+func Sanitize(s string) string { return clabinternaltuitermtext.Sanitize(s) }
 
 // FitLines returns exactly height lines of exactly width cells made from s, cutting or
 // padding as needed. Screens use it to hand back a block of the size they were given.
@@ -171,71 +137,6 @@ func FitLines(s string, width, height int) string {
 	return strings.Join(out, "\n")
 }
 
-// NaturalLess compares two strings the way people order names: runs of digits compare by
-// their numeric value, so that leaf2 sorts before leaf10. The comparison ignores case.
-func NaturalLess(a, b string) bool {
-	return naturalCompare(a, b) < 0
-}
-
-func naturalCompare(a, b string) int {
-	ra, rb := []rune(strings.ToLower(a)), []rune(strings.ToLower(b))
-	i, j := 0, 0
-
-	for i < len(ra) && j < len(rb) {
-		if unicode.IsDigit(ra[i]) && unicode.IsDigit(rb[j]) {
-			ni, nexti := digitRun(ra, i)
-			nj, nextj := digitRun(rb, j)
-
-			if c := compareDigits(ni, nj); c != 0 {
-				return c
-			}
-
-			i, j = nexti, nextj
-
-			continue
-		}
-
-		if ra[i] != rb[j] {
-			if ra[i] < rb[j] {
-				return -1
-			}
-
-			return 1
-		}
-
-		i++
-		j++
-	}
-
-	return (len(ra) - i) - (len(rb) - j)
-}
-
-// digitRun returns the run of digits starting at i without its leading zeros, and the
-// index following the run.
-func digitRun(r []rune, i int) (digits []rune, next int) {
-	next = i
-	for next < len(r) && unicode.IsDigit(r[next]) {
-		next++
-	}
-
-	digits = r[i:next]
-	for len(digits) > 1 && digits[0] == '0' {
-		digits = digits[1:]
-	}
-
-	return digits, next
-}
-
-func compareDigits(a, b []rune) int {
-	if len(a) != len(b) {
-		return len(a) - len(b)
-	}
-
-	for k := range a {
-		if a[k] != b[k] {
-			return int(a[k]) - int(b[k])
-		}
-	}
-
-	return 0
-}
+// NaturalLess compares two strings the way people order names: see
+// clabinternaltuitermtext.NaturalCompare, which the backend orders by as well.
+func NaturalLess(a, b string) bool { return clabinternaltuitermtext.NaturalLess(a, b) }

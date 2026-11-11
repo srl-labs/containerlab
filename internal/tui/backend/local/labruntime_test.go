@@ -303,8 +303,8 @@ func TestLabRuntimeInventory(t *testing.T) {
 		names = append(names, lab.Nodes[i].Name+"="+lab.Nodes[i].Readiness().String())
 	}
 
-	// The nodes go by the names of the topology.
-	want := []string{"R1=ready", "client1=stopped", "leaf1=ready"}
+	// The nodes go by the names of the topology, in the order the UI lists them in.
+	want := []string{"client1=stopped", "leaf1=ready", "R1=ready"}
 	if diff := cmp.Diff(want, names); diff != "" {
 		t.Errorf("unexpected nodes (-want +got):\n%s", diff)
 	}

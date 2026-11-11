@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	"gopkg.in/yaml.v2"
 )
 
@@ -223,7 +224,7 @@ func readTopoFile(path string) topoFile {
 		return file
 	}
 
-	if name := sanitize(strings.TrimSpace(header.Name)); name != "" {
+	if name := clabinternaltuitermtext.Sanitize(strings.TrimSpace(header.Name)); name != "" {
 		file.name = name
 	}
 
@@ -374,7 +375,10 @@ func readTopoFiles(ctx context.Context, paths []string) []topoFile {
 	}
 
 	slices.SortFunc(files, func(a, b topoFile) int {
-		return cmp.Or(naturalCompare(a.name, b.name), strings.Compare(a.path, b.path))
+		return cmp.Or(
+			clabinternaltuitermtext.NaturalCompare(a.name, b.name),
+			strings.Compare(a.path, b.path),
+		)
 	})
 
 	return files

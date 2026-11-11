@@ -12,6 +12,7 @@ import (
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // The operations in this file change labs. Each one runs the containerlab command that
@@ -79,7 +80,7 @@ func (b *Backend) topologyFile(lab, file string) (string, error) {
 		return "", err
 	}
 
-	if !fileExists(abs) {
+	if !clabutils.FileOrDirExists(abs) {
 		return "", fmt.Errorf("topology file %s does not exist", abs)
 	}
 

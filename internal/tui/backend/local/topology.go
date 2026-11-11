@@ -23,6 +23,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
@@ -368,12 +369,12 @@ func topologyFromNodes(
 }
 
 func sortedNames(names iter.Seq[string]) []string {
-	return slices.SortedFunc(names, naturalCompare)
+	return slices.SortedFunc(names, clabinternaltuitermtext.NaturalCompare)
 }
 
 // oneLine makes a text fit on a line of the UI.
 func oneLine(s string) string {
-	return sanitize(strings.Join(strings.Fields(s), " "))
+	return clabinternaltuitermtext.Sanitize(strings.Join(strings.Fields(s), " "))
 }
 
 func cloneTopology(topo *clabinternaltuibackend.Topology) clabinternaltuibackend.Topology {

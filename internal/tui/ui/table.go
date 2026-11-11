@@ -11,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 )
 
@@ -275,12 +276,12 @@ func (t *Table) less(a, b int) bool {
 			c = 1
 		}
 	default:
-		c = naturalCompare(ca.Text, cb.Text)
+		c = clabinternaltuitermtext.NaturalCompare(ca.Text, cb.Text)
 	}
 
 	if c == 0 {
 		// Ties keep a stable, ascending order whatever the direction of the sort.
-		return naturalCompare(t.rows[a].Key, t.rows[b].Key) < 0
+		return clabinternaltuitermtext.NaturalCompare(t.rows[a].Key, t.rows[b].Key) < 0
 	}
 
 	if t.sortDesc {

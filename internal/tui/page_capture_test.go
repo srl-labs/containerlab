@@ -332,3 +332,23 @@ func TestHexDump(t *testing.T) {
 		t.Errorf("unexpected hex dump:\n%s", strings.Join(got, "\n"))
 	}
 }
+
+// TestRemoteCaptureExplainsSudo checks that the command of a capture from the user's
+// computer tells what sudo needs when it runs through sudo, and only then.
+func TestRemoteCaptureExplainsSudo(t *testing.T) {
+	m, _ := newTestModel(t, 120, 35)
+
+	text := func(command string) string {
+		return ansi.Strip(strings.Join(remoteCaptureLines(m, command), "\n"))
+	}
+
+	through := "ssh alice@192.0.2.10 'sudo -n containerlab capture -w -' | wireshark -k -i -"
+	if got := text(through); !strings.Contains(got, "without a password") {
+		t.Errorf("the page does not explain sudo:\n%s", got)
+	}
+
+	direct := "ssh alice@192.0.2.10 'containerlab capture -w -' | wireshark -k -i -"
+	if got := text(direct); strings.Contains(got, "without a password") {
+		t.Errorf("the page explains sudo for a command without it:\n%s", got)
+	}
+}

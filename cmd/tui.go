@@ -11,7 +11,9 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -98,7 +100,19 @@ func isInteractiveTerminal() bool {
 // bareCommandOpensTUI reports whether running containerlab without a command should open
 // the TUI rather than print the help.
 func bareCommandOpensTUI() bool {
-	return isInteractiveTerminal() && os.Getenv(noTUIEnv) == ""
+	return isInteractiveTerminal() && !noTUI(os.Getenv(noTUIEnv))
+}
+
+// noTUI reports whether the value of the variable that turns the TUI off does so. A
+// boolean is taken for what it says, any other value that is set turns the TUI off.
+func noTUI(value string) bool {
+	if value == "" {
+		return false
+	}
+
+	off, err := strconv.ParseBool(value)
+
+	return err != nil || off
 }
 
 // rootFn runs when containerlab is called without a command.
@@ -123,10 +137,6 @@ func tuiFn(ctx context.Context, o *Options) error {
 			"to list labs from a script")
 	}
 
-	if _, err := clabinternaltuitheme.New(o.TUI.Theme, true); err != nil {
-		return err
-	}
-
 	be, err := newTUIBackend(o)
 	if err != nil {
 		return err
@@ -135,7 +145,9 @@ func tuiFn(ctx context.Context, o *Options) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	restoreSignals := tuiSignals(cancel)
+	var running atomic.Bool
+
+	restoreSignals := tuiSignals(cancel, running.Load)
 	defer restoreSignals()
 
 	restoreLog := silenceLogger()
@@ -145,6 +157,7 @@ func tuiFn(ctx context.Context, o *Options) error {
 		Theme:   o.TUI.Theme,
 		Lab:     o.Global.TopologyName,
 		NoMouse: o.TUI.NoMouse,
+		Running: running.Store,
 	})
 	if err != nil {
 		return fmt.Errorf("the TUI stopped: %w", err)
@@ -175,13 +188,15 @@ func newTUIBackend(o *Options) (clabinternaltuibackend.Backend, error) {
 
 // tuiSignals takes over the handling of termination signals while the TUI runs. The
 // regular handler ends the process on the spot, which would leave the terminal in the
-// state the UI put it in. It returns a function that hands the signals back.
-func tuiSignals(quit context.CancelFunc) (restore func()) {
+// state the UI put it in. running tells whether the UI owns the terminal. It returns a
+// function that hands the signals back.
+func tuiSignals(quit context.CancelFunc, running func() bool) (restore func()) {
 	handle := func(sig os.Signal) {
-		// An interrupt can only come from outside the UI, where ctrl+c is a key like
-		// any other: it is the terminal signaling the session a node shell runs in.
-		// That session deals with it, the UI carries on.
-		if sig == syscall.SIGINT {
+		// While the UI owns the terminal, an interrupt can only come from outside of it,
+		// where ctrl+c is a key like any other: it is the terminal signaling the session
+		// a node shell runs in. That session deals with it, the UI carries on. Before
+		// and after, ie. while the labs are listed for the first time, it ends the UI.
+		if sig == syscall.SIGINT && running() {
 			return
 		}
 

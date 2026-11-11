@@ -18,6 +18,7 @@ import (
 	"time"
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -336,7 +337,7 @@ func mergeInterfaces(
 	}
 
 	slices.SortFunc(out, func(a, b clabinternaltuibackend.Interface) int {
-		return naturalCompare(a.Name, b.Name)
+		return clabinternaltuitermtext.NaturalCompare(a.Name, b.Name)
 	})
 
 	return out
@@ -540,7 +541,7 @@ type stderrTail struct {
 // ifaceStreamMessage passes the warnings and errors of the events command on to the
 // messages of the backend.
 func (b *Backend) ifaceStreamMessage(last *stderrTail, raw string) {
-	line := sanitize(raw)
+	line := clabinternaltuitermtext.Sanitize(raw)
 
 	_, level, msg, ok := parseLogLine(line)
 	if !ok {

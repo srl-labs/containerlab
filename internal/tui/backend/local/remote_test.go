@@ -143,7 +143,7 @@ func TestRemoteCapture(t *testing.T) {
 	}{
 		"through sudo": {
 			func(_ *Options, d *deps) { d.getenv = sshEnv },
-			"ssh -p 2222 alice@192.0.2.10 'sudo containerlab " + capture + "' | wireshark -k -i -",
+			"ssh -p 2222 alice@192.0.2.10 'sudo -n containerlab " + capture + "' | wireshark -k -i -",
 		},
 		"setuid binary": {
 			func(_ *Options, d *deps) {

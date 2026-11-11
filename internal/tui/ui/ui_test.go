@@ -65,24 +65,6 @@ func TestPadFitsExactly(t *testing.T) {
 	}
 }
 
-func TestSanitizeRemovesControlSequences(t *testing.T) {
-	tests := map[string]string{
-		"plain":                      "plain",
-		"\x1b[31mred\x1b[0m":         "red",
-		"move\x1b[2Aup":              "moveup",
-		"title\x1b]0;owned\x07after": "titleafter",
-		"bell\x07 and\rreturn":       "bell andreturn",
-		"tab\there":                  "tab    here",
-		"line\nbreak":                "linebreak",
-	}
-
-	for in, want := range tests {
-		if got := Sanitize(in); got != want {
-			t.Errorf("Sanitize(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestFitLinesReturnsTheRequestedSize(t *testing.T) {
 	got := FitLines("one\na line that is much too long\nthree\nfour", 8, 3)
 	lines := strings.Split(got, "\n")
@@ -95,24 +77,6 @@ func TestFitLinesReturnsTheRequestedSize(t *testing.T) {
 		if w := Width(line); w != 8 {
 			t.Errorf("line %d is %d cells wide, want 8: %q", i, w, line)
 		}
-	}
-}
-
-func TestNaturalLess(t *testing.T) {
-	ordered := []string{"leaf1", "leaf2", "leaf10", "leaf10a", "Spine1", "spine02", "spine3"}
-
-	for i := 0; i+1 < len(ordered); i++ {
-		if !NaturalLess(ordered[i], ordered[i+1]) {
-			t.Errorf("%q should sort before %q", ordered[i], ordered[i+1])
-		}
-
-		if NaturalLess(ordered[i+1], ordered[i]) {
-			t.Errorf("%q should not sort before %q", ordered[i+1], ordered[i])
-		}
-	}
-
-	if NaturalLess("leaf1", "leaf1") {
-		t.Error("a value must not sort before itself")
 	}
 }
 

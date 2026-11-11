@@ -14,6 +14,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -85,7 +86,8 @@ func publishedPort(ctr *clabruntime.GenericContainer) int {
 // enabled the link carries two keys, of which the first one alone gives read-only access.
 func parseSSHXLink(content string) (sshxLink, bool) {
 	for field := range strings.FieldsSeq(content) {
-		if !strings.HasPrefix(field, sshxLinkHost) || sanitize(field) != field {
+		if !strings.HasPrefix(field, sshxLinkHost) ||
+			clabinternaltuitermtext.Sanitize(field) != field {
 			continue
 		}
 

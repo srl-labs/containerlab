@@ -91,8 +91,10 @@ func detectPrivilege(euid, suid int, setuidBinary bool, check adminGroupCheck) p
 func currentPrivilege(exe string) privilege {
 	_, euid, suid := unix.Getresuid()
 
-	priv := detectPrivilege(euid, suid, isSetuidRoot(exe), adminGroupMembership)
-	priv.setuid = isSetuidRoot(exe)
+	setuid := isSetuidRoot(exe)
+
+	priv := detectPrivilege(euid, suid, setuid, adminGroupMembership)
+	priv.setuid = setuid
 
 	return priv
 }
@@ -183,7 +185,7 @@ func (b *Backend) wiresharkUnavailable() string {
 	return ""
 }
 
-// sudoUser describes the user who invoked sudo.
+// sudoUser describes the user who invoked sudo, or the setuid binary.
 type sudoUser struct {
 	cred *syscall.Credential
 	// env holds the variables that differ for that user.
@@ -191,21 +193,22 @@ type sudoUser struct {
 }
 
 // invokingUser returns the user a program should run as when this process only is root
-// because of sudo: a desktop program belongs to the session of the user who typed the
-// command. It returns nil when there is no such user.
-func invokingUser(euid int, getenv func(string) string) *sudoUser {
+// because of sudo or because its binary is setuid: a desktop program belongs to the
+// session of the user who typed the command, and some refuse to run with the privileges
+// of another user. ruid and rgid are the real user and group of this process, which a
+// setuid binary leaves to the user. It returns nil when there is no such user.
+func invokingUser(euid, ruid, rgid int, getenv func(string) string) *sudoUser {
 	if euid != 0 {
 		return nil
 	}
 
-	uid, err := strconv.ParseUint(getenv("SUDO_UID"), 10, 32)
-	if err != nil || uid == 0 {
-		return nil
-	}
+	uid, gid, ok := sudoIDs(getenv)
+	if !ok {
+		if ruid <= 0 || rgid < 0 {
+			return nil
+		}
 
-	gid, err := strconv.ParseUint(getenv("SUDO_GID"), 10, 32)
-	if err != nil {
-		gid = uid
+		uid, gid = uint64(ruid), uint64(rgid)
 	}
 
 	who := &sudoUser{cred: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}}
@@ -237,6 +240,21 @@ func invokingUser(euid int, getenv func(string) string) *sudoUser {
 	}
 
 	return who
+}
+
+// sudoIDs returns the user and group of the user who invoked sudo, unless that is root.
+func sudoIDs(getenv func(string) string) (uid, gid uint64, ok bool) {
+	uid, err := strconv.ParseUint(getenv("SUDO_UID"), 10, 32)
+	if err != nil || uid == 0 {
+		return 0, 0, false
+	}
+
+	gid, err = strconv.ParseUint(getenv("SUDO_GID"), 10, 32)
+	if err != nil {
+		gid = uid
+	}
+
+	return uid, gid, true
 }
 
 // withEnv returns environ with the given entries replacing the variables of the same name.

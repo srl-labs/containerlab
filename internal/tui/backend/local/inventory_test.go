@@ -367,24 +367,6 @@ func TestShareLinkIsNotReadTwice(t *testing.T) {
 	}
 }
 
-func TestNaturalCompare(t *testing.T) {
-	sorted := []string{
-		"", "e1-1", "e1-2", "e1-10", "eth0", "eth00", "eth1", "eth9", "eth10", "leaf", "leaf1",
-		"leaf1a", "leaf2", "leaf10", "leaf10b", "mgmt0",
-	}
-
-	for i := range sorted {
-		for j := range sorted {
-			got := naturalCompare(sorted[i], sorted[j])
-
-			switch {
-			case i < j && got >= 0, i > j && got <= 0, i == j && got != 0:
-				t.Errorf("naturalCompare(%q, %q) = %d", sorted[i], sorted[j], got)
-			}
-		}
-	}
-}
-
 func TestInspect(t *testing.T) {
 	b := newTestBackend(t)
 

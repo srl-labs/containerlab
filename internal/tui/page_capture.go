@@ -447,6 +447,10 @@ func (m *Model) remoteCapture(req *clabinternaltuibackend.CaptureRequest) tea.Cm
 	return m.copy("capture command", command)
 }
 
+// remoteSudo is how the command of a capture from the user's computer runs containerlab
+// through sudo.
+const remoteSudo = "sudo -n "
+
 // remoteCaptureLines explains the command of a capture from the user's computer. The
 // command is wrapped for reading; what is copied is the one line it is.
 func remoteCaptureLines(m *Model, command string) []string {
@@ -470,6 +474,14 @@ func remoteCaptureLines(m *Model, command string) []string {
 		"",
 		"The address in the command is the one your SSH session came in on. Use the " +
 			"name or address you normally reach this host with, should it differ.",
+	}
+
+	if strings.Contains(command, remoteSudo) {
+		notes = append(notes, "",
+			"The capture runs through sudo, which cannot ask for a password: SSH gives it "+
+				"no terminal to ask in. It needs sudo without a password for containerlab on "+
+				"this host, or a containerlab installed with the setuid bit, which members "+
+				"of the clab_admins group run without sudo.")
 	}
 
 	for _, note := range notes {

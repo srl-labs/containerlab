@@ -9,8 +9,10 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -33,6 +35,9 @@ type Options struct {
 	// Input and Output replace the terminal, for tests.
 	Input  io.Reader
 	Output io.Writer
+	// Running, when set, is told true once the UI takes the terminal over, and false once
+	// it handed it back.
+	Running func(bool)
 }
 
 // Run starts the backend and runs the TUI until the user quits or ctx is done.
@@ -45,10 +50,20 @@ func Run(ctx context.Context, be clabinternaltuibackend.Backend, opts Options) e
 		opts.Home, _ = os.UserHomeDir()
 	}
 
+	if opts.Running == nil {
+		opts.Running = func(bool) {}
+	}
+
 	if err := be.Start(ctx); err != nil {
+		if ctx.Err() != nil {
+			// The user stopped the UI while the labs were listed for the first time.
+			return nil
+		}
+
 		return err
 	}
-	defer be.Close()
+
+	defer closeBackend(be, opts.Output)
 
 	// The caller owns the handling of signals and ends the UI through the context.
 	programOpts := []tea.ProgramOption{tea.WithContext(ctx), tea.WithoutSignalHandler()}
@@ -60,11 +75,40 @@ func Run(ctx context.Context, be clabinternaltuibackend.Backend, opts Options) e
 		programOpts = append(programOpts, tea.WithOutput(opts.Output))
 	}
 
+	opts.Running(true)
 	_, err := tea.NewProgram(New(be, opts), programOpts...).Run()
+	opts.Running(false)
+
 	if errors.Is(err, tea.ErrProgramKilled) && ctx.Err() != nil {
 		// The context ending is a regular way to stop, not a failure.
 		return nil
 	}
 
 	return err
+}
+
+// closeBackend closes the backend once the UI handed the terminal back. Closing waits for
+// the operations that are still running to stop, which takes a while for one that cleans
+// up after itself, so the user is told what is waited for. out replaces the standard error
+// output, for tests.
+func closeBackend(be clabinternaltuibackend.Backend, out io.Writer) {
+	if out == nil {
+		out = os.Stderr
+	}
+
+	var running []string
+
+	jobs := be.Jobs()
+	for i := range jobs {
+		if !jobs[i].State.Done() {
+			running = append(running, jobs[i].Title)
+		}
+	}
+
+	if len(running) > 0 {
+		_, _ = fmt.Fprintf(out, "Waiting for %d operation(s) to stop: %s\n",
+			len(running), strings.Join(running, ", "))
+	}
+
+	be.Close()
 }

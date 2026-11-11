@@ -419,9 +419,12 @@ func (b *Backend) Start(ctx context.Context) error {
 	return nil
 }
 
-// Close stops the watchers, asks the running jobs to stop and waits a moment for all of
-// that to happen. A job that needs longer to clean up after itself, ie. a deployment that
-// is rolled back, is left to finish on its own.
+// Close stops the watchers, asks the running jobs to stop and waits for that to happen.
+// The jobs are waited for until they ended, also one that takes a while to clean up after
+// itself, ie. a deployment that is rolled back: their output is read through pipes, and a
+// command whose output is gone with this process is ended by the next line it prints. How
+// long that takes is bounded by the escalation of the signals that stop a job. The other
+// goroutines get a moment.
 func (b *Backend) Close() {
 	b.closeOnce.Do(func() {
 		b.jobs.cancelAll()
@@ -430,6 +433,18 @@ func (b *Backend) Close() {
 		b.wgMu.Lock()
 		b.closing = true
 		b.wgMu.Unlock()
+
+		ended := make(chan struct{})
+
+		go b.guard("close", func() {
+			b.jobs.awaitAll()
+			close(ended)
+		})
+
+		select {
+		case <-ended:
+		case <-time.After(b.jobs.graces.longest()):
+		}
 
 		done := make(chan struct{})
 

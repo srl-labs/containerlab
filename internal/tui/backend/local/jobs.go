@@ -18,6 +18,7 @@ import (
 	"unicode"
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 )
 
 const (
@@ -58,6 +59,12 @@ var defaultJobGraces = jobGraces{
 	capture:  captureGrace,
 	other:    otherGrace,
 	kill:     killGrace,
+}
+
+// longest returns the longest a job can take to end once it was asked to stop: the longest
+// grace, the one of the termination signal, and the time its output is still read.
+func (g *jobGraces) longest() time.Duration {
+	return max(g.rollback, g.capture, g.other) + g.kill + outputDrainDelay
 }
 
 func (g *jobGraces) of(kind clabinternaltuibackend.JobKind) time.Duration {
@@ -101,18 +108,25 @@ type jobSpec struct {
 	live bool
 }
 
-// lockKey names what a job locks: its lab, or its topology file for a lab without name.
-func (s *jobSpec) lockKey() string {
-	switch {
-	case s.shared:
-		return ""
-	case s.lab != "":
-		return "lab\x00" + s.lab
-	case s.topo != "":
-		return "file\x00" + s.topo
-	default:
-		return ""
+// lockKeys names what a job locks: its lab and its topology file. Both are locked, as a
+// request may name a lab by either of them, and two jobs must exclude each other as soon
+// as they share one.
+func (s *jobSpec) lockKeys() []string {
+	if s.shared {
+		return nil
 	}
+
+	var keys []string
+
+	if s.lab != "" {
+		keys = append(keys, "lab\x00"+s.lab)
+	}
+
+	if s.topo != "" {
+		keys = append(keys, "file\x00"+s.topo)
+	}
+
+	return keys
 }
 
 // job is a containerlab command run on behalf of the UI.
@@ -310,19 +324,19 @@ type jobManager struct {
 
 // start runs a job. It fails with ErrLabBusy when the lab has a job that excludes others.
 func (m *jobManager) start(spec *jobSpec) (*job, error) {
-	key := spec.lockKey()
+	keys := spec.lockKeys()
 
 	m.mu.Lock()
 
-	if _, held := m.locks[key]; held && key != "" {
-		m.mu.Unlock()
+	for _, key := range keys {
+		if _, held := m.locks[key]; held {
+			m.mu.Unlock()
 
-		return nil, clabinternaltuibackend.ErrLabBusy
+			return nil, clabinternaltuibackend.ErrLabBusy
+		}
 	}
 
-	if key != "" {
-		m.locks[key] = nil
-	}
+	m.setLocks(keys, nil)
 
 	m.next++
 	id := m.next
@@ -397,7 +411,7 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 	proc, err := m.run.start(procs[0])
 	if err != nil {
 		m.mu.Lock()
-		delete(m.locks, key)
+		m.releaseLocks(keys, nil)
 		m.mu.Unlock()
 
 		return nil, fmt.Errorf("failed to run %s: %w", m.exe, err)
@@ -425,10 +439,7 @@ func (m *jobManager) start(spec *jobSpec) (*job, error) {
 
 	m.mu.Lock()
 	m.jobs = append(m.jobs, j)
-
-	if key != "" {
-		m.locks[key] = j
-	}
+	m.setLocks(keys, j)
 
 	m.forgetOldJobs()
 	m.mu.Unlock()
@@ -481,7 +492,7 @@ func (m *jobManager) addLine(j *job, stderr bool, raw string) {
 	now := m.clock.Now()
 
 	j.mu.Lock()
-	j.record(now, stderr, sanitize(raw))
+	j.record(now, stderr, clabinternaltuitermtext.Sanitize(raw))
 	j.mu.Unlock()
 
 	m.output.poke()
@@ -502,10 +513,7 @@ func (m *jobManager) wait(j *job, writers []*lineWriter) {
 
 	m.mu.Lock()
 
-	if key := j.spec.lockKey(); key != "" && m.locks[key] == j {
-		delete(m.locks, key)
-	}
-
+	m.releaseLocks(j.spec.lockKeys(), j)
 	m.mu.Unlock()
 
 	close(j.done)
@@ -607,6 +615,34 @@ func (m *jobManager) cancelAll() {
 
 	for _, j := range jobs {
 		m.interrupt(j, true)
+	}
+}
+
+// awaitAll waits until every job ended.
+func (m *jobManager) awaitAll() {
+	m.mu.Lock()
+	jobs := slices.Clone(m.jobs)
+	m.mu.Unlock()
+
+	for _, j := range jobs {
+		<-j.done
+	}
+}
+
+// setLocks makes the job hold the keys. A nil job reserves them for a job being started.
+// The caller holds the mutex.
+func (m *jobManager) setLocks(keys []string, j *job) {
+	for _, key := range keys {
+		m.locks[key] = j
+	}
+}
+
+// releaseLocks removes the keys the job holds. The caller holds the mutex.
+func (m *jobManager) releaseLocks(keys []string, j *job) {
+	for _, key := range keys {
+		if held, ok := m.locks[key]; ok && held == j {
+			delete(m.locks, key)
+		}
 	}
 }
 

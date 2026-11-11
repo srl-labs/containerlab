@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 )
@@ -27,13 +26,6 @@ const (
 	// maxLineBytes bounds a line of output. A longer line, ie. binary data without line
 	// breaks, is cut into pieces of this size.
 	maxLineBytes = 64 << 10
-	// tabWidth is the distance between tab stops when tabs are expanded.
-	tabWidth = 8
-
-	escape = 0x1b
-	bell   = 0x07
-	// c1CSI is the single character form of the control sequence introducer.
-	c1CSI = 0x9b
 )
 
 // ring keeps the most recent items of a sequence and remembers how many were added in
@@ -138,123 +130,6 @@ func (w *lineWriter) close() {
 	if len(w.buf) > 0 {
 		w.flush()
 	}
-}
-
-// sanitize makes a line of untrusted output safe to show in a terminal: escape sequences
-// and control characters are removed, tabs are expanded and invalid UTF-8 is replaced. Of a
-// line that was rewritten with carriage returns only the last version is kept.
-func sanitize(s string) string {
-	s = strings.TrimRight(s, "\r")
-	if !needsSanitizing(s) {
-		return s
-	}
-
-	var (
-		out strings.Builder
-		col int
-	)
-
-	out.Grow(len(s))
-
-	for i := 0; i < len(s); {
-		r, size := utf8.DecodeRuneInString(s[i:])
-
-		switch {
-		case r == escape:
-			i += escapeLen(s[i:])
-
-			continue
-		case r == c1CSI:
-			i += size + csiLen(s[i+size:])
-
-			continue
-		case r == '\r':
-			out.Reset()
-
-			col = 0
-		case r == '\t':
-			pad := tabWidth - col%tabWidth
-			out.WriteString(strings.Repeat(" ", pad))
-
-			col += pad
-		case unicode.IsControl(r):
-		default:
-			// An invalid byte decodes to the replacement character, which is what is kept.
-			out.WriteRune(r)
-
-			col++
-		}
-
-		i += size
-	}
-
-	return out.String()
-}
-
-func needsSanitizing(s string) bool {
-	for _, r := range s {
-		if r == utf8.RuneError || unicode.IsControl(r) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// escapeLen returns the length of the escape sequence s starts with.
-func escapeLen(s string) int {
-	if len(s) < 2 { //nolint:mnd // the escape character and what it introduces
-		return len(s)
-	}
-
-	switch s[1] {
-	case '[':
-		return 2 + csiLen(s[2:]) //nolint:mnd // the introducer is two bytes long
-	case ']', 'P', 'X', '^', '_':
-		return 2 + stringSeqLen(s[2:]) //nolint:mnd // the introducer is two bytes long
-	}
-
-	// A plain escape sequence: optional intermediate bytes and one final byte.
-	n := 1
-	for n < len(s) && s[n] >= 0x20 && s[n] <= 0x2f {
-		n++
-	}
-
-	if n < len(s) {
-		n++
-	}
-
-	return n
-}
-
-// csiLen returns the length of the control sequence that follows its introducer: parameter
-// and intermediate bytes up to the final byte.
-func csiLen(s string) int {
-	n := 0
-	for n < len(s) && s[n] >= 0x20 && s[n] <= 0x3f {
-		n++
-	}
-
-	if n < len(s) && s[n] >= 0x40 && s[n] <= 0x7e {
-		n++
-	}
-
-	return n
-}
-
-// stringSeqLen returns the length of the payload of an operating system command or a device
-// control string, which lasts until a bell or a string terminator.
-func stringSeqLen(s string) int {
-	for n := range len(s) {
-		switch {
-		case s[n] == bell:
-			return n + 1
-		case s[n] == escape && n+1 < len(s) && s[n+1] == '\\':
-			return n + 2 //nolint:mnd // the terminator is two bytes long
-		}
-	}
-
-	return len(s)
 }
 
 // parseLogLine splits a line of the containerlab log, "15:04:05 INFO message", into the

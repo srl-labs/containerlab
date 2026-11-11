@@ -198,8 +198,9 @@ func (b *Backend) runWireshark(j *job, relay *captureRelay, wireshark string) {
 }
 
 // wiresharkSpec describes the Wireshark process: detached from the terminal the UI owns,
-// reading the capture from its standard input, and run as the user who called sudo when
-// that is how this process became root, as it belongs to that user's desktop session.
+// reading the capture from its standard input, and run as the user who called sudo or the
+// setuid binary when that is how this process became root, as it belongs to that user's
+// desktop session and refuses to run setuid.
 func (b *Backend) wiresharkSpec(wireshark string) *procSpec {
 	spec := &procSpec{
 		path:    wireshark,
@@ -209,7 +210,7 @@ func (b *Backend) wiresharkSpec(wireshark string) *procSpec {
 		session: true,
 	}
 
-	if who := invokingUser(os.Geteuid(), b.getenv); who != nil {
+	if who := invokingUser(os.Geteuid(), os.Getuid(), os.Getgid(), b.getenv); who != nil {
 		spec.cred = who.cred
 		spec.env = withEnv(spec.env, who.env)
 	}

@@ -59,7 +59,8 @@ func (t Topic) Has(other Topic) bool { return t&other != 0 }
 type Backend interface {
 	// Start begins watching the runtime. It returns once the first inventory is loaded.
 	Start(ctx context.Context) error
-	// Close stops the watchers and cancels the running jobs and streams.
+	// Close stops the watchers and cancels the running jobs and streams. It waits for the
+	// jobs to stop, which can take as long as cleaning up after a canceled deployment.
 	Close()
 
 	// Notify returns a channel that receives a value whenever state has changed since

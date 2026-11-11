@@ -500,16 +500,24 @@ func TestInvokingUser(t *testing.T) {
 	env := map[string]string{"SUDO_UID": strconv.Itoa(uid), "SUDO_GID": strconv.Itoa(gid)}
 	getenv := func(key string) string { return env[key] }
 
+	noEnv := func(string) string { return "" }
+
 	// Without root privileges there is nobody else to run a program as.
-	if who := invokingUser(uid+1, getenv); who != nil {
+	if who := invokingUser(uid+1, uid+1, gid, getenv); who != nil {
 		t.Errorf("a user to switch to although the process is not root: %+v", who)
 	}
 
-	if who := invokingUser(0, func(string) string { return "" }); who != nil {
-		t.Errorf("a user to switch to although sudo was not used: %+v", who)
+	if who := invokingUser(0, 0, 0, noEnv); who != nil {
+		t.Errorf("a user to switch to although neither sudo nor setuid was used: %+v", who)
 	}
 
-	who := invokingUser(0, getenv)
+	// A setuid binary leaves the real user to the one who ran it.
+	if who := invokingUser(0, 4242, 4343, noEnv); who == nil || who.cred.Uid != 4242 ||
+		who.cred.Gid != 4343 {
+		t.Errorf("unexpected user for a setuid binary: %+v", who)
+	}
+
+	who := invokingUser(0, 0, 0, getenv)
 	if uid == 0 {
 		// Root calling sudo stays root.
 		if who != nil {

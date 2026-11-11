@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"os"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -151,5 +152,48 @@ func TestAwaitSignalHonorsDelegate(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("the signal was not returned once the delegate was gone")
+	}
+}
+
+func TestNoTUI(t *testing.T) {
+	for value, want := range map[string]bool{
+		"": false, "0": false, "false": false, "FALSE": false,
+		"1": true, "true": true, "yes": true,
+	} {
+		if got := noTUI(value); got != want {
+			t.Errorf("noTUI(%q) = %v, want %v", value, got, want)
+		}
+	}
+}
+
+// TestTUISignalsInterruptBeforeTheUIRuns checks that an interrupt ends the TUI until the UI
+// owns the terminal, and is left to the sessions started from it afterwards.
+func TestTUISignalsInterruptBeforeTheUIRuns(t *testing.T) {
+	var running atomic.Bool
+
+	quits := 0
+	restore := tuiSignals(func() { quits++ }, running.Load)
+
+	defer restore()
+
+	handle := *signalDelegate.Load()
+
+	handle(syscall.SIGINT)
+
+	if quits != 1 {
+		t.Fatalf("an interrupt while the labs are listed did not end the TUI")
+	}
+
+	running.Store(true)
+	handle(syscall.SIGINT)
+
+	if quits != 1 {
+		t.Errorf("an interrupt while the UI runs ended it")
+	}
+
+	handle(syscall.SIGTERM)
+
+	if quits != 2 {
+		t.Errorf("a termination request while the UI runs did not end it")
 	}
 }

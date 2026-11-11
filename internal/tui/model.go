@@ -101,6 +101,8 @@ func New(be clabinternaltuibackend.Backend, opts Options) *Model {
 		opts.Now = time.Now
 	}
 
+	// Run rejects a theme it does not know. A model created without it falls back to the
+	// default one.
 	th, err := clabinternaltuitheme.New(opts.Theme, true)
 	if err != nil {
 		th = clabinternaltuitheme.Default(true)

@@ -16,6 +16,7 @@ import (
 
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 )
 
 const (
@@ -142,7 +143,7 @@ func cleanOutput(s string) string {
 
 	lines := strings.Split(s, "\n")
 	for i := range lines {
-		lines[i] = sanitize(lines[i])
+		lines[i] = clabinternaltuitermtext.Sanitize(lines[i])
 	}
 
 	s = strings.Join(lines, "\n")

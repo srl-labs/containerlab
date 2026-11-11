@@ -8,7 +8,6 @@ import (
 	"cmp"
 	"context"
 	"maps"
-	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -18,8 +17,10 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const stateRunning = "running"
@@ -111,7 +112,7 @@ func buildLabs(containers []clabruntime.GenericContainer, env *inventoryEnv) []*
 	tellApart(labs)
 
 	slices.SortFunc(labs, func(a, b *labRecord) int {
-		return naturalCompare(a.lab.Name, b.lab.Name)
+		return clabinternaltuitermtext.NaturalCompare(a.lab.Name, b.lab.Name)
 	})
 
 	return labs
@@ -187,7 +188,7 @@ func (rec *labRecord) finish(env *inventoryEnv) {
 	lab := &rec.lab
 
 	slices.SortFunc(lab.Nodes, func(a, b clabinternaltuibackend.Node) int {
-		return cmp.Or(naturalCompare(a.Name, b.Name),
+		return cmp.Or(clabinternaltuitermtext.NaturalCompare(a.Name, b.Name),
 			strings.Compare(a.Container, b.Container))
 	})
 
@@ -309,44 +310,6 @@ func realPath(path string) string {
 	}
 
 	return resolved
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-
-	return err == nil
-}
-
-// naturalCompare orders strings with the numbers in them compared by value, so that leaf2
-// sorts before leaf10. Strings that only differ in how their numbers are written, ie. by
-// leading zeros, are ordered as plain strings.
-func naturalCompare(a, b string) int {
-	return cmp.Or(compareNumbersByValue(a, b), strings.Compare(a, b))
-}
-
-func compareNumbersByValue(a, b string) int {
-	for a != "" && b != "" {
-		if isDigit(a[0]) && isDigit(b[0]) {
-			an, bn := digits(a), digits(b)
-			a, b = a[len(an):], b[len(bn):]
-
-			// Without leading zeros the longer number is the larger one.
-			an, bn = strings.TrimLeft(an, "0"), strings.TrimLeft(bn, "0")
-			if c := cmp.Or(cmp.Compare(len(an), len(bn)), strings.Compare(an, bn)); c != 0 {
-				return c
-			}
-
-			continue
-		}
-
-		if a[0] != b[0] {
-			return cmp.Compare(a[0], b[0])
-		}
-
-		a, b = a[1:], b[1:]
-	}
-
-	return cmp.Compare(len(a), len(b))
 }
 
 func isDigit(c byte) bool { return c >= '0' && c <= '9' }
@@ -521,7 +484,7 @@ func (b *Backend) reload(ctx context.Context) error {
 
 	labs := buildLabs(containers, &inventoryEnv{
 		hostname: b.hostname,
-		exists:   fileExists,
+		exists:   clabutils.FileOrDirExists,
 		sshxLink: b.shares.link,
 	})
 

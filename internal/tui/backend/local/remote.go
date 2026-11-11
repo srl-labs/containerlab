@@ -120,6 +120,9 @@ func sshDestination(user, connection string) string {
 	return destination
 }
 
+// remoteSudo runs a command with root privileges in a session without terminal.
+const remoteSudo = "sudo -n "
+
 // RemoteCapture returns the command line that runs a capture from the computer of the
 // user and shows it in the Wireshark there: the capture command runs here, through SSH,
 // and its output is piped into Wireshark at the other end.
@@ -146,7 +149,9 @@ func (b *Backend) RemoteCapture(req clabinternaltuibackend.CaptureRequest) (stri
 
 // remoteProgram returns how the containerlab binary is run by a user who logs in through
 // SSH: by its name when that finds this binary, and through sudo unless the binary or the
-// user has root privileges anyway.
+// user has root privileges anyway. SSH gives the command no terminal, which leaves sudo
+// none to ask for a password in: it is told not to ask, which makes it fail right away
+// with a message that says so, rather than with Wireshark waiting for packets.
 func (b *Backend) remoteProgram(user string) string {
 	program := shellQuote(b.exe)
 
@@ -156,7 +161,7 @@ func (b *Backend) remoteProgram(user string) string {
 
 	// A lab runtime is reached as the user, with the access to the cluster the user has.
 	if !b.priv.setuid && user != rootUser && b.lrt == nil {
-		program = "sudo " + program
+		program = remoteSudo + program
 	}
 
 	return program

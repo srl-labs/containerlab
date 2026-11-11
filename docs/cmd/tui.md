@@ -15,7 +15,7 @@ It shows live tables of labs, nodes, interfaces and links, and runs the usual op
 * capture packets and watch them live in the UI, in Wireshark or keep them in a file;
 * share a terminal with [sshx](tools/sshx/attach.md) or [GoTTY](tools/gotty/attach.md).
 
-Running `containerlab` without a command opens the same UI when it is run in a terminal. Scripts are not affected: outside of a terminal the help is printed, as before. Set the `CLAB_NO_TUI` environment variable to get the help in a terminal as well.
+Running `containerlab` without a command opens the same UI when it is run in a terminal. Scripts are not affected: outside of a terminal the help is printed, as before. Set the `CLAB_NO_TUI` environment variable, ie. `CLAB_NO_TUI=1`, to get the help in a terminal as well; `CLAB_NO_TUI=0` or `false` leaves the UI on.
 
 ## Usage
 
@@ -138,7 +138,7 @@ Copying uses the clipboard of your terminal, so it also works when the UI runs o
 | `live view` | The packets are decoded in the UI, one line each, as they cross the link. |
 | `live view + file` | The same, and the capture is written to a pcapng file. |
 | `file` | The capture is written to a pcapng file, to open later. |
-| `my computer` | Nothing is captured yet: the UI gives you a command to run on your own computer, which runs the capture through SSH and pipes it into the Wireshark there. Offered when the UI is used through SSH. |
+| `my computer` | Nothing is captured yet: the UI gives you a command to run on your own computer, which runs the capture through SSH and pipes it into the Wireshark there. Offered when the UI is used through SSH. Unless containerlab is installed with the setuid bit and you are a member of the `clab_admins` group, the command runs containerlab with `sudo -n`, which needs sudo without a password on the host: SSH gives sudo no terminal to ask for one. |
 
 The live view lists the time, the interface, the addresses, the protocol and a summary of every packet. It follows the newest packet until you move up; `f`, the space bar or `G` follow again. `⏎` shows the protocol headers and the bytes of the packet under the cursor, and `/` filters the list, ie. by `bgp`, an address or `!lldp`. `C` stops the capture, and the packets stay to look at; `l` shows what the capture command logged. The capture is a job like any other: it keeps running when you leave the view, and the jobs view (`6`) leads back to it. The last 10000 packets are kept.
 

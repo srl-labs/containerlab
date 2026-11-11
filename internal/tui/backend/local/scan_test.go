@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var unlimitedScan = scanLimits{dirs: scanMaxDirs, files: scanMaxFiles}
@@ -291,12 +292,12 @@ func TestTopologyFileMatching(t *testing.T) {
 
 	deployed := buildLabs(
 		[]clabruntime.GenericContainer{nodeContainer("lab1", "n1", topo)},
-		&inventoryEnv{exists: fileExists, sshxLink: func(string) sshxLink { return sshxLink{} }},
+		&inventoryEnv{exists: clabutils.FileOrDirExists, sshxLink: func(string) sshxLink { return sshxLink{} }},
 	)[0]
 	moved := nodeContainer("lab1", "n1", filepath.Join(dir, "moved.clab.yml"))
 	orphaned := buildLabs(
 		[]clabruntime.GenericContainer{moved},
-		&inventoryEnv{exists: fileExists, sshxLink: func(string) sshxLink { return sshxLink{} }},
+		&inventoryEnv{exists: clabutils.FileOrDirExists, sshxLink: func(string) sshxLink { return sshxLink{} }},
 	)[0]
 
 	if deployed.lab.TopoMissing || !orphaned.lab.TopoMissing {

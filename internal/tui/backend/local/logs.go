@@ -13,6 +13,7 @@ import (
 	"time"
 
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -158,7 +159,7 @@ func parseContainerLogLine(raw string, timestamps bool) clabinternaltuibackend.L
 		}
 	}
 
-	line.Text = sanitize(raw)
+	line.Text = clabinternaltuitermtext.Sanitize(raw)
 	line.Level = detectLevel(line.Text)
 
 	return line

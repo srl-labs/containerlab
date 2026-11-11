@@ -20,6 +20,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -357,7 +358,7 @@ func desktopEnv(key string) string {
 func (b *testBackend) setLabs(containers ...clabruntime.GenericContainer) {
 	b.inv.replace(buildLabs(containers, &inventoryEnv{
 		hostname: "host",
-		exists:   fileExists,
+		exists:   clabutils.FileOrDirExists,
 		sshxLink: b.shares.link,
 	}))
 }

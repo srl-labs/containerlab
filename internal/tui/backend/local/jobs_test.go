@@ -296,6 +296,13 @@ func TestOneJobPerLab(t *testing.T) {
 		t.Fatalf("job for the same file: err = %v, want ErrLabBusy", err)
 	}
 
+	// A request that names the file only holds a lock of its own on it: the deployment
+	// of the lab holds the same one.
+	redeploy := clabinternaltuibackend.RedeployRequest{TopoFile: req.TopoFile}
+	if _, err := b.Redeploy(redeploy); !errors.Is(err, clabinternaltuibackend.ErrLabBusy) {
+		t.Fatalf("redeploy of the file: err = %v, want ErrLabBusy", err)
+	}
+
 	other, err := b.Deploy(deployFile(t, "lab2"))
 	if err != nil {
 		t.Fatalf("job for another lab: %v", err)
@@ -644,4 +651,50 @@ func TestJobOutputIsSignaled(t *testing.T) {
 	eventually(t, "the end of the job to be signaled", func() bool {
 		return b.drainTopics().Has(clabinternaltuibackend.TopicJobs)
 	})
+}
+
+// TestCloseWaitsForRollback quits while a deployment runs. The deployment is rolled back,
+// which takes longer than the other goroutines get: its output must still be read until
+// it ended, or the command would be ended by the next line it prints.
+func TestCloseWaitsForRollback(t *testing.T) {
+	b := newTestBackend(t)
+
+	id, err := b.Deploy(deployFile(t, "lab1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proc := b.run.proc(t, 0)
+	closed := make(chan struct{})
+
+	go func() {
+		b.Close()
+		close(closed)
+	}()
+
+	proc.awaitSignals(t, 1)
+
+	if got := proc.received()[0]; got != syscall.SIGINT {
+		t.Fatalf("the deployment got %v, want SIGINT", got)
+	}
+
+	select {
+	case <-closed:
+		t.Fatal("Close returned while the deployment was rolled back")
+	case <-time.After(closeWait + 200*time.Millisecond):
+	}
+
+	proc.stderr("10:00:00 INFO Removing containers\n")
+	proc.exitWith(1)
+
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Close did not return after the deployment ended")
+	}
+
+	lines := b.JobOutput(id, 0)
+	if len(lines) == 0 || !strings.Contains(lines[len(lines)-1].Text, "Removing containers") {
+		t.Errorf("the output of the rollback was not read: %+v", lines)
+	}
 }

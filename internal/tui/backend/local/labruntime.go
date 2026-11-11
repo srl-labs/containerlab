@@ -17,6 +17,7 @@ import (
 	"github.com/go-logr/logr"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabinternaltuibackend "github.com/srl-labs/containerlab/internal/tui/backend"
+	clabinternaltuitermtext "github.com/srl-labs/containerlab/internal/tui/termtext"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	"k8s.io/client-go/rest"
@@ -727,11 +728,11 @@ func linksFromInterfaces(
 	}
 
 	slices.SortFunc(links, func(a, b clabinternaltuibackend.Link) int {
-		if c := naturalCompare(a.A.Node, b.A.Node); c != 0 {
+		if c := clabinternaltuitermtext.NaturalCompare(a.A.Node, b.A.Node); c != 0 {
 			return c
 		}
 
-		return naturalCompare(a.A.Interface, b.A.Interface)
+		return clabinternaltuitermtext.NaturalCompare(a.A.Interface, b.A.Interface)
 	})
 
 	return links
