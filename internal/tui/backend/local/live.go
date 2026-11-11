@@ -75,8 +75,10 @@ func (f *liveFeed) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// close ends the feed, which tells the decoder that the capture is complete.
-func (f *liveFeed) close() {
+// close ends the feed, which tells the decoder that the capture is complete. It returns
+// the error of closing the capture file: the end of the capture may then be missing
+// from it.
+func (f *liveFeed) close() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -85,10 +87,14 @@ func (f *liveFeed) close() {
 		f.decoder = nil
 	}
 
-	if f.file != nil {
-		f.file.Close()
-		f.file = nil
+	if f.file == nil {
+		return nil
 	}
+
+	err := f.file.Close()
+	f.file = nil
+
+	return err
 }
 
 // captureLive starts a capture whose packets are decoded for the UI.
@@ -125,7 +131,8 @@ func (b *Backend) captureLive(
 
 	j, err := b.jobs.start(spec)
 	if err != nil {
-		feed.close()
+		// Nothing was written to the file, closing it has nothing to lose.
+		_ = feed.close()
 		stream.Close()
 
 		return 0, err
@@ -138,7 +145,12 @@ func (b *Backend) captureLive(
 	b.spawn("capture decoder", func() { b.decodeCapture(j, stream) })
 	b.spawn("capture end", func() {
 		<-j.done
-		feed.close()
+
+		if err := feed.close(); err != nil {
+			j.note(b.clock.Now(), levelWarn,
+				fmt.Sprintf("the capture file may be incomplete: %v", err))
+			b.jobs.output.poke()
+		}
 	})
 
 	return j.info.ID, nil

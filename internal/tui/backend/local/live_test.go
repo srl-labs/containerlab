@@ -6,6 +6,7 @@ package local
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -271,6 +272,31 @@ func TestLiveCaptureFileThatCannotBeWritten(t *testing.T) {
 
 	if b.run.count() != 0 {
 		t.Error("a capture was started without a place for its file")
+	}
+}
+
+// TestLiveFeedReportsFileThatCannotBeClosed checks that the error of closing the capture
+// file is not lost, as the end of the capture may be missing from the file then.
+func TestLiveFeedReportsFileThatCannotBeClosed(t *testing.T) {
+	file, err := os.Create(filepath.Join(t.TempDir(), "out.pcapng"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	feed := &liveFeed{file: file}
+
+	// A file that is closed already cannot be closed again.
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := feed.close(); !errors.Is(err, os.ErrClosed) {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// The feed is closed once, whatever came of it.
+	if err := feed.close(); err != nil {
+		t.Errorf("closing the feed again: %v", err)
 	}
 }
 
