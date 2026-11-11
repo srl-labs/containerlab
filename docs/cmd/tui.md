@@ -12,7 +12,7 @@ It shows live tables of labs, nodes, interfaces and links, and runs the usual op
 * follow and search the logs of a node;
 * watch the traffic rate of every interface and link, and the CPU and memory use of every node;
 * set and clear link impairments (delay, jitter, loss, rate, corruption);
-* capture packets into a local Wireshark or a file;
+* capture packets and watch them live in the UI, in Wireshark or keep them in a file;
 * share a terminal with [sshx](tools/sshx/attach.md) or [GoTTY](tools/gotty/attach.md).
 
 Running `containerlab` without a command opens the same UI when it is run in a terminal. Scripts are not affected: outside of a terminal the help is printed, as before. Set the `CLAB_NO_TUI` environment variable to get the help in a terminal as well.
@@ -103,11 +103,29 @@ Keys that change something are upper case and ask for confirmation, showing the 
 | node | `W` | save the configuration |
 | node | `y` | copy a value: name, addresses, image, … |
 | interface, link | `n` / `N` | impair: set delay, jitter, loss, rate and corruption / remove the impairments |
-| interface, link | `C` | capture packets |
+| interface, link | `C` | [capture packets](#packet-capture) |
 | interface | `m` | copy the MAC address |
 | job | `C` | cancel |
 
 Copying uses the clipboard of your terminal, so it also works when the UI runs on a remote host over SSH, provided the terminal supports it.
+
+## Packet capture
+
+`C` on an interface or a link starts a capture. The dialog asks where the packets go:
+
+| Send to | What happens |
+| --- | --- |
+| `wireshark` | Wireshark opens on the host and shows the packets live. Offered when Wireshark is installed and a graphical display is available. |
+| `live view` | The packets are decoded in the UI, one line each, as they cross the link. |
+| `live view + file` | The same, and the capture is written to a pcapng file. |
+| `file` | The capture is written to a pcapng file, to open later. |
+| `my computer` | Nothing is captured yet: the UI gives you a command to run on your own computer, which runs the capture through SSH and pipes it into the Wireshark there. Offered when the UI is used through SSH. |
+
+The live view lists the time, the interface, the addresses, the protocol and a summary of every packet. It follows the newest packet until you move up; `f`, the space bar or `G` follow again. `⏎` shows the protocol headers and the bytes of the packet under the cursor, and `/` filters the list, ie. by `bgp`, an address or `!lldp`. `C` stops the capture, and the packets stay to look at; `l` shows what the capture command logged. The capture is a job like any other: it keeps running when you leave the view, and the jobs view (`6`) leads back to it. The last 10000 packets are kept.
+
+The live view names the common protocols of a network lab, among them ARP, LLDP, LACP, STP, ICMP, BGP, OSPF, IS-IS, BFD, VRRP, DNS and DHCP, together with the VLAN, MPLS and VXLAN encapsulations around them. It does not replace Wireshark: use one of the other choices when you need every field of a protocol.
+
+The command for your own computer is copied to the clipboard and shown on the screen. It uses the address your SSH session came in on, which is not the one you typed when there is a jump host or address translation on the way; replace it with the name you normally use in that case.
 
 ## Topology map
 
