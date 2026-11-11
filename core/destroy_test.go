@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -942,6 +943,43 @@ topology:
 	}
 	// the mgmt-net link nodes are shared by the package, release their endpoints
 	t.Cleanup(cc.resetResolvedLinks)
+}
+
+// TestMakeCopyForDestroyKeepsTopologyEnv verifies that the destroy copy expands the topology
+// with the env vars the lab was deployed with, not with the process environment.
+func TestMakeCopyForDestroyKeepsTopologyEnv(t *testing.T) {
+	registerMgmtResolveRuntime()
+	setMgmtResolveBehavior(t, &mgmtResolveBehavior{})
+	t.Setenv("LAB_SUFFIX", "process")
+
+	topo := writeTopo(t, `
+name: env-${LAB_SUFFIX:=unset}
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+`)
+
+	c, err := NewContainerLab(
+		WithTimeout(time.Minute),
+		WithTopologyEnv([]string{"LAB_SUFFIX=given"}),
+		WithTopoPath(topo, nil),
+		WithRuntime("mgmtresolvetest", &clabruntime.RuntimeConfig{}),
+		WithSkippedBindsPathsCheck(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cc, err := c.makeCopyForDestroy(context.Background(), topo, "", *NewDestroyOptions())
+	if err != nil {
+		t.Fatalf("makeCopyForDestroy failed: %v", err)
+	}
+
+	if d := cmp.Diff("env-given", cc.Config.Name); d != "" {
+		t.Fatalf("lab name mismatch (-want +got):\n%s", d)
+	}
 }
 
 func boolToInt(b bool) int {

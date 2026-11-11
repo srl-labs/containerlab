@@ -742,7 +742,11 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
-		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplateWithEnv(
+			bytes.NewReader(c),
+			n.Cfg,
+			n.Cfg.TopologyEnv,
+		)
 		if err != nil {
 			return err
 		}

@@ -991,18 +991,24 @@ func (t *Topology) GetStages(nodeName string) (*Stages, error) {
 }
 
 func (t *Topology) ImportEnvs() {
-	t.Defaults.ImportEnvs()
+	t.ImportEnvsFrom(nil)
+}
+
+// ImportEnvsFrom imports the env vars of env (key=value entries) on every level
+// that sets __IMPORT_ENVS to true. A nil env imports the process environment.
+func (t *Topology) ImportEnvsFrom(env []string) {
+	t.Defaults.ImportEnvsFrom(env)
 
 	for _, k := range t.Kinds {
-		k.ImportEnvs()
+		k.ImportEnvsFrom(env)
 	}
 
 	for _, g := range t.Groups {
-		g.ImportEnvs()
+		g.ImportEnvsFrom(env)
 	}
 
 	for _, n := range t.Nodes {
-		n.ImportEnvs()
+		n.ImportEnvsFrom(env)
 	}
 }
 
