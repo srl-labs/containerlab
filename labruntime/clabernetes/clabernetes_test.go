@@ -780,20 +780,18 @@ func TestWaitReadyTimeoutReportsPendingNodes(t *testing.T) {
 }
 
 func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
+	// the progress is logged to the logger in the context
 	var output bytes.Buffer
-	oldLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel)
-	log.SetOutput(&output)
-	defer func() {
-		log.SetLevel(oldLevel)
-		log.SetOutput(os.Stderr)
-	}()
+	ctx := log.WithContext(context.Background(), log.New(&output))
 
 	progress := nodeReadinessProgress{}
-	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
-		{Name: "node1", State: "notready"},
-		{Name: "node2", State: "ready", Ready: true},
-	}})
+	progress.report(
+		ctx,
+		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+			{Name: "node1", State: "notready"},
+			{Name: "node2", State: "ready", Ready: true},
+		}},
+	)
 
 	got := output.String()
 	if strings.Contains(got, "node=node1") {
@@ -807,10 +805,13 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	}
 
 	output.Reset()
-	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
-		{Name: "node1", State: "ready", Ready: true},
-		{Name: "node2", State: "ready", Ready: true},
-	}})
+	progress.report(
+		ctx,
+		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+			{Name: "node1", State: "ready", Ready: true},
+			{Name: "node2", State: "ready", Ready: true},
+		}},
+	)
 	got = output.String()
 	if strings.Count(got, "C9s node is ready") != 1 ||
 		!strings.Contains(got, "node=node1") ||
@@ -819,10 +820,13 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	}
 
 	output.Reset()
-	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
-		{Name: "node1", State: "ready", Ready: true},
-		{Name: "node2", State: "notready"},
-	}})
+	progress.report(
+		ctx,
+		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+			{Name: "node1", State: "ready", Ready: true},
+			{Name: "node2", State: "notready"},
+		}},
+	)
 	got = output.String()
 	if !strings.Contains(got, "C9s node is not ready") ||
 		!strings.Contains(got, "node=node2") ||
@@ -832,10 +836,13 @@ func TestNodeReadinessProgressReportsTransitions(t *testing.T) {
 	}
 
 	output.Reset()
-	progress.report(&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
-		{Name: "node1", State: "ready", Ready: true},
-		{Name: "node2", State: "notready"},
-	}})
+	progress.report(
+		ctx,
+		&clablabruntime.LabState{Nodes: []clablabruntime.NodeState{
+			{Name: "node1", State: "ready", Ready: true},
+			{Name: "node2", State: "notready"},
+		}},
+	)
 	if output.Len() != 0 {
 		t.Fatalf("unchanged readiness should not produce repeated log lines:\n%s", output.String())
 	}

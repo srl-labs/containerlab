@@ -45,7 +45,7 @@ func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
 		if !exists {
 			continue
 		}
-		log.Info("Parking links for recreate", "node", nodeName)
+		log.FromContext(ctx).Info("Parking links for recreate", "node", nodeName)
 		if err := node.ParkEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
 		}
@@ -60,7 +60,7 @@ func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error
 		if !exists {
 			continue
 		}
-		log.Info("Restoring links after recreate", "node", nodeName)
+		log.FromContext(ctx).Info("Restoring links after recreate", "node", nodeName)
 		if err := node.RestoreEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed restoring endpoints for node %q: %w", nodeName, err)
 		}
@@ -84,7 +84,7 @@ func (c *CLab) restartApplyNodes(
 			continue
 		}
 
-		log.Info("Restarting node after link apply", "node", nodeName)
+		log.FromContext(ctx).Info("Restarting node after link apply", "node", nodeName)
 		if err := node.Stop(ctx); err != nil {
 			return err
 		}
@@ -143,7 +143,11 @@ func (c *CLab) waitNodeHealthyIfAvailable(ctx context.Context, node clabnodes.No
 			return nil
 		}
 		if err != nil {
-			log.Debugf("error checking node %q health: %v", node.GetShortName(), err)
+			log.FromContext(ctx).Debugf(
+				"error checking node %q health: %v",
+				node.GetShortName(),
+				err,
+			)
 		}
 
 		if time.Now().After(deadline) {

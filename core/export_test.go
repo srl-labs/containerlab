@@ -57,7 +57,7 @@ func TestCLab_exportTopologyDataWithMinimalTemplate(t *testing.T) {
 			var buf bytes.Buffer
 
 			// Call the function
-			err := c.exportTopologyDataWithMinimalTemplate(&buf)
+			err := c.exportTopologyDataWithMinimalTemplate(context.Background(), &buf)
 			if err != nil {
 				t.Fatalf("exportTopologyDataWithMinimalTemplate() error = %v", err)
 			}
@@ -103,7 +103,7 @@ func TestCLab_exportTopologyDataWithMinimalTemplate_NilConfig(t *testing.T) {
 	}()
 
 	// This should panic
-	_ = c.exportTopologyDataWithMinimalTemplate(&buf)
+	_ = c.exportTopologyDataWithMinimalTemplate(context.Background(), &buf)
 }
 
 func TestExportTopologyDataMgmtNetworksList(t *testing.T) {

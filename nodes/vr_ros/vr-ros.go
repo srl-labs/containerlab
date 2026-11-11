@@ -97,7 +97,7 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 // SaveConfig overrides the default VRNode SaveConfig to handle MikroTik RouterOS
 // Uses direct SSH connection since scrapligo doesn't support MikroTik RouterOS platform.
 // To be refactored to use scrapli's GenericDriver or an enhanced scraplicfg.
-func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+func (n *vrRos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	configContent, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
@@ -111,7 +111,7 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 	// Filter out ether1 management interface IP address configuration
 	filteredConfig := n.filterManagementInterfaceConfig(configContent)
 
-	return clabnodes.WriteSavedConfig(n.Cfg, n.ConfigDirName, n.StartupCfgFName,
+	return clabnodes.WriteSavedConfig(ctx, n.Cfg, n.ConfigDirName, n.StartupCfgFName,
 		[]byte(filteredConfig))
 }
 

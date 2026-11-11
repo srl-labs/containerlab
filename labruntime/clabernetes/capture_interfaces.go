@@ -93,7 +93,7 @@ func (r *Runtime) InspectInterfaces(
 	running := make([]clablabruntime.NodeLocation, 0, len(locations))
 	for _, location := range locations {
 		if location.Pod == "" {
-			log.Warn("Skipping interface detection of a node that does not run",
+			log.FromContext(ctx).Warn("Skipping interface detection of a node that does not run",
 				"node", location.NodeName)
 			continue
 		}
@@ -172,13 +172,13 @@ func (r *Runtime) sampleInterfaceStates(
 			err := exec(ctx, location.Namespace, location.Pod, location.Container,
 				[]string{"sh", "-c", interfaceSampleScript}, nil, &stdout, &stderr)
 			if err != nil {
-				log.Debug("Cannot read the interface state of a c9s node",
+				log.FromContext(ctx).Debug("Cannot read the interface state of a c9s node",
 					"node", location.NodeName, "error", err)
 				return
 			}
 			_, ifaces, _, err := parseInterfaceSample(stdout.Bytes())
 			if err != nil {
-				log.Debug("Cannot parse the interface state of a c9s node",
+				log.FromContext(ctx).Debug("Cannot parse the interface state of a c9s node",
 					"node", location.NodeName, "error", err)
 				return
 			}

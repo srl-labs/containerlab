@@ -2,7 +2,7 @@ package exec
 
 import (
 	"bytes"
-	"os"
+	"context"
 	"strings"
 	"testing"
 
@@ -81,10 +81,7 @@ func TestExecCollectionLogPreservesAddOrder(t *testing.T) {
 	collection.Add("h2", NewExecResult(NewExecCmdFromSlice([]string{"echo", "h2"})))
 
 	var output bytes.Buffer
-	log.SetOutput(&output)
-	defer log.SetOutput(os.Stderr)
-
-	collection.Log()
+	collection.Log(log.WithContext(context.Background(), log.New(&output)))
 
 	logOutput := output.String()
 	h1Index := strings.Index(logOutput, "node=h1")

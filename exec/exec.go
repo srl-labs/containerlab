@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -247,16 +248,16 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	return result.String(), nil
 }
 
-// Log writes to the log execution results stored in ExecCollection.
+// Log writes the execution results stored in ExecCollection to the logger in ctx.
 // If execution result contains error, the error log facility is used,
 // otherwise it is logged as INFO.
-func (ec *ExecCollection) Log() {
+func (ec *ExecCollection) Log(ctx context.Context) {
 	ec.m.RLock()
 	defer ec.m.RUnlock()
 	for _, entry := range ec.orderedEntries {
 		switch {
 		case entry.result.GetReturnCode() != 0:
-			log.Error(
+			log.FromContext(ctx).Error(
 				"Failed to execute command",
 				"command", entry.result.GetCmdString(),
 				"node", entry.cId,
@@ -265,7 +266,7 @@ func (ec *ExecCollection) Log() {
 				"stderr", entry.result.GetStdErrString(),
 			)
 		default:
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Executed command",
 				"node", entry.cId,
 				"command", entry.result.GetCmdString(),

@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	dependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
@@ -54,17 +55,17 @@ func (mr *MockDependencyManagerMockRecorder) AddNode(node any) *gomock.Call {
 }
 
 // CheckAcyclicity mocks base method.
-func (m *MockDependencyManager) CheckAcyclicity() error {
+func (m *MockDependencyManager) CheckAcyclicity(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckAcyclicity")
+	ret := m.ctrl.Call(m, "CheckAcyclicity", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckAcyclicity indicates an expected call of CheckAcyclicity.
-func (mr *MockDependencyManagerMockRecorder) CheckAcyclicity() *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) CheckAcyclicity(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockDependencyManager)(nil).CheckAcyclicity))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockDependencyManager)(nil).CheckAcyclicity), ctx)
 }
 
 // GetNode mocks base method.

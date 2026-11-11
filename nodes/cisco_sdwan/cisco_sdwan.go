@@ -133,15 +133,15 @@ func (n *cisco_sdwan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	return nil
 }
 
-func (n *cisco_sdwan) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *cisco_sdwan) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
 
-	return createCiscoSdwanFiles(n)
+	return createCiscoSdwanFiles(ctx, n)
 }
 
 func (n *cisco_sdwan) GetImages(_ context.Context) map[string]string {
@@ -173,7 +173,7 @@ func isValidComponentType(componentType string) bool {
 
 // createCiscoSdwanFiles handles startup configuration files for Cisco SD-WAN nodes.
 // It supports both cloud-init.yaml (full) and zcloud.xml (partial) configuration files.
-func createCiscoSdwanFiles(node *cisco_sdwan) error {
+func createCiscoSdwanFiles(ctx context.Context, node *cisco_sdwan) error {
 	nodeCfg := node.Config()
 
 	// Skip if no startup config is specified
@@ -196,12 +196,12 @@ func createCiscoSdwanFiles(node *cisco_sdwan) error {
 		// Full cloud-init file
 		dstFilename = "cloud-init.yaml"
 
-		log.Debug("Using cloud-init configuration file", "node", nodeCfg.ShortName)
+		log.FromContext(ctx).Debug("Using cloud-init configuration file", "node", nodeCfg.ShortName)
 	case ".xml":
 		// zCloud XML configuration
 		dstFilename = "zcloud.xml"
 
-		log.Debug("Using zCloud XML configuration file", "node", nodeCfg.ShortName)
+		log.FromContext(ctx).Debug("Using zCloud XML configuration file", "node", nodeCfg.ShortName)
 	default:
 		return fmt.Errorf(
 			"unsupported startup config file format for node %s: %s."+
@@ -215,7 +215,12 @@ func createCiscoSdwanFiles(node *cisco_sdwan) error {
 
 	// Check if config already exists
 	if _, err := os.Stat(dst); err == nil {
-		log.Infof("Config file already exists for node %s at %s", nodeCfg.ShortName, dst)
+		log.FromContext(ctx).Infof(
+			"Config file already exists for node %s at %s",
+			nodeCfg.ShortName,
+			dst,
+		)
+
 		return nil
 	}
 
@@ -226,7 +231,13 @@ func createCiscoSdwanFiles(node *cisco_sdwan) error {
 			nodeCfg.StartupConfig, dst, err)
 	}
 
-	log.Debug("Copied startup config", "source", nodeCfg.StartupConfig, "destination", dst)
+	log.FromContext(ctx).Debug(
+		"Copied startup config",
+		"source",
+		nodeCfg.StartupConfig,
+		"destination",
+		dst,
+	)
 
 	return nil
 }

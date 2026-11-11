@@ -64,9 +64,9 @@ func (s *sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	return nil
 }
 
-func (s *sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (s *sonic) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := s.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *sonic) quietWireInterfaces(ctx context.Context) {
 	for _, cmdStr := range wireInterfaceCmds(ifNames) {
 		cmd, err := clabexec.NewExecCmdFromString(cmdStr)
 		if err != nil {
-			log.Warn("failed to quiet sonic-vs wire interface",
+			log.FromContext(ctx).Warn("failed to quiet sonic-vs wire interface",
 				"node", s.Cfg.ShortName, "cmd", cmdStr, "error", err)
 
 			continue
@@ -134,7 +134,7 @@ func (s *sonic) quietWireInterfaces(ctx context.Context) {
 					execResult.GetReturnCode(), execResult.GetStdErrString())
 			}
 
-			log.Warn("failed to quiet sonic-vs wire interface",
+			log.FromContext(ctx).Warn("failed to quiet sonic-vs wire interface",
 				"node", s.Cfg.ShortName, "cmd", cmdStr, "error", err)
 		}
 	}
@@ -162,7 +162,10 @@ func (s *sonic) Start(ctx context.Context) error {
 }
 
 func (s *sonic) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
+	log.FromContext(ctx).Debugf(
+		"Running postdeploy actions for sonic-vs '%s' node",
+		s.Cfg.ShortName,
+	)
 
 	// quiet the wires before the SONiC agents start.
 	s.quietWireInterfaces(ctx)

@@ -137,7 +137,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 		return err
 	}
 
-	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint, l.NodeEndpoint)
+	log.FromContext(ctx).Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint, l.NodeEndpoint)
 
 	// build Netlink Macvlan struct
 	link := &netlink.Macvlan{
@@ -173,7 +173,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 
 	// add the link to the Node Namespace
 	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
-		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
+		SetNameMACAndUpInterface(ctx, mvInterface, l.NodeEndpoint))
 	return err
 }
 
@@ -190,7 +190,7 @@ func (l *LinkMacVlan) Remove(ctx context.Context) error {
 	// trigger link removal via the NodeEndpoint
 	err := l.NodeEndpoint.Remove(ctx)
 	if err != nil {
-		log.Debug(err)
+		log.FromContext(ctx).Debug(err)
 	}
 	// adjust the Deployment status to reflect the removal
 	l.DeploymentState = LinkDeploymentStateRemoved

@@ -181,7 +181,7 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 
 func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := s.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParam
 		return err
 	}
 
-	return createVrSROSFiles(s)
+	return createVrSROSFiles(ctx, s)
 }
 
 // verifyNokiaSrosImage ensures the image used with kind nokia_sros is not the SRsim
@@ -207,7 +207,7 @@ func (s *vrSROS) verifyNokiaSrosImage(ctx context.Context) error {
 	if err != nil {
 		// Skip check when runtime does not support image inspection (e.g. Podman).
 		if strings.Contains(err.Error(), "not implemented") {
-			log.Debug(
+			log.FromContext(ctx).Debug(
 				"Skipping nokia_sros image kind check: runtime does not support image inspection",
 			)
 			return nil
@@ -231,7 +231,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 
 	// apply partial configs if partial config is used and existing node config does not exist
 	if clabutils.IsPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
-		log.Info("Adding configuration",
+		log.FromContext(ctx).Info("Adding configuration",
 			"node", s.Cfg.LongName,
 			"type", "partial",
 			"source", s.Cfg.StartupConfig)
@@ -250,9 +250,9 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	}
 
 	if len(s.sshPubKeys) > 0 && s.injectSSHKeys() {
-		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
+		log.FromContext(ctx).Info("Adding public keys configuration", "node", s.Cfg.LongName)
 
-		sshConf, err := s.generateSSHPublicKeysConfig()
+		sshConf, err := s.generateSSHPublicKeysConfig(ctx)
 		if err != nil {
 			return err
 		}
@@ -299,7 +299,7 @@ func (s *vrSROS) injectSSHKeys() bool {
 	return s.kindSpecificCfg().InjectSSHKeys && !s.isConfigClassic()
 }
 
-func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+func (s *vrSROS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
 		s.Cfg.Credentials.Username,
 		s.Cfg.Credentials.Password,
@@ -309,21 +309,26 @@ func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, err
 		return nil, err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
+	log.FromContext(ctx).Infof(
+		"saved %s running configuration to startup configuration file\n",
+		s.Cfg.ShortName,
+	)
 	return nil, nil
 }
 
-func createVrSROSFiles(node clabnodes.Node) error {
+func createVrSROSFiles(ctx context.Context, node clabnodes.Node) error {
 	nodeCfg := node.Config()
 
 	// use default startup config load function if config in full form is provided
 	if !clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
 		// do not create new config file if there's existing config file
 		if nodeConfigExists(nodeCfg.LabDir) {
-			log.Infof("Using existing config file (%s) instead of applying a new one",
-				filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName))
+			log.FromContext(ctx).Infof(
+				"Using existing config file (%s) instead of applying a new one",
+				filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName),
+			)
 		} else {
-			clabnodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+			clabnodes.LoadStartupConfigFileVr(ctx, node, configDirName, startupCfgFName)
 		}
 	}
 
@@ -335,7 +340,7 @@ func createVrSROSFiles(node clabnodes.Node) error {
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		log.FromContext(ctx).Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 
 	return nil
@@ -373,7 +378,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
 
-	log.Info("Waiting for node to be ready. This may take a while",
+	log.FromContext(ctx).Info("Waiting for node to be ready. This may take a while",
 		"node", s.Cfg.LongName,
 		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
 	)
@@ -385,7 +390,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 
 		healthy, err := s.IsHealthy(ctx)
 		if err != nil {
-			log.Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
+			log.FromContext(ctx).Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
 		}
 
 		if !healthy {
@@ -394,11 +399,11 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 				return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
 			case <-time.After(5 * time.Second): // cool-off period
 			}
-			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
+			log.FromContext(ctx).Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
 		}
 
-		sl := log.StandardLog(log.StandardLogOptions{
+		sl := log.FromContext(ctx).StandardLog(log.StandardLogOptions{
 			ForceLevel: log.DebugLevel,
 		})
 		li, err := scraplilogging.NewInstance(
@@ -437,7 +442,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 			break
 		}
 
-		log.Debugf("%s: not yet ready - %v", addr, err)
+		log.FromContext(ctx).Debugf("%s: not yet ready - %v", addr, err)
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())

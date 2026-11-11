@@ -1,6 +1,7 @@
 package nftables
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -35,7 +36,7 @@ type NftablesClient struct {
 }
 
 // NewNftablesClient returns a new NftablesClient.
-func NewNftablesClient() (*NftablesClient, error) {
+func NewNftablesClient(ctx context.Context) (*NftablesClient, error) {
 	// setup netlink connection with nftables
 	nftConn, err := nftables.New(nftables.AsLasting())
 	if err != nil {
@@ -57,7 +58,7 @@ func NewNftablesClient() (*NftablesClient, error) {
 		return nil, err
 	}
 	if chain == nil {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"nftables does not seem to be in use, no %s chain found.",
 			definitions.DockerUserChain,
 		)
@@ -67,7 +68,7 @@ func NewNftablesClient() (*NftablesClient, error) {
 	// check if ip6_tables is generally available
 	v6Chains, err := nftC.nftConn.ListChainsOfTableFamily(nftables.TableFamilyIPv6)
 	if err == nil && len(v6Chains) > 0 {
-		log.Debugf("nftables: ip6 address family generally supported")
+		log.FromContext(ctx).Debugf("nftables: ip6 address family generally supported")
 		nftC.ip6_tables = true
 	}
 
@@ -78,7 +79,7 @@ func NewNftablesClient() (*NftablesClient, error) {
 		nftables.TableFamilyIPv6,
 	)
 	if err == nil && v6DockerChain != nil {
-		log.Debugf("nftables: ip6 docker is supported")
+		log.FromContext(ctx).Debugf("nftables: ip6 docker is supported")
 		nftC.ip6_docker = true
 	}
 
@@ -91,10 +92,13 @@ func (*NftablesClient) Name() string {
 }
 
 // DeleteForwardingRules deletes the forwarding rules for in or out interface in a given chain.
-func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) error {
+func (c *NftablesClient) DeleteForwardingRules(
+	ctx context.Context,
+	rule *definitions.FirewallRule,
+) error {
 	iface := rule.Interface
 	if iface == "docker0" {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"skipping deletion of iptables forwarding rule for non-bridged or default management network",
 		)
 		return nil
@@ -127,7 +131,7 @@ func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 
 	clabRules := c.getClabRulesForInterface(iface, allRules)
 	if len(clabRules) == 0 {
-		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
+		log.FromContext(ctx).Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
 	}
 
@@ -136,15 +140,18 @@ func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 	// or it is managed externally (created manually)
 	_, err = clabutils.BridgeByName(rule.Interface)
 	if err == nil {
-		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
+		log.FromContext(ctx).Debugf(
+			"bridge %s is still in use, not removing the forwarding rule",
+			iface,
+		)
 		return nil
 	}
 
-	log.Debugf("removing clab iptables rules for bridge %q", iface)
+	log.FromContext(ctx).Debugf("removing clab iptables rules for bridge %q", iface)
 	for _, r := range clabRules {
 		err := c.deleteRule(r)
 		if err != nil {
-			log.Warnf("failed to delete rule: %v", err)
+			log.FromContext(ctx).Warnf("failed to delete rule: %v", err)
 		}
 	}
 
@@ -155,33 +162,39 @@ func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 }
 
 // InstallForwardingRules installs the firewall `rule` for v4 and v6 address families.
-func (c *NftablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
+func (c *NftablesClient) InstallForwardingRules(
+	ctx context.Context,
+	rule *definitions.FirewallRule,
+) error {
 	defer c.close()
 
-	err := c.InstallForwardingRulesForAF(nftables.TableFamilyIPv4, rule)
+	err := c.InstallForwardingRulesForAF(ctx, nftables.TableFamilyIPv4, rule)
 	if err != nil {
 		return err
 	}
 
 	if !c.ip6_tables && rule.Chain == definitions.ForwardChain {
-		log.Debug("ip6_tables is not supported, skipping installation of ip6 forwarding rules")
+		log.FromContext(ctx).Debug(
+			"ip6_tables is not supported, skipping installation of ip6 forwarding rules",
+		)
 		return nil
 	}
 
 	if !c.ip6_docker && rule.Chain == definitions.DockerUserChain {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"ip6_tables is not supported by docker, skipping installation of ip6 forwarding rules",
 		)
 		return nil
 	}
 
 	// now it is safe to install the ip6 rules
-	return c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6, rule)
+	return c.InstallForwardingRulesForAF(ctx, nftables.TableFamilyIPv6, rule)
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family
 // input interface and chain.
 func (c *NftablesClient) InstallForwardingRulesForAF(
+	ctx context.Context,
 	af nftables.TableFamily,
 	rule *definitions.FirewallRule,
 ) error {
@@ -193,7 +206,7 @@ func (c *NftablesClient) InstallForwardingRulesForAF(
 	}
 
 	if c.ruleExists(rule, rules) {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"found allowing iptables forwarding rule targeting the bridge %q in the direction %s. Skipping creation of the forwarding rule.",
 			iface,
 			rule.Direction,
@@ -201,7 +214,7 @@ func (c *NftablesClient) InstallForwardingRulesForAF(
 		return nil
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Installing iptables rules for interface %q, direction %s, family %s",
 		iface,
 		rule.Direction,

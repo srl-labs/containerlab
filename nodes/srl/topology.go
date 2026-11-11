@@ -5,6 +5,7 @@
 package srl
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"os"
@@ -202,7 +203,7 @@ type srlTopologyData struct {
 	Slots       []srlTopologySlot
 }
 
-func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
+func generateSRLTopologyFile(ctx context.Context, cfg *clabtypes.NodeConfig) error {
 	topology, err := resolveSRLTopology(cfg)
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
-	log.Debug("generating srl topology file", "path", dst, "mac", data.MAC)
+	log.FromContext(ctx).Debug("generating srl topology file", "path", dst, "mac", data.MAC)
 
 	f, err := os.Create(dst)
 	if err != nil {

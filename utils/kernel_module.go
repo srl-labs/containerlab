@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -94,13 +95,13 @@ func isKernelModuleBuiltin(name string) (bool, error) {
 const kernelOSReleasePath = "/proc/sys/kernel/osrelease"
 
 // GetKernelVersion returns the parsed OS kernel version.
-func GetKernelVersion() (*KernelVersion, error) {
+func GetKernelVersion(ctx context.Context) (*KernelVersion, error) {
 	ver, err := os.ReadFile(kernelOSReleasePath)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugf("kernel version: %s", string(ver))
+	log.FromContext(ctx).Debugf("kernel version: %s", string(ver))
 
 	return parseKernelVersion(ver)
 }

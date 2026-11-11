@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -37,9 +38,9 @@ func NewHostRequirements() *HostRequirements {
 }
 
 // Verify runs verification checks against the host requirements set for a node.
-func (h *HostRequirements) Verify(kindName, nodeName string) error {
+func (h *HostRequirements) Verify(ctx context.Context, kindName, nodeName string) error {
 	// check virtualization Support
-	if h.VirtRequired && !clabvirt.VerifyVirtSupport() {
+	if h.VirtRequired && !clabvirt.VerifyVirtSupport(ctx) {
 		return fmt.Errorf(
 			"CPU virtualization support is required for node %q (%s)",
 			nodeName,
@@ -66,12 +67,12 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 		case FailBehaviourError:
 			return errors.New(message)
 		case FailBehaviourLog:
-			log.Error(message)
+			log.FromContext(ctx).Error(message)
 		}
 	}
 
 	// check minimum FreeMemory
-	if valid, num := h.verifyMinAvailMemory(); !valid {
+	if valid, num := h.verifyMinAvailMemory(ctx); !valid {
 		message := fmt.Sprintf(
 			"node %q (%s) has a minimum available memory requirement of "+
 				"%d GB whilst only %d GB memory is available",
@@ -85,7 +86,7 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 		case FailBehaviourError:
 			return errors.New(message)
 		case FailBehaviourLog:
-			log.Error(message)
+			log.FromContext(ctx).Error(message)
 		}
 	}
 
@@ -94,8 +95,10 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 
 // verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
 // It returns a bool indicating if the requirement is met and the amount of available memory in GB.
-func (h *HostRequirements) verifyMinAvailMemory() (result bool, availMemGB uint64) {
-	rawAvailMemGB := clabvirt.GetSysMemory(clabvirt.MemoryTypeAvailable)
+func (h *HostRequirements) verifyMinAvailMemory(
+	ctx context.Context,
+) (result bool, availMemGB uint64) {
+	rawAvailMemGB := clabvirt.GetSysMemory(ctx, clabvirt.MemoryTypeAvailable)
 
 	availMemGB = rawAvailMemGB / 1024 / 1024 / 1024 //nolint: mnd
 

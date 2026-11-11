@@ -171,7 +171,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	peerIdx := (idx + 1) % 2
 	peerEp := l.Endpoints[peerIdx]
 
-	log.Debugf("Creating Endpoint: %s ( --> %s )", ep, peerEp)
+	log.FromContext(ctx).Debugf("Creating Endpoint: %s ( --> %s )", ep, peerEp)
 
 	// build the netlink.Veth struct for the link provisioning
 	linkA := &netlink.Veth{
@@ -194,7 +194,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	// after LinkAdd succeeded, preventing orphaned interfaces from blocking retries.
 	cleanup := func(err error) error {
 		if delErr := netlink.LinkDel(linkA); delErr != nil {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"failed to cleanup veth pair %s after error: %v",
 				ep.GetRandIfaceName(),
 				delErr,
@@ -215,7 +215,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	// if the node is a regular namespace node
 	// add link to node, rename, set mac and Up
 	err = ep.GetNode().AddLinkToContainer(ctx, linkA,
-		SetNameMACAndUpInterface(linkA, ep))
+		SetNameMACAndUpInterface(ctx, linkA, ep))
 	if err != nil {
 		return cleanup(err)
 	}
@@ -235,7 +235,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	ep := l.Endpoints[idx]
 	peerEp := l.Endpoints[(idx+1)%2]
 
-	log.Debugf("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
+	log.FromContext(ctx).Debugf("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
 
 	// retrieve the netlink.Link for the provided Endpoint
 	link, err := netlink.LinkByName(ep.GetRandIfaceName())
@@ -252,18 +252,18 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	// Other nodeless endpoints, such as the management bridge, still need their
 	// node-specific setup.
 	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == LinkEndpointTypeHost {
-		if err := SetNameMACAndUpInterface(link, ep)(nil); err != nil {
+		if err := SetNameMACAndUpInterface(ctx, link, ep)(nil); err != nil {
 			return err
 		}
 	} else if err = ep.GetNode().AddLinkToContainer(ctx, link,
-		SetNameMACAndUpInterface(link, ep)); err != nil {
+		SetNameMACAndUpInterface(ctx, link, ep)); err != nil {
 		return err
 	}
 
 	l.DeploymentState = LinkDeploymentStateFullDeployed
 
 	if len(l.Endpoints) == 2 {
-		log.Infof("Created link: %s ▪┄┄▪ %s", l.Endpoints[0], l.Endpoints[1])
+		log.FromContext(ctx).Infof("Created link: %s ▪┄┄▪ %s", l.Endpoints[0], l.Endpoints[1])
 	}
 
 	return nil
@@ -333,7 +333,7 @@ func (l *LinkVEth) Remove(ctx context.Context) error {
 	for _, ep := range l.GetEndpoints() {
 		err := ep.Remove(ctx)
 		if err != nil {
-			log.Debug(err)
+			log.FromContext(ctx).Debug(err)
 		}
 	}
 	l.DeploymentState = LinkDeploymentStateRemoved

@@ -88,7 +88,11 @@ func DescribeInterfaces(entries []clablabruntime.CaptureInterface) string {
 }
 
 // ReportGap hands a gap to onGap, or logs it as a warning when onGap is nil.
-func ReportGap(onGap func(clablabruntime.CaptureGap), gap clablabruntime.CaptureGap) {
+func ReportGap(
+	ctx context.Context,
+	onGap func(clablabruntime.CaptureGap),
+	gap clablabruntime.CaptureGap,
+) {
 	if onGap != nil {
 		onGap(gap)
 		return
@@ -98,8 +102,19 @@ func ReportGap(onGap func(clablabruntime.CaptureGap), gap clablabruntime.Capture
 	if !gap.To.IsZero() {
 		to = gap.To.Format(time.RFC3339Nano)
 	}
-	log.Warn("Capture has a gap", "node", gap.Node, "interfaces", strings.Join(gap.Interfaces, ","),
-		"from", gap.From.Format(time.RFC3339Nano), "to", to, "reason", gap.Reason)
+	log.FromContext(ctx).Warn(
+		"Capture has a gap",
+		"node",
+		gap.Node,
+		"interfaces",
+		strings.Join(gap.Interfaces, ","),
+		"from",
+		gap.From.Format(time.RFC3339Nano),
+		"to",
+		to,
+		"reason",
+		gap.Reason,
+	)
 }
 
 // Output is the merged pcapng stream of one capture: the section header with one interface per

@@ -43,7 +43,7 @@ func (d *DockerRuntime) SyncMgmtHostRoutes(ctx context.Context) error {
 }
 
 func (d *DockerRuntime) removeOrphanMacvlanHosts(ctx context.Context) error {
-	return d.managementMacvlanHost().RemoveOrphans(func(id string) bool {
+	return d.managementMacvlanHost().RemoveOrphans(ctx, func(id string) bool {
 		_, err := d.Client.NetworkInspect(ctx, id, networkapi.InspectOptions{})
 		return !cerrdefs.IsNotFound(err)
 	})
@@ -92,7 +92,7 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context, excluded []net
 			return err
 		}
 	}
-	parent, err := mgmt.PrepareMacvlanParent(d.mgmt, host.Links)
+	parent, err := mgmt.PrepareMacvlanParent(ctx, d.mgmt, host.Links)
 	if err != nil {
 		return err
 	}
@@ -135,8 +135,15 @@ func (d *DockerRuntime) createMacvlanNetwork(ctx context.Context, excluded []net
 	}
 
 	if cerrdefs.IsNotFound(inspectErr) {
-		log.Info("Creating docker network", "name", d.mgmt.Network, "driver", "macvlan",
-			"parent", d.mgmt.MacvlanParent)
+		log.FromContext(ctx).Info(
+			"Creating docker network",
+			"name",
+			d.mgmt.Network,
+			"driver",
+			"macvlan",
+			"parent",
+			d.mgmt.MacvlanParent,
+		)
 		if _, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts); err != nil &&
 			!cerrdefs.IsConflict(err) {
 			return fmt.Errorf("create macvlan network %q: %w", d.mgmt.Network, err)

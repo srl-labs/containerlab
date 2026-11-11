@@ -18,20 +18,21 @@ import (
 	"github.com/steiler/acls"
 )
 
-func (n *vyos) save(_ context.Context, cli *network.Driver) error {
-	log.Debug("Saving config", "node", n.Cfg.ShortName)
+func (n *vyos) save(ctx context.Context, cli *network.Driver) error {
+	log.FromContext(ctx).Debug("Saving config", "node", n.Cfg.ShortName)
 	resp, err := cli.SendConfigs(saveCmd)
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
 		return fmt.Errorf("save failed: %w", resp.Failed)
 	}
-	log.Info("Save successful", "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Info("Save successful", "node", n.Cfg.ShortName)
 	return nil
 }
 
-func (n *vyos) newCli() (*network.Driver, error) {
+func (n *vyos) newCli(ctx context.Context) (*network.Driver, error) {
 	cli, err := clabutils.SpawnCLIviaExec(
+		ctx,
 		scrapliPlatformName,
 		n.Cfg.LongName,
 		n.Runtime.GetName())
@@ -41,12 +42,12 @@ func (n *vyos) newCli() (*network.Driver, error) {
 	return cli, nil
 }
 
-func (n *vyos) createVyosFiles(_ context.Context) error {
+func (n *vyos) createVyosFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
 	clabutils.CreateDirectory(n.configDir, clabconstants.PermissionsOpen)
-	log.Debugf("Chowning dir %s", n.configDir)
+	log.FromContext(ctx).Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
+	err := n.GenerateConfig(ctx, nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -89,8 +90,8 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 // parses everything through a management system. While Vyos does have a
 // management system it does a bunch of stuff as a regular linux user so the
 // directory needs rw access for the vyattacfg group.
-func (n *vyos) fixdirACL() error {
-	log.Debugf("Setting up %s ACLs", n.Cfg.LabDir)
+func (n *vyos) fixdirACL(ctx context.Context) error {
+	log.FromContext(ctx).Debugf("Setting up %s ACLs", n.Cfg.LabDir)
 	a := &acls.ACL{}
 	if err := a.Load(n.Cfg.LabDir, acls.PosixACLAccess); err != nil {
 		return err
@@ -111,9 +112,9 @@ func (n *vyos) fixdirACL() error {
 
 // Convert the PKCS#1 formatted key that clab generates into a PKCS#8 that Vyos
 // requires.
-func pkcs1To8(der []byte) ([]byte, error) {
+func pkcs1To8(ctx context.Context, der []byte) ([]byte, error) {
 	// the key we get is a []byte but it's actually a pem string not the raw data
-	log.Debug("Converting PKCS#1 key to PKCS#8")
+	log.FromContext(ctx).Debug("Converting PKCS#1 key to PKCS#8")
 	block, _ := pem.Decode(der)
 	if block == nil {
 		return nil, errors.New("something went wrong decoding the PEM")

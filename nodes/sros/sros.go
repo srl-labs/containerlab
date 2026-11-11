@@ -392,7 +392,7 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 
 // Pre Deploy func for SR-SIM kind.
 func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	log.Debug("Running pre-deploy")
+	log.FromContext(ctx).Debug("Running pre-deploy")
 
 	if err := n.verifyNokiaSrsimImage(ctx); err != nil {
 		return err
@@ -411,7 +411,7 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 		// generate the certificate
 		if *n.Cfg.Certificate.Issue {
 			n.Cfg.Certificate.SANs = append(n.Cfg.Certificate.SANs, n.baseShortName, n.baseLongName)
-			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+			certificate, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 			if err != nil {
 				return err
 			}
@@ -466,14 +466,14 @@ func (n *sros) PostDeployEndpoints(ctx context.Context) error {
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
 	if err != nil {
-		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
+		log.FromContext(ctx).Warn("Failed to get veth peer index for SR-SIM mgmt interface",
 			"node", n.Cfg.ShortName,
 			"error", err)
 		return nil
 	}
 
-	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-		log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+	if err := clabutils.DisableTxOffloadByIndex(ctx, peerIfIndex); err != nil {
+		log.FromContext(ctx).Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
 			"node", n.Cfg.ShortName,
 			"error", err)
 	}
@@ -483,7 +483,7 @@ func (n *sros) PostDeployEndpoints(ctx context.Context) error {
 
 // Post Deploy func for SR-SIM kind.
 func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions",
+	log.FromContext(ctx).Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
 
@@ -496,7 +496,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
 	if err != nil {
-		log.Debug("Failed to get container log stream", "node", n.Cfg.ShortName, "err", err)
+		log.FromContext(ctx).Debug(
+			"Failed to get container log stream",
+			"node",
+			n.Cfg.ShortName,
+			"err",
+			err,
+		)
 	} else {
 		// Start monitoring in a goroutine
 		monitoringCtx, cancel := context.WithCancel(ctx)
@@ -508,7 +514,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err = n.populateHosts(ctx, params.Nodes); err != nil {
-		log.Warn("Unable to populate hosts list", "node", n.Cfg.ShortName, "err", err)
+		log.FromContext(ctx).Warn(
+			"Unable to populate hosts list",
+			"node",
+			n.Cfg.ShortName,
+			"err",
+			err,
+		)
 	}
 
 	n.swVersion, err = n.RunningVersion(ctx)
@@ -535,7 +547,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
 			lastHealthErr = err
-			log.Debug(
+			log.FromContext(ctx).Debug(
 				fmt.Errorf(
 					"health check failed, check 'docker logs -f %s': %w",
 					n.Cfg.LongName,
@@ -545,13 +557,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		}
 
 		if isHealthy {
-			addr, err := n.MgmtIPAddr()
+			addr, err := n.MgmtIPAddr(ctx)
 			if err != nil {
 				return err
 			}
 			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
 			if *n.Cfg.Certificate.Issue {
-				log.Infof("TLS cert/key bootstrap for node %q", n.Cfg.LongName)
+				log.FromContext(ctx).Infof("TLS cert/key bootstrap for node %q", n.Cfg.LongName)
 
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
@@ -561,7 +573,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 						err,
 					)
 				}
-				log.Infof(
+				log.FromContext(ctx).Infof(
 					"Completed bootstrap for gRPC-TLS profile on node %s",
 					n.Cfg.ShortName,
 				)
@@ -569,7 +581,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 			// Partial or NO Config Provided
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
-				log.Infof("Saving node %q config as startup...", n.Cfg.LongName)
+				log.FromContext(ctx).Infof("Saving node %q config as startup...", n.Cfg.LongName)
 				err = n.saveConfigWithAddr(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
@@ -583,8 +595,15 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		case <-ctx.Done():
 			return ctx.Err()
 		case err := <-errChan:
-			log.With("kind", n.Cfg.Kind, "node", n.Cfg.ShortName).Debugf("got %q on errChan", err)
-			log.Info("Skipping postdeploy actions", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+			log.FromContext(ctx).With("kind", n.Cfg.Kind, "node", n.Cfg.ShortName).
+				Debugf("got %q on errChan", err)
+			log.FromContext(ctx).Info(
+				"Skipping postdeploy actions",
+				"kind",
+				n.Cfg.Kind,
+				"node",
+				n.Cfg.ShortName,
+			)
 			return nil
 		case <-time.After(retryTimer):
 			// continue to next iteration
@@ -612,7 +631,7 @@ func (n *sros) Delete(ctx context.Context) error {
 	for _, componentNode := range n.componentNodes {
 		err := componentNode.Delete(ctx)
 		if err != nil {
-			log.Warn(err)
+			log.FromContext(ctx).Warn(err)
 			errs = append(errs, err)
 		}
 	}
@@ -725,7 +744,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 		return fmt.Errorf("deploy network namespace node %q: %w", n.netnsNode.GetShortName(), err)
 	}
 
-	ips, err := n.distNodeMgmtIPs()
+	ips, err := n.distNodeMgmtIPs(ctx)
 	if err != nil {
 		return err
 	}
@@ -919,7 +938,7 @@ func (n *sros) Ready(ctx context.Context) error {
 	var err error
 	readyCmds := []string{readyCmdCpm, readyCmdBoth, readyCmdIom}
 	readyCmdsStrings := []string{"CPM", "BOTH", "IOM"}
-	log.Debug("Waiting for SR OS node to boot...", "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Debug("Waiting for SR OS node to boot...", "node", n.Cfg.ShortName)
 	for {
 		select {
 		case <-ctx.Done():
@@ -948,10 +967,14 @@ func (n *sros) Ready(ctx context.Context) error {
 							strings.ReplaceAll(execResult.String(), "\n", "; "),
 						)
 					}
-					log.Debug(logMsg)
+					log.FromContext(ctx).Debug(logMsg)
 				}
 				if execResult != nil && execResult.GetReturnCode() == 0 {
-					log.Debug("SR OS is ready to be configured", "node", n.Cfg.ShortName)
+					log.FromContext(ctx).Debug(
+						"SR OS is ready to be configured",
+						"node",
+						n.Cfg.ShortName,
+					)
 					return nil
 				}
 				time.Sleep(retryTimer)
@@ -961,16 +984,16 @@ func (n *sros) Ready(ctx context.Context) error {
 }
 
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
-func (*sros) checkKernelVersion() error {
+func (*sros) checkKernelVersion(ctx context.Context) error {
 	// retrieve running kernel version
-	kv, err := clabutils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion(ctx)
 	if err != nil {
 		return err
 	}
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Warnf(
+		log.FromContext(ctx).Warnf(
 			"Nokia SR OS requires a kernel version greater than %s. Detected kernel version: %s. Not all features might function properly!",
 			requiredKernelVersion,
 			kv,
@@ -981,7 +1004,7 @@ func (*sros) checkKernelVersion() error {
 
 func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 	// perform the sros specific kernel version check
-	err := n.checkKernelVersion()
+	err := n.checkKernelVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -997,7 +1020,11 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
 func (n *sros) createSROSFiles(ctx context.Context) error {
-	log.Debug("Creating directory structure for SR OS container", "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Debug(
+		"Creating directory structure for SR OS container",
+		"node",
+		n.Cfg.ShortName,
+	)
 
 	var err error
 
@@ -1013,7 +1040,7 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 				err,
 			)
 		}
-		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
+		log.FromContext(ctx).Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
 		clabconstants.PermissionsOpen)
@@ -1026,8 +1053,15 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
 	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
-		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
-			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+		log.FromContext(ctx).Debug(
+			"Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
+			"node",
+			n.Cfg.ShortName,
+			"path",
+			n.Cfg.LabDir,
+			"error",
+			err,
+		)
 	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
@@ -1037,7 +1071,7 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 	}
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
-		err = n.createSROSConfigFiles()
+		err = n.createSROSConfigFiles(ctx)
 		if err != nil {
 			return err
 		}
@@ -1062,15 +1096,21 @@ func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
 	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
 		return fmt.Errorf("write %s: %w", dstPath, err)
 	}
-	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
-	n.warnUnsupportedComponents(content)
+	log.FromContext(ctx).Debug(
+		"Wrote chassis_info.json to lab dir",
+		"node",
+		n.Cfg.ShortName,
+		"path",
+		dstPath,
+	)
+	n.warnUnsupportedComponents(ctx, content)
 	return nil
 }
 
 // warnUnsupportedComponents validates the effective component configuration against the
 // chassis_info.json extracted from this exact image. Validation is advisory and never blocks
 // deploy.
-func (n *sros) warnUnsupportedComponents(content []byte) {
+func (n *sros) warnUnsupportedComponents(ctx context.Context, content []byte) {
 	// A distributed node validates once, from CPM A, to avoid duplicate warnings from CPM B.
 	if !n.isStandaloneNode() && !n.isCPM(slotAName) {
 		return
@@ -1078,7 +1118,7 @@ func (n *sros) warnUnsupportedComponents(content []byte) {
 
 	info, err := parseChassisInfo(content)
 	if err != nil {
-		log.Warn("Could not validate SR-SIM components against chassis_info.json",
+		log.FromContext(ctx).Warn("Could not validate SR-SIM components against chassis_info.json",
 			"node", n.Cfg.ShortName, "error", err)
 		return
 	}
@@ -1099,7 +1139,7 @@ func (n *sros) warnUnsupportedComponents(content []byte) {
 		nodeType = chassis
 	}
 	for _, warning := range info.componentWarnings(nodeType, n.componentSFM(), effective) {
-		log.Warn("SR-SIM component configuration may not be supported",
+		log.FromContext(ctx).Warn("SR-SIM component configuration may not be supported",
 			"node", n.Cfg.ShortName,
 			"chassis", nodeType,
 			"warning", warning)
@@ -1191,7 +1231,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	// Forge the IP address to be the actual IP of mgmt
 	// because the CPM A might not own the netns & mgmt IP
 	if len(n.kindSpecificCfg().Components) > 0 {
-		ips, err := n.distNodeMgmtIPs()
+		ips, err := n.distNodeMgmtIPs(ctx)
 		if err == nil {
 			if ips.IPv4 != "" {
 				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
@@ -1218,7 +1258,13 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Nod
 
 	hosts, err := n.Runtime.GetHostsPath(ctx, containerName)
 	if err != nil {
-		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
+		log.FromContext(ctx).Warn(
+			"Unable to locate SR OS node /etc/hosts file",
+			"node",
+			n.Cfg.ShortName,
+			"err",
+			err,
+		)
 		return err
 	}
 	var entriesv4, entriesv6 bytes.Buffer
@@ -1243,7 +1289,13 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Nod
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
 	if err != nil {
-		log.Warn("Unable to open SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
+		log.FromContext(ctx).Warn(
+			"Unable to open SR OS node /etc/hosts file",
+			"node",
+			n.Cfg.ShortName,
+			"err",
+			err,
+		)
 		return err
 	}
 
@@ -1414,7 +1466,7 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		return err
 	}
 
-	log.Info(
+	log.FromContext(ctx).Info(
 		"Saved running configuration",
 		"node",
 		n.Cfg.ShortName,
@@ -1466,6 +1518,7 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	}
 
 	err := clabnetconf.MultiExec(
+		ctx,
 		fmt.Sprintf("[%s]", addr),
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
@@ -1480,14 +1533,14 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	return err
 }
 
-func (n *sros) IsHealthy(_ context.Context) (bool, error) {
+func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
 	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
 	}
 	// non-partial user startup config might not have any netconf config
 	// so we shouldn't check for this.
 	if isFullConfigFile(n.Cfg.StartupConfig) {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"node has full startup config, skipping NETCONF check",
 			"kind",
 			n.Cfg.Kind,
@@ -1496,11 +1549,11 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 		)
 		return true, nil
 	}
-	addr, err := n.MgmtIPAddr()
+	addr, err := n.MgmtIPAddr(ctx)
 	if err != nil {
 		return false, err
 	}
-	log.Debug(
+	log.FromContext(ctx).Debug(
 		"Checking netconf connection",
 		"node",
 		n.Cfg.LongName,
@@ -1572,7 +1625,7 @@ type MgmtIP struct {
 // distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
 // distributed node defined via components.
 // It returns an error if neither is set in the node config.
-func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
+func (n *sros) distNodeMgmtIPs(ctx context.Context) (MgmtIP, error) {
 	ips := MgmtIP{}
 
 	var containerName string
@@ -1589,7 +1642,7 @@ func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 	}
 
 	containers, err := n.Runtime.ListContainers(
-		context.Background(),
+		ctx,
 		[]*clabtypes.GenericFilter{
 			{
 				FilterType: "name",
@@ -1627,7 +1680,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 	}
 
 	if n.isDistributedBaseNode() {
-		ips, err := n.distNodeMgmtIPs()
+		ips, err := n.distNodeMgmtIPs(ctx)
 		if err != nil {
 			return clabtypes.HostEntries{}, err
 		}
@@ -1654,7 +1707,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
-func (n *sros) MgmtIPAddr() (string, error) {
+func (n *sros) MgmtIPAddr(ctx context.Context) (string, error) {
 	switch {
 	case n.Cfg.MgmtIPv6Address != "":
 		return n.Cfg.MgmtIPv6Address, nil
@@ -1663,7 +1716,7 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	}
 
 	if !n.isStandaloneNode() {
-		ips, err := n.distNodeMgmtIPs()
+		ips, err := n.distNodeMgmtIPs(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -1709,7 +1762,7 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 
 		if strings.Contains(line, srosMinorError) ||
 			strings.Contains(line, srosCriticalError) {
-			log.Warn(
+			log.FromContext(ctx).Warn(
 				"Got SR OS log message",
 				"node",
 				n.Cfg.ShortName,
@@ -1742,7 +1795,7 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 	if err != nil {
 		// Skip check when runtime does not support image inspection (e.g. Podman).
 		if strings.Contains(err.Error(), "not implemented") {
-			log.Debug(
+			log.FromContext(ctx).Debug(
 				"Skipping nokia_srsim image kind check: runtime does not support image inspection",
 			)
 			return nil
@@ -1760,7 +1813,7 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 			return nil
 		}
 	}
-	log.Warnf(
+	log.FromContext(ctx).Warnf(
 		"node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning",
 		n.Cfg.ShortName,
 	)
@@ -1855,7 +1908,7 @@ func (n *sros) Stop(ctx context.Context) error {
 
 	for _, c := range n.componentNodes {
 		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
-			log.Warnf("node %q component %q stop error: %v",
+			log.FromContext(ctx).Warnf("node %q component %q stop error: %v",
 				n.Cfg.ShortName, c.Config().ShortName, err)
 		}
 	}

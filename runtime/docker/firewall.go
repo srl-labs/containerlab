@@ -1,6 +1,8 @@
 package docker
 
 import (
+	"context"
+
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
@@ -8,9 +10,11 @@ import (
 
 // deleteMgmtNetworkFwdRule deletes `allow` rule installed with installFwdRule
 // when the containerlab management network (bridge) interface doesn't exist anymore.
-func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
+func (d *DockerRuntime) deleteMgmtNetworkFwdRule(ctx context.Context) (err error) {
 	if d.mgmt.Bridge == "" {
-		log.Debug("skipping forwarding rule removal for non-bridged management network")
+		log.FromContext(ctx).Debug(
+			"skipping forwarding rule removal for non-bridged management network",
+		)
 		return nil
 	}
 
@@ -18,7 +22,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		return nil
 	}
 
-	f, err := firewall.NewFirewallClient()
+	f, err := firewall.NewFirewallClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,7 +39,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.DeleteForwardingRules(&r)
+	err = f.DeleteForwardingRules(ctx, &r)
 	if err != nil {
 		return err
 	}
@@ -52,7 +56,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.DeleteForwardingRules(&r)
+	err = f.DeleteForwardingRules(ctx, &r)
 	if err != nil {
 		return err
 	}
@@ -63,24 +67,26 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 // installMgmtNetworkFwdRule installs the `allow` rule for traffic destined to the nodes
 // on the clab management network for v4 and v6.
 // This rule is required for external access to the nodes.
-func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
+func (d *DockerRuntime) installMgmtNetworkFwdRule(ctx context.Context) (err error) {
 	if !*d.mgmt.ExternalAccess {
-		log.Debug(
+		log.FromContext(ctx).Debug(
 			"skipping setup of forwarding rules for the management network since External Access is disabled by a user",
 		)
 		return nil
 	}
 
 	if d.mgmt.Bridge == "" {
-		log.Debug("skipping setup of forwarding rules for non-bridged management network")
+		log.FromContext(ctx).Debug(
+			"skipping setup of forwarding rules for non-bridged management network",
+		)
 		return nil
 	}
 
-	f, err := firewall.NewFirewallClient()
+	f, err := firewall.NewFirewallClient(ctx)
 	if err != nil {
 		return err
 	}
-	log.Debugf("using %s as the firewall interface", f.Name())
+	log.FromContext(ctx).Debugf("using %s as the firewall interface", f.Name())
 
 	// install the rules with the management bridge listed as the outgoing interface with the allow
 	// action
@@ -94,7 +100,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.InstallForwardingRules(&r)
+	err = f.InstallForwardingRules(ctx, &r)
 	if err != nil {
 		return err
 	}
@@ -111,7 +117,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.InstallForwardingRules(&r)
+	err = f.InstallForwardingRules(ctx, &r)
 	if err != nil {
 		return err
 	}

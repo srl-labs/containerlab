@@ -177,10 +177,10 @@ func (n *frr) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	return nil
 }
 
-func (n *frr) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *frr) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -188,10 +188,10 @@ func (n *frr) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) er
 	// Recorded here and written to the container in PostDeploy, once it runs.
 	n.sshPubKeys = params.SSHPubKeys
 
-	return n.createFRRFiles()
+	return n.createFRRFiles(ctx)
 }
 
-func (n *frr) createFRRFiles() error {
+func (n *frr) createFRRFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 
 	dir := filepath.Join(nodeCfg.LabDir, cfgDir)
@@ -214,7 +214,7 @@ func (n *frr) createFRRFiles() error {
 
 	confPath := filepath.Join(dir, frrConfFile)
 
-	err := n.GenerateConfig(confPath, cfgTemplate)
+	err := n.GenerateConfig(ctx, confPath, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("node=%s, failed to generate config: %w", nodeCfg.ShortName, err)
 	}
@@ -247,7 +247,7 @@ func (n *frr) createFRRFiles() error {
 
 // PostDeploy installs login credentials and keeps CLI-saved configs readable.
 func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for frr %q node", n.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Running postdeploy actions for frr %q node", n.Cfg.ShortName)
 
 	err := n.addSSHKeys(ctx)
 	if err != nil {
@@ -418,7 +418,11 @@ func (n *frr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, erro
 		return nil, fmt.Errorf("node=%s: %w", n.Cfg.ShortName, err)
 	}
 
-	log.Infof("saved FRR configuration from %s node to %s\n", n.Cfg.ShortName, confPath)
+	log.FromContext(ctx).Infof(
+		"saved FRR configuration from %s node to %s\n",
+		n.Cfg.ShortName,
+		confPath,
+	)
 
 	// Reporting the path is what makes "containerlab save --copy" pick the file
 	// up. A nil result is how a kind says it cannot save at all, and copying is

@@ -102,11 +102,11 @@ func (n *F5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	return nil
 }
 
-func (n *F5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *F5BigIPVE) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	// create config directory that will be bind mounted to vrnetlab container at /config path
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}

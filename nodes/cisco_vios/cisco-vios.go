@@ -129,7 +129,7 @@ func (n *vios) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 func (n *vios) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,13 @@ func (n *vios) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 }
 
 func (n *vios) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Info(
+		"Running postdeploy actions",
+		"kind",
+		n.Cfg.Kind,
+		"node",
+		n.Cfg.ShortName,
+	)
 	return n.genBootConfig()
 }
 

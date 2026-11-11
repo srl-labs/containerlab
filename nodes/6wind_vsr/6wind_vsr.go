@@ -168,7 +168,7 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResu
 		return nil, fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
 	}
-	log.Infof(
+	log.FromContext(ctx).Infof(
 		"saved 6WIND VSR configuration from %s node to %s\n",
 		n.Cfg.ShortName,
 		n.UserStartupConfig,
@@ -216,7 +216,7 @@ type vsrTemplateData struct {
 }
 
 // addDefaultConfig adds VSR default configuration.
-func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
+func (n *sixwind_vsr) addDefaultConfig(ctx context.Context) error {
 	// tplData holds data used in templating of the default config snippet
 	tplData := vsrTemplateData{
 		Banner:     banner,
@@ -237,20 +237,20 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
+	log.FromContext(ctx).Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY,
 		clabconstants.PermissionsFileDefault)
 	if err != nil {
-		log.Errorf("failed to open consolidated config file: %v", err)
+		log.FromContext(ctx).Errorf("failed to open consolidated config file: %v", err)
 	}
 	defer out.Close()
 
 	b, err := out.WriteString(buf.String())
 	if err != nil {
-		log.Errorf("failed to write in the file: %v", err)
+		log.FromContext(ctx).Errorf("failed to write in the file: %v", err)
 	}
-	log.Debugf("Wrote %d bytes", b)
+	log.FromContext(ctx).Debugf("Wrote %d bytes", b)
 
 	return nil
 }

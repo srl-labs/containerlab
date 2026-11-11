@@ -72,7 +72,7 @@ func (r *Runtime) Save(
 				nodeName,
 			)
 			if containerName == "" {
-				log.Info(
+				log.FromContext(ctx).Info(
 					"Skipping save for C9s node without a save-capable container",
 					"node", nodeName,
 				)
@@ -92,7 +92,7 @@ func (r *Runtime) Save(
 		}
 
 		if len(stdout) != 0 {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"C9s save output",
 				"node",
 				nodeName,
@@ -101,7 +101,7 @@ func (r *Runtime) Save(
 			)
 		}
 		if len(stderr) != 0 {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"C9s save output",
 				"node",
 				nodeName,
@@ -224,7 +224,7 @@ func (r *Runtime) placeSaveMarker(
 			return marker
 		}
 
-		log.Debug("failed to place save copy marker",
+		log.FromContext(ctx).Debug("failed to place save copy marker",
 			"pod", pod.Name,
 			"marker", marker,
 			"error", err,
@@ -232,8 +232,10 @@ func (r *Runtime) placeSaveMarker(
 		)
 	}
 
-	log.Debug("no writable save copy marker location; copying the full node directory",
-		"pod", pod.Name,
+	log.FromContext(ctx).Debug(
+		"no writable save copy marker location; copying the full node directory",
+		"pod",
+		pod.Name,
 	)
 
 	return ""
@@ -257,7 +259,7 @@ func (r *Runtime) collectSavedFiles(
 	artifactDir, err := r.nodeArtifactDir(ctx, pod, containerName, nodeName)
 	if err != nil {
 		if missingExecutable(err) {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)
@@ -271,7 +273,7 @@ func (r *Runtime) collectSavedFiles(
 	_, _, rc, err := r.execInPod(ctx, pod, containerName, []string{"test", "-d", artifactDir})
 	if err != nil {
 		if missingExecutable(err) {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)
@@ -282,7 +284,7 @@ func (r *Runtime) collectSavedFiles(
 		return nil, err
 	}
 	if rc != 0 {
-		log.Debug("no C9s saved config directory found",
+		log.FromContext(ctx).Debug("no C9s saved config directory found",
 			"node", nodeName,
 			"path", artifactDir,
 		)
@@ -299,7 +301,7 @@ func (r *Runtime) collectSavedFiles(
 		})
 		if findErr != nil {
 			if missingExecutable(findErr) {
-				log.Info(
+				log.FromContext(ctx).Info(
 					"Skipping save copy for C9s node without shell utilities in its image",
 					"node", nodeName,
 				)
@@ -314,10 +316,14 @@ func (r *Runtime) collectSavedFiles(
 			// readable here; find can only stumble over pre-existing paths owned by another
 			// user (e.g. root-staged payloads under a non-root device container). Keep
 			// whatever it did list instead of failing the save.
-			log.Debug("save copy file discovery reported errors; using partial results",
-				"node", nodeName,
-				"rc", rc,
-				"stderr", strings.TrimSpace(string(stderr)),
+			log.FromContext(ctx).Debug(
+				"save copy file discovery reported errors; using partial results",
+				"node",
+				nodeName,
+				"rc",
+				rc,
+				"stderr",
+				strings.TrimSpace(string(stderr)),
 			)
 		}
 		defer func() {
@@ -337,7 +343,11 @@ func (r *Runtime) collectSavedFiles(
 			tarTargets = append(tarTargets, relative)
 		}
 		if len(tarTargets) == 0 {
-			log.Debug("save produced no new config files to copy", "node", nodeName)
+			log.FromContext(ctx).Debug(
+				"save produced no new config files to copy",
+				"node",
+				nodeName,
+			)
 
 			return nil, nil
 		}
@@ -347,7 +357,7 @@ func (r *Runtime) collectSavedFiles(
 		append([]string{"tar", "cf", "-", "-C", artifactDir}, tarTargets...))
 	if err != nil {
 		if missingExecutable(err) {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Skipping save copy for C9s node without shell utilities in its image",
 				"node", nodeName,
 			)

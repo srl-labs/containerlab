@@ -6,6 +6,7 @@
 package netconf
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -56,7 +57,10 @@ func SaveRunningConfig(addr, username, password, _ string) error {
 
 // GetConfig retrieves the running configuration and returns it as a string. It automatically picks
 // the appropriate network driver for the provided Scrapli Platform.
-func GetConfig(addr, username, password, scrapliPlatform string) (string, error) {
+func GetConfig(
+	ctx context.Context,
+	addr, username, password, scrapliPlatform string,
+) (string, error) {
 	p, err := platform.NewPlatform(
 		scrapliPlatform,
 		addr,
@@ -96,7 +100,7 @@ func GetConfig(addr, username, password, scrapliPlatform string) (string, error)
 		return "", fmt.Errorf("failed to retrieve config via scraplicfg for %s: %+v", addr, err)
 	}
 
-	log.Debug("Retrieved node config via scraplicfg", "config", config.Result)
+	log.FromContext(ctx).Debug("Retrieved node config via scraplicfg", "config", config.Result)
 
 	return config.Result, nil
 }
@@ -109,7 +113,11 @@ type Operation func(*netconf.Driver) (*response.NetconfResponse, error)
 // require multiple NETCONF calls within a single session (for example, chaining import actions
 // prior
 // to committing configuration changes).
-func MultiExec(addr, username, password string, operations []Operation) error {
+func MultiExec(
+	ctx context.Context,
+	addr, username, password string,
+	operations []Operation,
+) error {
 	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
 		options.WithAuthUsername(username),
@@ -137,7 +145,7 @@ func MultiExec(addr, username, password string, operations []Operation) error {
 		if e != nil {
 			return fmt.Errorf("NETCONF operation failed for %q: %w", addr, e)
 		}
-		log.Debugf("NETCONF RPC sent to %q: %s", addr,
+		log.FromContext(ctx).Debugf("NETCONF RPC sent to %q: %s", addr,
 			xmlfmt.FormatXML(string(r.Input), "\t", "    "))
 		if r.Failed != nil {
 			return fmt.Errorf("NETCONF RPC to %q failed: %s",

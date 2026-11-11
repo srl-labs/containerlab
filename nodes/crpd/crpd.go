@@ -90,17 +90,17 @@ func (s *crpd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	return nil
 }
 
-func (s *crpd) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (s *crpd) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := s.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
-	return createCRPDFiles(s)
+	return createCRPDFiles(ctx, s)
 }
 
 func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
 	cmd, _ := clabexec.NewExecCmdFromString(sshRestartCmd)
 	execResult, err := s.RunExec(ctx, cmd)
@@ -113,7 +113,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		// on Junos >=23.4, where the SSH service was renamed to junos-ssh and
 		// is fully managed by MGD
 		if strings.Contains(execResult.GetStdErrString(), "ssh: unrecognized service") {
-			log.Debug(`Caught "ssh: unrecognized service" error, ignoring`)
+			log.FromContext(ctx).Debug(`Caught "ssh: unrecognized service" error, ignoring`)
 		} else {
 			return fmt.Errorf(
 				"crpd post-deploy sshd restart failed: %s",
@@ -123,7 +123,12 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	}
 
 	if s.Config().License != "" {
-		d, err := clabutils.SpawnCLIviaExec("juniper_junos", s.Cfg.LongName, s.Runtime.GetName())
+		d, err := clabutils.SpawnCLIviaExec(
+			ctx,
+			"juniper_junos",
+			s.Cfg.LongName,
+			s.Runtime.GetName(),
+		)
 		if err != nil {
 			return err
 		}
@@ -141,7 +146,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 				resp.Failed,
 			)
 		}
-		log.Debugf("crpd post-deploy license add completed")
+		log.FromContext(ctx).Debugf("crpd post-deploy license add completed")
 	}
 
 	return err
@@ -170,12 +175,16 @@ func (s *crpd) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 			err,
 		)
 	}
-	log.Infof("saved cRPD configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
+	log.FromContext(ctx).Infof(
+		"saved cRPD configuration from %s node to %s\n",
+		s.Cfg.ShortName,
+		confPath,
+	)
 
 	return nil, nil
 }
 
-func createCRPDFiles(node clabnodes.Node) error {
+func createCRPDFiles(ctx context.Context, node clabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd
 	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"),
@@ -199,7 +208,7 @@ func createCRPDFiles(node clabnodes.Node) error {
 		cfgTemplate = defaultCfgTemplate
 	}
 
-	err := node.GenerateConfig(cfg, cfgTemplate)
+	err := node.GenerateConfig(ctx, cfg, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("node=%s, failed to generate config: %w", nodeCfg.ShortName, err)
 	}
@@ -213,7 +222,7 @@ func createCRPDFiles(node clabnodes.Node) error {
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
 	}
-	log.Debug("Writing sshd_config succeeded")
+	log.FromContext(ctx).Debug("Writing sshd_config succeeded")
 
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
@@ -229,7 +238,7 @@ func createCRPDFiles(node clabnodes.Node) error {
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		log.FromContext(ctx).Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 	return nil
 }

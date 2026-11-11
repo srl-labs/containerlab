@@ -141,7 +141,13 @@ func (n *vrVAOS) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, e
 	}
 
 	configPath := filepath.Join(cfgDir, n.StartupCfgFName)
-	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
+	log.FromContext(ctx).Info(
+		"Saved configuration to path",
+		"nodeName",
+		n.Cfg.ShortName,
+		"path",
+		configPath,
+	)
 
 	return &clabnodes.SaveConfigResult{
 		ConfigPath: configPath,

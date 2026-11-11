@@ -627,7 +627,7 @@ func TestGenerateConfigs(t *testing.T) {
 				}
 			}
 
-			err := node.GenerateConfig(dstFile, tc.template)
+			err := node.GenerateConfig(context.Background(), dstFile, tc.template)
 			if tc.err != nil {
 				if !errors.Is(err, tc.err) {
 					tt.Errorf("got: %v, wanted: %v", err, tc.err)

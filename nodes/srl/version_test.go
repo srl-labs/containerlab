@@ -2,6 +2,7 @@ package srl
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"strings"
 	"testing"
@@ -151,7 +152,7 @@ func TestSetVersionSpecificParamsSSHPubKeys(t *testing.T) {
 			n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1"}
 
 			tplData := &srlTemplateData{}
-			if err := n.setVersionSpecificParams(tplData); err != nil {
+			if err := n.setVersionSpecificParams(context.Background(), tplData); err != nil {
 				t.Fatalf("setVersionSpecificParams() error = %v", err)
 			}
 
@@ -189,7 +190,7 @@ func TestSetVersionSpecificParamsSSHPubKeysDeterministic(t *testing.T) {
 		n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1"}
 
 		tplData := &srlTemplateData{}
-		if err := n.setVersionSpecificParams(tplData); err != nil {
+		if err := n.setVersionSpecificParams(context.Background(), tplData); err != nil {
 			t.Fatalf("setVersionSpecificParams() error = %v", err)
 		}
 
@@ -253,7 +254,7 @@ func TestSetVersionSpecificParamsEDAServer(t *testing.T) {
 			}
 
 			tplData := &srlTemplateData{}
-			if err := n.setVersionSpecificParams(tplData); err != nil {
+			if err := n.setVersionSpecificParams(context.Background(), tplData); err != nil {
 				t.Fatalf("setVersionSpecificParams() error = %v", err)
 			}
 
@@ -277,7 +278,7 @@ func TestSetCustomPromptDisabled(t *testing.T) {
 
 	tplData := &srlTemplateData{}
 	// a disabled prompt returns before running any command in the node
-	n.setCustomPrompt(tplData)
+	n.setCustomPrompt(context.Background(), tplData)
 
 	if tplData.EnableCustomPrompt || tplData.CustomPrompt != "" {
 		t.Fatalf("custom prompt set: %+v", tplData)

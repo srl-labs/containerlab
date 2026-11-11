@@ -94,7 +94,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 		return nil, err
 	}
 
-	log.Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s",
+	log.FromContext(ctx).Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s",
 		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
@@ -111,8 +111,12 @@ func (n *srl) OpenConfigFeatureEnabled(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	log.Debugf("SR Linux node %s OpenConfig feature output. stdout: %s, stderr: %s",
-		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.FromContext(ctx).Debugf(
+		"SR Linux node %s OpenConfig feature output. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return strings.TrimSpace(execResult.GetStdOutString()) != "", nil
 }
@@ -146,7 +150,7 @@ func (v *SrlVersion) MajorMinorSemverString() string {
 // setVersionSpecificParams sets version specific parameters in the template data struct
 // to enable/disable version-specific configuration blocks in the config template
 // or prepares data to conform to the expected format per specific version.
-func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
+func (n *srl) setVersionSpecificParams(ctx context.Context, tplData *srlTemplateData) error {
 	// v is in the vMajor.Minor format
 	v := n.swVersion.MajorMinorSemverString()
 
@@ -155,7 +159,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
 		pubKeys := n.sshPubKeys
 		if len(n.sshPubKeys) > srlMaxSSHPubKeys {
-			log.Warnf(
+			log.FromContext(ctx).Warnf(
 				"SR Linux node %q has %d SSH public keys, but SR Linux supports at most %d; "+
 					"only the first %d (sorted deterministically) will be provisioned",
 				n.Cfg.ShortName,

@@ -57,7 +57,7 @@ func prepareDesiredDeployment(
 	if err := setTopologyFilesFromConfigMaps(desiredTopology, stagedConfigMaps); err != nil {
 		return nil, err
 	}
-	primitives, err := compilePrimitiveResources(desiredTopology)
+	primitives, err := compilePrimitiveResources(ctx, desiredTopology)
 	if err != nil {
 		return nil, err
 	}

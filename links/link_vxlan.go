@@ -272,7 +272,7 @@ func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 
 	// add the link to the Node Namespace
 	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
-		SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
+		SetNameMACAndUpInterface(ctx, mvInterface, l.localEndpoint))
 	return err
 }
 
@@ -348,7 +348,7 @@ func (l *LinkVxlan) Remove(ctx context.Context) error {
 	}
 	err := l.localEndpoint.Remove(ctx)
 	if err != nil {
-		log.Debug(err)
+		log.FromContext(ctx).Debug(err)
 	}
 	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil

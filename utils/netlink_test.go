@@ -295,10 +295,10 @@ func TestMacvlanHostLifecycle(t *testing.T) {
 			if len(f.routes) != 1 || f.link.Attrs().Flags&net.FlagUp == 0 {
 				t.Fatal("partial interface was not repaired in place")
 			}
-			if err := host.Remove("network-id"); err != nil {
+			if err := host.Remove(context.Background(), "network-id"); err != nil {
 				t.Fatal(err)
 			}
-			if err := host.Remove("network-id"); err != nil {
+			if err := host.Remove(context.Background(), "network-id"); err != nil {
 				t.Fatal(err)
 			}
 			if f.calls["delete"] != 1 {
@@ -546,7 +546,11 @@ func TestMacvlanHostRefusesForeignState(t *testing.T) {
 				t.Fatalf("foreign state modified: %+v", f.calls)
 			}
 			if scenario == "type" {
-				if err := host.Remove("network-id"); err == nil || f.calls["delete"] != 0 {
+				if err := host.Remove(
+					context.Background(),
+					"network-id",
+				); err == nil ||
+					f.calls["delete"] != 0 {
 					t.Fatal("foreign interface removed")
 				}
 			}
@@ -572,7 +576,11 @@ func TestMacvlanHostAdoptsUnaliasedIdentity(t *testing.T) {
 		)
 	}
 	f.link.Attrs().Alias = ""
-	if err := host.Remove("network-id"); err != nil || f.calls["delete"] != 1 {
+	if err := host.Remove(
+		context.Background(),
+		"network-id",
+	); err != nil ||
+		f.calls["delete"] != 1 {
 		t.Fatalf("unaliased owned interface was not removed: %v calls=%v", err, f.calls)
 	}
 }
@@ -611,7 +619,7 @@ func TestMacvlanHostChecksumFill(t *testing.T) {
 	if err := ensureTestHost(context.Background(), host, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.Remove("network-id"); err != nil {
+	if err := host.Remove(context.Background(), "network-id"); err != nil {
 		t.Fatal(err)
 	}
 	want := macvlanHostName("network-id")
@@ -642,13 +650,19 @@ func TestMacvlanHostRemoveOrphans(t *testing.T) {
 	if err := ensureTestHost(context.Background(), host, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.RemoveOrphans(func(string) bool { return true }); err != nil {
+	if err := host.RemoveOrphans(
+		context.Background(),
+		func(string) bool { return true },
+	); err != nil {
 		t.Fatal(err)
 	}
 	if f.calls["delete"] != 0 {
 		t.Fatal("live network interface was deleted")
 	}
-	if err := host.RemoveOrphans(func(string) bool { return false }); err != nil {
+	if err := host.RemoveOrphans(
+		context.Background(),
+		func(string) bool { return false },
+	); err != nil {
 		t.Fatal(err)
 	}
 	if f.calls["delete"] != 1 || f.link != nil {
@@ -722,13 +736,13 @@ func TestMacvlanHostRemoveErrors(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.failures[operation] = unix.EPERM
-		if err := host.Remove("network-id"); !errors.Is(err, unix.EPERM) {
+		if err := host.Remove(context.Background(), "network-id"); !errors.Is(err, unix.EPERM) {
 			t.Fatalf("%s error lost: %v", operation, err)
 		}
 	}
 	f := newHostNetlink()
 	host := MacvlanHost{Links: f}
-	if err := host.Remove(""); err == nil || f.calls["lookup"] != 0 {
+	if err := host.Remove(context.Background(), ""); err == nil || f.calls["lookup"] != 0 {
 		t.Fatal("empty ID reached netlink")
 	}
 	if err := host.Ensure(
@@ -743,7 +757,7 @@ func TestMacvlanHostRemoveErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.failures["delete"] = unix.ENODEV
-	if err := host.Remove("network-id"); err != nil {
+	if err := host.Remove(context.Background(), "network-id"); err != nil {
 		t.Fatalf("concurrent removal rejected: %v", err)
 	}
 }

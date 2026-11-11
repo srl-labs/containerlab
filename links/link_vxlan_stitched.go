@@ -40,13 +40,13 @@ func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
 // VxLAN and veth interfaces on the host. Both interfaces must already exist.
 // Used during lab deploy where VxLAN is created by host endpoint deploy and
 // veth is created by node workers.
-func (l *VxlanStitched) Stitch() error {
-	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+func (l *VxlanStitched) Stitch(ctx context.Context) error {
+	err := stitch(ctx, l.vxlanLink.localEndpoint, l.vethStitchEp)
 	if err != nil {
 		return err
 	}
 
-	return stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
+	return stitch(ctx, l.vethStitchEp, l.vxlanLink.localEndpoint)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
@@ -55,7 +55,9 @@ func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
 }
 
 func (l *VxlanStitched) PostDeploy(ctx context.Context) error {
-	return retryTransientNetlink(ctx, "vxlan-stitch post-deploy", l.Stitch)
+	return retryTransientNetlink(ctx, "vxlan-stitch post-deploy", func() error {
+		return l.Stitch(ctx)
+	})
 }
 
 func (l *VxlanStitched) internalDeploy(
@@ -78,13 +80,13 @@ func (l *VxlanStitched) internalDeploy(
 	}
 
 	// unidirectionally stitch the vxlan endpoint to the veth endpoint
-	err = stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	err = stitch(ctx, l.vxlanLink.localEndpoint, l.vethStitchEp)
 	if err != nil {
 		return err
 	}
 
 	// unidirectionally stitch the veth endpoint to the vxlan endpoint
-	err = stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
+	err = stitch(ctx, l.vethStitchEp, l.vxlanLink.localEndpoint)
 	if err != nil {
 		return err
 	}
@@ -97,12 +99,12 @@ func (l *VxlanStitched) Remove(ctx context.Context) error {
 	// remove the veth link piece
 	err := l.vethLink.Remove(ctx)
 	if err != nil {
-		log.Debug(err)
+		log.FromContext(ctx).Debug(err)
 	}
 	// remove the vxlan link piece
 	err = l.vxlanLink.Remove(ctx)
 	if err != nil {
-		log.Debug(err)
+		log.FromContext(ctx).Debug(err)
 	}
 	// set the links DeploymentState to Removed
 	l.DeploymentState = LinkDeploymentStateRemoved

@@ -344,7 +344,7 @@ func TestDeleteMgmtNetworkFwdRuleSkipsNonBridge(t *testing.T) {
 		},
 	}
 
-	if err := rt.deleteMgmtNetworkFwdRule(); err != nil {
+	if err := rt.deleteMgmtNetworkFwdRule(context.Background()); err != nil {
 		t.Fatalf("deleteMgmtNetworkFwdRule() error = %v", err)
 	}
 }

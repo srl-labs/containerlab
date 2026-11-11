@@ -131,13 +131,13 @@ func (*bridge) Delete(_ context.Context) error {
 func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
 // DeleteNetnsSymlink is a noop for bridge nodes.
-func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
+func (b *bridge) DeleteNetnsSymlink(context.Context) (err error) { return nil }
 
-func (b *bridge) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
+func (b *bridge) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	if b.containerNs != "" {
 		return nil
 	}
-	return b.installIPTablesBridgeFwdRule()
+	return b.installIPTablesBridgeFwdRule(ctx)
 }
 
 func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
@@ -156,7 +156,7 @@ func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
 }
 
 func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
-	err := b.VerifyHostRequirements()
+	err := b.VerifyHostRequirements(ctx)
 	if err != nil {
 		return err
 	}
@@ -194,8 +194,8 @@ func (*bridge) GetContainers(_ context.Context) ([]clabruntime.GenericContainer,
 }
 
 // RunExec is a noop for bridge kind.
-func (b *bridge) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
+func (b *bridge) RunExec(ctx context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	log.FromContext(ctx).Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 	return nil, clabexec.ErrRunExecNotSupported
 }
 
@@ -275,12 +275,15 @@ func (b *bridge) GetLinkEndpointType() clablinks.LinkEndpointType {
 // installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the
 // bridge
 // otherwise, communication over the bridge is not permitted on most systems.
-func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
-	f, err := firewall.NewFirewallClient()
+func (b *bridge) installIPTablesBridgeFwdRule(ctx context.Context) (err error) {
+	f, err := firewall.NewFirewallClient(ctx)
 	if err != nil {
 		return err
 	}
-	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
+	log.FromContext(ctx).Debugf(
+		"setting up bridge firewall rules using %s as the firewall interface",
+		f.Name(),
+	)
 
 	r := definitions.FirewallRule{
 		Interface: b.nameWithoutSeparatorSuffix(),
@@ -290,7 +293,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		Table:     definitions.FilterTable,
 		Chain:     definitions.ForwardChain,
 	}
-	err = f.InstallForwardingRules(&r)
+	err = f.InstallForwardingRules(ctx, &r)
 	if err != nil {
 		return err
 	}
@@ -304,5 +307,5 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		Chain:     definitions.ForwardChain,
 	}
 
-	return f.InstallForwardingRules(&r)
+	return f.InstallForwardingRules(ctx, &r)
 }

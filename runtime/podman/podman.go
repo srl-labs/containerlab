@@ -203,7 +203,7 @@ func (r *PodmanRuntime) CreateNet(
 	if err != nil {
 		return err
 	}
-	log.Debugf("Trying to create a management network with params %+v", r.mgmt)
+	log.FromContext(ctx).Debugf("Trying to create a management network with params %+v", r.mgmt)
 	// check the network existence first
 	b, err := network.Exists(ctx, r.mgmt.Network, &network.ExistsOptions{})
 	if err != nil {
@@ -215,12 +215,12 @@ func (r *PodmanRuntime) CreateNet(
 		if err != nil {
 			return err
 		}
-		log.Debugf("Trying to create mgmt network with params: %+v", netopts)
+		log.FromContext(ctx).Debugf("Trying to create mgmt network with params: %+v", netopts)
 		resp, err := network.Create(ctx, &netopts)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Create network response was: %+v", resp)
+		log.FromContext(ctx).Debugf("Create network response was: %+v", resp)
 	}
 	details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
 	if err != nil {
@@ -261,7 +261,7 @@ func setMgmtIPAMFromPodmanSubnets(m *types.MgmtNet, subnets []netTypes.Subnet) e
 // DeleteNet deletes a clab mgmt bridge.
 func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	// Skip if "keep mgmt" is set
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Method DeleteNet was called with runtime inputs %+v and net settings %+v",
 		r,
 		r.mgmt,
@@ -273,7 +273,7 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("trying to delete mgmt network %v", r.mgmt.Network)
+	log.FromContext(ctx).Debugf("trying to delete mgmt network %v", r.mgmt.Network)
 
 	// Removal can fail with "network is being used" right after destroy has
 	// deleted all lab containers, because podman can briefly still consider
@@ -291,8 +291,13 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 		if err == nil || !isNetworkInUseErr(err) || attempt == netInUseRetries-1 {
 			break
 		}
-		log.Debugf("transient in-use error removing network %q (attempt %d/%d): %v",
-			r.mgmt.Network, attempt+1, netInUseRetries, err)
+		log.FromContext(ctx).Debugf(
+			"transient in-use error removing network %q (attempt %d/%d): %v",
+			r.mgmt.Network,
+			attempt+1,
+			netInUseRetries,
+			err,
+		)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -333,7 +338,7 @@ func (r *PodmanRuntime) PullImage(
 	if pullPolicy == types.PullPolicyNever {
 		if ex {
 			// image present, all good
-			log.Debugf("Image %s present, skip pulling", image)
+			log.FromContext(ctx).Debugf("Image %s present, skip pulling", image)
 			return nil
 		} else {
 			// image not found but pull policy = never
@@ -346,7 +351,7 @@ func (r *PodmanRuntime) PullImage(
 	}
 	if pullPolicy == types.PullPolicyIfNotPresent && ex == true {
 		// pull policy == IfNotPresent and image is present
-		log.Debugf("Image %s present, skip pulling", image)
+		log.FromContext(ctx).Debugf("Image %s present, skip pulling", image)
 		return nil
 	}
 
@@ -378,7 +383,7 @@ func (r *PodmanRuntime) CreateContainer(
 	if err != nil {
 		return "", fmt.Errorf("failed to create container %q: %w", cfg.LongName, err)
 	}
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Created a container with ID %v, warnings %v",
 		res.ID,
 		res.Warnings,
@@ -442,7 +447,7 @@ func (r *PodmanRuntime) StopContainer(
 	}
 
 	signal := string(stopSignal)
-	log.Debugf("using custom stop signal %q for container %q", signal, cID)
+	log.FromContext(ctx).Debugf("using custom stop signal %q for container %q", signal, cID)
 	if err := containers.Kill(ctx, cID, &containers.KillOptions{Signal: &signal}); err != nil {
 		return err
 	}
@@ -468,7 +473,8 @@ func (r *PodmanRuntime) ListContainers(
 	if err != nil {
 		return nil, err
 	}
-	listOpts := new(containers.ListOptions).WithAll(true).WithFilters(r.buildFilterString(filters))
+	filter := r.buildFilterString(ctx, filters)
+	listOpts := new(containers.ListOptions).WithAll(true).WithFilters(filter)
 	cList, err := containers.List(ctx, listOpts)
 	if err != nil {
 		return nil, err
@@ -489,19 +495,25 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	// to support stopped containers and containerlab-managed netns links.
 	nspath := inspect.NetworkSettings.SandboxKey
 	if nspath != "" && utils.FileOrDirExists(nspath) {
-		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		log.FromContext(ctx).Debugf(
+			"Method GetNSPath was called with a resulting nspath %q",
+			nspath,
+		)
 		return nspath, nil
 	}
 
 	runNetns := filepath.Join("/run/netns", cID)
 	if utils.FileOrDirExists(runNetns) {
-		log.Debugf("Method GetNSPath falling back to %q", runNetns)
+		log.FromContext(ctx).Debugf("Method GetNSPath falling back to %q", runNetns)
 		return runNetns, nil
 	}
 
 	// For host network containers sandbox key is typically empty.
 	if nspath == "" {
-		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		log.FromContext(ctx).Debugf(
+			"Method GetNSPath was called with a resulting nspath %q",
+			nspath,
+		)
 		return "", nil
 	}
 
@@ -527,7 +539,7 @@ func (r *PodmanRuntime) Exec(
 	execCreateConf.Cmd = execCmd.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
-		log.Errorf("failed to create exec in container %q: %v", cID, err)
+		log.FromContext(ctx).Errorf("failed to create exec in container %q: %v", cID, err)
 		return nil, err
 	}
 	var sOut, sErr podmanWriterCloser
@@ -541,7 +553,7 @@ func (r *PodmanRuntime) Exec(
 
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
-		log.Errorf("failed to start/attach exec in container %q: %v", cID, err)
+		log.FromContext(ctx).Errorf("failed to start/attach exec in container %q: %v", cID, err)
 		return nil, err
 	}
 	// perform inspection to retrieve the exitcode
@@ -549,7 +561,7 @@ func (r *PodmanRuntime) Exec(
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Exec attached to the container %q and got stdout %q and stderr %q",
 		cID,
 		sOut.Bytes(),
@@ -577,7 +589,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec *exec.
 	execCreateConf.Cmd = exec.GetCmd()
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
-		log.Errorf("failed to create exec in container %q: %v", cID, err)
+		log.FromContext(ctx).Errorf("failed to create exec in container %q: %v", cID, err)
 		return err
 	}
 	execSAAOpts := new(containers.ExecStartAndAttachOptions)
@@ -596,7 +608,7 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 		// Try to stop the containers first in case of graceful shutdown
 		err = containers.Stop(ctx, contName, &containers.StopOptions{})
 		if err != nil {
-			log.Warnf("Unable to stop %q gracefully: %v", contName, err)
+			log.FromContext(ctx).Warnf("Unable to stop %q gracefully: %v", contName, err)
 		}
 	}
 	// and do a force removal in the end
@@ -631,7 +643,10 @@ func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 		return "", err
 	}
 	hostsPath := inspect.HostsPath
-	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
+	log.FromContext(ctx).Debugf(
+		"Method GetHostsPath was called with a resulting path %q",
+		hostsPath,
+	)
 	return hostsPath, nil
 }
 
@@ -691,7 +706,7 @@ func (r *PodmanRuntime) IsHealthy(ctx context.Context, cID string) (bool, error)
 }
 
 func (*PodmanRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
-	log.Infof("WriteToStdinNoWait is not yet implemented for Podman runtime")
+	log.FromContext(ctx).Infof("WriteToStdinNoWait is not yet implemented for Podman runtime")
 	return nil
 }
 
@@ -822,7 +837,7 @@ func (p *PodmanRuntime) CopyToContainer(
 		NoOverwriteDirNonDir: new(true),
 	}
 
-	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
+	log.FromContext(ctx).Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
 	_, err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
 	if err != nil {
 		return fmt.Errorf(

@@ -59,13 +59,13 @@ func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 
 // PreDeploy default function: create lab directory, generate certificates, generate startup config
 // file.
-func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+func (n *VRNode) PreDeploy(ctx context.Context, params *PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
-	return LoadStartupConfigFileVr(n, n.ConfigDirName, n.StartupCfgFName)
+	return LoadStartupConfigFileVr(ctx, n, n.ConfigDirName, n.StartupCfgFName)
 }
 
 // AddEndpoint override version maps the endpoint name to an ethX-based name before adding it to the
@@ -124,8 +124,8 @@ func (vr *VRNode) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
-	config, err := clabnetconf.GetConfig(n.Cfg.LongName,
+func (n *VRNode) SaveConfig(ctx context.Context) (*SaveConfigResult, error) {
+	config, err := clabnetconf.GetConfig(ctx, n.Cfg.LongName,
 		n.Cfg.Credentials.Username,
 		n.Cfg.Credentials.Password,
 		n.ScrapliPlatformName,
@@ -135,7 +135,7 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	}
 
 	// Save config to mounted labdir startup config path
-	return WriteSavedConfig(n.Cfg, n.ConfigDirName, n.StartupCfgFName, []byte(config))
+	return WriteSavedConfig(ctx, n.Cfg, n.ConfigDirName, n.StartupCfgFName, []byte(config))
 }
 
 // PreStop prepares vrnetlab-specific state before DefaultNode.Stop parks interfaces and stops the
@@ -148,7 +148,7 @@ func (vr *VRNode) PreStop(ctx context.Context) error {
 func preStopPrepareVrnetlabQcowAlias(ctx context.Context, d *DefaultNode) {
 	aliasName, ok := vrnetlabQcowAliasName(d.Config().Image)
 	if !ok {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"node %q pre-stop vrnetlab qcow alias skipped: unable to infer tag from image %q",
 			d.Config().ShortName,
 			d.Config().Image,
@@ -189,7 +189,7 @@ func preStopPrepareVrnetlabQcowAlias(ctx context.Context, d *DefaultNode) {
 	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
 	res, err := d.RunExec(ctx, execCmd)
 	if err != nil {
-		log.Warnf(
+		log.FromContext(ctx).Warnf(
 			"node %q pre-stop vrnetlab qcow alias preparation failed: %v",
 			d.Config().ShortName,
 			err,
@@ -198,7 +198,7 @@ func preStopPrepareVrnetlabQcowAlias(ctx context.Context, d *DefaultNode) {
 	}
 
 	if res != nil && res.ReturnCode != 0 {
-		log.Warnf(
+		log.FromContext(ctx).Warnf(
 			"node %q pre-stop vrnetlab qcow alias prep returned code %d (stderr: %s)",
 			d.Config().ShortName,
 			res.ReturnCode,

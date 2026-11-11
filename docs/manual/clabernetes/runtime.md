@@ -1142,6 +1142,29 @@ decides what a user may do and its audit log names the user:
 The kubeconfig identity then needs the `impersonate` verb on the users and
 groups it acts as.
 
+### Logging per lab
+
+Operations that take a `context.Context`, such as deploy, destroy, start, stop,
+save, exec and capture, log to the [charmbracelet/log](https://github.com/charmbracelet/log)
+logger stored in that context, and to the default logger when the context holds
+none. This applies to Docker and Podman labs too, so a server can collect the
+output of each lab separately:
+
+```go
+var labLog bytes.Buffer
+
+ctx = log.WithContext(ctx, log.NewWithOptions(&labLog, log.Options{
+	Formatter: log.JSONFormatter,
+}))
+
+_, err = c.Deploy(ctx, deployOpts)
+```
+
+The logger in the context has its own level, independent of the default
+logger's. Image pulls are logged to it as one line per image instead of the
+progress bars. Loading a topology with `NewContainerLab` takes no context, so
+its messages still go to the default logger.
+
 ## RBAC requirements
 
 clabernetes ships two ClusterRoles meant to be bound per lab namespace with a

@@ -85,7 +85,8 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 	defer func() {
 		if opts.cleanup {
-			if cleanupErr := c.destroyLabDirs(topos, opts.all, failedLabDirs); cleanupErr != nil {
+			cleanupErr := c.destroyLabDirs(ctx, topos, opts.all, failedLabDirs)
+			if cleanupErr != nil {
 				err = errors.Join(err, cleanupErr)
 			}
 		}
@@ -95,7 +96,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		return nil
 	}
 
-	log.Debugf("got the following topologies for destroy: %+v", topos)
+	log.FromContext(ctx).Debugf("got the following topologies for destroy: %+v", topos)
 
 	// if all, and cli doesn't have --yes flag, and in a terminal -- prompt user confirmation
 	if opts.all && opts.terminalPrompt && term.IsTerminal(int(os.Stdin.Fd())) {
@@ -110,7 +111,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	for topo, labDir := range topos {
 		cc, err := c.makeCopyForDestroy(ctx, topo, labDir, *opts)
 		if err != nil {
-			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
+			log.FromContext(ctx).Errorf("error creating clab instance for topo %q: %v", topo, err)
 
 			errs = append(errs, fmt.Errorf(
 				"error creating clab instance for topo %q: %w", topo, err))
@@ -121,7 +122,11 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
 		if err != nil {
-			log.Errorf("Error occurred during the %s lab deletion: %v", cc.Config.Name, err)
+			log.FromContext(ctx).Errorf(
+				"Error occurred during the %s lab deletion: %v",
+				cc.Config.Name,
+				err,
+			)
 			errs = append(errs, err)
 			failedLabDirs[labDir] = true
 		}
@@ -169,7 +174,11 @@ func (c *CLab) makeCopyForDestroy(
 		// Derive lab name from lab directory (format: clab-<labname>)
 		labName := filepath.Base(labDir)
 		labName = strings.TrimPrefix(labName, "clab-")
-		log.Debugf("topology file %q not found, using lab name %q for destroy", topo, labName)
+		log.FromContext(ctx).Debugf(
+			"topology file %q not found, using lab name %q for destroy",
+			topo,
+			labName,
+		)
 		newOpts = append(newOpts, WithLabNameOnly(labName))
 	}
 
@@ -250,7 +259,7 @@ func (c *CLab) resolveExistingMgmtNetworks(
 		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
 		if rtErr != nil {
 			// runtimes without multiple network support never created extra networks
-			log.Debug(
+			log.FromContext(ctx).Debug(
 				"Skipping management network resolution", "network", m.Network, "error", rtErr,
 			)
 			continue
@@ -267,7 +276,11 @@ func (c *CLab) resolveExistingMgmtNetworks(
 			return err
 		}
 		if !exists {
-			log.Debug("Skipping management network that does not exist", "network", m.Network)
+			log.FromContext(ctx).Debug(
+				"Skipping management network that does not exist",
+				"network",
+				m.Network,
+			)
 			continue
 		}
 
@@ -281,12 +294,13 @@ func (c *CLab) resolveExistingMgmtNetworks(
 // recorded in failedLabDirs are kept: their labs are still running, and the
 // directory holds the lab state a later destroy attempt relies on.
 func (c *CLab) destroyLabDirs(
+	ctx context.Context,
 	topos map[string]string,
 	all bool,
 	failedLabDirs map[string]bool,
 ) error {
 	if len(topos) == 0 {
-		log.Info("no containerlab containers found")
+		log.FromContext(ctx).Info("no containerlab containers found")
 
 		if !all {
 			labDir := c.TopoPaths.TopologyLabDir()
@@ -319,7 +333,7 @@ func (c *CLab) destroyLabDirs(
 						}
 					}
 					if labDir == "" {
-						log.Info(
+						log.FromContext(ctx).Info(
 							"lab directory not found, nothing to clean",
 							"candidates",
 							candidates,
@@ -327,7 +341,7 @@ func (c *CLab) destroyLabDirs(
 						return nil
 					}
 				} else {
-					log.Info("lab directory not found, nothing to clean")
+					log.FromContext(ctx).Info("lab directory not found, nothing to clean")
 					return nil
 				}
 			}
@@ -335,13 +349,16 @@ func (c *CLab) destroyLabDirs(
 			// Safety: only remove directories that look like a lab directory.
 			base := filepath.Base(labDir)
 			if !strings.HasPrefix(base, "clab-") {
-				log.Warnf("refusing to remove lab directory %q: unexpected name", labDir)
+				log.FromContext(ctx).Warnf(
+					"refusing to remove lab directory %q: unexpected name",
+					labDir,
+				)
 				return nil
 			}
 			if c.Config != nil && c.Config.Name != "" {
 				expected := "clab-" + c.Config.Name
 				if base != expected {
-					log.Warnf(
+					log.FromContext(ctx).Warnf(
 						"refusing to remove lab directory %q: does not match expected %q",
 						labDir,
 						expected,
@@ -351,16 +368,26 @@ func (c *CLab) destroyLabDirs(
 			}
 
 			if _, err := os.Stat(labDir); os.IsNotExist(err) {
-				log.Info("lab directory not found, nothing to clean", "path", labDir)
+				log.FromContext(ctx).Info(
+					"lab directory not found, nothing to clean",
+					"path",
+					labDir,
+				)
 				return nil
 			} else if err != nil {
-				log.Debug("failed to stat lab directory, skipping", "path", labDir, "error", err)
+				log.FromContext(ctx).Debug(
+					"failed to stat lab directory, skipping",
+					"path",
+					labDir,
+					"error",
+					err,
+				)
 				return nil
 			}
 
-			log.Info("Removing lab directory", "path", labDir)
+			log.FromContext(ctx).Info("Removing lab directory", "path", labDir)
 			if err := os.RemoveAll(labDir); err != nil {
-				log.Errorf("error deleting lab directory: %v", err)
+				log.FromContext(ctx).Errorf("error deleting lab directory: %v", err)
 				return err
 			}
 		}
@@ -370,7 +397,7 @@ func (c *CLab) destroyLabDirs(
 
 	for _, labdir := range topos {
 		if failedLabDirs[labdir] {
-			log.Warnf(
+			log.FromContext(ctx).Warnf(
 				"keeping lab directory %s: the lab was not destroyed, so its state is kept for a later attempt",
 				labdir,
 			)
@@ -380,7 +407,7 @@ func (c *CLab) destroyLabDirs(
 
 		err := os.RemoveAll(labdir)
 		if err != nil {
-			log.Errorf("error deleting lab directory: %v", err)
+			log.FromContext(ctx).Errorf("error deleting lab directory: %v", err)
 		}
 	}
 
@@ -435,7 +462,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		maxWorkers = uint(len(containers))
 	}
 
-	log.Info("Destroying lab", "name", c.Config.Name)
+	log.FromContext(ctx).Info("Destroying lab", "name", c.Config.Name)
 
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
@@ -459,23 +486,23 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	c.deleteToolContainers(ctx)
 
-	log.Info("Removing host entries", "path", "/etc/hosts")
+	log.FromContext(ctx).Info("Removing host entries", "path", "/etc/hosts")
 
 	err = c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
-	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
+	log.FromContext(ctx).Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
 
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
-		log.Errorf("failed to remove ssh config file: %v", err)
+		log.FromContext(ctx).Errorf("failed to remove ssh config file: %v", err)
 	}
 
 	// delete container network namespaces symlinks
 	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
+		err = node.DeleteNetnsSymlink(ctx)
 		if err != nil {
 			return fmt.Errorf("error while deleting netns symlinks: %w", err)
 		}
@@ -484,16 +511,22 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// delete every defined management network, including extra networks
 	// that apply may have left without nodes, and networks a previous
 	// deployment recorded in the lab state but the topology no longer defines
-	for _, m := range c.mgmtNetworksForCleanup() {
+	for _, m := range c.mgmtNetworksForCleanup(ctx) {
 		if m.Network == "bridge" || keepMgmtNet {
 			continue
 		}
-		log.Debugf("Calling DeleteNet method. Management network value is: %+v", m)
+		log.FromContext(ctx).Debugf("Calling DeleteNet method. Management network value is: %+v", m)
 
 		rt, rtErr := c.mgmtRuntime(c.globalRuntimeName, m)
 		if rtErr != nil {
 			// runtimes without multiple network support never created extra networks
-			log.Debug("Skipping management network deletion", "network", m.Network, "error", rtErr)
+			log.FromContext(ctx).Debug(
+				"Skipping management network deletion",
+				"network",
+				m.Network,
+				"error",
+				rtErr,
+			)
 			continue
 		}
 		if err = rt.DeleteNet(ctx); err != nil {
@@ -501,7 +534,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			case err.Error() == fmt.Sprintf("Error: No such network: %s", m.Network):
 			case strings.Contains(err.Error(), fmt.Sprintf(" network %s not found", m.Network)):
 			default:
-				log.Error(err)
+				log.FromContext(ctx).Error(err)
 			}
 		}
 	}
@@ -530,12 +563,16 @@ func (c *CLab) addMgmtNetworksFromContainers(containers []clabruntime.GenericCon
 // the topology-defined ones plus any network a previous deployment recorded in
 // the lab state but that the current topology no longer defines. Without the
 // state record a network dropped from the mgmt list would never be removed.
-func (c *CLab) mgmtNetworksForCleanup() clabtypes.MgmtNetworks {
+func (c *CLab) mgmtNetworksForCleanup(ctx context.Context) clabtypes.MgmtNetworks {
 	networks := c.allMgmtNetworks()
 
 	state, err := c.LoadState()
 	if err != nil {
-		log.Warn("Unable to load the management networks recorded in the lab state", "error", err)
+		log.FromContext(ctx).Warn(
+			"Unable to load the management networks recorded in the lab state",
+			"error",
+			err,
+		)
 		return networks
 	}
 	if state == nil {
@@ -619,12 +656,12 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 			if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
 				action = "Deleting node for recreate"
 			}
-			log.Info(action, "node", nodeName, "container", ctr.Names[0])
+			log.FromContext(ctx).Info(action, "node", nodeName, "container", ctr.Names[0])
 			if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
 				return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
 			}
 
-			_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
+			_ = clabutils.DeleteNetnsSymlink(ctx, ctr.Names[0])
 		}
 	}
 
@@ -654,7 +691,11 @@ func (*CLab) preDestroyNodes(ctx context.Context, nodes []clabnodes.Node, worker
 			}
 
 			if err := n.PreDestroy(ctx); err != nil {
-				log.Warnf("node %q pre-destroy hook failed: %v", n.Config().ShortName, err)
+				log.FromContext(ctx).Warnf(
+					"node %q pre-destroy hook failed: %v",
+					n.Config().ShortName,
+					err,
+				)
 			}
 		}()
 	}
@@ -674,13 +715,17 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 			select {
 			case n := <-input:
 				if n == nil {
-					log.Debugf("Worker %d terminating...", i)
+					log.FromContext(ctx).Debugf("Worker %d terminating...", i)
 					return
 				}
 
 				err := n.Delete(ctx)
 				if err != nil {
-					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
+					log.FromContext(ctx).Errorf(
+						"could not remove container %q: %v",
+						n.Config().LongName,
+						err,
+					)
 				}
 			case <-ctx.Done():
 				return
@@ -719,7 +764,7 @@ func (c *CLab) deleteSpecialLinkNodes(ctx context.Context) {
 	for _, n := range specialNodes {
 		err := n.Delete(ctx)
 		if err != nil {
-			log.Warn(err)
+			log.FromContext(ctx).Warn(err)
 		}
 	}
 }
@@ -732,11 +777,11 @@ func (c *CLab) deleteContainersDirect(
 ) {
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
-			log.Warnf("skipping container %s with no names", cont.ID)
+			log.FromContext(ctx).Warnf("skipping container %s with no names", cont.ID)
 			continue
 		}
 		name := cont.Names[0]
-		log.Infof("Removing container: %s", name)
+		log.FromContext(ctx).Infof("Removing container: %s", name)
 
 		c.logoutTailscaleContainer(ctx, cont)
 		rt := cont.Runtime
@@ -745,7 +790,7 @@ func (c *CLab) deleteContainersDirect(
 		}
 		err := rt.DeleteContainer(ctx, name)
 		if err != nil {
-			log.Errorf("could not remove container %q: %v", name, err)
+			log.FromContext(ctx).Errorf("could not remove container %q: %v", name, err)
 		}
 	}
 }
@@ -775,29 +820,54 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 
 		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
 		if err != nil {
-			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
+			log.FromContext(ctx).Error(
+				"Failed to list tool containers",
+				"tool",
+				toolType,
+				"error",
+				err,
+			)
 			continue
 		}
 
 		if len(containers) == 0 {
-			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
+			log.FromContext(ctx).Debug(
+				"No tool containers found for lab",
+				"tool",
+				toolType,
+				"lab",
+				c.Config.Name,
+			)
 			continue
 		}
 
-		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
-			c.Config.Name, "count", len(containers))
+		log.FromContext(ctx).Info(
+			"Found tool containers associated with a lab",
+			"tool",
+			toolType,
+			"lab",
+			c.Config.Name,
+			"count",
+			len(containers),
+		)
 
 		for idx := range containers {
 			containerName := strings.TrimPrefix(containers[idx].Names[0], "/")
 
-			log.Info("Removing tool container", "tool", toolType, "container", containerName)
+			log.FromContext(ctx).Info(
+				"Removing tool container",
+				"tool",
+				toolType,
+				"container",
+				containerName,
+			)
 
 			c.logoutTailscaleContainer(ctx, containers[idx])
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
-				log.Error("Failed to remove tool container", "tool", toolType,
+				log.FromContext(ctx).Error("Failed to remove tool container", "tool", toolType,
 					"container", containerName, "error", err)
 			} else {
-				log.Info(
+				log.FromContext(ctx).Info(
 					"Tool container removed successfully",
 					"tool",
 					toolType,

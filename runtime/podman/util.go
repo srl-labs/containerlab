@@ -153,7 +153,11 @@ func (r *PodmanRuntime) createContainerSpec(
 		mem, err := humanize.ParseBytes(cfg.Memory)
 		mem64 := int64(mem)
 		if err != nil {
-			log.Warnf("Unable to parse memory limit %q for node %q", cfg.Memory, cfg.LongName)
+			log.FromContext(ctx).Warnf(
+				"Unable to parse memory limit %q for node %q",
+				cfg.Memory,
+				cfg.LongName,
+			)
 		}
 		lMem.Limit = &mem64
 	}
@@ -295,7 +299,7 @@ func (r *PodmanRuntime) createContainerSpec(
 				if netip != nil {
 					dnsServers = append(dnsServers, netip)
 				} else {
-					log.Errorf("%q given as DNS server is not a valid IP", servip)
+					log.FromContext(ctx).Errorf("%q given as DNS server is not a valid IP", servip)
 				}
 			}
 			specNetConfig.DNSServers = dnsServers
@@ -329,7 +333,7 @@ func (r *PodmanRuntime) createContainerSpec(
 // convertMounts separates host binds and managed volumes into Podman's corresponding storage
 // configuration fields.
 func (*PodmanRuntime) convertMounts(
-	_ context.Context,
+	ctx context.Context,
 	binds []string,
 	volumes []string,
 ) ([]specs.Mount, []*specgen.NamedVolume, error) {
@@ -381,7 +385,7 @@ func (*PodmanRuntime) convertMounts(
 		volumeSpec = append(volumeSpec, namedVolume)
 	}
 
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"convertMounts method received mounts %v (volumes %v) and produced %+v as a result",
 		binds,
 		volumes,
@@ -481,7 +485,7 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 
 		genericList[i].SetRuntime(r)
 	}
-	log.Debugf("Method produceGenericContainerList returns %+v", genericList)
+	log.FromContext(ctx).Debugf("Method produceGenericContainerList returns %+v", genericList)
 	return genericList, nil
 }
 
@@ -509,20 +513,28 @@ func (*PodmanRuntime) extractMgmtIP(
 	toReturn := runtime.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
 	if err != nil {
-		log.Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
+		log.FromContext(ctx).Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
 	}
 	// Extract the data only for a specific CNI. Network name is taken from a container's label
 	netName, ok := inspectRes.Config.Labels["clab-net-mgmt"]
 	if !ok || netName == "" {
-		log.Debugf("Couldn't extract mgmt net data for container %q", cID)
+		log.FromContext(ctx).Debugf("Couldn't extract mgmt net data for container %q", cID)
 		return toReturn, nil
 	}
 	mgmtData, ok := inspectRes.NetworkSettings.Networks[netName]
 	if !ok || mgmtData == nil {
-		log.Debugf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
+		log.FromContext(ctx).Debugf(
+			"Couldn't extract mgmt IPs for container %q and net %q",
+			cID,
+			netName,
+		)
 		return toReturn, nil
 	}
-	log.Debugf("extractMgmtIPs was called and we got a struct %T %+v", mgmtData, mgmtData)
+	log.FromContext(ctx).Debugf(
+		"extractMgmtIPs was called and we got a struct %T %+v",
+		mgmtData,
+		mgmtData,
+	)
 	v4addr := mgmtData.IPAddress
 	v4pLen := mgmtData.IPPrefixLen
 	v4Gw := mgmtData.Gateway
@@ -539,24 +551,31 @@ func (*PodmanRuntime) extractMgmtIP(
 	return toReturn, nil
 }
 
-func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
+func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
 	// TX checksum disabling will be done here since the mgmt bridge
 	// may not exist in netlink before a container is attached to it
 	brName := r.mgmt.Bridge
-	log.Debugf("Got a bridge name %q", brName)
+	log.FromContext(ctx).Debugf("Got a bridge name %q", brName)
 	// Disable checksum calculation hw offload
 	err := utils.EthtoolTXOff(brName)
 	if err != nil {
-		log.Warnf("failed to disable TX checksum offload for interface %q: %v", brName, err)
+		log.FromContext(ctx).Warnf(
+			"failed to disable TX checksum offload for interface %q: %v",
+			brName,
+			err,
+		)
 		return nil
 	}
-	log.Debugf("Successfully disabled Tx checksum offload for interface %q", brName)
+	log.FromContext(ctx).Debugf(
+		"Successfully disabled Tx checksum offload for interface %q",
+		brName,
+	)
 	return nil
 }
 
 // netOpts is an accessory function that returns a network.CreateOptions struct
 // filled with all parameters for CreateNet function.
-func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
+func (r *PodmanRuntime) netOpts(ctx context.Context) (netTypes.Network, error) {
 	var (
 		name        = r.mgmt.Network
 		intName     = r.mgmt.Bridge
@@ -587,7 +606,11 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 			v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
 		}
 		subnets = append(subnets, v4subnet)
-		log.Debugf("Added v4 subnet info to the net definion: \n%v, \n%v\n", subnets, v4subnet)
+		log.FromContext(ctx).Debugf(
+			"Added v4 subnet info to the net definion: \n%v, \n%v\n",
+			subnets,
+			v4subnet,
+		)
 	}
 	// check if v6 is defined
 	if r.mgmt.IPv6Subnet != "" && r.mgmt.IPv6Subnet != "auto" {
@@ -604,7 +627,11 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 			v6subnet.Gateway = net.ParseIP(r.mgmt.IPv6Gw)
 		}
 		subnets = append(subnets, v6subnet)
-		log.Debugf("Added v6 subnet info to the net definion: \n%v, \n%v\n", subnets, v6subnet)
+		log.FromContext(ctx).Debugf(
+			"Added v6 subnet info to the net definion: \n%v, \n%v\n",
+			subnets,
+			v6subnet,
+		)
 	}
 
 	// add custom mtu if defined
@@ -614,7 +641,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 
 	// Merge in bridge network driver options from topology file
 	for k, v := range r.mgmt.DriverOpts {
-		log.Debugf("Adding bridge network driver option %s=%s", k, v)
+		log.FromContext(ctx).Debugf("Adding bridge network driver option %s=%s", k, v)
 		options[k] = v
 	}
 
@@ -695,7 +722,10 @@ func podmanLeaseRangePrefix(lease *netTypes.LeaseRange) (string, error) {
 	)
 }
 
-func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[string][]string {
+func (*PodmanRuntime) buildFilterString(
+	ctx context.Context,
+	gFilters []*types.GenericFilter,
+) map[string][]string {
 	filters := map[string][]string{}
 	for _, gF := range gFilters {
 		filterType := gF.FilterType
@@ -708,19 +738,19 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 				gF.Match,
 			) // this regexp ensure we have an exact match for name
 		} else if gF.Operator != "=" {
-			log.Warnf("received a filter with unsupported match type: %+v", gF)
+			log.FromContext(ctx).Warnf("received a filter with unsupported match type: %+v", gF)
 			continue
 		} else {
 			filterStr = gF.Field + "=" + gF.Match
 		}
-		log.Debugf("produced a filterStr %q from inputs %+v", filterStr, gF)
+		log.FromContext(ctx).Debugf("produced a filterStr %q from inputs %+v", filterStr, gF)
 		_, ok := filters[filterType]
 		if !ok {
 			filters[filterType] = []string{}
 		}
 		filters[filterType] = append(filters[filterType], filterStr)
 	}
-	log.Debugf(
+	log.FromContext(ctx).Debugf(
 		"Method buildFilterString was called with inputs %+v\n and results %+v",
 		gFilters,
 		filters,

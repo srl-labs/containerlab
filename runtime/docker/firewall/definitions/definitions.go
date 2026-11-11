@@ -1,6 +1,7 @@
 package definitions
 
 import (
+	"context"
 	"errors"
 )
 
@@ -21,8 +22,8 @@ const (
 
 // ClabFirewall is the interface that all firewall clients must implement.
 type ClabFirewall interface {
-	DeleteForwardingRules(rule *FirewallRule) error
-	InstallForwardingRules(rule *FirewallRule) error
+	DeleteForwardingRules(ctx context.Context, rule *FirewallRule) error
+	InstallForwardingRules(ctx context.Context, rule *FirewallRule) error
 	Name() string
 }
 

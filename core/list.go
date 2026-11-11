@@ -114,7 +114,10 @@ func (c *CLab) ListContainerInterfaces(
 		}
 		defer containerNsHandle.Close()
 	default:
-		log.Warnf("Container %v has no namespace set, skipping!", containerInterfaces.ContainerName)
+		log.FromContext(ctx).Warnf(
+			"Container %v has no namespace set, skipping!",
+			containerInterfaces.ContainerName,
+		)
 		containerInterfaces.Interfaces = make([]*clabtypes.ContainerInterfaceDetails, 0)
 
 		return &containerInterfaces, nil
@@ -153,12 +156,16 @@ func (c *CLab) ListContainerInterfaces(
 			InterfaceType:  reported.Type(),
 			InterfaceState: attrs.OperState.String(),
 		}
-		log.Debugf("Interface info: %+v", ifaceDetails)
+		log.FromContext(ctx).Debugf("Interface info: %+v", ifaceDetails)
 
 		containerInterfaces.Interfaces = append(containerInterfaces.Interfaces, &ifaceDetails)
 	}
 
-	log.Debugf("Fetched %v interfaces for %v", len(interfaces), containerInterfaces.ContainerName)
+	log.FromContext(ctx).Debugf(
+		"Fetched %v interfaces for %v",
+		len(interfaces),
+		containerInterfaces.ContainerName,
+	)
 
 	return &containerInterfaces, nil
 }
@@ -194,7 +201,13 @@ func (c *CLab) ListContainersInterfaces(
 			if len(containers[idx].Names) > 0 {
 				containerName = containers[idx].Names[0]
 			}
-			log.Warn("Skipping interface detection", "node", containerName, "err", err)
+			log.FromContext(ctx).Warn(
+				"Skipping interface detection",
+				"node",
+				containerName,
+				"err",
+				err,
+			)
 			continue
 		}
 
@@ -203,7 +216,7 @@ func (c *CLab) ListContainersInterfaces(
 				return cIfs.Interfaces[i].InterfaceName < cIfs.Interfaces[j].InterfaceName
 			})
 		} else {
-			log.Warnf("No interfaces found for container %v", cIfs.ContainerName)
+			log.FromContext(ctx).Warnf("No interfaces found for container %v", cIfs.ContainerName)
 		}
 
 		containerInterfaces = append(containerInterfaces, cIfs)

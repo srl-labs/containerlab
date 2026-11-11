@@ -47,7 +47,7 @@ func (gc *GenericContainer) RunExec(
 	containerName := gc.Names[0]
 	execResult, err := gc.Runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {
-		log.Errorf(
+		log.FromContext(ctx).Errorf(
 			"%s: failed to execute cmd: %q with error %v",
 			containerName,
 			execCmd.GetCmdString(),
