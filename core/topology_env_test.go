@@ -5,9 +5,11 @@
 package core
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 )
 
 const envTopology = `name: env-test
@@ -92,5 +94,25 @@ func TestWithTopologyEnvAfterTopology(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("expected an error when the topology env is set after the topology")
+	}
+}
+
+func TestWithTopologyEnvRejectsLabRuntimes(t *testing.T) {
+	tests := map[string][]string{
+		"given_env": {"GIVEN=given"},
+		"empty_env": {},
+	}
+
+	for name, env := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := NewContainerLab(
+				WithTopologyEnv(env),
+				WithRuntime(clablabruntime.ClabernetesRuntimeName, nil),
+				WithTopoPath(writeTopo(t, envTopology), nil),
+			)
+			if err == nil || !strings.Contains(err.Error(), "not supported with lab runtimes") {
+				t.Fatalf("NewContainerLab() error = %v, want unsupported lab runtime error", err)
+			}
+		})
 	}
 }

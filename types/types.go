@@ -235,7 +235,7 @@ type NodeConfig struct {
 	Env  map[string]string `json:"env,omitempty"`
 	// TopologyEnv holds the env vars (key=value) the startup config templates are expanded
 	// with; nil means the process environment. It is not serialized.
-	TopologyEnv []string `json:"-"`
+	TopologyEnv []string `json:"-" yaml:"-"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
 	// Volume mounts strings (name:dest:options).
