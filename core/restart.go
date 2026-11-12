@@ -27,6 +27,10 @@ func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 		if err := n.Start(ctx); err != nil {
 			return err
 		}
+
+		if err := applyLinkImpairments(ctx, n.GetEndpoints()); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -59,6 +60,47 @@ func TestPortMappingPattern(t *testing.T) {
 				if (err == nil) != tc.valid {
 					t.Errorf("runtime error = %v, schema expects valid = %v", err, tc.valid)
 				}
+			}
+		})
+	}
+}
+
+func TestNetemDurationPattern(t *testing.T) {
+	b, err := os.ReadFile("clab.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Definitions map[string]struct {
+			Properties map[string]struct {
+				Pattern string
+			}
+		}
+	}
+	if err := json.Unmarshal(b, &schema); err != nil {
+		t.Fatal(err)
+	}
+	pattern := regexp.MustCompile(schema.Definitions["netem"].Properties["delay"].Pattern)
+	for _, tc := range []struct {
+		duration string
+		valid    bool
+	}{
+		{duration: "100ms", valid: true},
+		{duration: "1.5s", valid: true},
+		{duration: "1m30s", valid: true},
+		{duration: "250µs", valid: true},
+		{duration: "250us", valid: true},
+		{duration: "100"},
+		{duration: "-5ms"},
+		{duration: "5 ms"},
+	} {
+		t.Run(tc.duration, func(t *testing.T) {
+			if got := pattern.MatchString(tc.duration); got != tc.valid {
+				t.Errorf("schema accepts = %v, want %v", got, tc.valid)
+			}
+			d, err := time.ParseDuration(tc.duration)
+			if tc.valid && (err != nil || d < 0) {
+				t.Errorf("the schema accepts %q, but the topology doesn't: %v", tc.duration, err)
 			}
 		})
 	}
