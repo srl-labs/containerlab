@@ -187,6 +187,13 @@ func (t *terminal) Write(p []byte) (int, error) {
 	return t.Buffer.Write(p)
 }
 
+func (t *terminal) len() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.Len()
+}
+
 func (t *terminal) take() string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -253,7 +260,7 @@ func TestOutputSendsLonelyPixelsOnTheirOwn(t *testing.T) {
 	out.Queue(nil, []byte("<pixels>"))
 
 	deadline := time.Now().Add(2 * time.Second)
-	for term.Len() == 0 && time.Now().Before(deadline) {
+	for term.len() == 0 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -21,8 +22,47 @@ import (
 	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
 )
 
-// fakeTerminal stands in for the terminal the pixel layer is sent to.
-type fakeTerminal struct{ bytes.Buffer }
+// fakeTerminal stands in for the terminal the pixel layer is sent to. The output writes
+// to it from its own timer as well, hence the lock.
+type fakeTerminal struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (t *fakeTerminal) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.buf.Write(p)
+}
+
+func (t *fakeTerminal) Read(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.buf.Read(p)
+}
+
+func (t *fakeTerminal) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.buf.String()
+}
+
+func (t *fakeTerminal) Len() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.buf.Len()
+}
+
+func (t *fakeTerminal) Reset() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.buf.Reset()
+}
 
 func (*fakeTerminal) Close() error { return nil }
 func (*fakeTerminal) Fd() uintptr  { return 0 }
