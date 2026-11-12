@@ -27,6 +27,9 @@ const (
 
 	arrowRx = "↓"
 	arrowTx = "↑"
+
+	// headerRateWidth is the width of a rate in the header, the most Rate takes.
+	headerRateWidth = 4
 )
 
 // zone is a clickable stretch of the header.
@@ -129,6 +132,8 @@ func (m *Model) headerContext(detail int) string {
 
 	var rx, tx float64
 
+	sampled := false
+
 	for i := range labs {
 		if !labs[i].Deployed {
 			continue
@@ -140,6 +145,7 @@ func (m *Model) headerContext(detail int) string {
 		for n := range labs[i].Nodes {
 			rx += labs[i].Nodes[n].RxBps
 			tx += labs[i].Nodes[n].TxBps
+			sampled = sampled || labs[i].Nodes[n].HasStats
 		}
 	}
 
@@ -177,12 +183,19 @@ func (m *Model) headerContext(detail int) string {
 
 	parts = append(parts, nodes)
 
-	if detail == contextFull && (rx > 0 || tx > 0) {
+	if detail == contextFull && sampled {
 		parts = append(parts, m.th.Muted.Render(
-			arrowRx+clabinternaltuiui.Rate(rx)+" "+arrowTx+clabinternaltuiui.Rate(tx)))
+			arrowRx+headerRate(rx)+" "+arrowTx+headerRate(tx)))
 	}
 
 	return strings.Join(parts, sep) + " "
+}
+
+// headerRate formats a rate for the header in a constant width, so that the header does
+// not shift as the traffic changes. The number stays next to its arrow, the room it does
+// not need follows it.
+func headerRate(bps float64) string {
+	return clabinternaltuiui.PadRight(clabinternaltuiui.Rate(bps), headerRateWidth)
 }
 
 // titleRule renders the line under the header: where the user is, and the state of the

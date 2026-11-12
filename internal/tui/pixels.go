@@ -577,6 +577,8 @@ func (m *Model) pixelContext(detail int) []pixelSegment {
 
 	var rx, tx float64
 
+	sampled := false
+
 	for i := range labs {
 		if !labs[i].Deployed {
 			continue
@@ -588,6 +590,7 @@ func (m *Model) pixelContext(detail int) []pixelSegment {
 		for n := range labs[i].Nodes {
 			rx += labs[i].Nodes[n].RxBps
 			tx += labs[i].Nodes[n].TxBps
+			sampled = sampled || labs[i].Nodes[n].HasStats
 		}
 	}
 
@@ -641,9 +644,9 @@ func (m *Model) pixelContext(detail int) []pixelSegment {
 		},
 	})
 
-	if detail == contextFull && (rx > 0 || tx > 0) {
-		text := m.th.Info.Render(arrowRx) + m.th.Text.Render(clabinternaltuiui.Rate(rx)) + " " +
-			m.th.Accent.Render(arrowTx) + m.th.Text.Render(clabinternaltuiui.Rate(tx))
+	if detail == contextFull && sampled {
+		text := m.th.Info.Render(arrowRx) + m.th.Text.Render(headerRate(rx)) + " " +
+			m.th.Accent.Render(arrowTx) + m.th.Text.Render(headerRate(tx))
 		segs = append(segs, pixelSegment{text: text, width: clabinternaltuiui.Width(text)})
 	}
 

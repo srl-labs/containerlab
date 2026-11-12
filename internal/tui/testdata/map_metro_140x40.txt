@@ -1,4 +1,4 @@
- clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                                lab: metro · docker · ● 12/12 nodes · ↓54M ↑54M
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                              lab: metro · docker · ● 12/12 nodes · ↓54M  ↑54M
 ── labs ▸ metro ▸ map ────────────────────────────────────────────────────────────── layout: graph ── zoom: detail ── 12 nodes · 12 links ──
                            ┌──────────────┐                          ┌──────────────┐                  │ r2
                            │     cpe1     │                          │     cpe2     │                  │ ● ready

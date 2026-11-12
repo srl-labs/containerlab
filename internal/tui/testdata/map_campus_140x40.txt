@@ -1,4 +1,4 @@
- clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                               lab: campus · docker · ● 14/14 nodes · ↓82M ↑82M
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                             lab: campus · docker · ● 14/14 nodes · ↓82M  ↑82M
 ── labs ▸ campus ▸ map ───────────────────────────────────────────────────────────── layout: tiers ── zoom: normal ── 14 nodes · 24 links ──
                                             ┌──────────┐                                               │ core1
                                             │ internet │                                               │ ● ready
