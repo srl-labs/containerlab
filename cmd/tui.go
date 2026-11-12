@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -27,12 +26,7 @@ import (
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 )
 
-const (
-	tuiCommandName = "tui"
-	// noTUIEnv keeps a bare `containerlab` from opening the TUI, printing the help
-	// instead as it always did.
-	noTUIEnv = envPrefix + "_NO_TUI"
-)
+const tuiCommandName = "tui"
 
 func tuiCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
@@ -102,40 +96,6 @@ instead of the ones of this host.`,
 func isInteractiveTerminal() bool {
 	return term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stdout.Fd()) &&
 		os.Getenv("TERM") != "dumb"
-}
-
-// bareCommandOpensTUI reports whether running containerlab without a command should open
-// the TUI rather than print the help.
-func bareCommandOpensTUI() bool {
-	return isInteractiveTerminal() && !noTUI(os.Getenv(noTUIEnv))
-}
-
-// noTUI reports whether the value of the variable that turns the TUI off does so. A
-// boolean is taken for what it says, any other value that is set turns the TUI off.
-func noTUI(value string) bool {
-	if value == "" {
-		return false
-	}
-
-	off, err := strconv.ParseBool(value)
-
-	return err != nil || off
-}
-
-// rootFn runs when containerlab is called without a command.
-func rootFn(cobraCmd *cobra.Command, o *Options) error {
-	if !bareCommandOpensTUI() {
-		return cobraCmd.Help()
-	}
-
-	// The environment variables of the tui command apply here as well.
-	if tuiCommand, _, err := cobraCmd.Root().
-		Find([]string{tuiCommandName}); err == nil &&
-		v != nil {
-		updateOptionsFromViper(tuiCommand, o)
-	}
-
-	return tuiFn(cobraCmd.Context(), o)
 }
 
 func tuiFn(ctx context.Context, o *Options) error {

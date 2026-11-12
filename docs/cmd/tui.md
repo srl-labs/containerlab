@@ -15,8 +15,6 @@ It shows live tables of labs, nodes, interfaces and links, and runs the usual op
 * capture packets and watch them live in the UI, in Wireshark or keep them in a file;
 * share a terminal with [sshx](tools/sshx/attach.md) or [GoTTY](tools/gotty/attach.md).
 
-Running `containerlab` without a command opens the same UI when it is run in a terminal. Scripts are not affected: outside of a terminal the help is printed, as before. Set the `CLAB_NO_TUI` environment variable, ie. `CLAB_NO_TUI=1`, to get the help in a terminal as well; `CLAB_NO_TUI=0` or `false` leaves the UI on.
-
 ## Usage
 
 `containerlab [global-flags] tui [local-flags]`

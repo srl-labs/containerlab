@@ -56,14 +56,8 @@ func Entrypoint() (*cobra.Command, error) {
 		PersistentPreRunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return preRunFn(cobraCmd, o)
 		},
-		// Without a command containerlab opens its TUI when run in a terminal, and
-		// prints the help otherwise.
-		RunE: func(cobraCmd *cobra.Command, _ []string) error {
-			return rootFn(cobraCmd, o)
-		},
-		ValidArgsFunction: cobra.NoFileCompletions,
-		Aliases:           []string{"clab"},
-		SilenceUsage:      true,
+		Aliases:      []string{"clab"},
+		SilenceUsage: true,
 	}
 
 	c.PersistentFlags().CountVarP(
@@ -148,12 +142,6 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 		updateOptionsFromViper(cobraCmd, o)
 	}
 	applyLabRuntimeDefaultTimeout(cobraCmd, o)
-
-	// Without a command and outside of a terminal the help is printed, which needs none
-	// of the preparations below.
-	if !cobraCmd.HasParent() && !bareCommandOpensTUI() {
-		return nil
-	}
 
 	// setting log level
 	switch {

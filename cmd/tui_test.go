@@ -34,33 +34,6 @@ func TestTUICommandIsRegistered(t *testing.T) {
 	}
 }
 
-// TestBareCommandPrintsHelpWithoutTerminal runs containerlab without a command. Tests do
-// not run in a terminal, so the help must come out, as it did before the TUI existed.
-func TestBareCommandPrintsHelpWithoutTerminal(t *testing.T) {
-	optionsInstance = nil
-
-	root, err := Entrypoint()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var out bytes.Buffer
-
-	root.SetOut(&out)
-	root.SetErr(&out)
-	root.SetArgs(nil)
-
-	if err := root.Execute(); err != nil {
-		t.Fatalf("running without a command failed: %v", err)
-	}
-
-	for _, want := range []string{"Usage:", "Available Commands:", "deploy", tuiCommandName} {
-		if !strings.Contains(out.String(), want) {
-			t.Errorf("the help does not mention %q:\n%s", want, out.String())
-		}
-	}
-}
-
 func TestUnknownCommandIsStillAnError(t *testing.T) {
 	optionsInstance = nil
 
@@ -152,17 +125,6 @@ func TestAwaitSignalHonorsDelegate(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("the signal was not returned once the delegate was gone")
-	}
-}
-
-func TestNoTUI(t *testing.T) {
-	for value, want := range map[string]bool{
-		"": false, "0": false, "false": false, "FALSE": false,
-		"1": true, "true": true, "yes": true,
-	} {
-		if got := noTUI(value); got != want {
-			t.Errorf("noTUI(%q) = %v, want %v", value, got, want)
-		}
 	}
 }
 
