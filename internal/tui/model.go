@@ -26,6 +26,10 @@ const (
 
 	// flushDelay collects the changes of a burst into one redraw.
 	flushDelay = 40 * time.Millisecond
+	// frameGap is the least time between two frames while something is dragged in a
+	// terminal that does not tell when it is done with a frame. A pointer reports
+	// its moves far more often than a window is drawn.
+	frameGap = 16 * time.Millisecond
 
 	windowTitle = "containerlab"
 
@@ -42,6 +46,8 @@ type (
 	flushMsg struct{}
 	// tickMsg arrives once a second, to keep durations and the status line current.
 	tickMsg time.Time
+	// frameMsg tells that it is time to draw a frame that was held back.
+	frameMsg struct{}
 )
 
 // Model is the root of the UI: it owns the page stack, the dialogs and the chrome around
@@ -81,6 +87,21 @@ type Model struct {
 	// it last moved with the button held.
 	lastClickAt [2]int
 	drag        *[2]int
+	// pointer is where the pointer was last reported, in cells: with the part of a
+	// cell it is at when the terminal reports it in pixels, in the middle of its cell
+	// otherwise. pointerMod holds the modifier keys held then.
+	pointer    [2]float64
+	pointerMod tea.KeyMod
+	// grabbed is the page that holds on to something since the button went down.
+	grabbed grabber
+	// frame is the window as last drawn and frameAt when that was, for the frames
+	// that are held back, see holding. frameDue is set while a message is on its way
+	// that has the latest state drawn, and lastInput is when a key or the mouse was
+	// last used.
+	frame     string
+	frameAt   time.Time
+	frameDue  bool
+	lastInput time.Time
 
 	// watched are the jobs whose end is announced in the status line.
 	watched map[clabinternaltuibackend.JobID]bool
@@ -198,6 +219,32 @@ func (m *Model) scopedLabs() []clabinternaltuibackend.Lab {
 
 // Update implements tea.Model.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case tea.KeyPressMsg, tea.MouseMsg:
+		m.lastInput = time.Now()
+		m.traceInput(msg)
+	}
+
+	_, cmd := m.handle(m.pointed(msg))
+
+	// A frame that is held back is drawn once the terminal is ready for it, which it
+	// tells with a message of its own, or after a while when it does not.
+	if m.holding() && !m.frameDue {
+		m.frameDue = true
+
+		wait := frameGap
+		if m.px.inFlight {
+			wait = ackTimeout
+		}
+
+		cmd = tea.Batch(cmd, tea.Tick(wait, func(time.Time) tea.Msg { return frameMsg{} }))
+	}
+
+	return m, cmd
+}
+
+// handle does what a message asks for.
+func (m *Model) handle(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -236,10 +283,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDrag(msg)
 
 		return m, nil
-	case tea.MouseReleaseMsg:
-		m.drag = nil
+	case frameMsg:
+		m.frameDue = false
+		m.frameLate()
 
 		return m, nil
+	case tea.MouseReleaseMsg:
+		cmd := m.handleRelease()
+
+		return m, cmd
 	case tea.PasteMsg:
 		return m, m.handlePaste(msg)
 	case sessionEndedMsg:
@@ -531,7 +583,15 @@ func (m *Model) setScope(lab string) {
 
 // View implements tea.Model.
 func (m *Model) View() tea.View {
-	v := tea.NewView(m.render())
+	// The program asks for the window after every message. Messages can come in
+	// faster than a terminal takes frames, those of a pointer that drags something
+	// most of all: the window is then shown as it was drawn last, and drawn anew
+	// with all that happened since once the terminal is ready.
+	if !m.holding() {
+		m.frame, m.frameAt = m.render(), time.Now()
+	}
+
+	v := tea.NewView(m.frame)
 	v.AltScreen = true
 	v.WindowTitle = windowTitle
 

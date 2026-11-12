@@ -11,8 +11,9 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
-	"strconv"
+	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/klauspost/compress/zlib"
 )
@@ -23,10 +24,12 @@ const (
 	firstImageID  = 31000
 	layerImageIDs = 2000
 	// The numbers of the images of a flat scene, which are not used again for a long
-	// while. All of them have as many digits, so that one can take the place of
-	// another in a sequence that is sent again.
+	// while.
 	flatImageID  = 1_000_000
 	flatImageIDs = 8_000_000
+	// flatSplit is the number of rows at the top of a flat scene that are sent as an
+	// image of their own, see updateFlat.
+	flatSplit = 2
 
 	// transmitKeys starts the keys of a sequence that sends an image, up to its number.
 	transmitKeys = "a=T,q=2,f=32,o=z,i="
@@ -70,10 +73,15 @@ type stripState struct {
 	hash  uint64
 	shown bool
 	// cmd is the sequence that made the strip what it is, shown or hidden, kept to
-	// send it again when the terminal lost or moved the images, and idAt where the
-	// number of the image stands in it, for a flat scene.
-	cmd  []byte
-	idAt int
+	// send it again when the terminal lost or moved the images.
+	cmd []byte
+}
+
+// flatRow is a text row of a flat scene as last drawn: both layers in one, as pixels
+// with straight alpha.
+type flatRow struct {
+	hash uint64
+	pix  []uint8
 }
 
 // Screen tracks what the terminal shows of the pixel layer, and turns a new scene into
@@ -85,14 +93,109 @@ type Screen struct {
 	m      [layerCount]Metrics
 	flat   bool
 	strips [layerCount][]stripState
+	// rows holds the rows of a flat scene, and shown tells whether any of them is on
+	// screen.
+	rows  []flatRow
+	shown bool
 
-	strip strip
-	top   strip
+	// work draws the strips that are drawn one after the other, and packs the images
+	// of a flat scene.
+	work stripWorker
 	// sent counts the images sent in the flat way, each of which gets a number of its
 	// own.
 	sent int
+}
+
+// stripWorker draws strips and packs them for the terminal. Each of the workers that
+// draw at the same time has one.
+type stripWorker struct {
+	strip strip
+	// top is what goes on top of the strip where both layers make one image.
+	top  strip
 	zbuf bytes.Buffer
 	zw   *zlib.Writer
+}
+
+// stripJob is a strip that changed: what it is, and once it was drawn the sequence that
+// shows it, nil for a strip nothing is visible in. A strip of a flat scene is drawn with
+// both layers, into the row it is kept in.
+type stripJob struct {
+	l    Layer
+	row  int
+	draw bool
+	over bool
+	cmd  []byte
+}
+
+// drawStrips draws the strips that changed, as many at a time as there are processors:
+// a strip depends on nothing but the scene, and while something is moved across the
+// window most of them change with every frame.
+func (s *Screen) drawStrips(sc *Scene, jobs []stripJob) {
+	workers := min(runtime.GOMAXPROCS(0), len(jobs))
+	if workers <= 1 {
+		for i := range jobs {
+			s.drawStrip(sc, &jobs[i], &s.work)
+		}
+
+		return
+	}
+
+	var (
+		next atomic.Int64
+		wg   sync.WaitGroup
+	)
+
+	for range workers {
+		wg.Go(func() {
+			w, _ := stripWorkers.Get().(*stripWorker)
+			defer stripWorkers.Put(w)
+
+			for {
+				i := int(next.Add(1)) - 1
+				if i >= len(jobs) {
+					return
+				}
+
+				s.drawStrip(sc, &jobs[i], w)
+			}
+		})
+	}
+
+	wg.Wait()
+}
+
+var stripWorkers = sync.Pool{New: func() any { return &stripWorker{} }}
+
+// drawStrip draws one strip and builds the sequence that shows it. It reads the screen
+// without changing it.
+func (s *Screen) drawStrip(sc *Scene, job *stripJob, w *stripWorker) {
+	from, to := s.m[job.l].rowSpan(job.row)
+
+	if s.flat {
+		s.drawFlatRow(sc, job, w)
+
+		return
+	}
+
+	if !job.draw || to <= from {
+		return
+	}
+
+	w.strip.reset(s.m[job.l].Width, to-from, from)
+
+	if !w.strip.render(sc.shapes[job.l]) {
+		return
+	}
+
+	var cmd bytes.Buffer
+
+	// The image is stretched over the whole row.
+	m := s.m[job.l]
+	fmt.Fprintf(&cmd, "\x1b[%d;1H%s%s%d,s=%d,v=%d,c=%d,r=1,z=%d,C=1", job.row+1, apcStart,
+		transmitKeys, imageID(job.l, job.row), m.Width, to-from, m.Cols, job.l.zIndex())
+	w.pack(&cmd, w.strip.straight())
+
+	job.cmd = cmd.Bytes()
 }
 
 // NewScreen returns a screen that shows nothing yet.
@@ -119,23 +222,42 @@ func (s *Screen) Update(sc *Scene) (before, after []byte) {
 		for l := range s.strips {
 			s.strips[l] = make([]stripState, sc.ms[l].Rows)
 		}
+
+		s.rows, s.shown = make([]flatRow, sc.ms[Under].Rows), false
 	}
 
 	if s.flat {
-		// xterm.js gives an image a row more than it takes, and so wipes the row
-		// below it: a row under one that was sent is sent again, down to the first
-		// row that shows nothing.
-		wiped := false
-		for row := range s.strips[Under] {
-			wiped = s.updateFlat(&hides, &draws, sc, row, wiped)
-		}
+		s.updateFlat(&draws, sc)
 
 		return hides.Bytes(), draws.Bytes()
 	}
 
+	var jobs []stripJob
+
 	for l := range s.strips {
 		for row := range s.strips[l] {
-			s.updateStrip(&draws, sc, Layer(l), row)
+			st := &s.strips[l][row]
+			from, to := s.m[l].rowSpan(row)
+
+			if hash := stripHash(sc.shapes[l], from, to); hash != st.hash {
+				st.hash = hash
+				jobs = append(jobs, stripJob{l: Layer(l), row: row, draw: hash != 0})
+			}
+		}
+	}
+
+	s.drawStrips(sc, jobs)
+
+	for i := range jobs {
+		st := &s.strips[jobs[i].l][jobs[i].row]
+
+		switch {
+		case jobs[i].cmd != nil:
+			st.shown, st.cmd = true, jobs[i].cmd
+			draws.Write(st.cmd)
+		case st.shown:
+			st.shown, st.cmd = false, []byte(hideSeq(jobs[i].l, jobs[i].row))
+			draws.Write(st.cmd)
 		}
 	}
 
@@ -164,130 +286,124 @@ func (s *Screen) Repair() (before, after []byte) {
 	return before, s.All()
 }
 
-// eraseRow returns the sequence that erases a row of the terminal, which is how an image
-// is taken off a terminal that shows a placeholder for an image it was told to delete.
-func eraseRow(row int) string { return fmt.Sprintf("\x1b[m\x1b[%d;1H\x1b[2K", row+1) }
+// updateFlat brings a flat scene up to date: both layers in one image, placed on top of
+// the text, for a terminal built on xterm.js.
+//
+// Such a terminal takes a while for every image, however small, and little more for a
+// large one. And it gives an image a row more than it takes when the height of a cell
+// is not a whole number of pixels, which takes the image of the row below away. So
+// what changed is sent as one image, from the first row that changed down to the last
+// row of the window, which has nothing below it. The rows above keep the image they
+// have. An image cannot both start at the top and end at the bottom of the window, see
+// flatBand: when the first rows changed they are sent on their own, and all others
+// after them.
+func (s *Screen) updateFlat(draws *bytes.Buffer, sc *Scene) {
+	var jobs []stripJob
 
-// updateFlat brings one row of a flat scene up to date: both layers in one image, placed
-// on top of the text. wiped tells that the row above was sent, which took the image of
-// this one away; it reports whether this row was sent.
-func (s *Screen) updateFlat(hides, draws *bytes.Buffer, sc *Scene, row int, wiped bool) bool {
-	st := &s.strips[Under][row]
-	from, to := s.m[Under].rowSpan(row)
+	for row := range s.rows {
+		from, to := s.m[Under].rowSpan(row)
+		under, over := stripHash(sc.shapes[Under], from, to), stripHash(sc.shapes[Over], from, to)
 
-	under, over := stripHash(sc.shapes[Under], from, to), stripHash(sc.shapes[Over], from, to)
-
-	hash := uint64(0)
-	if under != 0 || over != 0 {
-		hash = (under*hashPrime ^ over) | 1
-	}
-
-	if hash == st.hash {
-		if wiped && st.shown {
-			draws.Write(s.again(st))
+		hash := uint64(0)
+		if under != 0 || over != 0 {
+			hash = (under*hashPrime ^ over) | 1
 		}
 
-		return wiped && st.shown
-	}
-
-	st.hash = hash
-	painted := false
-
-	if hash != 0 && to > from {
-		s.strip.reset(s.m[Under].Width, to-from, from)
-		painted = s.strip.render(sc.shapes[Under])
-
-		if over != 0 {
-			s.top.reset(s.m[Under].Width, to-from, from)
-
-			if s.top.render(sc.shapes[Over]) {
-				s.strip.blend(&s.top)
-
-				painted = true
-			}
+		if hash != s.rows[row].hash || s.rows[row].pix == nil {
+			s.rows[row].hash = hash
+			jobs = append(jobs, stripJob{row: row, draw: under != 0, over: over != 0})
 		}
 	}
 
-	if !painted {
-		if st.shown {
-			hides.WriteString(eraseRow(row))
-		}
-
-		st.shown, st.cmd = false, nil
-
-		return false
+	if len(jobs) == 0 {
+		return
 	}
 
-	var cmd bytes.Buffer
-
-	// On its last row xterm.js scrolls the screen up a line when it is given an
-	// image, also when told to leave the cursor alone. A row below the region that
-	// scrolls does not: the region is taken off the last row for that image.
-	last := row == len(s.strips[Under])-1 && row > 0
-	if last {
-		fmt.Fprintf(&cmd, "\x1b[1;%dr", row)
-	}
-
-	fmt.Fprintf(&cmd, "\x1b[%d;1H", row+1)
-	st.idAt = cmd.Len() + len(apcStart) + len(transmitKeys)
-	s.transmit(&cmd, flatImageID, Under, to-from, 0)
-
-	if last {
-		cmd.WriteString("\x1b[r")
-	}
-
-	st.shown, st.cmd = true, cmd.Bytes()
-	draws.Write(s.again(st))
-
-	return true
+	s.drawStrips(sc, jobs)
+	s.flatFrom(draws, jobs[0].row)
 }
 
-// again returns the sequence that sends the image of a flat row, under a number of its
-// own each time. Sending an image under a number that is in use while the terminal is
-// still busy with the one before leaves a placeholder in xterm.js; an image that is new
-// just takes the cells over.
-func (s *Screen) again(st *stripState) []byte {
+// drawFlatRow draws a row of a flat scene into the pixels kept for it.
+func (s *Screen) drawFlatRow(sc *Scene, job *stripJob, w *stripWorker) {
+	from, to := s.m[Under].rowSpan(job.row)
+	row := &s.rows[job.row]
+	size := s.m[Under].Width * max(to-from, 0) * bytesPerPixel
+
+	if cap(row.pix) < size {
+		row.pix = make([]uint8, size)
+	}
+
+	row.pix = row.pix[:size]
+
+	w.strip.reset(s.m[Under].Width, to-from, from)
+
+	if job.draw {
+		w.strip.render(sc.shapes[Under])
+	}
+
+	if job.over {
+		w.top.reset(s.m[Under].Width, to-from, from)
+
+		if w.top.render(sc.shapes[Over]) {
+			w.strip.blend(&w.top)
+		}
+	}
+
+	copy(row.pix, w.strip.straight())
+}
+
+// flatFrom writes the sequences that send the rows of a flat scene from a row on.
+func (s *Screen) flatFrom(out *bytes.Buffer, row int) {
+	rows := len(s.rows)
+	s.shown = true
+
+	if row >= flatSplit || rows <= flatSplit {
+		s.flatBand(out, min(row, rows-1), rows)
+
+		return
+	}
+
+	s.flatBand(out, 0, flatSplit)
+	s.flatBand(out, flatSplit, rows)
+}
+
+// flatBand writes the sequence that sends some rows of a flat scene as one image, in
+// the size it has: the terminal draws it with the pixels it reports, which are the ones
+// the scene is drawn with.
+//
+// An image that ends on the last row of the window may make xterm.js move on to a row
+// that is not there, which scrolls the screen, also when told to leave the cursor alone.
+// It does not below the region that scrolls: the region is set to the rows above the
+// image for it, of which there have to be two.
+func (s *Screen) flatBand(out *bytes.Buffer, from, to int) {
+	if from >= to {
+		return
+	}
+
+	top, _ := s.m[Under].rowSpan(from)
+	_, bottom := s.m[Under].rowSpan(to - 1)
+
+	pix := s.work.strip.pix[:0]
+	for row := from; row < to; row++ {
+		pix = append(pix, s.rows[row].pix...)
+	}
+
+	s.work.strip.pix = pix
+
+	fenced := to == len(s.rows) && from >= flatSplit
+	if fenced {
+		fmt.Fprintf(out, "\x1b[1;%dr", from)
+	}
+
 	s.sent++
 
-	id := strconv.Itoa(flatImageID + s.sent%flatImageIDs)
-	copy(st.cmd[st.idAt:st.idAt+len(id)], id)
+	fmt.Fprintf(out, "\x1b[%d;1H%s%s%d,s=%d,v=%d,C=1", from+1, apcStart, transmitKeys,
+		flatImageID+s.sent%flatImageIDs, s.m[Under].Width, bottom-top)
+	s.work.pack(out, pix)
 
-	return st.cmd
-}
-
-func (s *Screen) updateStrip(out *bytes.Buffer, sc *Scene, l Layer, row int) {
-	st := &s.strips[l][row]
-	from, to := s.m[l].rowSpan(row)
-	hash := stripHash(sc.shapes[l], from, to)
-
-	if hash == st.hash {
-		return
+	if fenced {
+		out.WriteString("\x1b[r")
 	}
-
-	st.hash = hash
-	painted := false
-
-	if hash != 0 && to > from {
-		s.strip.reset(s.m[l].Width, to-from, from)
-		painted = s.strip.render(sc.shapes[l])
-	}
-
-	if !painted {
-		if st.shown {
-			st.shown, st.cmd = false, []byte(hideSeq(l, row))
-			out.Write(st.cmd)
-		}
-
-		return
-	}
-
-	var cmd bytes.Buffer
-
-	fmt.Fprintf(&cmd, "\x1b[%d;1H", row+1)
-	s.transmit(&cmd, imageID(l, row), l, to-from, l.zIndex())
-
-	st.shown, st.cmd = true, cmd.Bytes()
-	out.Write(st.cmd)
 }
 
 // stripHash identifies the look of a strip: the shapes that touch its rows, in order.
@@ -323,26 +439,23 @@ func stripHash(shapes []shape, from, to int) uint64 {
 	return h.Sum64() | 1
 }
 
-// transmit writes the sequences that send the rendered strip and show it at the cursor,
-// stretched over the whole row. Sending an image under a number that is in use replaces
-// the image shown before.
-func (s *Screen) transmit(out *bytes.Buffer, id int, l Layer, height, z int) {
-	s.zbuf.Reset()
+// pack writes the pixels of an image, with straight alpha, after the keys of the sequence
+// that sends it. Sending an image under a number that is in use replaces the image shown
+// before.
+func (w *stripWorker) pack(out *bytes.Buffer, pix []uint8) {
+	w.zbuf.Reset()
 
-	if s.zw == nil {
-		s.zw, _ = zlib.NewWriterLevel(&s.zbuf, zlib.BestSpeed)
+	if w.zw == nil {
+		w.zw, _ = zlib.NewWriterLevel(&w.zbuf, zlib.BestSpeed)
 	} else {
-		s.zw.Reset(&s.zbuf)
+		w.zw.Reset(&w.zbuf)
 	}
 
-	_, _ = s.zw.Write(s.strip.straight())
-	_ = s.zw.Close()
+	_, _ = w.zw.Write(pix)
+	_ = w.zw.Close()
 
-	payload := make([]byte, base64.StdEncoding.EncodedLen(s.zbuf.Len()))
-	base64.StdEncoding.Encode(payload, s.zbuf.Bytes())
-
-	fmt.Fprintf(out, "%s%s%d,s=%d,v=%d,c=%d,r=1,z=%d,C=1",
-		apcStart, transmitKeys, id, s.m[l].Width, height, s.m[l].Cols, z)
+	payload := make([]byte, base64.StdEncoding.EncodedLen(w.zbuf.Len()))
+	base64.StdEncoding.Encode(payload, w.zbuf.Bytes())
 
 	for first := true; first || len(payload) > 0; first = false {
 		chunk := payload[:min(chunkSize, len(payload))]
@@ -379,15 +492,14 @@ func (s *Screen) All() []byte {
 
 	for l := range s.strips {
 		for row := range s.strips[l] {
-			st := &s.strips[l][row]
-
-			switch {
-			case s.flat && st.shown:
-				out.Write(s.again(st))
-			case !s.flat:
-				out.Write(st.cmd)
+			if !s.flat {
+				out.Write(s.strips[l][row].cmd)
 			}
 		}
+	}
+
+	if s.flat && s.shown {
+		s.flatFrom(&out, 0)
 	}
 
 	return out.Bytes()
@@ -431,4 +543,5 @@ func (s *Screen) Forget() {
 
 	s.m, s.flat = [layerCount]Metrics{}, false
 	s.strips = [layerCount][]stripState{}
+	s.rows, s.shown = nil, false
 }

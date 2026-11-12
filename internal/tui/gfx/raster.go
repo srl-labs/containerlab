@@ -20,6 +20,10 @@ type strip struct {
 	oy  int
 	pix []uint8
 	cov []float32
+	// cols and spans are scratch space: columns worth looking at, and for every row
+	// the columns something was drawn in.
+	cols  []int
+	spans [][2]int
 }
 
 func (b *strip) reset(w, h, oy int) {
@@ -98,6 +102,29 @@ func (b *strip) dots(sh *shape) {
 	step := sh.sw
 	half := step / 2 //nolint:mnd // the middle of a grid cell
 
+	if y0 >= y1 || x0 >= x1 {
+		return
+	}
+
+	// Most pixels are nowhere near a dot: the columns that are, and how far each is
+	// from the middle of its dot, are worked out once for all rows.
+	near := b.scratch(x1 - x0)
+	cols := b.cols[:0]
+
+	for x := x0; x < x1; x++ {
+		dx := float32(
+			math.Mod(float64(float32(x)+0.5-sh.x0), float64(step)),
+		) - half // pixel center
+		if abs32(dx) > sh.r+1 {
+			continue
+		}
+
+		near[x-x0] = dx
+		cols = append(cols, x)
+	}
+
+	b.cols = cols
+
 	for y := y0; y < y1; y++ {
 		dy := float32(
 			math.Mod(float64(float32(y)+0.5-sh.y0), float64(step)),
@@ -106,13 +133,8 @@ func (b *strip) dots(sh *shape) {
 			continue
 		}
 
-		for x := x0; x < x1; x++ {
-			dx := float32(
-				math.Mod(float64(float32(x)+0.5-sh.x0), float64(step)),
-			) - half // pixel center
-			if abs32(dx) > sh.r+1 {
-				continue
-			}
+		for _, x := range cols {
+			dx := near[x-x0]
 
 			if c := clamp01(sh.r + 0.5 - sqrt32(dx*dx+dy*dy)); c > 0 { // anti-aliasing
 				b.put(((y-b.oy)*b.w+x)*bytesPerPixel, sh.fill, c, false)
@@ -320,6 +342,16 @@ func (b *strip) segs(sh *shape) {
 	half := sh.sw / 2 // half the width
 	reach := half + 1
 
+	// For every row the columns that got coverage, so that the rest is not looked at.
+	if cap(b.spans) < y1-y0 {
+		b.spans = make([][2]int, y1-y0)
+	}
+
+	spans := b.spans[:y1-y0]
+	for i := range spans {
+		spans[i] = [2]int{x1, x0}
+	}
+
 	for s := 0; s+3 < len(sh.pts); s += 4 {
 		ax, ay, bx, by := sh.pts[s], sh.pts[s+1], sh.pts[s+2], sh.pts[s+3]
 
@@ -334,7 +366,34 @@ func (b *strip) segs(sh *shape) {
 		for y := sy0; y < sy1; y++ {
 			py := float32(y) + 0.5 - ay // pixel center
 
-			for x := sx0; x < sx1; x++ {
+			// A line that slants passes a row in a few columns only: the part of it
+			// within reach of the row tells which.
+			rx0, rx1 := sx0, sx1
+
+			if dy != 0 {
+				t0, t1 := (py-reach)/dy, (py+reach)/dy
+				if t0 > t1 {
+					t0, t1 = t1, t0
+				}
+
+				t0, t1 = max(t0, 0), min(t1, 1)
+				if t0 > t1 {
+					continue
+				}
+
+				from, to := ax+dx*t0, ax+dx*t1
+				rx0 = max(sx0, int(math.Floor(float64(min(from, to)-reach))))
+				rx1 = min(sx1, int(math.Ceil(float64(max(from, to)+reach))))
+			}
+
+			if rx0 >= rx1 {
+				continue
+			}
+
+			span := &spans[y-y0]
+			span[0], span[1] = min(span[0], rx0), max(span[1], rx1)
+
+			for x := rx0; x < rx1; x++ {
 				px := float32(x) + 0.5 - ax // pixel center
 
 				t := float32(0)
@@ -353,7 +412,7 @@ func (b *strip) segs(sh *shape) {
 	}
 
 	for y := y0; y < y1; y++ {
-		for x := x0; x < x1; x++ {
+		for x := spans[y-y0][0]; x < spans[y-y0][1]; x++ {
 			if c := cov[(y-y0)*w+(x-x0)]; c > 0 {
 				b.put(((y-b.oy)*b.w+x)*bytesPerPixel, sh.fill, c, sh.erase)
 			}

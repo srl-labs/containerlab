@@ -279,6 +279,13 @@ func (m *Model) handleWheel(msg tea.MouseWheelMsg) {
 		return
 	}
 
+	// With control held the wheel scales what a page draws, around the pointer.
+	if z, ok := m.top().(zoomer); ok && mouse.Mod.Contains(tea.ModCtrl) && len(m.overlays) == 0 {
+		if x, y := m.bodyPointer(); z.zoomAt(m, notches, x, y) {
+			return
+		}
+	}
+
 	// A wheel that tilts, or one turned with shift held, scrolls sideways where the
 	// page has something to show there.
 	if h, ok := m.top().(sideScroller); ok && sideways && len(m.overlays) == 0 {
@@ -328,6 +335,93 @@ type dragger interface {
 	dragBy(dx, dy int)
 }
 
+// grabber is implemented by pages that let what they show be picked up and moved with
+// the pointer. Positions are in cells of the body and need not be whole: a terminal that
+// reports the pointer in pixels tells where in a cell it is.
+type grabber interface {
+	// grab is told where the button went down and reports whether the page holds on
+	// to something there. It then gets every move of the pointer until the button is
+	// let go, instead of the plain drag of dragger.
+	grab(m *Model, x, y float64) bool
+	// dragTo is told where the pointer went with the button held. free is set while
+	// the user holds the key that turns off whatever helps to align things. It
+	// reports whether something is being moved: a pointer that shakes a little
+	// between press and release moves nothing.
+	dragTo(m *Model, x, y float64, free bool) bool
+	// drop is told that the button was let go.
+	drop(m *Model) tea.Cmd
+}
+
+// zoomer is implemented by pages whose content is scaled with the wheel while control
+// is held. It is told where the pointer is, in cells of the body, and reports whether
+// it did something.
+type zoomer interface {
+	zoomAt(m *Model, notches int, x, y float64) bool
+}
+
+// bodyPointer returns where the pointer is in the body of the page, in cells.
+func (m *Model) bodyPointer() (x, y float64) {
+	return m.pointer[0] - float64(m.bodyLeft()), m.pointer[1] - float64(m.bodyLine())
+}
+
+// pointed takes note of where a message of the mouse says the pointer is. A terminal
+// that was asked to reports the position in pixels: the message is handed on with the
+// cell the pointer is in, which is what most of the UI goes by.
+func (m *Model) pointed(msg tea.Msg) tea.Msg {
+	var mouse tea.Mouse
+
+	switch msg := msg.(type) {
+	case tea.MouseClickMsg:
+		mouse = tea.Mouse(msg)
+	case tea.MouseReleaseMsg:
+		mouse = tea.Mouse(msg)
+	case tea.MouseWheelMsg:
+		mouse = tea.Mouse(msg)
+	case tea.MouseMotionMsg:
+		mouse = tea.Mouse(msg)
+	default:
+		return msg
+	}
+
+	m.pointerMod = mouse.Mod
+
+	if x, y, ok := m.pixelPointer(mouse.X, mouse.Y); ok {
+		m.pointer = [2]float64{x, y}
+		mouse.X = max(0, min(int(x), m.width-1))
+		mouse.Y = max(0, min(int(y), m.height-1))
+	} else {
+		// The middle of the cell.
+		m.pointer = [2]float64{float64(mouse.X) + 0.5, float64(mouse.Y) + 0.5}
+
+		return msg
+	}
+
+	switch msg.(type) {
+	case tea.MouseClickMsg:
+		return tea.MouseClickMsg(mouse)
+	case tea.MouseReleaseMsg:
+		return tea.MouseReleaseMsg(mouse)
+	case tea.MouseWheelMsg:
+		return tea.MouseWheelMsg(mouse)
+	default:
+		return tea.MouseMotionMsg(mouse)
+	}
+}
+
+// handleRelease ends a drag: what a page held on to is dropped.
+func (m *Model) handleRelease() tea.Cmd {
+	m.drag = nil
+
+	g := m.grabbed
+	if g == nil {
+		return nil
+	}
+
+	m.grabbed = nil
+
+	return g.drop(m)
+}
+
 // hintZone is a clickable hint in the line of hints.
 type hintZone struct {
 	from, to int
@@ -360,6 +454,20 @@ func hintKey(h hint) (tea.KeyPressMsg, bool) {
 func (m *Model) handleDrag(msg tea.MouseMotionMsg) {
 	mouse := msg.Mouse()
 	if m.drag == nil || mouse.Button != tea.MouseLeft || len(m.overlays) > 0 {
+		return
+	}
+
+	if m.grabbed != nil {
+		x, y := m.bodyPointer()
+		free := mouse.Mod.Contains(tea.ModShift) || mouse.Mod.Contains(tea.ModAlt)
+
+		if m.grabbed.dragTo(m, x, y, free) {
+			// A press that moved something is not the first half of a double click.
+			m.lastClick = time.Time{}
+		}
+
+		m.drag = &[2]int{mouse.X, mouse.Y}
+
 		return
 	}
 
@@ -465,6 +573,13 @@ func (m *Model) handleClick(msg tea.MouseClickMsg) tea.Cmd {
 
 	if c, ok := m.top().(clicker); ok {
 		c.click(m, x, y, double)
+
+		// A double click opened something: there is nothing left to hold on to.
+		if g, ok := m.top().(grabber); ok && !double {
+			if fx, fy := m.bodyPointer(); g.grab(m, fx, fy) {
+				m.grabbed = g
+			}
+		}
 
 		return nil
 	}

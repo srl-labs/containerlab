@@ -19,9 +19,19 @@ const (
 	saveCursor   = "\x1b7"
 	restoreCur   = "\x1b8"
 
+	// mouseCells is what the text renderer sends to have the pointer reported in the
+	// extended format, in cells. mousePixels has it reported in pixels in that format,
+	// and mouseNoPixels takes that back.
+	mouseCells    = "\x1b[?1006h"
+	mousePixels   = "\x1b[?1016h"
+	mouseNoPixels = "\x1b[?1016l"
+
 	// lonelyDelay is how long a change of the pixel layer waits for a frame of text to
 	// travel with before it is sent on its own.
 	lonelyDelay = 12 * time.Millisecond
+	// hurryDelay is how long it waits when the user is moving something and every
+	// frame counts.
+	hurryDelay = time.Millisecond
 )
 
 // File is the terminal the UI writes to.
@@ -50,6 +60,8 @@ type Output struct {
 	shown bool
 	// off drops everything queued, once the UI is done with the pixel layer.
 	off bool
+	// mouse is set while the terminal is asked to report the pointer in pixels.
+	mouse bool
 }
 
 // NewOutput wraps the terminal.
@@ -77,6 +89,43 @@ func (o *Output) Queue(before, after []byte) {
 
 	if o.timer == nil {
 		o.timer = time.AfterFunc(lonelyDelay, o.flush)
+	}
+}
+
+// PixelMouse asks the terminal to report the pointer in pixels rather than in cells, or
+// to go back to cells. A terminal keeps one way to report the pointer, the one it was
+// asked for last, and the text renderer asks for cells whenever it turns the mouse on:
+// from then on the request for pixels is sent again right after each of those.
+func (o *Output) PixelMouse(on bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if o.mouse == on || o.off {
+		return
+	}
+
+	o.mouse = on
+
+	if on {
+		_, _ = o.File.Write([]byte(mousePixels))
+
+		return
+	}
+
+	// Taking the reports in pixels back leaves a terminal with the oldest format there
+	// is: it is asked for the extended one again.
+	_, _ = o.File.Write([]byte(mouseNoPixels + mouseCells))
+}
+
+// Hurry has what is queued sent right away instead of waiting for a frame of text to
+// travel with: for the frames of something that follows the pointer, which change the
+// pixels alone.
+func (o *Output) Hurry() {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if o.timer != nil {
+		o.timer.Reset(hurryDelay)
 	}
 }
 
@@ -152,9 +201,16 @@ func (o *Output) Write(p []byte) (int, error) {
 
 	leaves := bytes.Contains(p, []byte(altScreenOff))
 	enters := bytes.Contains(p, []byte(altScreenOn))
+	// The renderer just asked for the pointer in cells: see PixelMouse.
+	pointer := o.mouse && !o.off && bytes.Contains(p, []byte(mouseCells))
 
 	if o.off || (!o.shown && !enters) {
-		return o.File.Write(p)
+		n, err := o.File.Write(p)
+		if err == nil && pointer {
+			_, err = o.File.Write([]byte(mousePixels))
+		}
+
+		return n, err
 	}
 
 	var before, after []byte
@@ -205,6 +261,10 @@ func (o *Output) Write(p []byte) (int, error) {
 	}
 
 	o.early, o.pending = o.early[:0], o.pending[:0]
+
+	if pointer {
+		buf.WriteString(mousePixels)
+	}
 
 	if _, err := o.File.Write(settled(buf.Bytes())); err != nil {
 		return 0, err

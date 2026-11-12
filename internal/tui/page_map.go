@@ -80,6 +80,24 @@ type mapPage struct {
 	hidePanel bool
 
 	ifaces map[[2]string]*clabinternaltuibackend.Interface
+
+	// free is the map drawn from the positions the nodes were given, nil while a
+	// computed layout is shown. aspect is the height of a cell over its width, and
+	// stateFor what the state of the lab was gathered for.
+	free     *freeMap
+	aspect   float64
+	stateFor mapPainted
+	// placed holds the nodes that were moved here, until the backend reports them
+	// where they were put, and undo where the nodes of the last moves were before.
+	placed map[string]placedSpot
+	undo   []map[string]clabinternaltuitopo.Spot
+	// grabbed is what the pointer holds on to, moving the node that is moved with
+	// the keyboard, and adopted a layout that a move is turning into the drawing.
+	grabbed *freeGrab
+	moving  *keyMove
+	adopted *adoption
+	// unsaved is the lab that was said to have a drawing that cannot be saved.
+	unsaved string
 }
 
 // mapLabels tells what is written on the links of the map. Both are a matter of taste and
@@ -129,6 +147,7 @@ type mapPainted struct {
 func newMapPage(m *Model) *mapPage {
 	p := &mapPage{edge: noEdge, zoom: clabinternaltuitopo.ZoomNormal, fit: true}
 	p.labels = mapLabels{names: namesFocus, rates: true}
+	p.aspect, p.ownText = m.cellAspect(), m.textFont() != nil
 	p.refresh(m, clabinternaltuibackend.TopicAll)
 
 	return p
@@ -150,6 +169,16 @@ func (p *mapPage) info(*Model) []string {
 	}
 
 	info := []string{"layout: " + modeName(p.layout.Mode()), "zoom: " + zoomName(p.zoom)}
+
+	if p.free != nil {
+		info = []string{
+			"layout: " + modeName(clabinternaltuitopo.ModeSaved), "zoom: " + zoomName(p.free.level),
+		}
+
+		if p.moving != nil {
+			info = append([]string{"moving " + p.moving.node}, info...)
+		}
+	}
 
 	if len(p.graph.Nodes) == len(p.full.Nodes) {
 		return append(info,
@@ -224,6 +253,8 @@ func (p *mapPage) refresh(m *Model, topics clabinternaltuibackend.Topic) {
 		p.signature = ""
 		p.node, p.edge = "", noEdge
 		p.offsetX, p.offsetY = 0, 0
+		p.free, p.placed, p.undo = nil, nil, nil
+		p.grabbed, p.moving, p.adopted = nil, nil, nil
 		m.be.SetFocus(p.focus(m))
 	}
 
@@ -235,6 +266,7 @@ func (p *mapPage) refresh(m *Model, topics clabinternaltuibackend.Topic) {
 
 	p.topology = m.be.Topology(p.lab)
 	p.revision++
+	p.prunePlaced()
 
 	if current := m.lab(p.lab); current != nil {
 		p.ifaces = labInterfaces(m, current)
@@ -277,10 +309,18 @@ func (p *mapPage) compute() {
 	for i := range p.topology.Nodes {
 		n := &p.topology.Nodes[i]
 		known[n.Name] = true
-		full.Nodes = append(full.Nodes, clabinternaltuitopo.Node{
+
+		node := clabinternaltuitopo.Node{
 			ID: n.Name, Kind: n.Kind, Role: n.Role, Group: n.Group, Level: n.Level,
 			X: n.X, Y: n.Y, HasPos: n.HasPos,
-		})
+		}
+
+		// A node that was moved here is where it was put.
+		if o, moved := p.placed[n.Name]; moved {
+			node.X, node.Y, node.HasPos = o.at.X, o.at.Y, true
+		}
+
+		full.Nodes = append(full.Nodes, node)
 	}
 
 	for i := range p.topology.Links {
@@ -300,20 +340,40 @@ func (p *mapPage) compute() {
 		p.node, p.edge = busiestNode(&p.full), noEdge
 	}
 
+	// A drawing is shown whole, however large: it is moved and scaled to see its
+	// parts, where a computed layout leaves out what does not fit.
+	free := p.freeWanted()
+
 	p.shown = p.extent
-	if p.extent == extentAuto {
+
+	switch {
+	case p.extent != extentAuto:
+	case free:
+		p.shown = extentAll
+	default:
 		p.shown = p.autoExtent()
 	}
 
 	p.graph = reduceGraph(&p.full, p.shown, p.scope(p.shown))
-	p.layout = p.layoutAt(p.zoom)
+
+	if free {
+		// Of the layout the free view takes the links alone, which the smallest one
+		// has as well.
+		p.layout = clabinternaltuitopo.Compute(p.graph, clabinternaltuitopo.Options{
+			Mode: p.mode, Zoom: clabinternaltuitopo.ZoomCompact,
+		})
+	} else {
+		p.layout = p.layoutAt(p.zoom)
+	}
+
+	p.syncFree(free)
 
 	// The link in focus is gone when its far end is no longer drawn.
 	if !p.hasEdge(p.edge) {
 		p.edge = noEdge
 	}
 
-	if p.fit {
+	if p.fit && p.free == nil {
 		p.fitZoom()
 	}
 
@@ -485,6 +545,22 @@ func (p *mapPage) resize(width, height int) {
 		return
 	}
 
+	// Whether the drawing is shown in the free view depends on how the window is
+	// drawn, which the page is told right before its size.
+	if p.freeWanted() != (p.free != nil) {
+		p.compute()
+		p.center()
+
+		return
+	}
+
+	if p.free != nil {
+		p.free.refit = p.free.refit || (changed && p.fit)
+		p.free.reveal = true
+
+		return
+	}
+
 	switch {
 	case changed && p.extent == extentAuto:
 		// How much of the lab fits depends on the room there is.
@@ -512,6 +588,12 @@ func (p *mapPage) reveal() {
 		return
 	}
 
+	if p.free != nil {
+		p.free.reveal = true
+
+		return
+	}
+
 	width, height := p.viewSize()
 	total, totalHeight := p.layout.Size()
 
@@ -534,6 +616,12 @@ func (p *mapPage) center() {
 		return
 	}
 
+	if p.free != nil {
+		p.free.recenter = true
+
+		return
+	}
+
 	if rect, ok := p.layout.NodeRect(p.node); ok {
 		width, height := p.viewSize()
 		p.offsetX = rect.X + rect.W/2 - width/2  //nolint:mnd // the middle of both
@@ -545,6 +633,13 @@ func (p *mapPage) center() {
 
 func (p *mapPage) pan(dx, dy int) {
 	if p.layout == nil {
+		return
+	}
+
+	if f := p.free; f != nil {
+		f.ox += float64(dx) / f.scale
+		f.oy += float64(dy) * f.aspect / f.scale
+
 		return
 	}
 
@@ -570,6 +665,11 @@ func (p *mapPage) click(m *Model, x, y int, double bool) {
 	}
 
 	hit := p.layout.Hit(x+p.offsetX, y+p.offsetY)
+
+	if p.free != nil {
+		// In the free view things are where the pointer is, not in the cell it is in.
+		hit.Node, hit.Edge = p.hitFree(m.bodyPointer())
+	}
 
 	switch {
 	case hit.Node != "" && double:
@@ -645,11 +745,34 @@ func (p *mapPage) key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd) {
 		return false, nil
 	}
 
+	// A node that is being moved takes every key.
+	if p.moving != nil {
+		return true, p.moveKey(m, msg.String())
+	}
+
+	if p.free != nil && p.freeKey(m, msg.String()) {
+		return true, nil
+	}
+
 	if p.setting(m, msg.String()) || p.navigate(msg.String()) {
 		return true, nil
 	}
 
 	switch msg.String() {
+	case "g":
+		if !p.movable() {
+			return false, nil
+		}
+
+		p.startMove(m)
+
+		return true, nil
+	case "u":
+		if !p.movable() {
+			return false, nil
+		}
+
+		return true, p.undoMove(m)
 	case keyEnter:
 		if n := p.current(m); n != nil && p.edge < 0 {
 			m.push(newNodePage(m, n.NodeRef))
@@ -785,7 +908,12 @@ func (p *mapPage) setting(m *Model, key string) bool {
 }
 
 func (p *mapPage) step(dir clabinternaltuitopo.Dir) {
-	if next, ok := p.layout.Neighbor(p.node, dir); ok {
+	neighbor := p.layout.Neighbor
+	if p.free != nil {
+		neighbor = func(string, clabinternaltuitopo.Dir) (string, bool) { return p.freeNeighbor(dir) }
+	}
+
+	if next, ok := neighbor(p.node, dir); ok {
 		p.focusOn(next)
 	}
 }
@@ -793,6 +921,10 @@ func (p *mapPage) step(dir clabinternaltuitopo.Dir) {
 // cycleEdge moves the focus through the links of the focused node.
 func (p *mapPage) cycleEdge(delta int) {
 	edges := p.layout.EdgesOf(p.node)
+	if p.free != nil {
+		edges = p.freeEdgesOf(p.node)
+	}
+
 	if len(edges) == 0 {
 		return
 	}
@@ -855,7 +987,8 @@ func (p *mapPage) setZoom(zoom clabinternaltuitopo.Zoom) {
 // relabel draws the lab anew after a change of what is written on the links, which
 // changes the room the links are given.
 func (p *mapPage) relabel() {
-	if p.layout == nil {
+	if p.layout == nil || p.free != nil {
+		// The free view gives the links no room: what does not fit is left out.
 		return
 	}
 
@@ -1400,6 +1533,18 @@ func (p *mapPage) hints(m *Model) []hint {
 		return []hint{{"1", "labs"}, {"?", "help"}}
 	}
 
+	if p.moving != nil {
+		return []hint{
+			{"←↑↓→", "move"},
+			{"⇧←↑↓→", "by a pixel"},
+			{"⏎", "put down"},
+			{keyEsc, "put back"},
+			{"+", "zoom in"},
+			{"-", "out"},
+			{"f", "fit"},
+		}
+	}
+
 	hints := []hint{{"←↑↓→", "node"}, {keyTab, "link"}}
 
 	switch {
@@ -1421,6 +1566,14 @@ func (p *mapPage) hints(m *Model) []hint {
 
 	// What is written on the links comes before the zoom and the layout: a window too
 	// narrow for all of the hints drops the last ones, and those are set less often.
+	if p.movable() {
+		hints = append(hints, hint{"g", "move"})
+
+		if len(p.undo) > 0 {
+			hints = append(hints, hint{"u", "undo"})
+		}
+	}
+
 	return append(hints,
 		hint{keyActions, "actions"}, hint{"/", "go to"}, hint{"e", "extent"},
 		hint{"i", "names"}, hint{"r", "rates"},

@@ -209,6 +209,39 @@ func (l *Layout) NodeRect(id string) (Rect, bool) {
 	return l.nodes[i].rect, true
 }
 
+// Drawn reports whether a graph is laid out by the saved positions of its nodes when a
+// mode is asked for: when they are asked for and there are any, or when the choice is
+// left open and most of the nodes have one.
+func Drawn(g Graph, mode Mode) bool {
+	placed, total := 0, 0
+
+	for i := range g.Nodes {
+		if g.Nodes[i].ID == "" {
+			continue
+		}
+
+		total++
+
+		if g.Nodes[i].HasPos {
+			placed++
+		}
+	}
+
+	return drawn(mode, placed, total)
+}
+
+func drawn(mode Mode, placed, total int) bool {
+	switch mode {
+	case ModeSaved:
+		return placed > 0
+	case ModeTiers, ModeGraph:
+		return false
+	default:
+		// A few stray positions say nothing about the picture the user drew.
+		return total > 0 && placed*5 >= total*4
+	}
+}
+
 // pickMode resolves the requested mode against what the graph can support.
 func (l *Layout) pickMode() Mode {
 	withPos := 0
@@ -219,25 +252,12 @@ func (l *Layout) pickMode() Mode {
 		}
 	}
 
-	fallback := ModeGraph
-	if l.tier != nil {
-		fallback = ModeTiers
-	}
-
-	switch l.opts.Mode {
-	case ModeSaved:
-		if withPos > 0 {
-			return ModeSaved
-		}
-	case ModeTiers:
-	case ModeGraph:
+	switch {
+	case drawn(l.opts.Mode, withPos, len(l.nodes)):
+		return ModeSaved
+	case l.opts.Mode == ModeGraph, l.tier == nil:
 		return ModeGraph
 	default:
-		// A few stray positions say nothing about the picture the user drew.
-		if withPos*5 >= len(l.nodes)*4 {
-			return ModeSaved
-		}
+		return ModeTiers
 	}
-
-	return fallback
 }

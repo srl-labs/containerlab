@@ -7,6 +7,7 @@ package tui
 import (
 	"bytes"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -448,5 +449,187 @@ func TestPixelLayerForTerminalsThatShowImagesOverText(t *testing.T) {
 
 	if m.graphical() {
 		t.Error("the pixel layer is drawn although the terminal would hide the text under it")
+	}
+}
+
+func TestPixelMouseIsAskedForWhenTheTerminalKnowsIt(t *testing.T) {
+	// A terminal that says so when asked.
+	m, term := newPixelTextModel(t, 120, 35)
+
+	if m.px.mouseOn || strings.Contains(term.String(), "\x1b[?1016h") {
+		t.Fatal("the pointer is asked for in pixels before the terminal said that it can")
+	}
+
+	m.Update(tea.ModeReportMsg{Mode: ansi.ModeMouseExtSgrPixel, Value: ansi.ModeReset})
+
+	if !m.px.mouseOn || !strings.Contains(term.String(), "\x1b[?1016h") {
+		t.Fatal("the pointer is not asked for in pixels although the terminal can")
+	}
+
+	// One that does not know the mode.
+	m, term = newPixelTextModel(t, 120, 35)
+	m.Update(tea.ModeReportMsg{Mode: ansi.ModeMouseExtSgrPixel, Value: ansi.ModeNotRecognized})
+
+	if m.px.mouseOn || strings.Contains(term.String(), "\x1b[?1016h") {
+		t.Fatal("the pointer is asked for in pixels although the terminal cannot")
+	}
+
+	// And one that is known to, although it does not say so.
+	m.Update(tea.TerminalVersionMsg{Name: "par-term(0.31.0)"})
+
+	if !m.px.mouseOn {
+		t.Fatal("the pointer is not asked for in pixels in a terminal known to report them")
+	}
+}
+
+func TestPixelMouseIsTurnedIntoCells(t *testing.T) {
+	m, _ := newPixelTextModel(t, 120, 35)
+	m.Update(tea.ModeReportMsg{Mode: ansi.ModeMouseExtSgrPixel, Value: ansi.ModeSet})
+
+	// The second tab of the header, a third into its first cell and half way down
+	// the second line: the decoder takes one off whatever it is sent.
+	m.render()
+
+	zone := m.tabZones[1]
+	x := int((float64(zone.from)+0.33)*testCellWidth) - 1
+	y := int(math.Round(1.5*testCellHeight)) - 1
+
+	m.Update(tea.MouseClickMsg{X: x, Y: y, Button: tea.MouseLeft})
+
+	if m.top().tab() != zone.tab {
+		t.Errorf("the click at pixel %d,%d did not open the tab at column %d", x, y, zone.from)
+	}
+
+	if math.Abs(m.pointer[0]-float64(zone.from)-0.33) > 0.15 || math.Abs(m.pointer[1]-1.5) > 0.06 {
+		t.Errorf("the pointer is taken to be at %.2f,%.2f, want %.2f,1.50",
+			m.pointer[0], m.pointer[1], float64(zone.from)+0.33)
+	}
+
+	// A position far out of the window is in another unit: back to cells.
+	m.Update(tea.MouseMotionMsg{X: 40_000, Y: 12, Button: tea.MouseLeft})
+
+	if m.px.mouseOn {
+		t.Fatal("positions that cannot be pixels of the window are still taken for pixels")
+	}
+
+	m.Update(tea.MouseClickMsg{X: 7, Y: 3, Button: tea.MouseLeft})
+
+	if m.pointer != [2]float64{7.5, 3.5} {
+		t.Errorf("the pointer is taken to be at %v, want the middle of cell 7,3", m.pointer)
+	}
+}
+
+func TestPixelFramesWaitForTheTerminal(t *testing.T) {
+	m, term := newPixelTextModel(t, 120, 35)
+	press(m, "enter", "5")
+
+	// A terminal that never said that it answers questions about modes is not asked.
+	m.View()
+
+	if m.px.inFlight || strings.Contains(term.String(), pixelAck) && m.px.acks {
+		t.Fatal("a frame waits for a terminal that was never heard from")
+	}
+
+	m.Update(tea.ModeReportMsg{Mode: ansi.ModeMouseExtSgrPixel, Value: ansi.ModeNotRecognized})
+
+	if !m.px.acks {
+		t.Fatal("the answer of the terminal was not taken as a sign that it answers")
+	}
+
+	// The next frame that changes pixels goes out with the question, and the one
+	// after it waits for the answer.
+	press(m, "down")
+	m.View()
+
+	if !m.px.inFlight {
+		t.Fatal("the frame was sent without asking the terminal to tell when it is done")
+	}
+
+	shown := m.px.drawn
+
+	_, cmd := m.Update(keyMsg("down"))
+	if cmd == nil {
+		t.Error("nothing wakes the UI up should the terminal not answer")
+	}
+
+	m.View()
+
+	if m.px.drawn != shown {
+		t.Fatal("a frame was drawn while the terminal was busy with the one before")
+	}
+
+	// The answer lets the next frame through, with everything that happened since.
+	m.Update(tea.ModeReportMsg{Mode: ansi.ModeMouseExtSgrPixel, Value: ansi.ModeNotRecognized})
+
+	if m.px.inFlight {
+		t.Fatal("the answer of the terminal did not end the wait")
+	}
+
+	m.View()
+
+	if m.px.drawn == shown {
+		t.Fatal("no frame was drawn once the terminal was ready")
+	}
+
+	// A terminal that stops answering is waited for a few times, and then no more.
+	for i := range ackMisses {
+		// Each of these keys leaves the focus somewhere else than the frame before.
+		press(m, []string{"up", "up", "down"}[i%ackMisses])
+		m.View()
+
+		if !m.px.inFlight {
+			t.Fatal("the frame was sent without the question")
+		}
+
+		m.px.sentAt = m.px.sentAt.Add(-2 * ackTimeout)
+		m.Update(frameMsg{})
+	}
+
+	if m.px.acks || m.px.inFlight {
+		t.Error("a terminal that does not answer anymore is still waited for")
+	}
+}
+
+func TestPixelScaleFollowsTheTerminal(t *testing.T) {
+	// Cells of 19 pixels, and a terminal nothing is known about: twice the pixels.
+	m, _ := newPixelTextModel(t, 120, 35)
+	cells := int(math.Round(testCellWidth * 120))
+
+	if got := m.metrics().Width; got != 2*cells {
+		t.Errorf("the layer is %d pixels wide, want twice the %d the terminal reports", got, cells)
+	}
+
+	// One that reports the pixels of the display gets what it reports.
+	m.Update(tea.TerminalVersionMsg{Name: "ghostty 1.2.3"})
+
+	if got := m.metrics().Width; got != cells {
+		t.Errorf(
+			"the layer is %d pixels wide in a terminal that reports %d device pixels",
+			got,
+			cells,
+		)
+	}
+
+	// So does one built on xterm.js, which draws images with the pixels it reports.
+	m, _ = newPixelTextModel(t, 120, 35)
+	m.Update(tea.TerminalVersionMsg{Name: "xterm.js(5.6.0)"})
+
+	if got := m.metrics().Width; got != cells || !m.px.flat {
+		t.Errorf("the layer is %d pixels wide in a terminal built on xterm.js, want %d", got, cells)
+	}
+
+	// Large cells are those of a high resolution display counted in its own pixels.
+	m, _ = newPixelTextModel(t, 120, 35)
+	m.Update(uv.PixelSizeEvent{Width: 120 * 14, Height: 35 * 32})
+
+	if got := m.metrics().Height; got != 35*32 {
+		t.Errorf("the layer is %d pixels tall with cells of 32 pixels, want %d", got, 35*32)
+	}
+
+	// Unless the terminal is known to count without the scale of the display.
+	m.Update(tea.TerminalVersionMsg{Name: "par-term(0.31.0)"})
+
+	if got := m.metrics().Height; got != 2*35*32 {
+		t.Errorf("the layer is %d pixels tall in such a terminal, want %d", got, 2*35*32)
 	}
 }

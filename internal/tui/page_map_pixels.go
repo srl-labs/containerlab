@@ -84,6 +84,12 @@ func (p *mapPage) viewPixels(m *Model) string {
 		return p.empty(m)
 	}
 
+	p.aspect = sc.Y(1) / sc.X(1)
+
+	if p.free != nil {
+		return p.viewFree(m, sc, canvas)
+	}
+
 	grid := p.painted(m)
 
 	//nolint:mnd // just inside the edge of the card
@@ -141,30 +147,23 @@ func (p *mapPage) paintLabels(
 	}
 }
 
-// paintLinks draws the links, the ones that matter most last so that they end up on top:
-// unknown, up, mixed, down, then the one in focus.
-//
-//nolint:mnd // sizes and positions of what is drawn, in cells and points
-func (p *mapPage) paintLinks(
-	m *Model,
-	sc *clabinternaltuigfx.Scene,
-	canvas clabinternaltuigfx.Color,
-) {
-	sk := m.skin()
+// edgesByUrgency returns the links in the order they are drawn in, the ones that matter
+// most last so that they end up on top: unknown, up, mixed, down, then the one in focus.
+func (p *mapPage) edgesByUrgency() []clabinternaltuitopo.Edge {
 	edges := p.layout.Edges()
 
 	urgency := func(e *clabinternaltuitopo.Edge) int {
 		if e.ID == p.edge {
-			return int(clabinternaltuitopo.LinkMixed) + 2 // after every state
+			return int(clabinternaltuitopo.LinkMixed) + 2 //nolint:mnd // after every state
 		}
 
 		switch p.layout.EdgeState(p.paintedState, e.ID) {
 		case clabinternaltuitopo.LinkUp:
 			return 1
 		case clabinternaltuitopo.LinkMixed:
-			return 2 // see above
+			return 2 //nolint:mnd // see above
 		case clabinternaltuitopo.LinkDown:
-			return 3 // see above
+			return 3 //nolint:mnd // see above
 		default:
 			return 0
 		}
@@ -174,20 +173,65 @@ func (p *mapPage) paintLinks(
 		return urgency(&edges[i]) < urgency(&edges[j])
 	})
 
-	// The lines are opaque: several links share stretches of their routes, and there
-	// a translucent line would add up.
-	// The colors are the ones of the containerlab app, mixed with the canvas as it
-	// does for links that run in right angles.
-	up := clabinternaltuigfx.Mix(canvas, appLinkUp, appLinkMix)
-	down := clabinternaltuigfx.Mix(canvas, appLinkDown, appLinkMix)
-	unknown := clabinternaltuigfx.Mix(canvas, appLinkIdle, appLinkMix)
+	return edges
+}
 
+// paintLink draws the line of a link through points given in cells.
+//
+// The lines are opaque: several links share stretches of their routes, and there a
+// translucent line would add up. The colors are the ones of the containerlab app, mixed
+// with the canvas as it does for links that run in right angles.
+func (p *mapPage) paintLink(
+	m *Model,
+	sc *clabinternaltuigfx.Scene,
+	e *clabinternaltuitopo.Edge,
+	pts []clabinternaltuigfx.Point,
+	canvas clabinternaltuigfx.Color,
+) {
+	sk := m.skin()
+	width, dash := linkWidth, 0.0
+	color := clabinternaltuigfx.Mix(canvas, appLinkUp, appLinkMix)
+
+	switch p.layout.EdgeState(p.paintedState, e.ID) {
+	case clabinternaltuitopo.LinkDown:
+		dash, color = linkDash, clabinternaltuigfx.Mix(canvas, appLinkDown, appLinkMix)
+	case clabinternaltuitopo.LinkMixed:
+		color = clabinternaltuigfx.RGB(m.th.Palette.Warning)
+	case clabinternaltuitopo.LinkUnknown:
+		color = clabinternaltuigfx.Mix(canvas, appLinkIdle, appLinkMix)
+	case clabinternaltuitopo.LinkUp:
+	}
+
+	if p.layout.Bundled(e.ID) {
+		width = bundleWidth
+	}
+
+	if e.ID == p.edge {
+		width, color = focusWidth, sk.Accent
+		// A glow.
+		sc.Route(pts, glowWidth, linkRound, 0,
+			clabinternaltuigfx.Mix(canvas, sk.Accent, 0.25)) //nolint:mnd // a quarter
+	}
+
+	// A casing in the color of the canvas: where two links cross, the one on top
+	// cuts a small gap in the other, so that a crossing never reads as a turn.
+	sc.Route(pts, width+2*linkCasing, linkRound, 0, canvas)
+	sc.Route(pts, width, linkRound, dash, color)
+}
+
+// paintLinks draws the links along the routes of the layout.
+func (p *mapPage) paintLinks(
+	m *Model,
+	sc *clabinternaltuigfx.Scene,
+	canvas clabinternaltuigfx.Color,
+) {
+	edges := p.edgesByUrgency()
+
+	//nolint:mnd // the middle of a cell
 	ox, oy := float64(pixelInset-p.offsetX)+0.5, float64(pixelBodyTop-p.offsetY)+0.5
 
 	for i := range edges {
-		e := &edges[i]
-
-		route := p.layout.Route(e.ID)
+		route := p.layout.Route(edges[i].ID)
 		if len(route) == 0 {
 			continue
 		}
@@ -197,33 +241,7 @@ func (p *mapPage) paintLinks(
 			pts[k] = clabinternaltuigfx.Point{X: float64(at.X) + ox, Y: float64(at.Y) + oy}
 		}
 
-		width, dash, color := linkWidth, 0.0, up
-
-		switch p.layout.EdgeState(p.paintedState, e.ID) {
-		case clabinternaltuitopo.LinkDown:
-			dash, color = linkDash, down
-		case clabinternaltuitopo.LinkMixed:
-			color = clabinternaltuigfx.RGB(m.th.Palette.Warning)
-		case clabinternaltuitopo.LinkUnknown:
-			color = unknown
-		case clabinternaltuitopo.LinkUp:
-		}
-
-		if p.layout.Bundled(e.ID) {
-			width = bundleWidth
-		}
-
-		if e.ID == p.edge {
-			width, color = focusWidth, sk.Accent
-			// A glow.
-			sc.Route(pts, glowWidth, linkRound, 0,
-				clabinternaltuigfx.Mix(canvas, sk.Accent, 0.25))
-		}
-
-		// A casing in the color of the canvas: where two links cross, the one on top
-		// cuts a small gap in the other, so that a crossing never reads as a turn.
-		sc.Route(pts, width+2*linkCasing, linkRound, 0, canvas)
-		sc.Route(pts, width, linkRound, dash, color)
+		p.paintLink(m, sc, &edges[i], pts, canvas)
 	}
 }
 
@@ -307,66 +325,78 @@ func nodeSymbol(role, kind string) clabinternaltuigfx.Symbol {
 }
 
 // paintNodes draws the boxes of the nodes as cards.
-//
-//nolint:mnd // the cards sit a little inside the cells of their boxes
 func (p *mapPage) paintNodes(m *Model, sc *clabinternaltuigfx.Scene) {
-	sk := m.skin()
-	fill := clabinternaltuigfx.Mix(sk.Card, sk.Ink, 0.04)
-	edge := clabinternaltuigfx.Mix(sk.CardEdge, sk.Ink, 0.12)
 	shadows := len(p.graph.Nodes) <= shadowedNodes
 
 	for i := range p.graph.Nodes {
-		id := p.graph.Nodes[i].ID
-
-		r, ok := p.layout.NodeRect(id)
+		r, ok := p.layout.NodeRect(p.graph.Nodes[i].ID)
 		if !ok {
 			continue
 		}
 
-		x, y := float64(r.X+pixelInset-p.offsetX), float64(r.Y+pixelBodyTop-p.offsetY)
-		w, h := float64(r.W), float64(r.H)
-		tint := clabinternaltuigfx.RGB(
-			m.th.LevelStyle(nodeStateLevel(p.paintedState.Nodes[id])).GetForeground())
-		focused := p.node == id && p.edge < 0
-
-		body, line := fill, edge
-
-		switch p.paintedState.Nodes[id] {
-		case clabinternaltuitopo.NodeWarn, clabinternaltuitopo.NodeDown:
-			line = clabinternaltuigfx.Mix(sk.Card, tint, 0.75)
-		case clabinternaltuitopo.NodeReady, clabinternaltuitopo.NodeUnknown:
-		}
-
-		if focused {
-			body, line = clabinternaltuigfx.Mix(sk.Card, sk.Accent, 0.14), sk.Accent
-		}
-
-		// A node of one row is a pill, a taller one a card with a state dot.
-		bx, by, bw, bh, round := x+0.3, y+0.2, w-0.6, h-0.4, float64(nodeRound)
-		if r.H == 1 {
-			bx, by, bw, bh, round = x+0.1, y+0.06, w-0.2, 0.88, chipRound
-		}
-
-		if shadows && r.H > 1 {
-			sc.Shadow(bx, by, bw, bh, round, 7, 3, sk.Shadow)
-		}
-
-		if focused {
-			sc.Halo(bx, by, bw, bh, round, 3, sk.Accent.Alpha(0.25))
-		}
-
-		sc.Box(bx, by, bw, bh, round, body, line, 1)
-
-		if !p.ownText {
-			if r.H > 1 {
-				sc.Dot(x+w-1.8, y+0.85, nodeDot, tint)
-			}
-
-			continue
-		}
-
-		p.paintNodeContent(m, sc, &p.graph.Nodes[i], r, bx, bw, y, focused)
+		p.paintCard(m, sc, &p.graph.Nodes[i],
+			float64(r.X+pixelInset-p.offsetX), float64(r.Y+pixelBodyTop-p.offsetY),
+			float64(r.W), float64(r.H), shadows, false)
 	}
+}
+
+// paintCard draws a node as a card whose top left corner is at a position in cells. A
+// card that is lifted, as one is while it is moved, throws a longer shadow.
+//
+//nolint:mnd // the cards sit a little inside the cells of their boxes
+func (p *mapPage) paintCard(
+	m *Model, sc *clabinternaltuigfx.Scene, n *clabinternaltuitopo.Node,
+	x, y, w, h float64, shadows, lifted bool,
+) {
+	sk := m.skin()
+	fill := clabinternaltuigfx.Mix(sk.Card, sk.Ink, 0.04)
+	edge := clabinternaltuigfx.Mix(sk.CardEdge, sk.Ink, 0.12)
+	rows := int(math.Round(h))
+
+	tint := clabinternaltuigfx.RGB(
+		m.th.LevelStyle(nodeStateLevel(p.paintedState.Nodes[n.ID])).GetForeground())
+	focused := p.node == n.ID && p.edge < 0
+
+	body, line := fill, edge
+
+	switch p.paintedState.Nodes[n.ID] {
+	case clabinternaltuitopo.NodeWarn, clabinternaltuitopo.NodeDown:
+		line = clabinternaltuigfx.Mix(sk.Card, tint, 0.75)
+	case clabinternaltuitopo.NodeReady, clabinternaltuitopo.NodeUnknown:
+	}
+
+	if focused {
+		body, line = clabinternaltuigfx.Mix(sk.Card, sk.Accent, 0.14), sk.Accent
+	}
+
+	// A node of one row is a pill, a taller one a card with a state dot.
+	bx, by, bw, bh, round := x+0.3, y+0.2, w-0.6, h-0.4, float64(nodeRound)
+	if rows == 1 {
+		bx, by, bw, bh, round = x+0.1, y+0.06, w-0.2, 0.88, chipRound
+	}
+
+	switch {
+	case lifted:
+		sc.Shadow(bx, by, bw, bh, round, 18, 9, sk.Shadow)
+	case shadows && rows > 1:
+		sc.Shadow(bx, by, bw, bh, round, 7, 3, sk.Shadow)
+	}
+
+	if focused {
+		sc.Halo(bx, by, bw, bh, round, 3, sk.Accent.Alpha(0.25))
+	}
+
+	sc.Box(bx, by, bw, bh, round, body, line, 1)
+
+	if !p.ownText {
+		if rows > 1 {
+			sc.Dot(x+w-1.8, y+0.85, nodeDot, tint)
+		}
+
+		return
+	}
+
+	p.paintNodeContent(m, sc, n, rows, bx, bw, y, focused)
 }
 
 // nodeBadge returns the colors of the badge of a node that is not running.
@@ -391,7 +421,7 @@ func nodeBadge(state clabinternaltuitopo.NodeState) ([2]clabinternaltuigfx.Color
 //
 //nolint:mnd // sizes and positions of what is drawn, in cells and points
 func (p *mapPage) paintNodeContent(
-	m *Model, sc *clabinternaltuigfx.Scene, n *clabinternaltuitopo.Node, r clabinternaltuitopo.Rect,
+	m *Model, sc *clabinternaltuigfx.Scene, n *clabinternaltuitopo.Node, rows int,
 	bx, bw, y float64, focused bool,
 ) {
 	font, sk := m.textFont(), m.skin()
@@ -404,7 +434,7 @@ func (p *mapPage) paintNodeContent(
 	name = clabinternaltuiui.Sanitize(name)
 
 	note := ""
-	if r.H > 3 {
+	if rows > 3 {
 		note = p.paintedState.NodeNotes[n.ID]
 		if note == "" {
 			note = n.Kind
@@ -418,7 +448,7 @@ func (p *mapPage) paintNodeContent(
 
 	muted := clabinternaltuigfx.RGB(m.th.Palette.Muted)
 
-	if r.H == 1 {
+	if rows == 1 {
 		sc.Text(font, bx, y, bw, textSize, focused, clabinternaltuigfx.AlignCenter, name, ink)
 
 		return

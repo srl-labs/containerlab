@@ -449,7 +449,7 @@ func TestDotsMakeAGrid(t *testing.T) {
 	}
 }
 
-// flatRows returns the rows a sequence sends an image for, in order.
+// flatRows returns the rows a sequence sends an image at, in order.
 func flatRows(seq []byte) []string {
 	sends := regexp.MustCompile(`\x1b\[(\d+);1H\x1b_Ga=T`).FindAllSubmatch(seq, -1)
 	rows := make([]string, 0, len(sends))
@@ -461,9 +461,10 @@ func flatRows(seq []byte) []string {
 	return rows
 }
 
-// TestFlatScreenSendsOneImageARow draws for a terminal that shows one image a cell, on
-// top of its text: both layers go into one image a row, placed over the text.
-func TestFlatScreenSendsOneImageARow(t *testing.T) {
+// TestFlatScreenSendsWhatChangedAsOneImage draws for a terminal that shows one image a
+// cell, on top of its text, and takes a while for every image: both layers go into one
+// image, from the first row that changed down to the last one.
+func TestFlatScreenSendsWhatChangedAsOneImage(t *testing.T) {
 	screen := NewScreen()
 
 	sc := NewFlatScene(testMetrics())
@@ -471,17 +472,26 @@ func TestFlatScreenSendsOneImageARow(t *testing.T) {
 	sc.On(Over).Rect(0, 0, 10, 1, red.Alpha(0.5))
 	sc.On(Under)
 
+	// The first frame is the whole window. An image cannot both start at the top and
+	// end at the bottom: the first rows are one image, the others another.
 	before, after := screen.Update(sc)
 	if len(before) != 0 {
 		t.Errorf("the first frame takes something away: %q", before)
 	}
 
-	if got := flatRows(after); strings.Join(got, ",") != "1,2,3" {
-		t.Errorf("the first frame sent the rows %v, want 1, 2 and 3", got)
+	if got := flatRows(after); strings.Join(got, ",") != "1,3" {
+		t.Errorf("the first frame sent images at the rows %v, want 1 and 3", got)
 	}
 
-	if !bytes.Contains(after, []byte(",z=0,")) || bytes.Contains(after, []byte("z=-")) {
-		t.Error("the images are not placed on top of the text")
+	// The images are sent in their own size, on top of the text.
+	for _, key := range []string{"c=", "r=", "z="} {
+		if bytes.Contains(after, []byte(","+key)) {
+			t.Errorf("an image is sent with %s", key)
+		}
+	}
+
+	if !bytes.Contains(after, []byte(",s=100,v=40,")) {
+		t.Errorf("no image of two rows of the window was sent: %q", after[:60])
 	}
 
 	// An image that fits one sequence says nothing about chunks, and none is sent
@@ -490,70 +500,101 @@ func TestFlatScreenSendsOneImageARow(t *testing.T) {
 		t.Error("an image of one sequence is marked as the last chunk")
 	}
 
-	if ids := images(after); len(ids) != 3 || ids[0] == ids[1] || ids[1] == ids[2] {
-		t.Errorf("the images have the numbers %v", ids)
+	first := images(after)
+	if len(first) != 2 || first[0] == first[1] {
+		t.Errorf("the images have the numbers %v", first)
 	}
 
-	// Sending a row takes the image of the row below it away in such a terminal: the
-	// rows under a changed one are sent again, down to the first that shows nothing.
-	changed := NewFlatScene(testMetrics())
-	changed.Fill(0, 0, 10, 3, 0, white)
-	changed.Dot(5, 1.5, 3, red)
+	// Nothing changed: nothing is sent.
+	same := NewFlatScene(testMetrics())
+	same.Fill(0, 0, 10, 3, 0, white)
+	same.On(Over).Rect(0, 0, 10, 1, red.Alpha(0.5))
+	same.On(Under)
 
-	before, after = screen.Update(changed)
-	if got := flatRows(after); strings.Join(got, ",") != "1,2,3" {
-		t.Errorf(
-			"a change took the rows %v, want 1 for the layer on top that went, then 2 and 3",
-			got,
-		)
+	if before, after = screen.Update(same); len(before)+len(after) != 0 {
+		t.Errorf("a frame that changed nothing sent %q and %q", before, after)
 	}
 
-	if len(before) != 0 {
-		t.Errorf("a change takes something away: %q", before)
+	// A change in the third row: one image, from that row down. The region that
+	// scrolls is set to the rows above it, so that the image cannot scroll the screen
+	// from the last row.
+	low := NewFlatScene(testMetrics())
+	low.Fill(0, 0, 10, 3, 0, white)
+	low.On(Over).Rect(0, 0, 10, 1, red.Alpha(0.5))
+	low.On(Under).Dot(5, 2.5, 3, red)
+
+	_, after = screen.Update(low)
+	if !bytes.HasPrefix(after, []byte("\x1b[1;2r\x1b[3;1H")) ||
+		!bytes.HasSuffix(after, []byte("\x1b[r")) {
+		t.Errorf("the change was sent as %q…%q", after[:20], after[len(after)-8:])
 	}
 
-	one := NewFlatScene(testMetrics())
-	one.Fill(0, 0, 10, 3, 0, white)
-	one.Dot(5, 2.5, 3, red)
-
-	if got := flatRows(drawn(screen.Update(one))); strings.Join(got, ",") != "2,3" {
-		t.Errorf("a change in the second and third row sent the rows %v", got)
+	if ids := images(after); len(ids) != 1 || ids[0] == first[0] || ids[0] == first[1] {
+		t.Errorf("the change was sent as the images %v, after %v", ids, first)
 	}
 
-	// A row that empties is erased, in front of the frame of text.
-	less := NewFlatScene(testMetrics())
-	less.Fill(0, 0, 10, 2, 0, white)
-	less.Dot(5, 1.5, 3, red)
+	if !bytes.Contains(after, []byte(",s=100,v=40,")) {
+		t.Errorf("the image does not hold the last two rows: %q", after[:60])
+	}
 
-	before, _ = screen.Update(less)
-	if string(before) != eraseRow(2) {
-		t.Errorf("the emptied row was taken away with %q", before)
+	// A change in the last row alone sends that row.
+	last := NewFlatScene(testMetrics())
+	last.Fill(0, 0, 10, 3, 0, white)
+	last.On(Over).Rect(0, 0, 10, 1, red.Alpha(0.5))
+	last.On(Under).Dot(5, 2.5, 3, red)
+	last.Dot(5, 3.5, 3, red)
+
+	_, after = screen.Update(last)
+	if !bytes.HasPrefix(after, []byte("\x1b[1;3r\x1b[4;1H")) ||
+		!bytes.Contains(after, []byte(",v=20,")) {
+		t.Errorf("the last row was sent as %q", after[:60])
+	}
+
+	// A change in the first row sends everything: its image may take the row below
+	// it along, which has to be sent after it.
+	top := NewFlatScene(testMetrics())
+	top.Fill(0, 0, 10, 3, 0, white)
+
+	before, after = screen.Update(top)
+	if got := flatRows(after); strings.Join(got, ",") != "1,3" || len(before) != 0 {
+		t.Errorf("a change in the first row sent images at the rows %v, after %q", got, before)
 	}
 
 	// The whole layer is taken away by clearing the screen, and put back by sending
-	// every row under a new number.
+	// all of it under new numbers.
 	if got := string(screen.Hide()); got != eraseAll {
 		t.Errorf("hiding sent %q", got)
 	}
 
 	before, after = screen.Repair()
-	if string(before) != eraseAll || strings.Join(flatRows(after), ",") != "1,2" {
-		t.Errorf("a repair sent %q and the rows %v", before, flatRows(after))
+	if string(before) != eraseAll || strings.Join(flatRows(after), ",") != "1,3" {
+		t.Errorf("a repair sent %q and images at the rows %v", before, flatRows(after))
 	}
 }
 
-// TestFlatScreenKeepsTheLastRowFromScrolling sends an image for the last row: the region
-// that scrolls is taken off that row around it.
-func TestFlatScreenKeepsTheLastRowFromScrolling(t *testing.T) {
+// TestFlatScreenDrawsBothLayersIntoOneImage looks at the pixels a flat scene is sent
+// with: the layer on top of the text is part of them.
+func TestFlatScreenDrawsBothLayersIntoOneImage(t *testing.T) {
 	screen := NewScreen()
 
 	sc := NewFlatScene(testMetrics())
-	sc.Fill(0, 3, 10, 1, 0, white)
+	sc.Fill(0, 0, 10, 4, 0, white)
+	sc.On(Over).Rect(0, 1, 10, 1, red)
+	sc.On(Under)
 
-	_, after := screen.Update(sc)
-	if !bytes.HasPrefix(after, []byte("\x1b[1;3r\x1b[4;1H")) ||
-		!bytes.HasSuffix(after, []byte("\x1b[r")) {
-		t.Errorf("the last row was sent as %q…%q", after[:20], after[len(after)-8:])
+	screen.Update(sc)
+
+	// Twenty rows of pixels a row of text, a hundred pixels each.
+	for row, want := range []Color{white, red, white, white} {
+		pix := screen.rows[row].pix
+		if len(pix) != 100*20*4 {
+			t.Fatalf("row %d is kept with %d bytes", row, len(pix))
+		}
+
+		at := (10*100 + 50) * 4
+		if got := (Color{R: pix[at], G: pix[at+1], B: pix[at+2], A: pix[at+3]}); got != want {
+			t.Errorf("row %d is %v in its middle, want %v", row, got, want)
+		}
 	}
 }
 
@@ -621,4 +662,53 @@ func testFont(t *testing.T, name string) []byte {
 	}
 
 	return data
+}
+
+func TestOutputKeepsThePointerReportedInPixels(t *testing.T) {
+	out, _, term := shownOutput(t)
+
+	out.PixelMouse(true)
+
+	if got := term.take(); got != mousePixels {
+		t.Fatalf("the terminal got %q, want to be asked for pixels", got)
+	}
+
+	// Asked a second time, nothing is sent.
+	out.PixelMouse(true)
+
+	if got := term.take(); got != "" {
+		t.Errorf("the terminal was asked again: %q", got)
+	}
+
+	// The renderer turns the mouse on again, ie. after the terminal was lent to a
+	// session, and asks for cells as it does: pixels are asked for right after.
+	frame := syncStart + "\x1b[?1002h" + mouseCells + "text" + syncEnd
+	if n, err := out.Write([]byte(frame)); err != nil || n != len(frame) {
+		t.Fatalf("Write returned %d, %v", n, err)
+	}
+
+	got := term.take()
+	if !strings.HasSuffix(got, mousePixels+syncEnd) ||
+		strings.Index(got, mousePixels) < strings.Index(got, mouseCells) {
+		t.Errorf("the terminal got %q, want pixels asked for after cells", got)
+	}
+
+	// A frame that does not touch the mouse is left alone.
+	_, _ = out.Write([]byte(syncStart + "text" + syncEnd))
+
+	if got := term.take(); strings.Contains(got, mousePixels) {
+		t.Errorf("the terminal was asked for pixels with a plain frame: %q", got)
+	}
+
+	out.PixelMouse(false)
+
+	if got := term.take(); got != mouseNoPixels+mouseCells {
+		t.Errorf("the terminal got %q, want to be asked for cells again", got)
+	}
+
+	_, _ = out.Write([]byte(frame))
+
+	if got := term.take(); strings.Contains(got, mousePixels) {
+		t.Errorf("the terminal was asked for pixels after they were given up: %q", got)
+	}
 }

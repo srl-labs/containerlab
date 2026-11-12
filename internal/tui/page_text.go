@@ -279,6 +279,8 @@ func helpGroups() []helpGroup {
 			{"e", "how much is drawn: all, without hosts, or around the focus"},
 			{"+ - f", "zoom in, zoom out, fit"},
 			{"v", "layout: saved positions, tiers or by connectivity"},
+			{"g", "pick the node up: arrows move it, ⏎ puts it down, esc back"},
+			{"u", "take the last move of a node back"},
 			{"i", "interface names at the ends of links: of the node in focus, all, off"},
 			{"r", "show or hide the traffic rates on the links"},
 			{"H J K L", "pan"},
@@ -288,7 +290,8 @@ func helpGroups() []helpGroup {
 			{"double click", "open the row or the node"},
 			{"right click", "menu of actions for what was clicked"},
 			{"wheel", "scroll"},
-			{"drag", "move the map"},
+			{"drag", "move the map, or a node of it where pixels are drawn"},
+			{"ctrl+wheel", "zoom the drawing of a lab around the pointer"},
 			{"shift+drag", "select text with the terminal, bypassing the UI"},
 		}},
 	}

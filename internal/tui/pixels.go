@@ -14,11 +14,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 	clabinternaltuigfx "github.com/srl-labs/containerlab/internal/tui/gfx"
 	clabinternaltuitheme "github.com/srl-labs/containerlab/internal/tui/theme"
 	clabinternaltuiui "github.com/srl-labs/containerlab/internal/tui/ui"
@@ -39,13 +41,19 @@ func GraphicsModes() []string { return []string{GraphicsAuto, GraphicsOn, Graphi
 
 const (
 	// graphicsScaleEnv sets how many pixels the layer is drawn with for each pixel the
-	// terminal reports. Terminals report sizes without the scale of the display, so on
-	// a high resolution display the layer is only sharp when drawn larger.
+	// terminal reports. Some terminals report sizes without the scale of the display,
+	// so on a high resolution display the layer is only sharp when drawn larger.
+	// Without it the scale follows from what is known about the terminal.
 	graphicsScaleEnv = "CLAB_TUI_GRAPHICS_SCALE"
 	// graphicsTextEnv set to off leaves the text to the terminal.
 	graphicsTextEnv = "CLAB_TUI_GRAPHICS_TEXT"
-	defaultScale    = 2
-	maxScale        = 4
+	// graphicsMouseEnv tells how the terminal reports the pointer, for a terminal that
+	// gets it wrong when asked: cells, or pixels.
+	graphicsMouseEnv = "CLAB_TUI_GRAPHICS_MOUSE"
+	mouseInCells     = "cells"
+	mouseInPixels    = "pixels"
+	defaultScale     = 2
+	maxScale         = 4
 	// pixelBudget is the most pixels the layer is drawn with, 32 MB of image memory,
 	// and minScale how far the scale is taken down to stay within it.
 	pixelBudget = 8_000_000
@@ -60,6 +68,32 @@ const (
 	flatTerminal = "xterm.js"
 	// pixelSizeQuery asks for the size of the text area in pixels.
 	pixelSizeQuery = "\x1b[14t"
+	// sharpCell is the height of a cell in pixels from which the layer is drawn with
+	// the pixels the terminal reports: such cells are those of a display of high
+	// resolution, counted in its own pixels.
+	sharpCell = 30
+	// pixelMouseQuery asks whether the terminal knows how to report the pointer in
+	// pixels, and pixelMouseTerminal is the name of the terminals that do without
+	// saying so: the ones built on the par-term engine, Muxus among them.
+	pixelMouseQuery    = "\x1b[?1016$p"
+	pixelMouseTerminal = "par-term"
+	// pixelAck is asked after the pixels of a frame, and answered once the terminal
+	// took them in: the next frame is not drawn before, so that a terminal that is
+	// slow with images shows the latest state rather than one frame after the other
+	// of what happened a while ago. It is the question about the pointer again, as
+	// that is one every terminal that knows such questions answers.
+	pixelAck = pixelMouseQuery
+	// ackTimeout is how long the answer is waited for, and ackMisses how many times
+	// in a row it may stay away before it is no longer asked for.
+	ackTimeout = 1500 * time.Millisecond
+	ackMisses  = 3
+	// graphicsTraceEnv names a file that is told what every frame of the pixel layer
+	// took: to find out why a terminal is slow.
+	graphicsTraceEnv = "CLAB_TUI_GRAPHICS_TRACE"
+	// pixelMouseSlack is how far beyond the window, as a multiple of its size, a
+	// position may be before the terminal is taken to report in another unit than
+	// the one it gives the size of the window in.
+	pixelMouseSlack = 1.5
 
 	// The pixel layer needs some room: below this size the plain look is used.
 	pixelMinWidth  = 72
@@ -74,6 +108,10 @@ const (
 	// pixelInset is where the content of a card starts, from the edge of the window.
 	pixelInset = 2
 )
+
+// deviceTerminals are the names of the terminals that report sizes in the pixels of the
+// display, not in pixels that the display scales.
+var deviceTerminals = []string{"ghostty", "kitty", "wezterm", "foot"}
 
 // pixels is the state of the pixel layer drawn under the text, for terminals that speak
 // the kitty graphics protocol.
@@ -95,6 +133,22 @@ type pixels struct {
 	shown bool
 	// text is set when the layer writes the text as well, in a font of its own.
 	text bool
+	// devicePixels is set for a terminal that is known to report sizes in the pixels
+	// of the display, scaledPixels for one known to report them without the scale
+	// of the display.
+	devicePixels, scaledPixels bool
+	// mouseCan is set once the terminal is known to report the pointer in pixels when
+	// asked to, mouseOn while it is asked to, and mouseOff when it never is.
+	mouseCan, mouseOn, mouseOff bool
+	// acks is set once the terminal answered a question about a mode, which is what
+	// tells that it took a frame in. inFlight is set while the answer for the frame
+	// sent at sentAt is awaited, and missed counts the answers that never came.
+	// late counts the answers that may still come for frames that were given up on.
+	acks, inFlight bool
+	sentAt         time.Time
+	missed, late   int
+	// trace is the file the frames are logged to, nil for none.
+	trace *os.File
 	// flat is set for a terminal that shows one image a cell, on top of its text, and
 	// nothing below it: the terminal of VS Code and whatever else is built on
 	// xterm.js. The layer is then sent as one image a row and writes all of the
@@ -138,6 +192,12 @@ func (m *Model) pixelOverlays(sc *clabinternaltuigfx.Scene) {
 	}
 }
 
+// prepared is implemented by the pages that lay out what they show with the scene of a
+// frame, before the frame is drawn.
+type prepared interface {
+	prepare(m *Model, sc *clabinternaltuigfx.Scene)
+}
+
 // selfFramed is implemented by the pages that draw the cards of their body themselves.
 type selfFramed interface{ framesItself() bool }
 
@@ -152,16 +212,77 @@ func newPixels(
 	screen *clabinternaltuigfx.Screen,
 	mode string,
 ) *pixels {
-	scale := defaultScale
+	// Zero leaves the scale to what is known about the terminal, see metrics.
+	scale := 0
 	if n, err := strconv.Atoi(os.Getenv(graphicsScaleEnv)); err == nil && n >= 1 && n <= maxScale {
 		scale = n
 	}
 
-	return &pixels{
-		out: out, screen: screen, supported: mode == GraphicsOn, scale: scale,
-		text: os.Getenv(graphicsTextEnv) != "off" && uiFont() != nil,
-		flat: os.Getenv("TERM_PROGRAM") == "vscode",
+	var trace *os.File
+	if name := os.Getenv(graphicsTraceEnv); name != "" {
+		//nolint:mnd // the mode of a log file
+		trace, _ = os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	}
+
+	return &pixels{
+		trace: trace,
+		out:   out, screen: screen, supported: mode == GraphicsOn, scale: scale,
+		text:     os.Getenv(graphicsTextEnv) != "off" && uiFont() != nil,
+		flat:     os.Getenv("TERM_PROGRAM") == "vscode",
+		mouseCan: os.Getenv(graphicsMouseEnv) == mouseInPixels,
+		mouseOff: os.Getenv(graphicsMouseEnv) == mouseInCells,
+	}
+}
+
+// pixelMouse asks the terminal to report the pointer in pixels once it is known that it
+// can, and that there is a pixel layer to make use of it: things drawn there are then
+// moved as finely as they are drawn.
+func (m *Model) pixelMouse() {
+	px := m.px
+	want := px.mouseCan && !px.mouseOff && !m.opts.NoMouse && px.supported &&
+		px.w > 0 && px.h > 0 && px.cols > 0 && px.rows > 0
+
+	if want != px.mouseOn {
+		px.mouseOn = want
+		px.out.PixelMouse(want)
+	}
+}
+
+// pixelPointer turns a position the terminal reported in pixels into cells, with the
+// part of the cell the pointer is at. It reports false when positions come in cells.
+func (m *Model) pixelPointer(x, y int) (col, row float64, ok bool) {
+	px := m.px
+	if px == nil || !px.mouseOn {
+		return 0, 0, false
+	}
+
+	// A position far outside of the window is in another unit than the size of the
+	// window was given in: such a terminal is left to report cells.
+	if float64(x) > pixelMouseSlack*float64(px.w) || float64(y) > pixelMouseSlack*float64(px.h) {
+		px.mouseOff = true
+
+		m.pixelMouse()
+
+		return 0, 0, false
+	}
+
+	// The input decoder took one off, as it does for cells, which count from one.
+	col = float64(x+1) * float64(px.cols) / float64(px.w)
+	row = float64(y+1) * float64(px.rows) / float64(px.h)
+
+	return max(0, col), max(0, row), true
+}
+
+// cellAspect returns the height of a cell over its width.
+func (m *Model) cellAspect() float64 {
+	const usual = 2.25
+
+	px := m.px
+	if px == nil || px.w <= 0 || px.h <= 0 || px.cols <= 0 || px.rows <= 0 {
+		return usual
+	}
+
+	return (float64(px.h) / float64(px.rows)) / (float64(px.w) / float64(px.cols))
 }
 
 // graphical reports whether the window is drawn with the pixel layer.
@@ -193,7 +314,7 @@ func (m *Model) pixelInit() tea.Cmd {
 
 	// The terminal is asked who it is first: the answers come in the order of the
 	// questions, so it is known what kind of terminal says that it shows images.
-	return tea.Raw(versionQuery + graphicsQuery + pixelSizeQuery)
+	return tea.Raw(versionQuery + graphicsQuery + pixelSizeQuery + pixelMouseQuery)
 }
 
 // pixelUpdate handles what the terminal answers. It reports whether the message was one
@@ -203,11 +324,43 @@ func (m *Model) pixelUpdate(msg tea.Msg) bool {
 		return false
 	}
 
+	defer m.pixelMouse()
+
 	switch msg := msg.(type) {
 	case tea.TerminalVersionMsg:
-		if strings.HasPrefix(strings.ToLower(msg.Name), flatTerminal) && !m.px.flat {
+		name := strings.ToLower(msg.Name)
+
+		if strings.HasPrefix(name, flatTerminal) && !m.px.flat {
 			m.px.flat = true
 			m.layout()
+		}
+
+		// The terminals of that engine report sizes the way they report the pointer.
+		if strings.HasPrefix(name, pixelMouseTerminal) {
+			m.px.mouseCan, m.px.scaledPixels = true, true
+		}
+
+		for _, known := range deviceTerminals {
+			if strings.HasPrefix(name, known) && !m.px.devicePixels {
+				m.px.devicePixels = true
+				m.layout()
+			}
+		}
+
+		return true
+	case tea.ModeReportMsg:
+		if msg.Mode != ansi.ModeMouseExtSgrPixel {
+			return false
+		}
+
+		// Whatever the answer, it tells that the terminal answers, and that it is
+		// done with the frame the question was sent after.
+		m.frameAcked()
+
+		switch msg.Value {
+		case ansi.ModeSet, ansi.ModeReset, ansi.ModePermanentlySet:
+			m.px.mouseCan = true
+		case ansi.ModeNotRecognized, ansi.ModePermanentlyReset:
 		}
 
 		return true
@@ -240,6 +393,107 @@ func (m *Model) pixelUpdate(msg tea.Msg) bool {
 	return false
 }
 
+// sendFrame hands the pixels of a frame to the terminal, with the question whose answer
+// tells that the terminal is ready for the next one.
+func (m *Model) sendFrame(sc *clabinternaltuigfx.Scene) {
+	px := m.px
+	start := time.Now()
+	before, after := px.screen.Update(sc)
+
+	if px.acks && len(after) > 0 {
+		// Answers that did not come for this long are not coming anymore.
+		if time.Since(px.sentAt) > 2*ackTimeout {
+			px.late = 0
+		}
+
+		after = append(after, pixelAck...)
+		px.inFlight, px.sentAt = true, time.Now()
+	}
+
+	px.out.Queue(before, after)
+
+	// What follows the pointer or a key is not held back for the text.
+	if m.grabbed != nil || len(after) > 0 && time.Since(m.lastInput) < time.Second {
+		px.out.Hurry()
+	}
+
+	if px.trace != nil && len(after) > 0 {
+		fmt.Fprintf(px.trace, "%s frame %d bytes, drawn in %.1f ms\n",
+			start.Format("15:04:05.000"), len(before)+len(after),
+			float64(time.Since(start).Microseconds())/1000) //nolint:mnd // to milliseconds
+	}
+}
+
+// traceInput logs a key or a move of the mouse, when the frames are logged: how often
+// a terminal reports the pointer bounds how smoothly something follows it.
+func (m *Model) traceInput(msg tea.Msg) {
+	if m.px == nil || m.px.trace == nil {
+		return
+	}
+
+	fmt.Fprintf(m.px.trace, "%s input %T\n", time.Now().Format("15:04:05.000"), msg)
+}
+
+// frameAcked takes note that the terminal is done with the frame it was sent last.
+func (m *Model) frameAcked() {
+	px := m.px
+	px.acks = true
+
+	// An answer for a frame that was given up on says nothing about the one after.
+	if px.late > 0 {
+		px.late--
+
+		return
+	}
+
+	px.missed = 0
+
+	if !px.inFlight {
+		return
+	}
+
+	px.inFlight = false
+
+	if px.trace != nil {
+		fmt.Fprintf(px.trace, "%s taken in after %.1f ms\n", time.Now().Format("15:04:05.000"),
+			float64(time.Since(px.sentAt).Microseconds())/1000) //nolint:mnd // to milliseconds
+	}
+}
+
+// frameLate is called when the answer for a frame is overdue: the next frame is drawn
+// without it, and a terminal that keeps not answering is no longer asked.
+func (m *Model) frameLate() {
+	px := m.px
+	if px == nil || !px.inFlight || time.Since(px.sentAt) < ackTimeout {
+		return
+	}
+
+	px.inFlight = false
+	px.late++
+
+	px.missed++
+
+	if px.missed >= ackMisses {
+		px.acks, px.late = false, 0
+	}
+}
+
+// holding reports whether the window is not drawn anew for now: while the terminal is
+// busy with the frame before, or, in a terminal that does not tell, while something is
+// dragged and the last frame is a moment old only.
+func (m *Model) holding() bool {
+	px := m.px
+	if px == nil || m.frame == "" {
+		return false
+	}
+
+	if px.inFlight {
+		return time.Since(px.sentAt) < ackTimeout
+	}
+
+	return m.grabbed != nil && !px.acks && time.Since(m.frameAt) < frameGap
+}
+
 // metrics returns the size of the layer for the current window. Between a resize and the
 // answer of the terminal to the question about its new size, the size of the cells is
 // taken to be what it was.
@@ -253,6 +507,24 @@ func (m *Model) metrics() clabinternaltuigfx.Metrics {
 	height := float64(px.h) / float64(px.rows) * float64(m.height)
 
 	scale := float64(px.scale)
+
+	switch {
+	case px.flat:
+		// A terminal built on xterm.js draws images with the pixels it reports,
+		// whatever the display has: more of them are scaled down again, at four
+		// times the cost.
+		scale = 1
+	case px.scale > 0:
+	case px.devicePixels || (!px.scaledPixels && height/float64(m.height) >= sharpCell):
+		// The terminal reports the pixels of the display, or its cells are large
+		// enough to look sharp as they are: more pixels would only be more data.
+		scale = 1
+	default:
+		// A terminal that reports its size without the scale of the display: twice
+		// the pixels keep the layer sharp on a high resolution one.
+		scale = defaultScale
+	}
+
 	if most := math.Sqrt(pixelBudget / (width * height)); scale > most {
 		scale = math.Max(most, minScale)
 	}
@@ -434,6 +706,13 @@ func (m *Model) renderPixels() string {
 	px.scene, px.shown = sc, true
 	px.zones = px.zones[:0]
 
+	// A page that works out what it shows from the size of things in pixels does so
+	// before anything is drawn: the line above its body tells what came of it.
+	p := m.top()
+	if s, ok := p.(prepared); ok {
+		s.prepare(m, sc)
+	}
+
 	blank := strings.Repeat(" ", m.width)
 	lines := make([]string, 0, m.height)
 	lines = append(lines, blank, m.pixelHeader(sc), blank, m.pixelCrumbs(sc), blank)
@@ -441,7 +720,6 @@ func (m *Model) renderPixels() string {
 	// The body sits in a card. A page made of a table gets the card of the table,
 	// with its decorations; any other page gets a plain one, drawn first so that the
 	// page can draw on it.
-	p := m.top()
 	if f, ok := p.(selfFramed); p.table() == nil && (!ok || !f.framesItself()) {
 		m.card(sc, pixelBodyTop, m.bodyHeight())
 	}
@@ -495,7 +773,7 @@ func (m *Model) renderPixels() string {
 		screen = clabinternaltuiui.StripMarks(m.compose(screen))
 	}
 
-	px.out.Queue(px.screen.Update(sc))
+	m.sendFrame(sc)
 	px.scene, px.drawn = nil, sc
 
 	return screen

@@ -80,6 +80,9 @@ type Backend interface {
 	Interfaces(node NodeRef) []Interface
 	// Topology returns the nodes and links of a lab.
 	Topology(lab string) Topology
+	// PlaceNodes saves where nodes sit in the drawing of a lab, by their names. The
+	// positions of the other nodes stay as they are.
+	PlaceNodes(lab string, positions map[string]Position) error
 	// Messages returns the messages logged by the backend.
 	Messages() []LogLine
 
@@ -454,6 +457,10 @@ type TopoNode struct {
 	X, Y   float64
 	HasPos bool
 }
+
+// Position is where a node sits in the drawing of a topology, in the pixels of the canvas
+// the containerlab application draws topologies on.
+type Position struct{ X, Y float64 }
 
 // Topology holds the nodes and links of a lab.
 type Topology struct {

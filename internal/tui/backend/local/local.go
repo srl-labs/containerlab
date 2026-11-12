@@ -151,6 +151,8 @@ type Backend struct {
 
 	// parseMu serializes the parsing of topology files.
 	parseMu sync.Mutex
+	// drawMu serializes the changes of drawing files.
+	drawMu sync.Mutex
 
 	shellMu sync.Mutex
 	shells  map[string][]string

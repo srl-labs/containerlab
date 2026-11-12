@@ -183,8 +183,8 @@ func readTopologyData(path string) (*topologyData, error) {
 	return &topo, nil
 }
 
-// readAnnotations reads a drawing file. The file is optional and never written: nil is
-// returned when it is missing or unreadable.
+// readAnnotations reads a drawing file. The file is optional: nil is returned when it is
+// missing or unreadable.
 func readAnnotations(path string) *annotations {
 	data, err := readLimited(path)
 	if err != nil {

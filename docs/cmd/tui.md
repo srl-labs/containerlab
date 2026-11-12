@@ -96,6 +96,7 @@ The mouse is an addition, nothing depends on it:
 * click a row to select it, double-click to open it, right-click for the menu of its actions;
 * click a view in the first line, a column title to sort by it, or a key hint in the last line but one to do what the key does;
 * scroll lists, logs and the map with the wheel, drag the map to move it;
+* where the UI draws [pixels](#graphics), drag a node of the map to [move it](#moving-nodes), and turn the wheel with `ctrl` held to zoom a drawing around the pointer;
 * click fields and buttons in dialogs, click next to a menu to close it.
 
 Hold `shift` while dragging to select text with the terminal instead, or start the UI with `--no-mouse`.
@@ -159,6 +160,8 @@ The map view (`5`, or `t` on a lab or a node) draws the topology of a lab: nodes
 | `e` | how much of the lab is drawn, see below |
 | `+` `-` `f` | zoom in, zoom out, fit |
 | `v` | layout: saved positions, tiers or by connectivity |
+| `g` | move the node in focus, see [Moving nodes](#moving-nodes) |
+| `u` | take the last move of a node back |
 | `i` | interface names at the ends of the links: for the node in focus, for every link, off |
 | `r` | show or hide the traffic rates on the links |
 | `H` `J` `K` `L` | pan, also `shift` with the arrows |
@@ -184,6 +187,21 @@ With a node in focus the node actions apply (`s` shell, `l` logs, …), with a l
 
 Nodes are arranged in tiers. The tier of a node is taken from its `graph-level` label when there is one, else worked out from the names (`spine`, `leaf`, `core`, `pe`, …) and from how the nodes are connected. When the topology was arranged in the containerlab app or the VS Code extension, the saved positions are used to order the nodes.
 
+### Moving nodes
+
+Where the UI draws [pixels](#graphics), the nodes of the map can be put where you want them, as in the Containerlab app. The positions are saved in the same file the app keeps its drawing in, `<topology file>.annotations.json`, so a lab arranged here looks the same there and the other way around. Everything else in that file stays as it is.
+
+* **With the mouse**, drag a node. In a terminal that reports the pointer in pixels, such as kitty, the node follows the pointer pixel by pixel; in other terminals it moves by cells. Close to being in line with another node it snaps into line, and a guide shows which line that is; hold `alt` to place it freely. Dragging the canvas moves the view, `ctrl` with the wheel zooms.
+* **With the keyboard**, `g` picks the node in focus up. The arrows move it, with `shift` by about a pixel, `enter` puts it down and `esc` puts it back where it was.
+
+`u` takes the last move back, one move at a time.
+
+A lab with saved positions is shown as that drawing, with every node at its place and straight links between them: the layout named **saved**. `+` and `-` then spread the nodes out or pull them together, `f` fits the drawing to the window, and how much the cards show follows from the room they have. The whole lab is drawn whatever its size.
+
+A lab without saved positions is shown in a computed layout. Moving a node there turns the layout on screen into the drawing of the lab, and all positions are saved with the first move. When a lab has a drawing and one of the computed layouts was picked with `v`, moving a node asks before the drawing is replaced.
+
+The drawing of a lab whose topology file is not on this host, or of any lab with `--read-only`, cannot be saved: nodes still move, for as long as the UI runs.
+
 ### Large labs
 
 A drawing of a large lab is many times wider than a terminal. The map therefore draws as much as fits and says in its title what it shows:
@@ -201,11 +219,15 @@ In a terminal that speaks the [kitty graphics protocol](https://sw.kovidgoyal.ne
 
 The text is drawn as pixels as well, in a proportional font the UI brings along, which is what makes it look like an application rather than a terminal. Such text cannot be selected or searched with the terminal. What a node or a command printed is the exception: logs, the output of commands and of jobs, descriptions and captured packets stay text of the terminal, in its fixed width font, and can be selected and copied. Set `CLAB_TUI_GRAPHICS_TEXT=off` to leave all text to the terminal.
 
-The terminal of VS Code shows such images as well, once `terminal.integrated.enableImages` is set, but only on top of its text and not below it. The UI is drawn there in one layer that holds all of the text, also what a node printed, in a font of fixed width: nothing can be selected with the terminal there. Without that setting VS Code gets the plain look.
+The terminal of VS Code shows such images as well, once `terminal.integrated.enableImages` is set, but only on top of its text and not below it. The UI is drawn there in one layer that holds all of the text, also what a node printed, in a font of fixed width: nothing can be selected with the terminal there. That terminal takes a while for every image, so what changed is sent as a single image, from the first line that changed to the last line of the window. Without that setting VS Code gets the plain look.
 
 The UI asks the terminal whether it shows images when it starts, and keeps the plain look when there is no answer, when the window is smaller than 72 by 20 cells, or over a connection that does not pass the answer on, ie. inside tmux.
 
-The pixels are drawn at twice the size the terminal reports, which keeps them sharp on high resolution displays. `CLAB_TUI_GRAPHICS_SCALE` changes that factor, from `1` to `4`: `1` sends a quarter of the data, which helps over a slow connection.
+The layer is drawn with as many pixels as the display shows, as far as that can be told. Terminals that report their size in the pixels of the display, such as kitty, Ghostty, WezTerm and foot, get the pixels they report, and so does VS Code, which draws images no finer than that. Other terminals report their size without the scale of the display: for them the layer is drawn at twice the size, which keeps it sharp on a high resolution display. `CLAB_TUI_GRAPHICS_SCALE` sets that factor by hand, from `1` to `4`: `1` sends the least data, which helps over a slow connection.
+
+A terminal is not sent a frame before it took the one before in: the UI asks it to say so after every frame. A terminal that is slow with images thereby shows fewer frames, each of them current, rather than every frame late. Should something feel slow, `CLAB_TUI_GRAPHICS_TRACE=<file>` logs the size of every frame, how long it took to draw and how long the terminal took for it.
+
+A terminal that can report the pointer in pixels is asked to, which is what lets a node of the map be [moved](#moving-nodes) as finely as it is drawn. Should a terminal get that wrong, so that clicks land next to where the pointer is, `CLAB_TUI_GRAPHICS_MOUSE=cells` keeps the reports in cells; `CLAB_TUI_GRAPHICS_MOUSE=pixels` asks for pixels without asking first whether the terminal knows them.
 
 ## Flags
 

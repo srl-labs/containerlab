@@ -10,6 +10,7 @@ package fake
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math/rand/v2"
 	"os/exec"
 	"path/filepath"
@@ -73,8 +74,10 @@ type Backend struct {
 
 	notify  chan struct{}
 	changed clabinternaltuibackend.Topic
-	stop    context.CancelFunc
-	wg      sync.WaitGroup
+	// placed holds where the nodes were put in the drawings of the labs, by lab and node.
+	placed map[string]map[string]clabinternaltuibackend.Position
+	stop   context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 var _ clabinternaltuibackend.Backend = (*Backend)(nil)
@@ -357,12 +360,53 @@ func (b *Backend) Topology(lab string) clabinternaltuibackend.Topology {
 	defer b.mu.Unlock()
 
 	for i := range b.specs {
-		if b.specs[i].name == lab {
-			return buildTopology(&b.specs[i])
+		if b.specs[i].name != lab {
+			continue
 		}
+
+		topo := buildTopology(&b.specs[i])
+
+		for n := range topo.Nodes {
+			if pos, ok := b.placed[lab][topo.Nodes[n].Name]; ok {
+				topo.Nodes[n].X, topo.Nodes[n].Y, topo.Nodes[n].HasPos = pos.X, pos.Y, true
+			}
+		}
+
+		return topo
 	}
 
 	return clabinternaltuibackend.Topology{Lab: lab, Warning: "unknown lab"}
+}
+
+// PlaceNodes implements clabinternaltuibackend.Backend. The drawing of a demo lab lasts
+// as long as the demo does.
+func (b *Backend) PlaceNodes(
+	lab string,
+	positions map[string]clabinternaltuibackend.Position,
+) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	for i := range b.specs {
+		if b.specs[i].name != lab {
+			continue
+		}
+
+		if b.placed == nil {
+			b.placed = map[string]map[string]clabinternaltuibackend.Position{}
+		}
+
+		if b.placed[lab] == nil {
+			b.placed[lab] = map[string]clabinternaltuibackend.Position{}
+		}
+
+		maps.Copy(b.placed[lab], positions)
+		b.signal(clabinternaltuibackend.TopicLinks)
+
+		return nil
+	}
+
+	return fmt.Errorf("unknown lab %s", lab)
 }
 
 // Messages implements clabinternaltuibackend.Backend.
