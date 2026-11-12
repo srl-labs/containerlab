@@ -505,7 +505,7 @@ func (b *Backend) reload(ctx context.Context) error {
 	}
 
 	if membership {
-		// Other labs mean other topologies, and other directories to look for files in.
+		// Other labs mean other topology files to read.
 		topics |= clabinternaltuibackend.TopicLinks
 
 		b.files.request()

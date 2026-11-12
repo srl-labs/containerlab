@@ -312,21 +312,14 @@ func (b *Backend) scanLoop(ctx context.Context) {
 }
 
 // scanTopologies searches the places topology files are expected in: the working
-// directory, the directories of the deployed labs, the configured directories and the
-// directory containerlab keeps fetched labs in.
+// directory, the configured directories and the directory containerlab keeps fetched labs
+// in. The directories of the deployed labs are not searched, only their files are read: a
+// lab deployed from elsewhere must not fill the list with the files around it.
 func (b *Backend) scanTopologies(ctx context.Context) []topoFile {
 	records := b.inv.records()
 	home, _ := os.UserHomeDir()
 
-	dirs := []string{"."}
-
-	for _, rec := range records {
-		if rec.lab.TopoFile != "" {
-			dirs = append(dirs, filepath.Dir(rec.lab.TopoFile))
-		}
-	}
-
-	dirs = append(dirs, b.opts.LabsDirs...)
+	dirs := append([]string{"."}, b.opts.LabsDirs...)
 
 	if home != "" {
 		dirs = append(dirs, filepath.Join(home, clabHomeDir))

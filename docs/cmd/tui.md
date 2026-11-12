@@ -228,7 +228,7 @@ The theme can also be changed from within the UI with `:theme <name>`.
 
 ### labs-dir
 
-Besides the running labs the UI lists topology files that are not deployed. It looks for them in the current directory, next to the topology files of the running labs and in `~/.clab`. With `--labs-dir` more directories are searched; the flag can be given multiple times.
+Besides the running labs the UI lists topology files that are not deployed. It looks for them in the current directory and in `~/.clab`; the directories of the running labs are not searched. With `--labs-dir` more directories are searched; the flag can be given multiple times.
 
 ### read-only
 

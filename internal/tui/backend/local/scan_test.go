@@ -332,14 +332,18 @@ func TestTopologyFileMatching(t *testing.T) {
 
 func TestLabsListsTopologyFiles(t *testing.T) {
 	dir := t.TempDir()
-	deployedTopo := filepath.Join(dir, "running.clab.yml")
-	writeFile(t, deployedTopo, "name: running\ntopology:\n  nodes: {n1: {}, n2: {}, n3: {}}\n")
 	writeFile(t, filepath.Join(dir, "sub", "idle10.clab.yml"), "name: idle10\n")
 	writeFile(t, filepath.Join(dir, "sub", "idle2.clab.yaml"),
 		"name: idle2\ntopology:\n  nodes: {a: {}}\n")
-	// A lab directory next to the topology holds a copy, which is not listed.
-	writeFile(t, filepath.Join(dir, "clab-running", topologyDataFile), "{}")
-	writeFile(t, filepath.Join(dir, "clab-running", "running.clab.yml"), "name: running\n")
+	// A lab directory holds a copy, which is not listed.
+	writeFile(t, filepath.Join(dir, "clab-idle2", topologyDataFile), "{}")
+	writeFile(t, filepath.Join(dir, "clab-idle2", "idle2.clab.yml"), "name: idle2\n")
+
+	// The lab is deployed from elsewhere. Its file is listed, the files next to it are not.
+	deployedDir := t.TempDir()
+	deployedTopo := filepath.Join(deployedDir, "running.clab.yml")
+	writeFile(t, deployedTopo, "name: running\ntopology:\n  nodes: {n1: {}, n2: {}, n3: {}}\n")
+	writeFile(t, filepath.Join(deployedDir, "neighbor.clab.yml"), "name: neighbor\n")
 
 	other := t.TempDir()
 	writeFile(t, filepath.Join(other, "extra.clab.yml"), "name: extra\n")
@@ -354,7 +358,8 @@ func TestLabsListsTopologyFiles(t *testing.T) {
 		nodeContainer("running", "n2", deployedTopo),
 	)
 
-	// The working directory of the test is searched as well, it holds no topologies.
+	t.Chdir(dir)
+
 	files := b.scanTopologies(context.Background())
 	b.files.replace(files)
 
@@ -369,7 +374,8 @@ func TestLabsListsTopologyFiles(t *testing.T) {
 	var got []entry
 
 	for _, lab := range b.Labs() {
-		if strings.HasPrefix(lab.TopoFile, dir) || strings.HasPrefix(lab.TopoFile, other) {
+		if strings.HasPrefix(lab.TopoFile, dir) || strings.HasPrefix(lab.TopoFile, other) ||
+			strings.HasPrefix(lab.TopoFile, deployedDir) {
 			got = append(
 				got,
 				entry{lab.Name, lab.TopoFile, lab.Deployed, lab.DefinedNodes, len(lab.Nodes)},
