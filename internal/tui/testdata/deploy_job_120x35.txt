@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs·1          all labs · docker · ● 48/53 nodes · ↓406M ↑406M
+── jobs ▸ #1 deploy clos ───────────────────────────────────────────────────────── running 0s ── following ── 9 lines ──
+ $ containerlab deploy -t /home/demo/labs/clos.clab.yml
+ 12:04:11.000 INFO  Containerlab started version=0.83.0
+ 12:04:11.000 INFO  Parsing & checking topology file=clos.clab.yml
+ 12:04:11.000 INFO  Creating docker network name=clab IPv4 subnet=172.20.20.0/24 MTU=1500
+ 12:04:11.000 INFO  Creating lab directory path=/home/demo/labs/clab-clos
+ 12:04:11.000 INFO  Creating container name=spine1
+ 12:04:11.000 INFO  Creating container name=spine2
+ 12:04:11.000 INFO  Creating container name=leaf1
+ 12:04:11.000 INFO  Creating container name=leaf2
+ 12:04:11.000 INFO  Creating container name=leaf3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ running…
+ C cancel  f follow  w wrap  / find  y copy  esc back  ? help
+                                                                                                                   demo

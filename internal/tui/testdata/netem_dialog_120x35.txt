@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── labs ▸ dc1 ▸ nodes ▸ leaf1 ──────────────────────────────────────────────────────────────────────── ready ── up 3h ──
+ name  clab-dc1-leaf1                   kind   nokia_srlinux (ixrd2l)        CPU    11%  ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+ image ghcr.io/nokia/srlinux:25.10.1    status Up 3 hours                    MEM   704M
+ ipv4  172.20.20.13/24                  ipv6   3fff:172:20:20::d/64          ↓ RX  4.5M  ▅▅▄▄▄▄▄▄▅▄▅▅▅▅▅▅▅▅▅▅▆▆▇▇▇▇████
+ shell /opt/srlinux/bin/sr_cli          ports  22/tcp, 830/tcp, 57400/tcp    ↑ TX  8.8M  ▆▅▆▆▇▇▇▆▇▆▆▅▅▅▅▅▅▅▆▆▆▆▆▆▆▇▇███
+── interfaces [4] ──────────────────────────────────────────────────────────────────────────────────────────────────────
+    NAME   ALIAS          STATE  PEER          TYPE   MTU  MAC                 ↓ RX   ↑ TX            NETEM
+  ● mgmt0                 up     —             veth  1500  02:42:ac:14:14:0d   2.3k   4.4k  ▇█▇▆▅▆▇▄  —
+▌ ● e1-49  ethernet-1/49  up     spine1:e1-1   veth  9232  1a:b0:00:ff:00:01   3.1M   6.0M  ▆▆▆▇▇███  50ms ±5ms 1% loss
+  ○ e1-50  etherne╭─ Impairments · leaf1:e1-49 ──────────────────────────────────────────────────────╮—
+  ● e1-1   etherne│ Shapes the traffic leaving leaf1:e1-49.                                          │—
+                  │ All values are set at once: an empty field clears that impairment.               │
+                  │                                                                                  │
+                  │ ▸ delay       [50ms                       ] e.g. 50ms                            │
+                  │   jitter      [5ms                        ] needs a delay                        │
+                  │   loss        [1                          ] percent                              │
+                  │   rate        [                           ] kbit/s                               │
+                  │   corruption  [                           ] percent                              │
+                  │                                                                                  │
+                  │ $ containerlab tools netem set -n clab-dc1-leaf1 -i e1-49 --delay 50ms --jitter… │
+                  │                                                                                  │
+                  │                                                              Cancel      Apply   │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+ tab next  ⏎ apply  esc cancel
+                                                                                                                   demo

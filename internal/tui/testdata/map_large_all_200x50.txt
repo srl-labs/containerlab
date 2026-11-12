@@ -1,0 +1,50 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                                                                                       lab: fabric · docker · ● 164/164 nodes · ↓427M ↑427M
+── labs ▸ fabric ▸ map ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── layout: tiers ── zoom: compact ── 164 nodes · 256 links ──
+                                                                             [spine1]                                                                              │ spine1
+─┬─────────────────────────────┬────────────────────────────────┬────────────────┴────────────┬──────────────────────────┬─────────────────────────────┬───────────│ ● ready
+leaf2]                       [leaf3]                        [leaf4]                       [leaf5]                      [leaf6]                     [leaf7]         │ nokia_srlinux
+───┼──────┐     ┌────────┬───────┼───┐        ┌─────┬─────┬────┤         ┌─────┬────────┬────┤      ┌────────┬─────┬───────┤      ┌─────┬─────┬───────┤      ┌─────│ 172.20.27.11
+[h2-3] [h2-4] [h3-1] [h3-2] [h3-3] [h3-4] [h4-1] [h4-2] [h4-3] [h4-4] [h5-1] [h5-2] [h5-3] [h5-4] [h6-1] [h6-2] [h6-3] [h6-4] [h7-1] [h7-2] [h7-3] [h7-4] [h8-1] [h│ CPU   32% ▄▄▄▄▄▄▄▃▄▄▄▄▃▄▄▃
+                                                                                                                                                                   │ MEM  705M
+                                                                                                                                                                   │
+                                                                                                                                                                   │ links
+                                                                                                                                                                   │ ● e1-1      leaf1      ↓581k ↑164k
+                                                                                                                                                                   │ ● e1-2      leaf2      ↓1.6M ↑1.3M
+                                                                                                                                                                   │ ● e1-3      leaf3      ↓3.0M ↑1.9M
+                                                                                                                                                                   │ ● e1-4      leaf4      ↓3.3M ↑3.3M
+                                                                                                                                                                   │ ● e1-5      leaf5      ↓2.1M ↑2.7M
+                                                                                                                                                                   │ ● e1-6      leaf6      ↓217k ↑179k
+                                                                                                                                                                   │ ● e1-7      leaf7      ↓1.1M ↑1.4M
+                                                                                                                                                                   │ ● e1-8      leaf8      ↓1.5M ↑689k
+                                                                                                                                                                   │ ● e1-9      leaf9      ↓882k ↑2.6M
+                                                                                                                                                                   │ ● e1-10     leaf10     ↓948k ↑1.6M
+                                                                                                                                                                   │ ● e1-11     leaf11     ↓155k ↑185k
+                                                                                                                                                                   │ ● e1-12     leaf12     ↓1.8M ↑304k
+                                                                                                                                                                   │ ● e1-13     leaf13     ↓623k ↑551k
+                                                                                                                                                                   │ ● e1-14     leaf14     ↓2.6M ↑2.2M
+                                                                                                                                                                   │ ● e1-15     leaf15     ↓4.3M ↑3.4M
+                                                                                                                                                                   │ ● e1-16     leaf16     ↓752k ↑580k
+                                                                                                                                                                   │ ● e1-17     leaf17     ↓763k ↑980k
+                                                                                                                                                                   │ ● e1-18     leaf18     ↓1.3M ↑1.7M
+                                                                                                                                                                   │ ● e1-19     leaf19     ↓771k ↑1.3M
+                                                                                                                                                                   │ ● e1-20     leaf20     ↓744k ↑1.5M
+                                                                                                                                                                   │ ● e1-21     leaf21     ↓370k ↑236k
+                                                                                                                                                                   │ ● e1-22     leaf22     ↓400k ↑1.3M
+                                                                                                                                                                   │ ● e1-23     leaf23     ↓1.8M ↑1.5M
+                                                                                                                                                                   │ ● e1-24     leaf24     ↓1.2M ↑791k
+                                                                                                                                                                   │ ● e1-25     leaf25     ↓924k ↑3.7M
+                                                                                                                                                                   │ ● e1-26     leaf26     ↓179k ↑591k
+                                                                                                                                                                   │ ● e1-27     leaf27     ↓807k ↑1.2M
+                                                                                                                                                                   │ ● e1-28     leaf28     ↓2.6M ↑2.8M
+                                                                                                                                                                   │ ● e1-29     leaf29     ↓714k ↑1.3M
+                                                                                                                                                                   │ ● e1-30     leaf30     ↓1.3M ↑4.2M
+                                                                                                                                                                   │ ● e1-31     leaf31     ↓909k ↑441k
+                                                                                                                                                                   │ ● e1-32     leaf32     ↓553k ↑463k
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+ ←↑↓→ node  tab link  ⏎ open  s shell  S ssh  c connect  a actions  / go to  e extent  i names  r rates  + zoom in  - out  f fit  v layout  p panel  ? help
+ • showing: all — 164 of 164 nodes                                                                                                                                                                 demo

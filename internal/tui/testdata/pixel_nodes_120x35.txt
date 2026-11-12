@@ -1,0 +1,35 @@
+
+        1 Labs   2 Nodes   3 Interfaces   4 Links   5 Map   6 Jobs                  dc1 · docker     9/10  ↓147M ↑147M
+
+  labs › dc1 › nodes  10                                                                                    2 marked
+
+        NAME     KIND           STATE     IPV4          IMAGE                   CPU             MEM   ↓ RX   ↑ TX  AGE
+        spine1   nokia_srlinux  ready     172.20.20.11  nokia/srlinux:25.10.1   33%            698M    31M    44M  3h
+        spine2   nokia_srlinux  ready     172.20.20.12  nokia/srlinux:25.10.1   25%            709M    24M    13M  3h
+        leaf1    nokia_srlinux  ready     172.20.20.13  nokia/srlinux:25.10.1   11%            704M   4.5M   8.8M  3h
+        leaf2    nokia_srlinux  ready     172.20.20.14  nokia/srlinux:25.10.1   18%            700M    19M    10M  3h
+        leaf3    nokia_srlinux  ready     172.20.20.15  nokia/srlinux:25.10.1   39%            703M    51M    53M  3h
+        leaf4    nokia_srlinux  starting  172.20.20.16  nokia/srlinux:25.10.1  158%            706M   5.7k   8.3k  12s
+        client1  linux          ready     172.20.20.17  srl-labs/network-mul…    2%             24M   2.8M   1.5M  3h
+        client2  linux          ready     172.20.20.18  srl-labs/network-mul…    1%             24M   117k   178k  3h
+        client3  linux          ready     172.20.20.19  srl-labs/network-mul…   12%             24M    14M    16M  3h
+        client4  linux          ready     172.20.20.20  srl-labs/network-mul…    0%             24M   3.6k   3.5k  3h
+
+
+
+         clab-dc1-leaf4                          starting     CPU 158%
+         nokia_srlinux · Up 12 seconds (health: starting)
+
+   image    ghcr.io/nokia/srlinux:25.10.1
+   ipv4     172.20.20.16/24
+   ipv6     3fff:172:20:20::10/64
+   ports    22/tcp, 830/tcp, 57400/tcp                        Traffic     rx 5.7k     tx 8.3k
+   shell    /opt/srlinux/bin/sr_cli
+   group    leaf
+   id       3f9c2a71b5e9
+
+    Shell  s   Ssh  S   Connect  c   Logs  l
+
+
+  ⏎ open   a actions   s shell   S ssh   c connect   l logs   d describe   x run   R restart   O stop   t map   ? help
+                                                                                                                  demo

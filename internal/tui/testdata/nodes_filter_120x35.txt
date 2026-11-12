@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs            all labs · docker · ● 48/53 nodes · ↓412M ↑413M
+── nodes [4/53] ─────────────────────────────────────────────────────────────────────────────────────────────── /leaf ──
+    NAME      LAB       KIND                STATE     IPV4          IMAGE                   CPU   MEM   ↓ RX   ↑ TX  AGE
+▌ ● leaf1     dc1       nokia_srlinux       ready     172.20.20.13  nokia/srlinux:25.10.1   11%  704M   4.5M   8.8M  3h
+  ● leaf2     dc1       nokia_srlinux       ready     172.20.20.14  nokia/srlinux:25.10.1   18%  700M    19M    10M  3h
+  ● leaf3     dc1       nokia_srlinux       ready     172.20.20.15  nokia/srlinux:25.10.1   39%  703M    51M    53M  3h
+  ◐ leaf4     dc1       nokia_srlinux       starting  172.20.20.16  nokia/srlinux:25.10.1  158%  706M   5.7k   8.3k  12s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+── clab-dc1-leaf1 ──────────────────────────────────────────────────────────────────────────────────────────── p hide ──
+ image  ghcr.io/nokia/srlinux:25.10.1    ipv4  172.20.20.13/24                   shell /opt/srlinux/bin/sr_cli
+ kind   nokia_srlinux (ixrd2l)           ipv6  3fff:172:20:20::d/64              group leaf
+ status Up 3 hours                       ports 22/tcp, 830/tcp, 57400/tcp        id    3f9c2a71b2e6
+ ⏎ keep  esc clear  ↑↓ move  !term exclude
+ /leaf                                                                                                             demo

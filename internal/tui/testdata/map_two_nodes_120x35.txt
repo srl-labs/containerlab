@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                          lab: linux · docker · ● 0/0 nodes
+── labs ▸ linux ▸ map ──────────────────────────────────────────── layout: graph ── zoom: detail ── 2 nodes · 1 links ──
+     ┏━━━━━━━━━━━━━━┓                         ┌──────────────┐                     │ l1
+     ┃      l1      ┠┈ eth1 ┈┈┈┈┈┈┈┈┈┈┈ eth1 ┈┤      l2      │                     │ linux
+     ┃    linux     ┃                         │    linux     │                     │ not running
+     ┗━━━━━━━━━━━━━━┛                         └──────────────┘                     │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+ ←↑↓→ node  tab link  a actions  / go to  e extent  i names  r rates  + zoom in  - out  f fit  v layout  ? help
+                                                                                                                   demo

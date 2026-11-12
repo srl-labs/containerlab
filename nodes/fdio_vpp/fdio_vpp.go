@@ -175,6 +175,10 @@ func (n *fdio_vpp) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult,
 	return nil, nil
 }
 
+func (*fdio_vpp) ExecInteractiveShell() []string {
+	return []string{"/usr/bin/nsenter", "--net=/run/netns/dataplane", "/bin/bash"}
+}
+
 // CheckInterfaceName allows any interface name for vpp nodes, but checks
 // if eth0 is only used with network-mode=none.
 func (n *fdio_vpp) CheckInterfaceName() error {

@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── labs ▸ dc1 ▸ interfaces [34] ────────────────────────────────────────────────────────────────────────────────────────
+    NAME   NODE     ALIAS          STATE  PEER          TYPE   MTU   ↓ RX   ↑ TX            NETEM
+▌ ● mgmt0  spine1                  up     —             veth  1500   5.6k   4.7k  ▆▅▆▆█▅▄▆  —                          ▐
+  ● e1-1   spine1   ethernet-1/1   up     leaf1:e1-49   veth  9232   6.0M   3.1M  ▆▆▆▇▇███  —                          ▐
+  ● e1-2   spine1   ethernet-1/2   up     leaf2:e1-49   veth  9232   2.4M    13M  ██▇█▇▇██  —                          ▐
+  ● e1-3   spine1   ethernet-1/3   up     leaf3:e1-49   veth  9232    23M    28M  ▇▇▇▇▇███  —                          ▐
+  ● e1-4   spine1   ethernet-1/4   up     leaf4:e1-49   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● mgmt0  spine2                  up     —             veth  1500   3.5k   3.9k  ▇█▆▆▇▅▆▆  —                          ▐
+  ○ e1-1   spine2   ethernet-1/1   down   leaf1:e1-50   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● e1-2   spine2   ethernet-1/2   up     leaf2:e1-50   veth  9232   7.7M   5.7M  █▇▇█▇███  —                          ▐
+  ● e1-3   spine2   ethernet-1/3   up     leaf3:e1-50   veth  9232    16M   7.6M  ▇▇▇████▇  —                          ▐
+  ● e1-4   spine2   ethernet-1/4   up     leaf4:e1-50   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● mgmt0  leaf1                   up     —             veth  1500   2.3k   4.4k  ▇█▇▆▅▆▇▄  —                          ▐
+  ● e1-49  leaf1    ethernet-1/49  up     spine1:e1-1   veth  9232   3.1M   6.0M  ▆▆▆▇▇███  50ms ±5ms 1% loss          ▐
+  ○ e1-50  leaf1    ethernet-1/50  down   spine2:e1-1   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● e1-1   leaf1    ethernet-1/1   up     client1:eth1  veth  9232   1.4M   2.8M  ▇▇▇█████  —                          ▐
+  ● mgmt0  leaf2                   up     —             veth  1500   4.4k   4.7k  ▇▇▇▇█▇▇▆  —                          ▐
+  ● e1-49  leaf2    ethernet-1/49  up     spine1:e1-2   veth  9232    13M   2.4M  ██▇█▇▇██  —                          ▐
+  ● e1-50  leaf2    ethernet-1/50  up     spine2:e1-2   veth  9232   5.7M   7.7M  █▇▇█▇███  —                          ▐
+  ● e1-1   leaf2    ethernet-1/1   up     client2:eth1  veth  9232   175k   114k  █▇▇▇▆▆▆▆  —                          ▐
+  ● mgmt0  leaf3                   up     —             veth  1500   5.9k   6.7k  ▆▇▇█▆█▇█  —                          ▐
+  ● e1-49  leaf3    ethernet-1/49  up     spine1:e1-3   veth  9232    28M    23M  ▇▇▇▇▇███  —                          ▐
+  ● e1-50  leaf3    ethernet-1/50  up     spine2:e1-3   veth  9232   7.6M    16M  ▇▇▇████▇  —                          ▐
+  ● e1-1   leaf3    ethernet-1/1   up     client3:eth1  veth  9232    16M    14M  ▇▇▇▇▇███  —                          ▐
+  ● mgmt0  leaf4                   up     —             veth  1500   5.7k   8.3k  ▆▆▆▇█▆▆█  —                          ▐
+  ● e1-49  leaf4    ethernet-1/49  up     spine1:e1-4   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● e1-50  leaf4    ethernet-1/50  up     spine2:e1-4   veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● e1-1   leaf4    ethernet-1/1   up     client4:eth1  veth  9232      0      0  ▁▁▁▁▁▁▁▁  —                          ▐
+  ● eth0   client1                 up     —             veth  1500   4.5k   7.2k  ▆▇▄▇█▇▄▇  —
+  ● eth1   client1                 up     leaf1:e1-1    veth  9232   2.8M   1.4M  ▇▇▇█████  —
+  ● eth0   client2                 up     —             veth  1500   3.0k   3.2k  ▆▇▆▄█▅▅▄  —
+  ● eth1   client2                 up     leaf2:e1-1    veth  9232   114k   175k  █▇▇▇▆▆▆▆  —
+ ⏎ node  a actions  n impair  C capture  m copy mac  ␣ mark  / filter  esc back  ? help
+                                                                                                                   demo
