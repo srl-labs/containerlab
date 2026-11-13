@@ -477,7 +477,9 @@ func TestEmitStatsReportsRenamedLinkFirst(t *testing.T) {
 		MTU:        1500,
 		Statistics: &netlink.LinkStatistics{RxBytes: 10},
 	}}
-	watcher.emitStats(registry, snapshotFromLink(link), ifaceStatsMetrics{Timestamp: time.Now()})
+	watcher.emitStats(registry, snapshotFromLink(link), ifaceStatsMetrics{
+		Timestamp: time.Now(),
+	})
 	close(events)
 
 	var got []reportedEvent

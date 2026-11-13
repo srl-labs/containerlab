@@ -710,7 +710,12 @@ func (w *netlinkWatcher) emitStats(
 
 	attributes := interfaceAttributes(w.container, snapshot)
 	if w.track(registry, snapshot.Index, attributes) {
-		registry.sendInterfaceEvent(w.container, "create", maps.Clone(attributes), metrics.Timestamp)
+		registry.sendInterfaceEvent(
+			w.container,
+			"create",
+			maps.Clone(attributes),
+			metrics.Timestamp,
+		)
 	}
 
 	interfaceStatsAttributes(attributes, metrics)
