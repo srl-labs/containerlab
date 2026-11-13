@@ -388,3 +388,145 @@ func TestProcessUpdateDeleteOnlyTrackedLinks(t *testing.T) {
 		t.Fatal("deleted link is still tracked")
 	}
 }
+
+// reportedEvent is the action and interface name of an emitted event.
+type reportedEvent struct {
+	action string
+	ifname string
+}
+
+// drainEvents closes events and returns what was emitted, in order.
+func drainEvents(events chan aggregatedEvent) []reportedEvent {
+	close(events)
+
+	var got []reportedEvent
+	for ev := range events {
+		got = append(got, reportedEvent{action: ev.Action, ifname: ev.Attributes["ifname"]})
+	}
+
+	return got
+}
+
+// stitchedWatcher returns a watcher that reported the link with index 7 as
+// the host-side stitch interface of its veth-stitch link.
+func stitchedWatcher() *netlinkWatcher {
+	return &netlinkWatcher{
+		container: &clabruntime.GenericContainer{Names: []string{"n1"}},
+		reported: map[int]reportedInterface{
+			7: {
+				attributes: map[string]string{"ifname": "clab-s-0011aabb", "alias": "e1-1"},
+				since:      time.Now(),
+			},
+		},
+	}
+}
+
+// TestEmitReportsRenamedLinkDeleted checks that a link reported under another
+// name than before is first reported deleted under the old name, so clients
+// do not keep both, and is then new to them.
+func TestEmitReportsRenamedLinkDeleted(t *testing.T) {
+	events := make(chan aggregatedEvent, 8)
+	registry := newNetlinkRegistry(t.Context(), events, false, false, 0)
+	watcher := stitchedWatcher()
+
+	link := &netlink.Veth{LinkAttrs: netlink.LinkAttrs{Index: 7, Name: "e1-1", MTU: 1500}}
+	watcher.emit(registry, "update", snapshotFromLink(link))
+	watcher.emit(registry, "update", snapshotFromLink(link))
+
+	want := []reportedEvent{
+		{action: "delete", ifname: "clab-s-0011aabb"},
+		{action: "create", ifname: "e1-1"},
+		{action: "update", ifname: "e1-1"},
+	}
+	if got := drainEvents(events); !slices.Equal(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+}
+
+// TestEmitDeletesLinkAsLastReported checks that a deletion names the link as
+// clients know it, also when its stitch interface is already gone.
+func TestEmitDeletesLinkAsLastReported(t *testing.T) {
+	events := make(chan aggregatedEvent, 8)
+	registry := newNetlinkRegistry(t.Context(), events, false, false, 0)
+	watcher := stitchedWatcher()
+
+	link := &netlink.Veth{LinkAttrs: netlink.LinkAttrs{Index: 7, Name: "e1-1", MTU: 1500}}
+	watcher.emit(registry, "delete", snapshotFromLink(link))
+
+	want := []reportedEvent{{action: "delete", ifname: "clab-s-0011aabb"}}
+	if got := drainEvents(events); !slices.Equal(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+
+	if _, ok := watcher.reported[7]; ok {
+		t.Fatal("deleted link is still tracked as reported")
+	}
+}
+
+// TestEmitStatsReportsRenamedLinkFirst checks that counters of a link reported
+// under another name before follow its deletion under that name and its
+// creation without counters.
+func TestEmitStatsReportsRenamedLinkFirst(t *testing.T) {
+	events := make(chan aggregatedEvent, 8)
+	registry := newNetlinkRegistry(t.Context(), events, false, true, time.Second)
+	watcher := stitchedWatcher()
+
+	link := &netlink.Veth{LinkAttrs: netlink.LinkAttrs{
+		Index:      7,
+		Name:       "e1-1",
+		MTU:        1500,
+		Statistics: &netlink.LinkStatistics{RxBytes: 10},
+	}}
+	watcher.emitStats(registry, snapshotFromLink(link), ifaceStatsMetrics{Timestamp: time.Now()})
+	close(events)
+
+	var got []reportedEvent
+	for ev := range events {
+		got = append(got, reportedEvent{action: ev.Action, ifname: ev.Attributes["ifname"]})
+
+		_, hasCounters := ev.Attributes["rx_bytes"]
+		if hasCounters != (ev.Action == "stats") {
+			t.Fatalf("%s event has counters: %v", ev.Action, hasCounters)
+		}
+	}
+
+	want := []reportedEvent{
+		{action: "delete", ifname: "clab-s-0011aabb"},
+		{action: "create", ifname: "e1-1"},
+		{action: "stats", ifname: "e1-1"},
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+
+	if _, ok := watcher.reported[7].attributes["rx_bytes"]; ok {
+		t.Fatal("counters are kept as what the link was reported as")
+	}
+}
+
+// TestReportStitchMarksLeavesUnmarkedLinks checks that links without a marked
+// stitch interface, or reported too long ago, are not reported again.
+func TestReportStitchMarksLeavesUnmarkedLinks(t *testing.T) {
+	events := make(chan aggregatedEvent, 8)
+	registry := newNetlinkRegistry(t.Context(), events, false, false, 0)
+	watcher := &netlinkWatcher{
+		container: &clabruntime.GenericContainer{Names: []string{"n1"}},
+	}
+
+	recent := &netlink.Veth{LinkAttrs: netlink.LinkAttrs{Index: 7, Name: "e1-1", MTU: 1500}}
+	old := &netlink.Veth{LinkAttrs: netlink.LinkAttrs{Index: 8, Name: "e1-2", MTU: 1500}}
+	states := map[int]ifaceSnapshot{7: snapshotFromLink(recent), 8: snapshotFromLink(old)}
+	watcher.emit(registry, "create", states[7])
+	watcher.emit(registry, "create", states[8])
+	watcher.reported[8] = reportedInterface{
+		attributes: watcher.reported[8].attributes,
+		since:      time.Now().Add(-2 * stitchMarkWindow),
+	}
+
+	watcher.reportStitchMarks(states, registry)
+
+	want := []reportedEvent{{action: "create", ifname: "e1-1"}, {action: "create", ifname: "e1-2"}}
+	if got := drainEvents(events); !slices.Equal(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -247,7 +248,23 @@ type netlinkWatcher struct {
 	includeStats    bool
 	statsInterval   time.Duration
 	nsHandle        netns.NsHandle
+	// reported holds what each link was last reported as, by its index in the
+	// container's namespace.
+	reported map[int]reportedInterface
 }
+
+// reportedInterface is what a link was last reported as.
+type reportedInterface struct {
+	attributes map[string]string
+	// since is when the link was first reported.
+	since time.Time
+}
+
+// stitchMarkWindow is how long after a link is first reported its host-side
+// stitch interface is looked for while the link itself does not change.
+// Deploying a veth-stitch link marks that interface right after it creates the
+// link, without a change in the node's namespace.
+var stitchMarkWindow = time.Minute
 
 // Retry settings for a watcher that could not subscribe to link updates.
 var (
@@ -421,6 +438,7 @@ func (w *netlinkWatcher) watch(
 			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
 		case <-netemTicker.C:
 			w.pollNetemChanges(states, registry, netemQuery)
+			w.reportStitchMarks(states, registry)
 		case <-ctx.Done():
 			return true, nil
 		case update, ok := <-updates:
@@ -496,11 +514,11 @@ func (w *netlinkWatcher) processExisting(
 
 	switch {
 	case exists:
-		registry.emitInterfaceEvent(w.container, "update", snapshot)
+		w.emit(registry, "update", snapshot)
 	case !initial:
-		registry.emitInterfaceEvent(w.container, "create", snapshot)
+		w.emit(registry, "create", snapshot)
 	case w.includeSnapshot:
-		registry.emitInterfaceEvent(w.container, "snapshot", snapshot)
+		w.emit(registry, "snapshot", snapshot)
 	}
 }
 
@@ -534,7 +552,7 @@ func (w *netlinkWatcher) removeVanishedLinks(
 
 		delete(states, idx)
 		delete(statsSamples, idx)
-		registry.emitInterfaceEvent(w.container, "delete", snapshot)
+		w.emit(registry, "delete", snapshot)
 	}
 
 	return vanished
@@ -569,7 +587,7 @@ func (w *netlinkWatcher) processUpdate(
 
 		delete(states, snapshot.Index)
 		delete(statsSamples, snapshot.Index)
-		registry.emitInterfaceEvent(w.container, "delete", previous)
+		w.emit(registry, "delete", previous)
 	case unix.RTM_NEWLINK:
 		// Query netem info for this interface
 		snapshot = withNetem(snapshot, netemQuery.Query())
@@ -589,7 +607,7 @@ func (w *netlinkWatcher) processUpdate(
 				statsSamples[snapshot.Index] = sample
 			}
 		}
-		registry.emitInterfaceEvent(w.container, action, snapshot)
+		w.emit(registry, action, snapshot)
 	}
 }
 
@@ -624,9 +642,108 @@ func (w *netlinkWatcher) pollNetemChanges(
 
 		if !snapshot.equal(previous) {
 			states[idx] = snapshot
-			registry.emitInterfaceEvent(w.container, "update", snapshot)
+			w.emit(registry, "update", snapshot)
 		}
 	}
+}
+
+// reportStitchMarks reports the links whose host-side stitch interface got
+// marked after their last event. Only veths reported under their own name
+// shortly before are looked at: the node's end of a veth-stitch link is a veth
+// and is marked while its lab deploys.
+func (w *netlinkWatcher) reportStitchMarks(
+	states map[int]ifaceSnapshot,
+	registry *netlinkRegistry,
+) {
+	for idx, snapshot := range states {
+		reported, ok := w.reported[idx]
+		if !ok || snapshot.Type != "veth" ||
+			reported.attributes["ifname"] != snapshot.Name ||
+			time.Since(reported.since) > stitchMarkWindow {
+			continue
+		}
+
+		if interfaceAttributes(w.container, snapshot)["ifname"] != snapshot.Name {
+			w.emit(registry, "update", snapshot)
+		}
+	}
+}
+
+// emit reports an event of a link. A deletion names the link as it was last
+// reported. A link reported under another name before, such as the node's own
+// interface until its stitch interface got marked, is first reported deleted
+// under that name, so that clients do not keep both; it is then new to them.
+func (w *netlinkWatcher) emit(registry *netlinkRegistry, action string, snapshot ifaceSnapshot) {
+	if w.container == nil {
+		return
+	}
+
+	if action == "delete" {
+		attributes := interfaceAttributes(w.container, snapshot)
+		if previous, ok := w.reported[snapshot.Index]; ok {
+			attributes = previous.attributes
+		}
+
+		delete(w.reported, snapshot.Index)
+		registry.sendInterfaceEvent(w.container, action, attributes, time.Now())
+
+		return
+	}
+
+	attributes := interfaceAttributes(w.container, snapshot)
+	if w.track(registry, snapshot.Index, attributes) && action == "update" {
+		action = "create"
+	}
+
+	registry.sendInterfaceEvent(w.container, action, attributes, time.Now())
+}
+
+// emitStats reports the counters of a link, under the name emit reports it.
+func (w *netlinkWatcher) emitStats(
+	registry *netlinkRegistry,
+	snapshot ifaceSnapshot,
+	metrics ifaceStatsMetrics,
+) {
+	if !registry.includeStats || w.container == nil || !snapshot.HasStats {
+		return
+	}
+
+	attributes := interfaceAttributes(w.container, snapshot)
+	if w.track(registry, snapshot.Index, attributes) {
+		registry.sendInterfaceEvent(w.container, "create", maps.Clone(attributes), metrics.Timestamp)
+	}
+
+	interfaceStatsAttributes(attributes, metrics)
+	registry.sendInterfaceEvent(w.container, "stats", attributes, metrics.Timestamp)
+}
+
+// track records what the link at index is reported as. When it was reported
+// under another name before, it reports that name deleted and returns true.
+func (w *netlinkWatcher) track(
+	registry *netlinkRegistry,
+	index int,
+	attributes map[string]string,
+) bool {
+	if w.reported == nil {
+		w.reported = make(map[int]reportedInterface)
+	}
+
+	previous, known := w.reported[index]
+
+	since := time.Now()
+	if known {
+		since = previous.since
+	}
+
+	w.reported[index] = reportedInterface{attributes: maps.Clone(attributes), since: since}
+
+	if !known || previous.attributes["ifname"] == attributes["ifname"] {
+		return false
+	}
+
+	registry.sendInterfaceEvent(w.container, "delete", previous.attributes, time.Now())
+
+	return true
 }
 
 func firstContainerName(container *clabruntime.GenericContainer) string {
@@ -809,19 +926,14 @@ func overlayToolsInterface(
 	}
 }
 
-func (r *netlinkRegistry) emitInterfaceEvent(
+func (r *netlinkRegistry) sendInterfaceEvent(
 	container *clabruntime.GenericContainer,
 	action string,
-	snapshot ifaceSnapshot,
+	attributes map[string]string,
+	timestamp time.Time,
 ) {
-	if container == nil {
-		return
-	}
-
-	attributes := interfaceAttributes(container, snapshot)
-
 	event := aggregatedEvent{
-		Timestamp:   time.Now(),
+		Timestamp:   timestamp,
 		Type:        "interface",
 		Action:      action,
 		ActorID:     container.ShortID,
@@ -870,34 +982,6 @@ func waitForNamespacePath(
 	}
 
 	return "", fmt.Errorf("namespace path not ready for container %s", containerID)
-}
-
-func (r *netlinkRegistry) emitInterfaceStatsEvent(
-	container *clabruntime.GenericContainer,
-	snapshot ifaceSnapshot,
-	metrics ifaceStatsMetrics,
-) {
-	if !r.includeStats || container == nil || !snapshot.HasStats {
-		return
-	}
-
-	attributes := interfaceAttributes(container, snapshot)
-	interfaceStatsAttributes(attributes, metrics)
-
-	event := aggregatedEvent{
-		Timestamp:   metrics.Timestamp,
-		Type:        "interface",
-		Action:      "stats",
-		ActorID:     container.ShortID,
-		ActorName:   firstContainerName(container),
-		ActorFullID: container.ID,
-		Attributes:  attributes,
-	}
-
-	select {
-	case r.events <- event:
-	case <-r.ctx.Done():
-	}
 }
 
 func snapshotInterfaces(netHandle *netlink.Handle) (map[int]ifaceSnapshot, error) {
@@ -1140,7 +1224,7 @@ func (w *netlinkWatcher) collectAndEmitStats(
 			Timestamp: now,
 		}
 
-		registry.emitInterfaceStatsEvent(w.container, state, metrics)
+		w.emitStats(registry, state, metrics)
 
 		statsSamples[idx] = ifaceStatsSample{
 			RxBytes:   state.RxBytes,
