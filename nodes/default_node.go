@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -190,7 +191,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	// container runtime. This env var is used by some containers (e.g. vrnetlab systems) to
 	// postpone the startup until all interfaces
 	// have been added to the container namespace.
-	d.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(d.GetEndpoints()))
+	d.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(d.EndpointsWithParked()))
 
 	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
@@ -1113,6 +1114,13 @@ func (d *DefaultNode) ReleaseEndpoint(e clablinks.Endpoint) error {
 
 func (d *DefaultNode) GetEndpoints() []clablinks.Endpoint {
 	return d.Endpoints
+}
+
+func (d *DefaultNode) EndpointsWithParked() []clablinks.Endpoint {
+	if d.parkingNode == nil {
+		return d.Endpoints
+	}
+	return append(slices.Clone(d.Endpoints), d.parkingNode.GetEndpoints()...)
 }
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
