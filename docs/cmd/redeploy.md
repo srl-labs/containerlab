@@ -80,6 +80,11 @@ Using `--ipv6-subnet | -6` flag users can define a custom IPv6 subnet that conta
 
 With `--max-workers` flag, it is possible to limit the number of concurrent workers that create/delete containers or wire virtual links. By default, the number of workers equals the number of nodes/links to process.
 
+#### format
+
+The local `--format | -f` flag selects `table` or `json` output for the final
+deployment summary.
+
 #### keep-mgmt-net
 
 Do not try to remove the management network during destroy phase. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
@@ -116,6 +121,10 @@ The `--no-topology-cr` flag applies to the [clabernetes runtime](../manual/clabe
 #### image-pull-secret
 
 The `--image-pull-secret` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It sets the name of the image pull secret populated in the c9s `Topology` CR during the deploy phase. See [`deploy --image-pull-secret`](deploy.md#image-pull-secret).
+
+#### expose-type
+
+The `--expose-type` flag applies to the [clabernetes runtime](../manual/clabernetes/runtime.md) only. It controls the Kubernetes Service type used to expose lab nodes during the deploy phase. See [`deploy --expose-type`](deploy.md#expose-type).
 
 #### no-persistence
 
