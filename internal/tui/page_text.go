@@ -234,6 +234,8 @@ func helpGroups() []helpGroup {
 			{"ctrl+z", "suspend, return with fg"},
 		}},
 		{"Labs", []hint{
+			{"⏎ or →", "on a folder: open it, ← closes it"},
+			{"e", "open every folder, or close them all"},
 			{"D", "deploy"},
 			{"X", "destroy"},
 			{"R", "redeploy"},

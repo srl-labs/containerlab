@@ -62,7 +62,7 @@ The UI recalls them on start, the last but one line always shows the keys of the
 
 | Key | Action |
 | --- | --- |
-| `→` `←` | the same as `enter` and `esc`, so that the arrows alone walk through labs, nodes and interfaces |
+| `→` `←` | the same as `enter` and `esc`, so that the arrows alone walk through labs, nodes and interfaces; on a [folder](#folders-of-topology-files) they open and close it |
 | `[` `]` | previous and next lab, or node when one is open, without going back to the list |
 | `ctrl+k` | go to a lab, a node or a view by typing a part of its name |
 | `1` … `6` | switch to the labs, nodes, interfaces, links, map or jobs view |
@@ -74,12 +74,23 @@ The UI recalls them on start, the last but one line always shows the keys of the
 | `space` | mark a row; actions then apply to all marked rows |
 | `ctrl+a` | mark or unmark all rows |
 | `p` | show or hide the details pane |
+| `e` | open every [folder](#folders-of-topology-files) in the list of labs, or close them all |
 | `?` | list all keys |
 | `ctrl+z` | suspend the UI and return to the shell, `fg` brings it back |
 | `ctrl+l` | redraw the screen |
 | `ctrl+c` | quit |
 
 `esc` undoes one thing at a time: it clears the filter, then the marks, and then leaves the view. Each view keeps its cursor, filter and sort order while you visit other views. The list of labs always shows all labs; the other views show the lab that was opened, or all of them after `0`.
+
+### Folders of topology files
+
+The list of labs shows the deployed labs first. The topology files that are not deployed follow, in folders of the directories they are in:
+
+* the files in the directory the UI was started in are listed directly, the directories below it are folders;
+* every other directory that is searched, such as `~/.clab` or one given with [`--labs-dir`](#labs-dir), is a folder of its own, named by its whole path;
+* a folder that holds nothing but one other folder is shown as one, ie. `srl-labs/srl-telemetry-lab`.
+
+Folders start closed and show how many labs they hold. `enter` or `→` opens the folder under the cursor, `←` closes it, or goes from a lab to its folder; `e` opens or closes all of them, and a click on the arrow in front of a folder opens or closes it too. The [filter](#navigating) looks into closed folders: the folders that hold a match open while it is set, and a folder whose name matches shows everything in it.
 
 ### Menus and dialogs
 
@@ -248,7 +259,7 @@ The theme can also be changed from within the UI with `:theme <name>`.
 
 ### labs-dir
 
-Besides the running labs the UI lists topology files that are not deployed. It looks for them in the current directory and in `~/.clab`; the directories of the running labs are not searched. With `--labs-dir` more directories are searched; the flag can be given multiple times.
+Besides the running labs the UI lists topology files that are not deployed. It looks for them in the current directory and in `~/.clab`; the directories of the running labs are not searched. With `--labs-dir` more directories are searched; the flag can be given multiple times. The files are shown in [folders](#folders-of-topology-files) of the directories they are in.
 
 ### read-only
 

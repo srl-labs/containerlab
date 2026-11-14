@@ -407,3 +407,20 @@ func TestLabsListsTopologyFiles(t *testing.T) {
 		}
 	}
 }
+
+// TestHostTellsWhereTopologiesAreSearched: the UI groups the files it lists by the
+// directories searched, which the host names as absolute paths, the start directory first.
+func TestHostTellsWhereTopologiesAreSearched(t *testing.T) {
+	dir, other, home := t.TempDir(), t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Chdir(dir)
+
+	b := newTestBackend(t, func(o *Options, _ *deps) {
+		o.LabsDirs = []string{other, other, "."}
+	})
+
+	want := []string{dir, other, filepath.Join(home, clabHomeDir)}
+	if diff := cmp.Diff(want, b.Host().TopoDirs); diff != "" {
+		t.Errorf("unexpected directories (-want +got):\n%s", diff)
+	}
+}

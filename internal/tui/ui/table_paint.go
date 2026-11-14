@@ -26,8 +26,10 @@ type Skin struct {
 	// drawn around a text then follows the width the font gives it.
 	Font     *clabinternaltuigfx.Font
 	TextSize float64
-	// Ink is the color of text on the background.
-	Ink clabinternaltuigfx.Color
+	// Ink is the color of text on the background, Muted the one of secondary text and
+	// icons.
+	Ink   clabinternaltuigfx.Color
+	Muted clabinternaltuigfx.Color
 	// Line separates areas, RowLine the rows of a table.
 	Line    clabinternaltuigfx.Color
 	RowLine clabinternaltuigfx.Color
@@ -150,8 +152,12 @@ func (t *Table) Paint(sc *clabinternaltuigfx.Scene, x, y float64, sk *Skin) {
 			sc.HLine(x, ry, rowWidth, sk.RowLine)
 		}
 
-		t.paintMark(sc, x+1, ry, row, sk)
+		if !row.Folder {
+			t.paintMark(sc, x+1, ry, row, sk)
+		}
+
 		t.paintCells(sc, x, ry, row, sk)
+		t.paintFolder(sc, x, ry, t.shown[i], sk)
 	}
 
 	if from, to := t.thumb(); to > from {
@@ -242,4 +248,25 @@ func (t *Table) paintCells(
 		case DecoNone:
 		}
 	}
+}
+
+// paintFolder draws the chevron and the icon of a folder in the tree column.
+//
+//nolint:mnd // sizes and positions of what is drawn, in cells and points
+func (t *Table) paintFolder(sc *clabinternaltuigfx.Scene, x, ry float64, i int, sk *Skin) {
+	from, _, ok := t.chevronSpan(i)
+	if !ok {
+		return
+	}
+
+	chevron, folder := clabinternaltuigfx.IconChevronRight, clabinternaltuigfx.IconFolder
+	if t.folderOpen(&t.rows[i]) {
+		chevron, folder = clabinternaltuigfx.IconChevronDown, clabinternaltuigfx.IconFolderOpen
+	}
+
+	// The chevron in the first cell, the folder clear of it, and as much room again up
+	// to the name.
+	cx, mid := x+float64(from), ry+0.5
+	sc.Icon(chevron, cx+0.5, mid, 12.5, 1.5, sk.Muted)
+	sc.Icon(folder, cx+2.2, mid, 14, 1.25, sk.Muted)
 }

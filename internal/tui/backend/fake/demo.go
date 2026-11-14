@@ -138,11 +138,12 @@ const demoFabricLeaves = 32
 // demoSpecs returns the labs of the demo. They include a large fabric, which is not
 // deployed unless a size is asked for.
 func demoSpecs(fabricLeaves int) []labSpec {
+	// The labs added later come last, so that the ones before them keep their addresses.
 	if fabricLeaves > 0 {
-		return append(baseSpecs(), fabricSpec(fabricLeaves, true))
+		return append(append(baseSpecs(), fabricSpec(fabricLeaves, true)), pairSpecs()...)
 	}
 
-	return append(baseSpecs(), fabricSpec(demoFabricLeaves, false))
+	return append(append(baseSpecs(), fabricSpec(demoFabricLeaves, false)), pairSpecs()...)
 }
 
 func baseSpecs() []labSpec {
@@ -183,6 +184,38 @@ func baseSpecs() []labSpec {
 			},
 			links: []linkSpec{{a: "l1", aif: "eth1", z: "l2", zif: "eth1"}},
 		},
+	}
+}
+
+// pairSpecs are the topology files of small labs that are not deployed, spread over the
+// directories the demo searches: a training directory with a folder below it, and a lab
+// fetched into the directory of containerlab.
+func pairSpecs() []labSpec {
+	return []labSpec{
+		pairSpec("srl01", demoHome+"/labs/training/srl01.clab.yml", kindSRL),
+		pairSpec("frr01", demoHome+"/labs/training/frr01.clab.yml", kindLinux),
+		pairSpec("ebgp", demoHome+"/labs/training/bgp/ebgp.clab.yml", kindCEOS),
+		pairSpec("ibgp", demoHome+"/labs/training/bgp/ibgp.clab.yml", kindCRPD),
+		pairSpec("st", demoHome+"/.clab/srl-labs/srl-telemetry-lab/st.clab.yml", kindSRL),
+	}
+}
+
+// pairSpec is a lab that is not deployed, of two nodes of a kind joined by one link: the
+// labs a training or a fetched example brings.
+func pairSpec(name, topoFile, kind string) labSpec {
+	iface := "eth1"
+	if kind == kindSRL {
+		iface = "e1-1"
+	}
+
+	return labSpec{
+		name:     name,
+		topoFile: topoFile,
+		nodes: []nodeSpec{
+			{name: "r1", kind: kind},
+			{name: "r2", kind: kind},
+		},
+		links: []linkSpec{{a: "r1", aif: iface, z: "r2", zif: iface}},
 	}
 }
 

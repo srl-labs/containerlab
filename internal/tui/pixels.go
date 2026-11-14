@@ -632,6 +632,7 @@ func (m *Model) buildSkin() {
 		Line:       lift(0.09),
 		RowLine:    ink.Alpha(0.04),
 		Ink:        ink,
+		Muted:      clabinternaltuigfx.RGB(p.Muted),
 		TextSize:   textSize,
 		Raised:     clabinternaltuigfx.RGB(p.Raised),
 		RaisedEdge: ink.Alpha(0.09),

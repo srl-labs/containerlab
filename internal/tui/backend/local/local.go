@@ -308,6 +308,7 @@ func newBackend(opts *Options, d *deps) *Backend {
 		Caps:       b.capabilities(),
 	}
 	b.host.SSH = sshDestination(b.host.User, b.sshConnection())
+	b.host.TopoDirs = absDirs(b.topoDirs())
 
 	graces := defaultJobGraces
 	if b.lrt != nil {

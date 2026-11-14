@@ -63,6 +63,9 @@ type Column struct {
 	// Tight columns are followed by a single space instead of the regular gap. It suits
 	// one cell wide columns holding a state glyph.
 	Tight bool
+	// Tree marks the column that shows how the rows are nested: it indents them and
+	// puts an open or closed chevron in front of every folder.
+	Tree bool
 }
 
 // Cell is the value of a row in one column.
@@ -80,6 +83,14 @@ type Cell struct {
 type Row struct {
 	Key   string
 	Cells []Cell
+	// Parent is the key of the folder the row is in, empty for a row at the top. A row
+	// whose folder is not among the rows is shown at the top.
+	Parent string
+	// Folder is set for a row that holds the rows naming it as their parent. They are
+	// shown while it is open; folders start closed. A folder spans the row from the tree
+	// column on: the texts of its cells follow each other there, so that a long name
+	// does not widen the column.
+	Folder bool
 }
 
 // Table is a scrolling, sortable and filterable table with a cursor and row marks. It
@@ -119,6 +130,22 @@ type Table struct {
 	// cursor changes two of them.
 	drawn map[string]drawnRow
 
+	// tree is set while some rows are folders or in one. kids then lists the rows in
+	// each folder by the key of the folder, the top level under the empty key, up
+	// holds the folder of every row in one, and depth tells how deep every row is
+	// nested. open holds the open folders, which stay open while the rows change.
+	// While a filter is set the folders are open instead, but for the ones in shut,
+	// which the user closed since the filter was set. leaves and leavesShown count the
+	// rows that are no folder, all of them and the ones passing the filter.
+	tree        bool
+	kids        map[string][]int
+	up          map[string]string
+	depth       []int
+	open        map[string]bool
+	shut        map[string]bool
+	leaves      int
+	leavesShown int
+
 	// Empty is shown in place of the rows when there are none.
 	Empty string
 	// Focused draws the cursor row highlighted. Tables sharing a screen clear it on the
@@ -156,6 +183,11 @@ func (t *Table) SetPixels(on bool) {
 
 	t.pixels = on
 	t.stale = true
+
+	// The room in front of the name of a folder depends on it.
+	if t.tree {
+		t.measure()
+	}
 }
 
 // gutter is the width of what comes in front of every row: the cursor bar and the mark,
@@ -202,6 +234,8 @@ func NewTable(th *clabinternaltuitheme.Theme, cols []Column) *Table {
 		cols:    cols,
 		marks:   map[string]struct{}{},
 		drawn:   map[string]drawnRow{},
+		open:    map[string]bool{},
+		shut:    map[string]bool{},
 		sortCol: -1,
 		stale:   true,
 		Focused: true,
@@ -231,6 +265,7 @@ func (t *Table) SetRows(rows []Row) {
 
 	t.rows = rows
 	t.forget()
+	t.indexTree()
 	t.measure()
 	t.rebuild()
 	t.restoreCursor(key)
@@ -246,7 +281,16 @@ func (t *Table) measure() {
 		w := Width(t.cols[i].Title)
 
 		for r := range t.rows {
-			w = max(w, Width(t.cell(&t.rows[r], i).Text))
+			if t.spans(r, i) {
+				continue
+			}
+
+			text := Width(t.cell(&t.rows[r], i).Text)
+			if t.cols[i].Tree {
+				text += t.indent(r)
+			}
+
+			w = max(w, text)
 		}
 
 		w = max(w, t.cols[i].Min, 1)
@@ -271,6 +315,13 @@ func (t *Table) cell(r *Row, col int) *Cell {
 // rebuild applies the filter and the sort order.
 func (t *Table) rebuild() {
 	t.shown = t.shown[:0]
+
+	if t.tree {
+		t.rebuildTree()
+		t.clamp()
+
+		return
+	}
 
 	for i := range t.rows {
 		if t.matches(&t.rows[i]) {
@@ -327,13 +378,34 @@ func (t *Table) SetFilter(query string) {
 
 	t.filter = query
 	t.terms = parseFilter(query)
+	clear(t.shut)
 	t.forget()
 	t.rebuild()
 
 	// A new query starts from the first match, unless the row under the cursor still
 	// matches, which keeps the selection steady while the query is refined.
 	t.cursor, t.offset = 0, 0
-	t.restoreCursor(key)
+
+	if !t.tree {
+		t.restoreCursor(key)
+
+		return
+	}
+
+	// The folders around the matches are shown too: the cursor goes to a row that
+	// matches itself, not to the folder it is in.
+	if t.moveTo(key) && (len(t.terms) == 0 || t.matches(&t.rows[t.shown[t.cursor]])) {
+		return
+	}
+
+	for i, idx := range t.shown {
+		if len(t.terms) == 0 || t.matches(&t.rows[idx]) {
+			t.cursor = i
+			t.clamp()
+
+			return
+		}
+	}
 }
 
 // Filter returns the current filter.
@@ -449,8 +521,13 @@ func (t *Table) SortState() (title string, desc, sorted bool) {
 	return t.cols[t.sortCol].Title, t.sortDesc, true
 }
 
-// Counts returns the number of rows shown and the total number of rows.
+// Counts returns the number of rows shown and the total number of rows. In a table with
+// folders only the rows that are no folder count, whether their folder is open or not.
 func (t *Table) Counts() (shown, total int) {
+	if t.tree {
+		return t.leavesShown, t.leaves
+	}
+
 	return len(t.shown), len(t.rows)
 }
 
@@ -472,8 +549,19 @@ func (t *Table) CursorKey() string {
 	return ""
 }
 
-// SetCursorKey moves the cursor to the row with the given key, if it is shown.
+// SetCursorKey moves the cursor to the row with the given key, opening the folders it is
+// in. It reports false when there is no such row or the filter hides it.
 func (t *Table) SetCursorKey(key string) bool {
+	if t.tree && t.reveal(key) {
+		t.forget()
+		t.rebuild()
+	}
+
+	return t.moveTo(key)
+}
+
+// moveTo moves the cursor to the row with the given key, if it is shown.
+func (t *Table) moveTo(key string) bool {
 	for i, idx := range t.shown {
 		if t.rows[idx].Key == key {
 			t.cursor = i
@@ -486,9 +574,15 @@ func (t *Table) SetCursorKey(key string) bool {
 	return false
 }
 
+// restoreCursor moves the cursor back to the row with the given key. When that row is in
+// a folder that was closed, the cursor goes to the folder.
 func (t *Table) restoreCursor(key string) {
-	if key != "" && t.SetCursorKey(key) {
-		return
+	for key != "" {
+		if t.moveTo(key) {
+			return
+		}
+
+		key = t.parentOf(key)
 	}
 
 	t.clamp()
@@ -529,10 +623,10 @@ func (t *Table) clamp() {
 	t.offset = max(0, min(t.offset, len(t.shown)-body))
 }
 
-// ToggleMark marks or unmarks the row under the cursor.
+// ToggleMark marks or unmarks the row under the cursor. Folders are not marked.
 func (t *Table) ToggleMark() {
 	r, ok := t.Cursor()
-	if !ok {
+	if !ok || r.Folder {
 		return
 	}
 
@@ -550,7 +644,7 @@ func (t *Table) ToggleMarkAll() {
 	all := len(t.shown) > 0
 
 	for _, idx := range t.shown {
-		if _, marked := t.marks[t.rows[idx].Key]; !marked {
+		if _, marked := t.marks[t.rows[idx].Key]; !marked && !t.rows[idx].Folder {
 			all = false
 
 			break
@@ -564,7 +658,9 @@ func (t *Table) ToggleMarkAll() {
 	}
 
 	for _, idx := range t.shown {
-		t.marks[t.rows[idx].Key] = struct{}{}
+		if !t.rows[idx].Folder {
+			t.marks[t.rows[idx].Key] = struct{}{}
+		}
 	}
 }
 
@@ -673,6 +769,11 @@ func (t *Table) Click(x, y int) bool {
 
 	t.cursor = i
 	t.clamp()
+
+	// A click on the chevron of a folder opens or closes it.
+	if from, to, ok := t.chevronSpan(t.shown[i]); ok && x >= from && x < to {
+		t.ToggleFolder()
+	}
 
 	return true
 }
@@ -1010,7 +1111,19 @@ func (t *Table) drawRow(i int, row *Row, marked bool) string {
 			used += gap
 		}
 
-		b.WriteString(t.renderCell(row, c, t.layout.widths[k], selected, fill))
+		if t.spans(t.shown[i], c) {
+			width := t.rowWidth() - used
+			b.WriteString(t.renderSpan(row, t.shown[i], k, width, selected, fill))
+
+			return t.fit(b.String(), used+width, fill)
+		}
+
+		lead := ""
+		if t.cols[c].Tree {
+			lead = t.lead(t.shown[i])
+		}
+
+		b.WriteString(t.renderCell(row, c, t.layout.widths[k], lead, selected, fill))
 
 		used += t.layout.widths[k]
 	}
@@ -1018,13 +1131,20 @@ func (t *Table) drawRow(i int, row *Row, marked bool) string {
 	return t.fit(b.String(), used, fill)
 }
 
-func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipgloss.Style) string {
+// renderCell renders a cell of a row. lead goes in front of the text: the indentation and
+// the chevron of a row in the tree column.
+func (t *Table) renderCell(
+	row *Row, col, width int, lead string, selected bool, fill lipgloss.Style,
+) string {
 	c := t.cell(row, col)
 
 	text := c.Text
 	if t.pixels && c.Deco.replacesText() {
 		text = ""
 	}
+
+	lead = Truncate(lead, width)
+	width -= Width(lead)
 
 	if t.cols[col].TruncLeft {
 		text = TruncateLeft(text, width)
@@ -1049,6 +1169,10 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 		content = style.Render(text)
 	}
 
+	if lead != "" {
+		content = t.th.Muted.Inherit(fill).Render(lead) + content
+	}
+
 	pad := fill.Render(strings.Repeat(" ", max(0, width-Width(text))))
 
 	if t.cols[col].Align == AlignRight {
@@ -1060,6 +1184,55 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 	}
 
 	return content + pad
+}
+
+// renderSpan renders the cells of a folder from the tree column on, the k-th visible
+// column, one after the other in the given width.
+func (t *Table) renderSpan(
+	row *Row, i, k, width int, selected bool, fill lipgloss.Style,
+) string {
+	var b strings.Builder
+
+	lead, prefix := t.lead(i), ""
+	if t.pixels {
+		// The layer draws the chevron, and writes the texts as one piece: its letters
+		// are narrower than the cells, and the gaps between the texts would differ.
+		prefix, lead = lead, ""
+		width -= Width(prefix)
+	}
+
+	used := 0
+
+	for n, c := range t.layout.cols[k:] {
+		text := t.cell(row, c).Text
+		if n > 0 {
+			if text == "" {
+				continue
+			}
+
+			gap := fill.Render(strings.Repeat(" ", tableGap))
+			b.WriteString(gap)
+
+			used += tableGap
+		}
+
+		w := min(width-used, Width(lead)+Width(text))
+		if w <= 0 {
+			break
+		}
+
+		b.WriteString(t.renderCell(row, c, w, lead, selected, fill))
+
+		used += w
+		lead = ""
+	}
+
+	body := b.String()
+	if t.pixels {
+		body = MarkFlow(body)
+	}
+
+	return prefix + body + fill.Render(strings.Repeat(" ", max(0, width-used)))
 }
 
 // fit pads a rendered line to the table width, or cuts it when even the columns that

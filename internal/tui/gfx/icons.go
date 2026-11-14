@@ -10,6 +10,10 @@ type Icon int
 // The icons.
 const (
 	IconCheck Icon = iota
+	IconChevronRight
+	IconChevronDown
+	IconFolder
+	IconFolderOpen
 )
 
 // iconGrid is the size of the square the icons are designed in.
@@ -27,6 +31,21 @@ type iconArt struct {
 var icons = map[Icon]iconArt{
 	IconCheck: {
 		lines: [][]float64{{3.4, 8.4, 6.6, 11.6, 12.6, 4.8}},
+	},
+	IconChevronRight: {
+		lines: [][]float64{{6, 4, 10, 8, 6, 12}},
+	},
+	IconChevronDown: {
+		lines: [][]float64{{4, 6, 8, 10, 12, 6}},
+	},
+	IconFolder: {
+		lines: [][]float64{{1.5, 13, 1.5, 3.5, 6.2, 3.5, 7.8, 5.2, 14.5, 5.2, 14.5, 13, 1.5, 13}},
+	},
+	IconFolderOpen: {
+		lines: [][]float64{
+			{1.5, 13, 1.5, 3.5, 6.2, 3.5, 7.8, 5.2, 13, 5.2, 13, 7.4},
+			{1.5, 13, 3.8, 7.4, 15.2, 7.4, 12.9, 13, 1.5, 13},
+		},
 	},
 }
 

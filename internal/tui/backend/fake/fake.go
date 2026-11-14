@@ -326,6 +326,7 @@ func (*Backend) Host() clabinternaltuibackend.Host {
 			LinkState: true,
 			Wireshark: true,
 		},
+		TopoDirs: []string{demoHome + "/labs", demoHome + "/.clab"},
 	}
 }
 

@@ -319,13 +319,7 @@ func (b *Backend) scanTopologies(ctx context.Context) []topoFile {
 	records := b.inv.records()
 	home, _ := os.UserHomeDir()
 
-	dirs := append([]string{"."}, b.opts.LabsDirs...)
-
-	if home != "" {
-		dirs = append(dirs, filepath.Join(home, clabHomeDir))
-	}
-
-	paths, truncated := findTopologyFiles(ctx, scanRoots(dirs, home, b.opts.ScanDepth),
+	paths, truncated := findTopologyFiles(ctx, scanRoots(b.topoDirs(), home, b.opts.ScanDepth),
 		scanLimits{dirs: scanMaxDirs, files: scanMaxFiles})
 	if truncated && !b.scanTruncated {
 		b.logf(levelWarn, "the search for topology files stopped at its limit of %d "+
@@ -342,6 +336,35 @@ func (b *Backend) scanTopologies(ctx context.Context) []topoFile {
 	}
 
 	return readTopoFiles(ctx, paths)
+}
+
+// topoDirs returns the directories to search for topology files: the working directory,
+// the configured directories and the directory containerlab keeps fetched labs in.
+func (b *Backend) topoDirs() []string {
+	dirs := append([]string{"."}, b.opts.LabsDirs...)
+
+	if home, _ := os.UserHomeDir(); home != "" {
+		dirs = append(dirs, filepath.Join(home, clabHomeDir))
+	}
+
+	return dirs
+}
+
+// absDirs returns the directories as absolute paths, without the ones that cannot be
+// made absolute and without duplicates.
+func absDirs(dirs []string) []string {
+	out := make([]string, 0, len(dirs))
+
+	for _, dir := range dirs {
+		abs, err := filepath.Abs(dir)
+		if dir == "" || err != nil || slices.Contains(out, abs) {
+			continue
+		}
+
+		out = append(out, abs)
+	}
+
+	return out
 }
 
 // readTopoFiles reads the given topology files, each once however many paths lead to it,

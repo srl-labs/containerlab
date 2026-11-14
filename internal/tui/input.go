@@ -117,8 +117,13 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 
 	// In lists the arrows walk the hierarchy: right goes into what is selected, as
-	// enter does, and left goes back out.
-	if m.top().table() != nil {
+	// enter does, and left goes back out. In a list with folders they open and close
+	// the folders first.
+	if t := m.top().table(); t != nil {
+		if t.Walk(msg.String()) {
+			return nil
+		}
+
 		switch msg.String() {
 		case "right":
 			msg = tea.KeyPressMsg{Code: tea.KeyEnter}

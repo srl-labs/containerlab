@@ -6,6 +6,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -32,8 +33,9 @@ type labsPage struct {
 
 	tbl      *clabinternaltuiui.Table
 	hidePane bool
-	// byKey finds the lab a table row stands for.
-	byKey map[string]int
+	// byKey finds the lab a table row stands for, folders the folder.
+	byKey   map[string]int
+	folders map[string]*labFolder
 }
 
 //nolint:mnd // the widths of the columns are what they are
@@ -44,7 +46,7 @@ func labColumns() []clabinternaltuiui.Column {
 	// keeps a readable width: the columns of lesser interest give way before it does.
 	return []clabinternaltuiui.Column{
 		{ID: "dot", Title: "", Max: 1, NoSort: true, NoFilter: true, Tight: true},
-		{ID: "name", Title: "NAME", Min: 8, Max: 32},
+		{ID: "name", Title: "NAME", Min: 8, Max: 40, Tree: true},
 		{ID: "state", Title: "STATE", Priority: 1},
 		{ID: "nodes", Title: "NODES", Priority: 1, NoFilter: true},
 		{ID: "cpu", Title: "CPU", Priority: 3, Align: right, Numeric: true, NoFilter: true},
@@ -144,15 +146,67 @@ func (p *labsPage) refresh(m *Model, topics clabinternaltuibackend.Topic) {
 	})
 
 	p.byKey = make(map[string]int, len(m.labs))
+	p.folders = map[string]*labFolder{}
 	rows := make([]clabinternaltuiui.Row, 0, len(m.labs))
 
+	// The deployed labs come first. The topology files that are not deployed follow,
+	// in folders of the directories they are in.
 	for _, i := range order {
 		lab := &m.labs[i]
+		if !lab.Deployed {
+			continue
+		}
+
 		p.byKey[labKey(lab)] = i
 		rows = append(rows, p.row(m, lab))
 	}
 
+	rows = p.folderRows(m, labTree(m.labs, m.host.TopoDirs, m.opts.Home), "", rows)
+
 	p.tbl.SetRows(rows)
+}
+
+// folderRows appends the rows of the labs in a folder and of the folders below it.
+func (p *labsPage) folderRows(
+	m *Model, f *labFolder, parent string, rows []clabinternaltuiui.Row,
+) []clabinternaltuiui.Row {
+	for _, i := range f.labs {
+		lab := &m.labs[i]
+		p.byKey[labKey(lab)] = i
+
+		row := p.row(m, lab)
+		row.Parent = parent
+		rows = append(rows, row)
+	}
+
+	for _, sub := range f.folders {
+		key := folderKey(sub.path)
+		p.folders[key] = sub
+		rows = append(rows, p.folderRow(m, sub, key, parent))
+		rows = p.folderRows(m, sub, key, rows)
+	}
+
+	return rows
+}
+
+// folderRow is the row of a folder: its name and how many labs it holds.
+func (*labsPage) folderRow(
+	m *Model, f *labFolder, key, parent string,
+) clabinternaltuiui.Row {
+	cells := make([]clabinternaltuiui.Cell, len(labColumns()))
+	cells[1] = m.cell(f.name)
+	cells[2] = m.mutedCell(labCount(f.count))
+
+	return clabinternaltuiui.Row{Key: key, Parent: parent, Folder: true, Cells: cells}
+}
+
+// labCount says how many labs there are.
+func labCount(n int) string {
+	if n == 1 {
+		return "1 lab"
+	}
+
+	return fmt.Sprintf("%d labs", n)
 }
 
 // cpuCell shows the load of a whole lab. It adds up the nodes, so unlike the load of a
@@ -183,12 +237,14 @@ func (p *labsPage) row(m *Model, lab *clabinternaltuibackend.Lab) clabinternaltu
 			nodes = fmt.Sprintf("%s/%d", clabinternaltuiui.Dash, lab.DefinedNodes)
 		}
 
+		// The folder the file is in is shown by the rows above it, the details pane
+		// has the whole path.
 		row.Cells = []clabinternaltuiui.Cell{
 			m.levelCell(glyph, level), m.mutedCell(lab.Name), m.levelCell(stateText, level),
 			m.mutedCell(nodes), m.dash(),
 			{},
 			m.dash(), m.dash(), m.dash(), m.dash(), m.dash(),
-			m.mutedCell(clabinternaltuiui.HomePath(lab.TopoFile, m.opts.Home)),
+			m.mutedCell(filepath.Base(lab.TopoFile)),
 		}
 
 		return row
@@ -240,6 +296,11 @@ func (p *labsPage) row(m *Model, lab *clabinternaltuibackend.Lab) clabinternaltu
 	return row
 }
 
+// currentFolder returns the folder under the cursor, nil when the cursor is on a lab.
+func (p *labsPage) currentFolder() *labFolder {
+	return p.folders[p.tbl.CursorKey()]
+}
+
 // current returns the lab under the cursor.
 func (p *labsPage) current(m *Model) *clabinternaltuibackend.Lab {
 	i, ok := p.byKey[p.tbl.CursorKey()]
@@ -283,16 +344,60 @@ func (p *labsPage) key(m *Model, msg tea.KeyPressMsg) (bool, tea.Cmd) {
 
 		return true, nil
 	case keyEnter:
-		p.open(m, lab)
+		if !p.tbl.ToggleFolder() {
+			p.open(m, lab)
+		}
 
 		return true, nil
+	case keyFolders:
+		if p.tbl.HasFolders() {
+			p.tbl.SetAllOpen(!p.tbl.AllOpen())
+
+			return true, nil
+		}
 	}
 
 	return false, nil
 }
 
+// keyFolders opens every folder of the list of labs, or closes them all.
+const keyFolders = "e"
+
+// foldersAction is the action of keyFolders, named for what it does next.
+func (p *labsPage) foldersAction() action {
+	a := action{
+		key: keyFolders, name: "expand all", desc: "open every folder",
+		run: func() tea.Cmd {
+			p.tbl.SetAllOpen(true)
+
+			return nil
+		},
+	}
+
+	if p.tbl.AllOpen() {
+		a.name, a.desc = "collapse all", "close every folder"
+		a.run = func() tea.Cmd {
+			p.tbl.SetAllOpen(false)
+
+			return nil
+		}
+	}
+
+	return a
+}
+
 // actions implements actor.
 func (p *labsPage) actions(m *Model) (string, []action) {
+	if f := p.currentFolder(); f != nil {
+		return f.name, []action{
+			p.foldersAction(),
+			{
+				key: "y", name: "copy path", desc: "copy the path of the folder",
+				run: func() tea.Cmd { return m.copy("folder path", f.path) },
+			},
+		}
+	}
+
 	return m.labActions(p.current(m))
 }
 
@@ -333,8 +438,12 @@ func (p *labsPage) rule(m *Model, title string) string {
 	return paneRule(m, title, p.width)
 }
 
-// pane describes the lab under the cursor.
+// pane describes the lab or the folder under the cursor.
 func (p *labsPage) pane(m *Model) string {
+	if f := p.currentFolder(); f != nil {
+		return p.folderPane(m, f)
+	}
+
 	lab := p.current(m)
 	if lab == nil {
 		return p.rule(m, "") + "\n" +
@@ -377,6 +486,24 @@ func (p *labsPage) pane(m *Model) string {
 		clabinternaltuiui.Fields(m.th, fields, p.width, paneRows)
 }
 
+// folderPane describes a folder: where it is and what it holds.
+func (p *labsPage) folderPane(m *Model, f *labFolder) string {
+	holds := labCount(f.count) + ", not deployed"
+	if n := len(f.folders); n > 0 {
+		holds += fmt.Sprintf(" · %d folder", n)
+		if n > 1 {
+			holds += "s"
+		}
+	}
+
+	fields := []clabinternaltuiui.Field{
+		{Label: "folder", Value: clabinternaltuiui.HomePath(f.path, m.opts.Home)},
+		{Label: "holds", Value: holds},
+	}
+
+	return p.rule(m, f.name) + "\n" + clabinternaltuiui.Fields(m.th, fields, p.width, paneRows)
+}
+
 // paneRule renders the rule that separates a table from the details pane below it.
 func paneRule(m *Model, title string, width int) string {
 	rule := m.th.Border.Render
@@ -403,7 +530,16 @@ func paneRule(m *Model, title string, width int) string {
 }
 
 func (p *labsPage) hints(m *Model) []hint {
-	hints := []hint{{"⏎", "open"}, {keyActions, "actions"}}
+	enter := "open"
+
+	switch folder, open := p.tbl.CursorFolder(); {
+	case folder && open:
+		enter = "collapse"
+	case folder:
+		enter = "expand"
+	}
+
+	hints := []hint{{"⏎", enter}, {keyActions, "actions"}}
 
 	_, list := p.actions(m)
 	hints = append(hints, actionHints(list)...)

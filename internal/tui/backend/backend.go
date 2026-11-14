@@ -162,6 +162,9 @@ type Host struct {
 	// command. It is empty when the UI is not used through SSH.
 	SSH  string
 	Caps Capabilities
+	// TopoDirs are the directories searched for topology files that are not deployed,
+	// as absolute paths, the directory the UI was started in first.
+	TopoDirs []string
 }
 
 // Capabilities tells which groups of operations are available.
