@@ -51,6 +51,24 @@ Decompress the image with `xz -d`, then copy the `.qcow2` file into the `ipinfus
 !!!info
     Default user credentials: `admin:admin@123`
 
+## Features and options
+
+### Startup configuration
+
+It is possible to start -{{ kind_display_name }}- nodes with a user-defined configuration in addition to the default configuration. Set the [`startup-config`](../nodes.md#startup-config) property to the path of the config file to mount in the container and use as the startup configuration:
+
+```yaml
+topology:
+  nodes:
+    node:
+      kind: -{{ kind_code_name }}-
+      startup-config: myconfig.txt
+```
+
+Containerlab copies `myconfig.txt` from the directory containing the topology file to the node's lab directory as `/config/startup-config.cfg` and mounts that directory in the container. After the bootstrap configuration, the node enters configuration mode, applies the file line by line, then runs `commit` and `write memory`.
+
+The file must contain OcNOS configuration-mode commands. It can contain a partial configuration to add to the default configuration.
+
 ## Interfaces mapping
 
 ipinfusion_ocnos container can have up to 63 interfaces (eth management + 62 additional data interfaces defined in the topology file) and uses the following mapping rules:
