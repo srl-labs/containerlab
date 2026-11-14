@@ -121,7 +121,7 @@ func build(d *definition) *Theme {
 		Info:    lipgloss.NewStyle().Foreground(p.Info),
 
 		TableHeader: lipgloss.NewStyle().Foreground(p.Muted).Bold(true),
-		Selected:    base.Background(p.Selection).Bold(true),
+		Selected:    base.Background(p.Selection),
 		Match:       lipgloss.NewStyle().Foreground(p.Accent).Bold(true).Underline(true),
 		Mark:        lipgloss.NewStyle().Foreground(p.Warning).Bold(true),
 

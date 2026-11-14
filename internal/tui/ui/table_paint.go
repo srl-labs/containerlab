@@ -151,7 +151,7 @@ func (t *Table) Paint(sc *clabinternaltuigfx.Scene, x, y float64, sk *Skin) {
 		}
 
 		t.paintMark(sc, x+1, ry, row, sk)
-		t.paintCells(sc, x, ry, row, sk, cursor)
+		t.paintCells(sc, x, ry, row, sk)
 	}
 
 	if from, to := t.thumb(); to > from {
@@ -184,7 +184,7 @@ func (t *Table) paintMark(sc *clabinternaltuigfx.Scene, x, ry float64, row *Row,
 //
 //nolint:mnd // sizes and positions of what is drawn, in cells and points
 func (t *Table) paintCells(
-	sc *clabinternaltuigfx.Scene, x, ry float64, row *Row, sk *Skin, bold bool,
+	sc *clabinternaltuigfx.Scene, x, ry float64, row *Row, sk *Skin,
 ) {
 	pos := float64(t.gutter())
 
@@ -219,7 +219,7 @@ func (t *Table) paintCells(
 
 			tw := float64(Width(text))
 			if sk.Font != nil {
-				tw = sc.TextWidth(sk.Font, sk.TextSize, bold, text)
+				tw = sc.TextWidth(sk.Font, sk.TextSize, false, text)
 			}
 
 			// An outlined pill around the text, as wide as the text is.

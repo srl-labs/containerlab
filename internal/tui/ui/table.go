@@ -1032,11 +1032,11 @@ func (t *Table) renderCell(row *Row, col, width int, selected bool, fill lipglos
 		text = Truncate(text, width)
 	}
 
+	// The selected row keeps the weight of the others: bold text is wider, and the text
+	// of a row would shift each time the selection moves onto it. The pixel layer marks
+	// the row with a color of its own.
 	style, match := c.Style, t.th.Match
-	switch {
-	case selected && t.pixels:
-		style = style.Bold(true)
-	case selected:
+	if selected && !t.pixels {
 		style = style.Inherit(t.th.Selected)
 		match = match.Inherit(fill)
 	}
