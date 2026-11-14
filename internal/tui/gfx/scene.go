@@ -57,10 +57,17 @@ func (c Color) Luma() float64 {
 func clamp(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }
 
 // Metrics describe the window: its size in cells and the size of that area in pixels.
+// Grid is how many pixels of the layer make one pixel of the screen, when the terminal
+// scales the layer down by a whole number: text is aligned to the pixels of the screen.
+// Zero is one.
 type Metrics struct {
 	Cols, Rows    int
 	Width, Height int
+	Grid          int
 }
+
+// grid returns how many pixels of the layer make one pixel of the screen.
+func (m Metrics) grid() int { return max(1, m.Grid) }
 
 // Valid reports whether the metrics describe a window something can be drawn in.
 func (m Metrics) Valid() bool {
@@ -138,6 +145,8 @@ type shape struct {
 	font *Font
 	text string
 	bold bool
+	// grid is how many pixels make one pixel of the screen, which text is aligned to.
+	grid uint8
 	// adv is the room every character of a text takes, when they are set one a cell.
 	adv  float32
 	hash uint64
@@ -159,6 +168,9 @@ func (m Metrics) coarse() Metrics {
 	}
 
 	m.Width, m.Height = m.Width/k, m.Height/k
+	if k > 1 {
+		m.Grid = 0
+	}
 
 	return m
 }
@@ -674,6 +686,7 @@ func hashShape(sh *shape) uint64 {
 		binary.LittleEndian.PutUint64(buf[:], sh.font.id)
 		_, _ = h.Write(buf[:])
 		_, _ = h.Write([]byte(sh.text))
+		_, _ = h.Write([]byte{sh.grid})
 
 		if sh.bold {
 			_, _ = h.Write([]byte{1})

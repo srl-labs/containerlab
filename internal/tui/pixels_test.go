@@ -303,9 +303,20 @@ func TestPixelLayerStaysWithinBudget(t *testing.T) {
 		)
 	}
 
+	if got := small.metrics().Grid; got != 2 {
+		t.Errorf("text in a layer of twice the pixels is lined up on %d of them, want 2", got)
+	}
+
 	got := m.metrics()
 	if pixels := got.Width * got.Height; pixels > pixelBudget+pixelBudget/100 {
 		t.Errorf("the layer has %d pixels, want at most %d", pixels, pixelBudget)
+	}
+
+	// Twice the pixels do not fit, once does: the terminal is not left to scale the
+	// layer by some fraction.
+	if want := int(math.Round(testCellWidth * 440)); got.Width != want || got.Grid != 1 {
+		t.Errorf("a window of 440 columns is drawn %d pixels wide on a grid of %d, want %d on 1",
+			got.Width, got.Grid, want)
 	}
 
 	if got.Width < got.Cols || got.Height < got.Rows {
@@ -319,6 +330,23 @@ func TestPixelLayerStaysWithinBudget(t *testing.T) {
 	}
 
 	assertScreenFits(t, m, m.render())
+}
+
+func TestPixelScaleIsAWholeNumberWhenItFits(t *testing.T) {
+	for _, tc := range []struct {
+		scale, area, budget, want float64
+	}{
+		{scale: 2, area: 2_000_000, budget: 12_000_000, want: 2},
+		{scale: 2, area: 4_000_000, budget: 12_000_000, want: 1},
+		{scale: 4, area: 1_000_000, budget: 12_000_000, want: 3},
+		{scale: 1, area: 30_000_000, budget: 24_000_000, want: math.Sqrt(0.8)},
+		{scale: 1, area: 200_000_000, budget: 24_000_000, want: minScale},
+	} {
+		if got := fitScale(tc.scale, tc.area, tc.budget); math.Abs(got-tc.want) > 1e-9 {
+			t.Errorf("a scale of %v for %v pixels within %v is %v, want %v",
+				tc.scale, tc.area, tc.budget, got, tc.want)
+		}
+	}
 }
 
 // TestPixelLayerWritesTheText draws a screen with the font of the pixel layer: the

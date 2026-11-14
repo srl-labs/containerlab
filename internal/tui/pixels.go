@@ -54,10 +54,17 @@ const (
 	mouseInPixels    = "pixels"
 	defaultScale     = 2
 	maxScale         = 4
-	// pixelBudget is the most pixels the layer is drawn with, 32 MB of image memory,
-	// and minScale how far the scale is taken down to stay within it.
-	pixelBudget = 8_000_000
-	minScale    = 0.5
+	// pixelBudget is the most pixels the layer is drawn with, 48 MB of image memory:
+	// enough for twice the pixels of a window that fills a screen of 1920 by 1200, and
+	// within the 64 MB Muxus keeps for the images of a tab. A terminal that counts
+	// the pixels of the display keeps far more, deviceBudget is what the layer takes
+	// there. One built on xterm.js gets flatBudget: it is sent whole images, which the
+	// terminal holds twice for a moment. minScale is how far the scale is taken down
+	// to stay within the budget.
+	pixelBudget  = 12_000_000
+	deviceBudget = 24_000_000
+	flatBudget   = 8_000_000
+	minScale     = 0.5
 
 	// graphicsQuery asks the terminal whether it shows images of the kitty graphics
 	// protocol, with an image of one pixel that is not kept.
@@ -330,6 +337,11 @@ func (m *Model) pixelUpdate(msg tea.Msg) bool {
 	case tea.TerminalVersionMsg:
 		name := strings.ToLower(msg.Name)
 
+		if m.px.trace != nil {
+			fmt.Fprintf(m.px.trace, "%s terminal %q\n",
+				time.Now().Format("15:04:05.000"), msg.Name)
+		}
+
 		if strings.HasPrefix(name, flatTerminal) && !m.px.flat {
 			m.px.flat = true
 			m.layout()
@@ -418,9 +430,12 @@ func (m *Model) sendFrame(sc *clabinternaltuigfx.Scene) {
 	}
 
 	if px.trace != nil && len(after) > 0 {
-		fmt.Fprintf(px.trace, "%s frame %d bytes, drawn in %.1f ms\n",
+		ms := m.metrics()
+		fmt.Fprintf(px.trace, "%s frame %d bytes, drawn in %.1f ms, %dx%d pixels for "+
+			"%dx%d cells of %dx%d reported, grid %d\n",
 			start.Format("15:04:05.000"), len(before)+len(after),
-			float64(time.Since(start).Microseconds())/1000) //nolint:mnd // to milliseconds
+			float64(time.Since(start).Microseconds())/1000, //nolint:mnd // to milliseconds
+			ms.Width, ms.Height, ms.Cols, ms.Rows, px.w, px.h, ms.Grid)
 	}
 }
 
@@ -500,24 +515,31 @@ func (m *Model) holding() bool {
 //
 // A terminal keeps what it holds of images within a budget, and drops the oldest ones
 // when that is exceeded: the layer is drawn with fewer pixels in a large window, so that
-// it stays well within what terminals allow.
+// it stays well within what terminals allow. It is then drawn with a whole number of
+// pixels for each pixel the terminal reports, as long as that fits: a terminal that
+// scales the layer by some other factor blurs all of it.
 func (m *Model) metrics() clabinternaltuigfx.Metrics {
 	px := m.px
 	width := float64(px.w) / float64(px.cols) * float64(m.width)
 	height := float64(px.h) / float64(px.rows) * float64(m.height)
 
 	scale := float64(px.scale)
+	budget := float64(pixelBudget)
 
 	switch {
 	case px.flat:
 		// A terminal built on xterm.js draws images with the pixels it reports,
 		// whatever the display has: more of them are scaled down again, at four
 		// times the cost.
-		scale = 1
+		scale, budget = 1, flatBudget
 	case px.scale > 0:
-	case px.devicePixels || (!px.scaledPixels && height/float64(m.height) >= sharpCell):
-		// The terminal reports the pixels of the display, or its cells are large
-		// enough to look sharp as they are: more pixels would only be more data.
+	case px.devicePixels:
+		// The terminal reports the pixels of the display: more pixels would only be
+		// more data.
+		scale, budget = 1, deviceBudget
+	case !px.scaledPixels && height/float64(m.height) >= sharpCell:
+		// Cells large enough to be those of a display of high resolution, counted
+		// in its own pixels.
 		scale = 1
 	default:
 		// A terminal that reports its size without the scale of the display: twice
@@ -525,8 +547,14 @@ func (m *Model) metrics() clabinternaltuigfx.Metrics {
 		scale = defaultScale
 	}
 
-	if most := math.Sqrt(pixelBudget / (width * height)); scale > most {
-		scale = math.Max(most, minScale)
+	scale = fitScale(scale, width*height, budget)
+
+	// Text is lined up with the pixels the terminal reports, which the layer has a
+	// whole number of, or the pixels of the layer when the terminal scales it down by
+	// some other factor.
+	grid := 1
+	if scale >= 1 && scale == math.Trunc(scale) {
+		grid = int(scale)
 	}
 
 	return clabinternaltuigfx.Metrics{
@@ -534,7 +562,25 @@ func (m *Model) metrics() clabinternaltuigfx.Metrics {
 		Rows:   m.height,
 		Width:  max(m.width, int(math.Round(width*scale))),
 		Height: max(m.height, int(math.Round(height*scale))),
+		Grid:   grid,
 	}
+}
+
+// fitScale returns the scale a layer of an area in pixels is drawn with, at most the one
+// asked for, so that it stays within a budget of pixels: the largest whole number that
+// fits, or less than one when not even that does.
+func fitScale(scale, area, budget float64) float64 {
+	if scale*scale*area <= budget {
+		return scale
+	}
+
+	for k := math.Floor(scale); k >= 1; k-- {
+		if k*k*area <= budget {
+			return k
+		}
+	}
+
+	return math.Max(math.Min(1, math.Sqrt(budget/area)), minScale)
 }
 
 // setBackground takes note of the background color of the terminal, which the surfaces

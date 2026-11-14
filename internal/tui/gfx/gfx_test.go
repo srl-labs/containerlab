@@ -7,6 +7,7 @@ package gfx
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"math"
 	"os"
 	"path/filepath"
@@ -717,5 +718,95 @@ func TestOutputKeepsThePointerReportedInPixels(t *testing.T) {
 
 	if got := term.take(); strings.Contains(got, mousePixels) {
 		t.Errorf("the terminal was asked for pixels after they were given up: %q", got)
+	}
+}
+
+func testUIFont(t *testing.T) *Font {
+	t.Helper()
+
+	font, err := NewFont(
+		testFont(t, "Inter-400.ttf"),
+		testFont(t, "Inter-600.ttf"),
+		testFont(t, "DejaVuSans.ttf"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return font
+}
+
+// inkRows returns the rows of an image that hold ink, and how much the most covered pixel
+// of each holds.
+func inkRows(img *image.NRGBA) (rows []int, peak []uint8) {
+	b := img.Bounds()
+
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		top := uint8(0)
+		for x := b.Min.X; x < b.Max.X; x++ {
+			top = max(top, img.NRGBAAt(x, y).A)
+		}
+
+		if top > 25 {
+			rows, peak = append(rows, y), append(peak, top)
+		}
+	}
+
+	return rows, peak
+}
+
+func TestTextLinesUpWithThePixels(t *testing.T) {
+	font := testUIFont(t)
+
+	for _, size := range []float64{10, 11.5, 12, 13, 14.3, 17} {
+		for _, x := range []float64{1, 1.13, 1.37, 1.61, 1.88} {
+			// The top of a z is a flat edge at the height of the lowercase: it fills
+			// one row of pixels rather than half of two.
+			sc := NewScene(testMetrics())
+			sc.Text(font, x, 1, 6, size, false, AlignStart, "z", white)
+
+			rows, peak := inkRows(sc.Image(Under))
+			if len(rows) == 0 || peak[0] < 230 {
+				t.Errorf(
+					"at %v points from column %v the top row of a z holds %v, want a full pixel",
+					size,
+					x,
+					peak,
+				)
+			}
+
+			// The stem of an l fills a column of pixels.
+			sc = NewScene(testMetrics())
+			sc.Text(font, x, 1, 6, size, false, AlignStart, "l", white)
+
+			img := sc.Image(Under)
+			mid := (rows[0] + rows[len(rows)-1]) / 2
+			full := false
+
+			for col := range img.Bounds().Dx() {
+				full = full || img.NRGBAAt(col, mid).A >= 230
+			}
+
+			if !full {
+				t.Errorf("at %v points from column %v the stem of an l fills no column", size, x)
+			}
+		}
+	}
+}
+
+func TestTextLinesUpWithThePixelsOfTheScreen(t *testing.T) {
+	font := testUIFont(t)
+
+	// A layer of twice the pixels, which the terminal shows at half the size.
+	m := Metrics{Cols: 10, Rows: 4, Width: 200, Height: 160, Grid: 2}
+
+	for _, x := range []float64{1, 1.07, 1.31, 1.55} {
+		sc := NewScene(m)
+		sc.Text(font, x, 1, 6, 13, false, AlignStart, "z", white)
+
+		rows, _ := inkRows(sc.Image(Under))
+		if len(rows) == 0 || rows[0]%2 != 0 || (rows[len(rows)-1]+1)%2 != 0 {
+			t.Errorf("from column %v a z covers rows %v, want whole pixels of the screen", x, rows)
+		}
 	}
 }
