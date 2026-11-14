@@ -791,7 +791,7 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 | `$$var`            | Escape expressions. Result will be `$var`.                           |
 
 /// note
-Programs that use containerlab as a Go library can pass the environment variables to expand with the `core.WithTopologyEnv` option. The topology, the startup-config templates and `__IMPORT_ENVS` then use only these variables instead of the environment of the program, which keeps the program's own settings, such as secrets, out of the topologies it deploys. The variables are only used by the program that passes them and aren't stored with the lab, so commands run later from a shell, such as `containerlab destroy -t <topology>`, expand the topology with the environment of that shell and need the same variables to be set.
+Programs that use containerlab as a Go library can pass the environment variables to expand with the `core.WithTopologyEnv` option. The topology, the startup-config templates and `__IMPORT_ENVS` then use only these variables instead of the environment of the program, which keeps the program's own settings, such as secrets, out of the topologies it deploys. The option is not supported with lab runtimes such as Clabernetes (`c9s`). The variables are only used by the program that passes them and aren't stored with the lab, so commands run later from a shell, such as `containerlab destroy -t <topology>`, expand the topology with the environment of that shell and need the same variables to be set.
 ///
 
 ## Magic Variables
