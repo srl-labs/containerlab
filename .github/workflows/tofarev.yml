@@ -12,10 +12,10 @@ jobs:
       github.event.comment.user.type == 'User' &&
       contains(fromJSON('["hellt","flosch62","kaelemc","sacckth"]'), github.event.comment.user.login) &&
       contains(github.event.comment.body, '/tofarev review')
-    uses: hellt/tofarev/.github/workflows/review.yml@19130835865201fbea6324e6262111807736de99
+    uses: hellt/tofarev/.github/workflows/review.yml@ca96ef91456e98df7dc67f67260c6703755cb211
     with:
       bot_repository: hellt/tofarev
-      bot_ref: 19130835865201fbea6324e6262111807736de99
+      bot_ref: ca96ef91456e98df7dc67f67260c6703755cb211
       app_client_id: ${{ vars.TOFAREV_APP_CLIENT_ID }}
       trusted_config: '{"repository":"srl-labs/containerlab","repositoryId":290960521,"allowedUsers":["hellt","flosch62","kaelemc","sacckth"],"shareSessions":true}'
     secrets:
