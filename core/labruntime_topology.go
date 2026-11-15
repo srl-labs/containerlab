@@ -12,6 +12,10 @@ import (
 // normally resolve while initializing nodes. Inherited fields are materialized on each node so
 // that defaults, kinds, and groups can contain node-scoped variables too.
 func (c *CLab) labRuntimeTopologyWithExpandedMagicVars() ([]byte, error) {
+	if !strings.Contains(string(c.renderedTopology), "__clab") {
+		return c.renderedTopology, nil
+	}
+
 	source := &Config{}
 	if err := yaml.Unmarshal(c.renderedTopology, source); err != nil {
 		return nil, fmt.Errorf(
