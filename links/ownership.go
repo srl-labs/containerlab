@@ -130,6 +130,109 @@ func DiscoverOwnedInterfaceNames(
 	return ifaceNames, nil
 }
 
+// DiscoverEndpointsForBridgeNS discovers interfaces attached to an in-container
+// bridge in node's namespace and maps each to its logical endpoint name via the
+// ownership altname marker (hash of ownerName and logical iface name). This has
+// no dependency on discovery order of the remote endpoints.
+// desiredNames holds the logical endpoint iface names of the topology defined on
+// this bridge. Interfaces carrying an ownership marker for an entry of
+// desiredNames are returned in matched; any other containerlab-owned
+// bridge-attached interface is returned in orphans (stale candidates).
+// matched: key = logical endpoint iface name. orphans key = kernel iface name.
+func DiscoverEndpointsForBridgeNS(
+	ctx context.Context,
+	node Node,
+	ownerName string,
+	bridgeName string,
+	desiredNames map[string]struct{},
+) (matched map[string]OwnedInterface, orphans []OwnedInterface, err error) {
+	matched = make(map[string]OwnedInterface, len(desiredNames))
+
+	err = node.ExecFunction(ctx, func(_ ns.NetNS) error {
+		// Bridge absent is fine: there is nothing attached to discover.
+		bridge, bridgeErr := netlink.LinkByName(bridgeName)
+		if bridgeErr != nil {
+			return nil
+		}
+		bridgeIndex := bridge.Attrs().Index
+
+		links, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+
+		for _, link := range links {
+			name := link.Attrs().Name
+			if name == "lo" || name == "eth0" || name == bridgeName {
+				continue
+			}
+
+			if !hasOwnershipAltName(link) {
+				continue
+			}
+
+			// Match against the desired logical endpoint names
+			// recorded in this interface's ownership altname.
+			logical, found := matchOwnedInterface(link, ownerName, desiredNames)
+
+			info := OwnedInterface{
+				Name:        name,
+				Index:       link.Attrs().Index,
+				MasterIndex: link.Attrs().MasterIndex,
+				Type:        link.Type(),
+			}
+			if info.MasterIndex != 0 {
+				master, masterErr := netlink.LinkByIndex(info.MasterIndex)
+				if masterErr != nil {
+					return fmt.Errorf("failed to discover master for %q: %w", name, masterErr)
+				}
+				info.MasterName = master.Attrs().Name
+			}
+			if info.Type == "veth" {
+				veth, ok := link.(*netlink.Veth)
+				if !ok {
+					veth = &netlink.Veth{LinkAttrs: *link.Attrs()}
+				}
+				peerIndex, peerErr := netlink.VethPeerIndex(veth)
+				if peerErr != nil {
+					return fmt.Errorf("failed to discover veth peer for %q: %w", name, peerErr)
+				}
+				info.PeerIndex = peerIndex
+			}
+
+			if found {
+				matched[logical] = info
+			} else if info.MasterIndex == bridgeIndex {
+				// Owned, attached to this bridge, but no desired endpoint claims it:
+				// a stale/orphan candidate that must be visible to stale cleanup.
+				orphans = append(orphans, info)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sort.Slice(orphans, func(i, j int) bool {
+		return orphans[i].Name < orphans[j].Name
+	})
+
+	return matched, orphans, nil
+}
+
+// matchOwnedInterface finds which desired logical endpoint name claims this
+// interface by comparing ownership altname hashes.
+func matchOwnedInterface(link netlink.Link, ownerName string, desiredNames map[string]struct{}) (string, bool) {
+	for name := range desiredNames {
+		if HasOwnershipAltNameFor(link, ownerName, name) {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 // ValidateOwnedInterface returns an error when an existing interface is not
 // owned by the requested logical endpoint. Missing interfaces are valid.
 func ValidateOwnedInterface(ctx context.Context, node Node, ifaceName string) error {
@@ -164,7 +267,26 @@ func ValidateOwnedInterfaceFor(
 	})
 }
 
+// RemoveOwnedInterface removes an interface only when it carries the ownership
+// marker of the given node's logical endpoint.
 func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) error {
+	return removeOwnedInterfaceStrict(ctx, node, ifaceName, true)
+}
+
+// RemoveInterface removes an interface without per-node ownership checks, only
+// requiring a containerlab ownership marker. Needed for BridgeNS bridges, where
+// the bridge-attached interface's ownership marker refers to the bridge endpoint
+// owner, not to the parent container this call executes in.
+func RemoveInterface(ctx context.Context, node Node, ifaceName string) error {
+	return removeOwnedInterfaceStrict(ctx, node, ifaceName, false)
+}
+
+func removeOwnedInterfaceStrict(
+	ctx context.Context,
+	node Node,
+	ifaceName string,
+	requireNodeOwnership bool,
+) error {
 	if node == nil || ifaceName == "" {
 		return nil
 	}
@@ -177,9 +299,18 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 		if err != nil {
 			return err
 		}
-		if !isOwnedBy(link, node, ownershipName(node), ifaceName) {
+
+		if requireNodeOwnership && !isOwnedBy(link, node, ownershipName(node), ifaceName) {
 			return fmt.Errorf(
 				"%w: interface %q on node %q",
+				ErrInterfaceUnowned,
+				ifaceName,
+				node.GetShortName(),
+			)
+		}
+		if !requireNodeOwnership && !hasOwnershipAltName(link) {
+			return fmt.Errorf(
+				"%w: interface %q on node %q is not containerlab-owned",
 				ErrInterfaceUnowned,
 				ifaceName,
 				node.GetShortName(),

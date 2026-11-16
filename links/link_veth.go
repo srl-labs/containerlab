@@ -153,6 +153,11 @@ type LinkVEth struct {
 	deployMutex sync.Mutex
 }
 
+// SetDeploymentState implements LinkDeploymentStateSetter.
+func (l *LinkVEth) SetDeploymentState(state LinkDeploymentState) {
+	l.DeploymentState = state
+}
+
 func NewLinkVEth() *LinkVEth {
 	return &LinkVEth{
 		Endpoints: make([]Endpoint, 0, 2),

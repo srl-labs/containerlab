@@ -9,6 +9,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type runtimeNodeGroup struct {
@@ -76,6 +77,25 @@ func (c *CLab) runtimeNodeGroups(
 			result[nodeName] = &runtimeNodeGroup{
 				name:               nodeName,
 				rootNamespaceBased: true,
+			}
+			continue
+		}
+		// BridgeNS bridges (in-container bridges) don't have their own containers,
+		// but they do represent real resources. Check if parent container exists.
+		//
+		// Trade-off: We only check parent container existence, not the actual bridge
+		// interface inside the parent. This is fast and simple, but may show the bridge
+		// as "current" when the bridge interface is missing (e.g., after container
+		// recreation). The detailed bridge existence check is handled during
+		// reconciliation by linkIntact() and bridgeMasterMismatch().
+		if cfg.Kind == "bridge" && cfg.NetworkMode != "" && cfg.NetworkMode != "host" {
+			if parentName, err := clabutils.ContainerNameFromNetworkMode(cfg.NetworkMode); err == nil {
+				if _, parentExists := result[parentName]; parentExists {
+					result[nodeName] = &runtimeNodeGroup{
+						name:               nodeName,
+						rootNamespaceBased: true,
+					}
+				}
 			}
 			continue
 		}
