@@ -89,7 +89,9 @@ func (c *CLab) runtimeNodeGroups(
 		// recreation). The detailed bridge existence check is handled during
 		// reconciliation by linkIntact() and bridgeMasterMismatch().
 		if cfg.Kind == "bridge" && cfg.NetworkMode != "" && cfg.NetworkMode != "host" {
-			if parentName, err := clabutils.ContainerNameFromNetworkMode(cfg.NetworkMode); err == nil {
+			if parentName, err := clabutils.ContainerNameFromNetworkMode(
+				cfg.NetworkMode,
+			); err == nil {
 				if _, parentExists := result[parentName]; parentExists {
 					result[nodeName] = &runtimeNodeGroup{
 						name:               nodeName,

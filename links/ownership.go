@@ -224,7 +224,11 @@ func DiscoverEndpointsForBridgeNS(
 
 // matchOwnedInterface finds which desired logical endpoint name claims this
 // interface by comparing ownership altname hashes.
-func matchOwnedInterface(link netlink.Link, ownerName string, desiredNames map[string]struct{}) (string, bool) {
+func matchOwnedInterface(
+	link netlink.Link,
+	ownerName string,
+	desiredNames map[string]struct{},
+) (string, bool) {
 	for name := range desiredNames {
 		if HasOwnershipAltNameFor(link, ownerName, name) {
 			return name, true

@@ -140,7 +140,10 @@ func (r *BridgePortRelocation) RestoreBridgePort(
 				return fmt.Errorf("failed to drop old ownership altname %q: %w", altName, delErr)
 			}
 		}
-		if addErr := linkAddAltName(link, ownershipAltNameFor(newOwnerName, r.IfaceName)); addErr != nil &&
+		if addErr := linkAddAltName(
+			link,
+			ownershipAltNameFor(newOwnerName, r.IfaceName),
+		); addErr != nil &&
 			!isAltNameNotSupportedErr(addErr) {
 			return addErr
 		}

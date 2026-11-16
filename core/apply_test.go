@@ -1138,7 +1138,10 @@ func TestPlanApplyAddsNewRootNamespaceNode(t *testing.T) {
 				IsRootNamespaceBased: true,
 			}).AnyTimes()
 			br.EXPECT().GetShortName().Return("br1").AnyTimes()
-			br.EXPECT().GetLinkEndpointType().Return(clablinks.LinkEndpointType("bridge")).AnyTimes()
+			br.EXPECT().
+				GetLinkEndpointType().
+				Return(clablinks.LinkEndpointType("bridge")).
+				AnyTimes()
 			br.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			if !tt.wantAdded {
 				// Only nodes known to the previous topology are checked for drift.

@@ -121,7 +121,11 @@ func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 		n.parentNode = dp.Nodes[cntName]
 
 		if n.parentNode == nil {
-			return fmt.Errorf("bridge %q: parent container %q not found in topology", n.GetShortName(), cntName)
+			return fmt.Errorf(
+				"bridge %q: parent container %q not found in topology",
+				n.GetShortName(),
+				cntName,
+			)
 		}
 
 		// For BridgeNS, wait for parent container to be running before creating bridge
@@ -166,7 +170,8 @@ func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 }
 
 // waitForParentContainer waits for the parent container to have a joinable network namespace.
-// This is necessary for BridgeNS bridges which execute operations in the parent container's namespace.
+// This is necessary for BridgeNS bridges which execute operations in the parent container's
+// namespace.
 func (n *bridge) waitForParentContainer(ctx context.Context, parentNode clabnodes.Node) error {
 	// Poll until parent container has a joinable network namespace or context is cancelled
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -186,7 +191,11 @@ func (n *bridge) waitForParentContainer(ctx context.Context, parentNode clabnode
 				continue
 			}
 			if status == clabruntime.Stopped {
-				return fmt.Errorf("parent container %q has stopped (status=%s)", n.containerNs, status)
+				return fmt.Errorf(
+					"parent container %q has stopped (status=%s)",
+					n.containerNs,
+					status,
+				)
 			}
 		}
 	}

@@ -667,7 +667,8 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		// bridge in the parent container's namespace. Matching is done inside the
 		// namespace callback via ownership altnames, so this is order-independent
 		// w.r.t. the remote endpoints' discovery.
-		if node, ok := c.Nodes[nodeName]; ok && node.GetLinkEndpointType() == clablinks.LinkEndpointTypeBridgeNS {
+		if node, ok := c.Nodes[nodeName]; ok &&
+			node.GetLinkEndpointType() == clablinks.LinkEndpointTypeBridgeNS {
 			parentNode, err := c.bridgeNSParentNode(nodeName)
 			if err != nil {
 				return err
@@ -1186,7 +1187,8 @@ func bridgeMasterMismatch(ep clablinks.Endpoint, live clablinks.OwnedInterface) 
 
 	// Handle in-container bridge (BridgeNS) endpoints
 	if endpointType == clablinks.LinkEndpointTypeBridgeNS {
-		// For BridgeNS, the bridge name in the container is the node name without the namespace suffix
+		// For BridgeNS, the bridge name in the container is the node name without the namespace
+		// suffix
 		bridgeName := node.GetShortName()
 		if idx := strings.Index(bridgeName, "|"); idx != -1 {
 			bridgeName = bridgeName[:idx]
