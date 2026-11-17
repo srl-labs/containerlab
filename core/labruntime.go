@@ -67,6 +67,14 @@ func (c *CLab) deployWithLabRuntime(
 	return c.containersFromLabState(state), nil
 }
 
+// CheckLabRuntimeDeploy returns the error a deploy with the lab runtime fails with before it
+// changes anything, such as link impairments the lab runtime doesn't support.
+func (c *CLab) CheckLabRuntimeDeploy() error {
+	_, err := c.labRuntimeDeployRequest()
+
+	return err
+}
+
 func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	if c.Config.Name == "" {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("topology name is required")

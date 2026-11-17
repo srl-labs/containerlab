@@ -11,6 +11,8 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
+	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 func linksEndpoints(links map[int]clablinks.Link) []clablinks.Endpoint {
@@ -56,6 +58,14 @@ func applyEndpointImpairment(
 	endpoint clablinks.Endpoint,
 	netem *clablinks.Netem,
 ) error {
+	if clablinks.NetemNeedsVEthStitch(endpoint) {
+		log.Warn(
+			"Link impairments of this node only take effect on veth-stitch links",
+			"node", endpoint.GetNode().GetShortName(),
+			"interface", endpoint.GetIfaceName(),
+		)
+	}
+
 	target := clablinks.NetemEndpoint(endpoint)
 
 	return target.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
@@ -75,7 +85,24 @@ func applyEndpointImpairment(
 			}
 		}()
 
-		link, err := net.InterfaceByName(target.GetIfaceName())
+		// interfaces with names linux doesn't allow are found by their sanitized altname
+		netlinkLink, err := netlink.LinkByName(
+			clabutils.SanitizeInterfaceName(target.GetIfaceName()))
+		if _, notFound := err.(netlink.LinkNotFoundError); notFound {
+			// e.g. links to filtered-out nodes or containers stopped outside containerlab
+			log.Warn(
+				"Skipping the link impairment of a missing interface",
+				"node", endpoint.GetNode().GetShortName(),
+				"interface", endpoint.GetIfaceName(),
+			)
+
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		link, err := net.InterfaceByName(netlinkLink.Attrs().Name)
 		if err != nil {
 			return err
 		}

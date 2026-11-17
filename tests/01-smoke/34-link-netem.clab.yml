@@ -32,7 +32,7 @@ topology:
         - node: l1
           interface: eth2
         - node: l2
-          interface: eth2
+          interface: eth2/1
           netem:
             corruption: 2
     - type: veth-stitch

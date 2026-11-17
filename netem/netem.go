@@ -59,6 +59,10 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 func ReplaceImpairments(tcnl *tc.Tc, link *net.Interface, delay, jitter time.Duration,
 	loss float64, rate uint64, probability float64,
 ) error {
+	if delay < 0 || jitter < 0 {
+		return fmt.Errorf("delay and jitter must not be negative")
+	}
+
 	err := tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
 		return fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
@@ -149,6 +153,18 @@ func setRate(qdisc *tc.Object, rate uint64) {
 	if byteRate > math.MaxUint32 {
 		qdisc.Attribute.Netem.Rate64 = &byteRate
 	}
+}
+
+// RateKbit returns the rate of the netem qdisc in kbit/s.
+func RateKbit(netem *tc.Netem) uint64 {
+	switch {
+	case netem.Rate64 != nil:
+		return *netem.Rate64 * 8 / 1000
+	case netem.Rate != nil:
+		return uint64(netem.Rate.Rate) * 8 / 1000
+	}
+
+	return 0
 }
 
 // setCorruption sets the corruption probability and correlation.

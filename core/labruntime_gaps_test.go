@@ -172,6 +172,9 @@ netem: [{delay: 10ms}]
 		"validate": func(c *CLab) error {
 			return c.ValidateLabRuntimeTopology(ctx)
 		},
+		"check before a redeploy": func(c *CLab) error {
+			return c.CheckLabRuntimeDeploy()
+		},
 	}
 
 	for name, run := range tests {

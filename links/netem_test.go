@@ -289,6 +289,46 @@ endpoints:
 	}
 }
 
+func TestNetemNeedsVEthStitch(t *testing.T) {
+	nodes := map[string]Node{
+		"r1": newFakeNode("r1"),
+		"srsim": &fakeDefaultLinkTypeNode{
+			fakeNode: newFakeNode("srsim"),
+			linkType: LinkTypeVethStitch,
+		},
+	}
+
+	for linkType, want := range map[string][]bool{
+		"veth":        {false, true},
+		"veth-stitch": {false, false},
+	} {
+		t.Run(linkType, func(t *testing.T) {
+			var ld LinkDefinition
+			if err := yaml.Unmarshal([]byte(`
+type: `+linkType+`
+endpoints:
+  - node: r1
+    interface: eth1
+  - node: srsim
+    interface: eth1
+`), &ld); err != nil {
+				t.Fatal(err)
+			}
+
+			link, err := ld.Link.Resolve(&ResolveParams{LabName: "lab", Nodes: nodes})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for i, endpoint := range link.GetEndpoints() {
+				if got := NetemNeedsVEthStitch(endpoint); got != want[i] {
+					t.Fatalf("NetemNeedsVEthStitch(%s) = %t, want %t", endpoint, got, want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestNetemEndpointOfVEthLink(t *testing.T) {
 	link, err := resolveNetemLink(t, `endpoints: ["r1:eth1", "r2:eth1"]`)
 	if err != nil {

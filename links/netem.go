@@ -164,3 +164,15 @@ func NetemEndpoint(e Endpoint) Endpoint {
 
 	return e
 }
+
+// NetemNeedsVEthStitch reports whether the link impairment of e has no effect because its node,
+// such as SR-SIM, can only be impaired on veth-stitch links and e isn't on one.
+func NetemNeedsVEthStitch(e Endpoint) bool {
+	if _, ok := e.GetLink().(*LinkVEthStitched); ok {
+		return false
+	}
+
+	provider, ok := e.GetNode().(defaultLinkTypeProvider)
+
+	return ok && provider.DefaultLinkType() == LinkTypeVethStitch
+}

@@ -1160,10 +1160,6 @@ func deltaCounter(previous, current uint64) uint64 {
 	return current
 }
 
-const (
-	msPerSec = 1000
-)
-
 type netemQuerier struct {
 	nsHandle netns.NsHandle
 	tcHandle *gotc.Tc
@@ -1283,9 +1279,7 @@ func netemInfoFromQdisc(qdisc *gotc.Object) netemInfo {
 		info.Jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
 
-	if qdisc.Netem.Rate != nil && qdisc.Netem.Rate.Rate != 0 {
-		info.Rate = int(qdisc.Netem.Rate.Rate * 8 / msPerSec)
-	}
+	info.Rate = int(clabnetem.RateKbit(qdisc.Netem))
 
 	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
 		info.Corruption = math.Round((float64(qdisc.Netem.Corrupt.Probability)/
