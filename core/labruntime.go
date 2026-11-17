@@ -35,10 +35,9 @@ func (c *CLab) deployWithLabRuntime(
 		return nil, fmt.Errorf("rendered topology is empty")
 	}
 
-	if c.Config.Topology != nil &&
-		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
-		return nil, fmt.Errorf("link impairments (netem) are not supported for lab runtime %q",
-			c.globalRuntimeName)
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return nil, err
 	}
 
 	if options != nil && options.reconfigure {
@@ -57,10 +56,6 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
-	req, err := c.labRuntimeDeployRequest()
-	if err != nil {
-		return nil, err
-	}
 	req.Wait = true
 	applyLabRuntimeDeployOptions(&req, options)
 
@@ -78,6 +73,11 @@ func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	}
 	if len(c.renderedTopology) == 0 {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("rendered topology is empty")
+	}
+	if c.Config.Topology != nil &&
+		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
+		return clablabruntime.DeployRequest{}, fmt.Errorf(
+			"link impairments (netem) are not supported for lab runtime %q", c.globalRuntimeName)
 	}
 
 	topologyFile := ""

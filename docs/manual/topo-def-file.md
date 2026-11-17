@@ -296,14 +296,16 @@ links:
         mac: <NodeA-Interface-Mac>          # optional
         ipv4: <NodeA-IPv4-Address>          # optional
         ipv6: <NodeA-IPv6-Address>          # optional
+        netem: <NodeA-Impairment>           # optional
       - node: r2
         interface: 1/1/c1/1
         mac: <NodeB-Interface-Mac>          # optional
         ipv4: <NodeB-IPv4-Address>          # optional
         ipv6: <NodeB-IPv6-Address>          # optional
+        netem: <NodeB-Impairment>           # optional
 ```
 
-The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them.
+The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them. [Link impairments](impairments.md#impairments-in-the-topology) set with `netem` are applied on the stitch.
 
 ###### mgmt-net
 

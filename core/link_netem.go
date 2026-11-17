@@ -56,9 +56,9 @@ func applyEndpointImpairment(
 	endpoint clablinks.Endpoint,
 	netem *clablinks.Netem,
 ) error {
-	node := endpoint.GetNode()
+	target := clablinks.NetemEndpoint(endpoint)
 
-	return node.ExecFunction(ctx, func(ns.NetNS) error {
+	return target.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
 		nodeNS, err := ns.GetCurrentNS()
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func applyEndpointImpairment(
 			}
 		}()
 
-		link, err := net.InterfaceByName(endpoint.GetIfaceName())
+		link, err := net.InterfaceByName(target.GetIfaceName())
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func applyEndpointImpairment(
 
 		log.Info(
 			"Set link impairments",
-			"node", node.GetShortName(),
+			"node", endpoint.GetNode().GetShortName(),
 			"interface", endpoint.GetIfaceName(),
 		)
 

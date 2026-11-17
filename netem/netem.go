@@ -114,11 +114,22 @@ func DeleteImpairments(tcnl *tc.Tc, link *net.Interface) error {
 
 // setDelay sets delay and jitter to the qdisc.
 func setDelay(qdisc *tc.Object, delay, jitter time.Duration) {
-	delayNs := delay.Nanoseconds()
-	jitterNs := jitter.Nanoseconds()
+	qdisc.Attribute.Netem.Qopt.Latency, qdisc.Attribute.Netem.Latency64 = netemTime(delay)
+	qdisc.Attribute.Netem.Qopt.Jitter, qdisc.Attribute.Netem.Jitter64 = netemTime(jitter)
+}
 
-	qdisc.Attribute.Netem.Latency64 = &delayNs
-	qdisc.Attribute.Netem.Jitter64 = &jitterNs
+// netemTime converts the duration to the ticks of the netem options, capped at the highest
+// number of ticks they hold. Longer durations are also returned in nanoseconds, which kernels
+// since 4.15 use instead of the ticks.
+func netemTime(d time.Duration) (uint32, *int64) {
+	ticks := float64(d.Microseconds()) * core.GetTickInUSec()
+	if ticks <= math.MaxUint32 {
+		return uint32(ticks), nil
+	}
+
+	ns := d.Nanoseconds()
+
+	return math.MaxUint32, &ns
 }
 
 // setLoss sets the loss to the qdisc.

@@ -54,10 +54,6 @@ func (*LinkHostRaw) GetType() LinkType {
 }
 
 func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
-	if err := checkNetemOnVeth(LinkTypeHost, r.Endpoint); err != nil {
-		return nil, err
-	}
-
 	// filtered true means the link is in the filter provided by a user
 	// aka it should be resolved/created/deployed
 	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})

@@ -46,6 +46,18 @@ Packets are delayed
     Should Not Be Empty    ${min-rtt}
     Should Be True    ${min-rtt}[0] >= 45
 
+Impairment of a veth-stitch link is set on the stitch
+    Host Qdisc Should Contain    clab-stitch-${lab-name}-l1-eth3    delay 100ms
+    Qdisc Should Not Contain    l1    eth3    netem
+
+Packets on a veth-stitch link are delayed
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime-cli-exec-cmd} clab-${lab-name}-l1 ping -c 3 -i 0.2 10.0.3.2
+    Log    ${output}
+    ${min-rtt} =    Get Regexp Matches    ${output}    = ([0-9.]+)/    1
+    Should Not Be Empty    ${min-rtt}
+    Should Be True    ${min-rtt}[0] >= 95
+
 Restarted node gets its impairments again
     ${rc}    ${output} =    Run Clab Command
     ...    restart -t ${CURDIR}/${topo} --node l1
@@ -101,3 +113,11 @@ Qdisc Should Not Contain
     [Arguments]    ${node}    ${interface}    ${impairment}
     ${qdisc} =    Get Qdisc    ${node}    ${interface}
     Should Not Contain    ${qdisc}    ${impairment}
+
+Host Qdisc Should Contain
+    [Arguments]    ${interface}    ${impairment}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo tc qdisc show dev ${interface}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    ${impairment}

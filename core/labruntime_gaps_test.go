@@ -111,7 +111,36 @@ func TestDeployReconfigureWithLabRuntimeCleansUp(t *testing.T) {
 	}
 }
 
-func TestDeployWithLabRuntimeRejectsLinkImpairments(t *testing.T) {
+type requestRecordingLabRuntime struct {
+	recordingDeployLabRuntime
+	requested bool
+}
+
+func (r *requestRecordingLabRuntime) Plan(
+	context.Context,
+	clablabruntime.DeployRequest,
+) (*clablabruntime.DeployPlan, error) {
+	r.requested = true
+
+	return &clablabruntime.DeployPlan{}, nil
+}
+
+func (r *requestRecordingLabRuntime) Manifests(
+	context.Context,
+	clablabruntime.DeployRequest,
+) ([]clablabruntime.Manifest, error) {
+	r.requested = true
+
+	return nil, nil
+}
+
+func (r *requestRecordingLabRuntime) Validate(context.Context, clablabruntime.DeployRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func TestLabRuntimeRejectsLinkImpairments(t *testing.T) {
 	t.Parallel()
 
 	var link clablinks.LinkDefinition
@@ -122,24 +151,54 @@ netem: [{delay: 10ms}]
 		t.Fatal(err)
 	}
 
-	runtime := &recordingDeployLabRuntime{}
-	c := &CLab{
-		Config: &Config{
-			Name:     "lab1",
-			Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+	ctx := context.Background()
+	tests := map[string]func(c *CLab) error{
+		"deploy": func(c *CLab) error {
+			_, err := c.deployWithLabRuntime(ctx, &DeployOptions{reconfigure: true})
+			return err
 		},
-		LabRuntime:        runtime,
-		TopoPaths:         &clabtypes.TopoPaths{},
-		renderedTopology:  []byte("name: lab1\n"),
-		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+		"dry run": func(c *CLab) error {
+			options, err := NewDeployOptions(0)
+			if err != nil {
+				return err
+			}
+			_, err = c.Deploy(ctx, options.SetDryRun(true))
+			return err
+		},
+		"manifests": func(c *CLab) error {
+			_, err := c.LabRuntimeManifests(ctx, nil)
+			return err
+		},
+		"validate": func(c *CLab) error {
+			return c.ValidateLabRuntimeTopology(ctx)
+		},
 	}
 
-	_, err := c.deployWithLabRuntime(context.Background(), nil)
-	if err == nil || !strings.Contains(err.Error(), "link impairments (netem) are not supported") {
-		t.Fatalf("deployWithLabRuntime() = %v; want the link impairments rejected", err)
-	}
-	if runtime.deployed {
-		t.Fatal("the lab was deployed")
+	for name, run := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runtime := &requestRecordingLabRuntime{}
+			c := &CLab{
+				Config: &Config{
+					Name:     "lab1",
+					Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+				},
+				LabRuntime:        runtime,
+				TopoPaths:         &clabtypes.TopoPaths{},
+				renderedTopology:  []byte("name: lab1\n"),
+				globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+			}
+
+			err := run(c)
+			if err == nil ||
+				!strings.Contains(err.Error(), "link impairments (netem) are not supported") {
+				t.Fatalf("%s = %v; want the link impairments rejected", name, err)
+			}
+			if runtime.requested || runtime.deployed || runtime.request.Name != "" {
+				t.Fatal("the request reached the lab runtime")
+			}
+		})
 	}
 }
 

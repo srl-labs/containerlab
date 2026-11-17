@@ -281,7 +281,7 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 		return fmt.Errorf("unknown link type %q", lt)
 	}
 
-	return nil
+	return ld.checkNetem()
 }
 
 // MarshalYAML serializes LinkDefinition (e.g when used with generate command).
