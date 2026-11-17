@@ -168,6 +168,31 @@ netem: [{delay: 1ms}]
 `,
 			wantErr: "netem is only supported on veth links",
 		},
+		"an extended link that isn't a veth link": {
+			definition: `
+type: macvlan
+host-interface: eth0
+endpoint:
+  node: r1
+  interface: eth1
+  netem:
+    delay: 1ms
+`,
+			wantErr: "netem is only supported on veth links, not on macvlan links",
+		},
+		"a host endpoint of an extended veth link": {
+			definition: `
+type: veth
+endpoints:
+  - node: r1
+    interface: eth1
+  - node: host
+    interface: r1-eth1
+    netem:
+      delay: 1ms
+`,
+			wantErr: "netem is not supported on host endpoints",
+		},
 	}
 
 	for name, tc := range tests {

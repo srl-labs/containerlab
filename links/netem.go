@@ -3,6 +3,7 @@ package links
 import (
 	"fmt"
 	"math"
+	"slices"
 	"time"
 )
 
@@ -85,4 +86,41 @@ func parseNetemDuration(name, value string) (time.Duration, error) {
 	}
 
 	return duration, nil
+}
+
+func declaresNetem(e *EndpointRaw) bool {
+	return e != nil && e.Netem != nil && *e.Netem != (NetemRaw{})
+}
+
+// checkNetemOnVeth rejects link impairments on the endpoints of a link that is not a veth link.
+func checkNetemOnVeth(lt LinkType, endpoints ...*EndpointRaw) error {
+	if slices.ContainsFunc(endpoints, declaresNetem) {
+		return fmt.Errorf("netem is only supported on veth links, not on %s links", lt)
+	}
+
+	return nil
+}
+
+// DeclaresNetem reports whether the link sets a link impairment on any of its endpoints.
+func (ld *LinkDefinition) DeclaresNetem() bool {
+	var endpoints []*EndpointRaw
+
+	switch l := ld.Link.(type) {
+	case *LinkVEthRaw:
+		endpoints = l.Endpoints
+	case *LinkVEthStitchedRaw:
+		endpoints = l.Endpoints
+	case *LinkHostRaw:
+		endpoints = []*EndpointRaw{l.Endpoint}
+	case *LinkMacVlanRaw:
+		endpoints = []*EndpointRaw{l.Endpoint}
+	case *LinkMgmtNetRaw:
+		endpoints = []*EndpointRaw{l.Endpoint}
+	case *LinkDummyRaw:
+		endpoints = []*EndpointRaw{l.Endpoint}
+	case *LinkVxlanRaw:
+		endpoints = []*EndpointRaw{&l.Endpoint}
+	}
+
+	return slices.ContainsFunc(endpoints, declaresNetem)
 }
