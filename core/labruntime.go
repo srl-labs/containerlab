@@ -35,10 +35,9 @@ func (c *CLab) deployWithLabRuntime(
 		return nil, fmt.Errorf("rendered topology is empty")
 	}
 
-	if _, ok := c.LabRuntime.(clablabruntime.LinkImpairer); !ok && c.Config.Topology != nil &&
-		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
-		return nil, fmt.Errorf("link impairments (netem) are not supported for lab runtime %q",
-			c.globalRuntimeName)
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return nil, err
 	}
 
 	if options != nil && options.reconfigure {
@@ -57,10 +56,6 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
-	req, err := c.labRuntimeDeployRequest()
-	if err != nil {
-		return nil, err
-	}
 	req.Wait = true
 	applyLabRuntimeDeployOptions(&req, options)
 
@@ -72,12 +67,25 @@ func (c *CLab) deployWithLabRuntime(
 	return c.containersFromLabState(state), nil
 }
 
+// CheckLabRuntimeDeploy returns the error a deploy with the lab runtime fails with before it
+// changes anything, such as link impairments the lab runtime doesn't support.
+func (c *CLab) CheckLabRuntimeDeploy() error {
+	_, err := c.labRuntimeDeployRequest()
+
+	return err
+}
+
 func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	if c.Config.Name == "" {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("topology name is required")
 	}
 	if len(c.renderedTopology) == 0 {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("rendered topology is empty")
+	}
+	if _, ok := c.LabRuntime.(clablabruntime.LinkImpairer); !ok && c.Config.Topology != nil &&
+		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
+		return clablabruntime.DeployRequest{}, fmt.Errorf(
+			"link impairments (netem) are not supported for lab runtime %q", c.globalRuntimeName)
 	}
 
 	topologyFile := ""

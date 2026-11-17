@@ -59,10 +59,6 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 }
 
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
-	if err := checkNetemOnVeth(LinkTypeMacVLan, r.Endpoint); err != nil {
-		return nil, err
-	}
-
 	var err error
 	// filtered true means the link is in the filter provided by a user
 	// aka it should be resolved/created/deployed

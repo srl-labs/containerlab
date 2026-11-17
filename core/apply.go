@@ -171,9 +171,6 @@ func (c *CLab) apply(
 		if err := c.syncTailscaleProxy(ctx); err != nil {
 			return nil, err
 		}
-		if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
-			return nil, err
-		}
 		if options.finalizeNoop {
 			if err := c.prepareApply(
 				ctx,
@@ -193,6 +190,9 @@ func (c *CLab) apply(
 			}
 		} else {
 			c.writeState()
+		}
+		if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+			return nil, err
 		}
 		return applyResultFromPlan(plan), nil
 	}
@@ -243,10 +243,6 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
-		return nil, err
-	}
-
 	if err := c.updateRuntimeInfoForExistingNodes(ctx); err != nil {
 		return nil, err
 	}
@@ -258,6 +254,10 @@ func (c *CLab) apply(
 	}
 
 	if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
+		return nil, err
+	}
+
+	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 		return nil, err
 	}
 

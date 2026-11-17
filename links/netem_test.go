@@ -120,6 +120,17 @@ endpoints:
   - node: r2
     interface: eth1
 `,
+		"veth-stitch link": `
+type: veth-stitch
+endpoints:
+  - node: r1
+    interface: eth1
+    netem:
+      delay: 50ms
+      loss: 1
+  - node: r2
+    interface: eth1
+`,
 	}
 
 	for name, definition := range tests {
@@ -193,6 +204,45 @@ endpoints:
 `,
 			wantErr: "netem is not supported on host endpoints",
 		},
+		"a mgmt-net endpoint of a veth-stitch link": {
+			definition: `
+type: veth-stitch
+endpoints:
+  - node: r1
+    interface: eth1
+  - node: mgmt-net
+    interface: r1-eth1
+    netem:
+      delay: 1ms
+`,
+			wantErr: "netem is not supported on mgmt-net endpoints",
+		},
+		"an invalid impairment of a veth-stitch link": {
+			definition: `
+type: veth-stitch
+endpoints:
+  - node: r1
+    interface: eth1
+    netem:
+      loss: 101
+  - node: r2
+    interface: eth1
+`,
+			wantErr: "invalid netem for r1:eth1",
+		},
+		"a vxlan-stitch link": {
+			definition: `
+type: vxlan-stitch
+remote: 192.0.2.1
+vni: 100
+endpoint:
+  node: r1
+  interface: eth1
+  netem:
+    delay: 1ms
+`,
+			wantErr: "netem is only supported on veth links, not on vxlan-stitch links",
+		},
 	}
 
 	for name, tc := range tests {
@@ -202,6 +252,93 @@ endpoints:
 				t.Fatalf("want error containing %q, got %v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestNetemEndpointOfVEthStitchLink(t *testing.T) {
+	var ld LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+type: veth-stitch
+endpoints:
+  - node: r1
+    interface: eth1
+  - node: r2
+    interface: eth2
+`), &ld); err != nil {
+		t.Fatal(err)
+	}
+
+	link, err := ld.Link.Resolve(&ResolveParams{LabName: "lab", Nodes: map[string]Node{
+		"r1": newFakeNode("r1"),
+		"r2": newFakeNode("r2"),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpoints := link.GetEndpoints()
+	wantIfaces := []string{
+		stitchFarEndName("lab", "r2", "eth2"),
+		stitchFarEndName("lab", "r1", "eth1"),
+	}
+	for i, endpoint := range endpoints {
+		target := NetemEndpoint(endpoint)
+		if target.GetNode() != GetHostLinkNode() || target.GetIfaceName() != wantIfaces[i] {
+			t.Fatalf("netem endpoint of %s = %s, want host:%s", endpoint, target, wantIfaces[i])
+		}
+	}
+}
+
+func TestNetemNeedsVEthStitch(t *testing.T) {
+	nodes := map[string]Node{
+		"r1": newFakeNode("r1"),
+		"srsim": &fakeDefaultLinkTypeNode{
+			fakeNode: newFakeNode("srsim"),
+			linkType: LinkTypeVethStitch,
+		},
+	}
+
+	for linkType, want := range map[string][]bool{
+		"veth":        {false, true},
+		"veth-stitch": {false, false},
+	} {
+		t.Run(linkType, func(t *testing.T) {
+			var ld LinkDefinition
+			if err := yaml.Unmarshal([]byte(`
+type: `+linkType+`
+endpoints:
+  - node: r1
+    interface: eth1
+  - node: srsim
+    interface: eth1
+`), &ld); err != nil {
+				t.Fatal(err)
+			}
+
+			link, err := ld.Link.Resolve(&ResolveParams{LabName: "lab", Nodes: nodes})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for i, endpoint := range link.GetEndpoints() {
+				if got := NetemNeedsVEthStitch(endpoint); got != want[i] {
+					t.Fatalf("NetemNeedsVEthStitch(%s) = %t, want %t", endpoint, got, want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestNetemEndpointOfVEthLink(t *testing.T) {
+	link, err := resolveNetemLink(t, `endpoints: ["r1:eth1", "r2:eth1"]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, endpoint := range link.GetEndpoints() {
+		if target := NetemEndpoint(endpoint); target != endpoint {
+			t.Fatalf("netem endpoint of %s = %s, want the endpoint itself", endpoint, target)
+		}
 	}
 }
 

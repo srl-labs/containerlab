@@ -34,7 +34,8 @@ Impairments of a brief link are set
     Qdisc Should Contain    l2    eth1    rate 10Mbit
 
 Impairment of an extended link is set
-    Qdisc Should Contain    l2    eth2    corrupt 2%
+    # eth2/1 isn't a valid linux interface name, so the interface is found by its altname eth2-1
+    Qdisc Should Contain    l2    eth2-1    corrupt 2%
     Qdisc Should Not Contain    l1    eth2    netem
 
 Packets are delayed
@@ -45,6 +46,18 @@ Packets are delayed
     ${min-rtt} =    Get Regexp Matches    ${output}    = ([0-9.]+)/    1
     Should Not Be Empty    ${min-rtt}
     Should Be True    ${min-rtt}[0] >= 45
+
+Impairment of a veth-stitch link is set on the stitch
+    Host Qdisc Should Contain    clab-stitch-${lab-name}-l1-eth3    delay 100ms
+    Qdisc Should Not Contain    l1    eth3    netem
+
+Packets on a veth-stitch link are delayed
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime-cli-exec-cmd} clab-${lab-name}-l1 ping -c 3 -i 0.2 10.0.3.2
+    Log    ${output}
+    ${min-rtt} =    Get Regexp Matches    ${output}    = ([0-9.]+)/    1
+    Should Not Be Empty    ${min-rtt}
+    Should Be True    ${min-rtt}[0] >= 95
 
 Restarted node gets its impairments again
     ${rc}    ${output} =    Run Clab Command
@@ -60,7 +73,8 @@ Started node gets its impairments again
     ...    start -t ${CURDIR}/${topo} --node l2
     Should Be Equal As Integers    ${rc}    0
     Qdisc Should Contain    l2    eth1    rate 10Mbit
-    Qdisc Should Contain    l2    eth2    corrupt 2%
+    Qdisc Should Contain    l2    eth2-1    corrupt 2%
+    Host Qdisc Should Contain    clab-stitch-${lab-name}-l1-eth3    delay 100ms
 
 Apply updates a changed impairment
     ${rc}    ${output} =    Run Clab Command
@@ -101,3 +115,17 @@ Qdisc Should Not Contain
     [Arguments]    ${node}    ${interface}    ${impairment}
     ${qdisc} =    Get Qdisc    ${node}    ${interface}
     Should Not Contain    ${qdisc}    ${impairment}
+
+Host Qdisc Should Contain
+    [Arguments]    ${interface}    ${impairment}
+    # tc cuts device names to 15 characters, so the interface name is looked up with ip first
+    ${rc}    ${link} =    Run And Return Rc And Output
+    ...    sudo ip -o link show dev ${interface}
+    Log    ${link}
+    Should Be Equal As Integers    ${rc}    0
+    ${name} =    Get Regexp Matches    ${link}    ^\\d+: ([^:@]+)    1
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo tc qdisc show dev ${name}[0]
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    ${impairment}

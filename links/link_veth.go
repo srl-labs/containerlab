@@ -68,10 +68,6 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
-		if (epr.Node == "host" || epr.Node == "mgmt-net") && declaresNetem(epr) {
-			return nil, fmt.Errorf("netem is not supported on %s endpoints", epr.Node)
-		}
-
 		ep, err := epr.Resolve(params, l)
 		if err != nil {
 			return nil, err

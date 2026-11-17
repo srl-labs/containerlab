@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"errors"
+
+	clablinks "github.com/srl-labs/containerlab/links"
 )
 
 // RestartNodes performs stop+start for each node, restoring parked interfaces.
@@ -19,19 +22,18 @@ func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 		return err
 	}
 
+	var endpoints []clablinks.Endpoint
 	for _, n := range nodes {
 		if err := n.Stop(ctx); err != nil {
-			return err
+			return errors.Join(err, applyLinkImpairments(ctx, endpoints))
 		}
 
 		if err := n.Start(ctx); err != nil {
-			return err
+			return errors.Join(err, applyLinkImpairments(ctx, endpoints))
 		}
 
-		if err := applyLinkImpairments(ctx, n.GetEndpoints()); err != nil {
-			return err
-		}
+		endpoints = append(endpoints, n.GetEndpoints()...)
 	}
 
-	return nil
+	return applyLinkImpairments(ctx, endpoints)
 }

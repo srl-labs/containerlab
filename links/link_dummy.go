@@ -22,10 +22,6 @@ func (*LinkDummyRaw) GetType() LinkType {
 // by a concrete LinkDummyRaw struct.
 // Resolving a dummy links endpoints.
 func (r *LinkDummyRaw) Resolve(params *ResolveParams) (Link, error) {
-	if err := checkNetemOnVeth(LinkTypeDummy, r.Endpoint); err != nil {
-		return nil, err
-	}
-
 	// filtered true means the link is in the filter provided by a user
 	// aka it should be resolved/created/deployed
 	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})

@@ -59,6 +59,10 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 func ReplaceImpairments(tcnl *tc.Tc, link *net.Interface, delay, jitter time.Duration,
 	loss float64, rate uint64, probability float64,
 ) error {
+	if delay < 0 || jitter < 0 {
+		return fmt.Errorf("delay and jitter must not be negative")
+	}
+
 	err := tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
 		return fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
@@ -114,11 +118,22 @@ func DeleteImpairments(tcnl *tc.Tc, link *net.Interface) error {
 
 // setDelay sets delay and jitter to the qdisc.
 func setDelay(qdisc *tc.Object, delay, jitter time.Duration) {
-	delayNs := delay.Nanoseconds()
-	jitterNs := jitter.Nanoseconds()
+	qdisc.Attribute.Netem.Qopt.Latency, qdisc.Attribute.Netem.Latency64 = netemTime(delay)
+	qdisc.Attribute.Netem.Qopt.Jitter, qdisc.Attribute.Netem.Jitter64 = netemTime(jitter)
+}
 
-	qdisc.Attribute.Netem.Latency64 = &delayNs
-	qdisc.Attribute.Netem.Jitter64 = &jitterNs
+// netemTime converts the duration to the ticks of the netem options, capped at the highest
+// number of ticks they hold. Longer durations are also returned in nanoseconds, which kernels
+// since 4.15 use instead of the ticks.
+func netemTime(d time.Duration) (uint32, *int64) {
+	ticks := float64(d.Microseconds()) * core.GetTickInUSec()
+	if ticks <= math.MaxUint32 {
+		return uint32(ticks), nil
+	}
+
+	ns := d.Nanoseconds()
+
+	return math.MaxUint32, &ns
 }
 
 // setLoss sets the loss to the qdisc.
@@ -138,6 +153,18 @@ func setRate(qdisc *tc.Object, rate uint64) {
 	if byteRate > math.MaxUint32 {
 		qdisc.Attribute.Netem.Rate64 = &byteRate
 	}
+}
+
+// RateKbit returns the rate of the netem qdisc in kbit/s.
+func RateKbit(netem *tc.Netem) uint64 {
+	switch {
+	case netem.Rate64 != nil:
+		return *netem.Rate64 * 8 / 1000
+	case netem.Rate != nil:
+		return uint64(netem.Rate.Rate) * 8 / 1000
+	}
+
+	return 0
 }
 
 // setCorruption sets the corruption probability and correlation.

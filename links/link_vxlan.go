@@ -35,10 +35,6 @@ type LinkVxlanRaw struct {
 }
 
 func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
-	if err := checkNetemOnVeth(lr.LinkType, &lr.Endpoint); err != nil {
-		return nil, err
-	}
-
 	switch lr.LinkType {
 	case LinkTypeVxlan:
 		return lr.resolveVxlan(params, false)

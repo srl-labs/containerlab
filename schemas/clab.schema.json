@@ -1245,7 +1245,7 @@
                     "minItems": 2,
                     "maxItems": 2,
                     "items": {
-                        "$ref": "#/definitions/link-endpoint"
+                        "$ref": "#/definitions/veth-link-endpoint"
                     }
                 },
                 "mtu": {
@@ -1301,7 +1301,7 @@
                     "minItems": 2,
                     "maxItems": 2,
                     "items": {
-                        "$ref": "#/definitions/link-endpoint"
+                        "$ref": "#/definitions/veth-link-endpoint"
                     }
                 },
                 "mtu": {
@@ -1535,6 +1535,43 @@
         "link-endpoint": {
             "type": "object",
             "description": "Common link endpoint object for extended link configs",
+            "properties": {
+                "node": {
+                    "type": "string",
+                    "description": ""
+                },
+                "interface": {
+                    "type": "string",
+                    "description": ""
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "",
+                    "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
+                },
+                "ipv4": {
+                    "$ref": "#/definitions/ipv4-prefix",
+                    "description": "IPv4 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv4 address in CIDR notation, e.g. 10.0.0.1/24"
+                },
+                "ipv6": {
+                    "$ref": "#/definitions/ipv6-prefix",
+                    "description": "IPv6 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv6 address in CIDR notation, e.g. 2001:db8::1/64"
+                },
+                "vars": {
+                    "$ref": "#/definitions/endpoint-vars"
+                }
+            },
+            "required": [
+                "node",
+                "interface"
+            ],
+            "additionalProperties": false
+        },
+        "veth-link-endpoint": {
+            "type": "object",
+            "description": "Link endpoint object for extended veth and veth-stitch link configs",
             "properties": {
                 "node": {
                     "type": "string",

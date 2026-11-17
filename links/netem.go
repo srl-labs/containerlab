@@ -92,10 +92,50 @@ func declaresNetem(e *EndpointRaw) bool {
 	return e != nil && e.Netem != nil && *e.Netem != (NetemRaw{})
 }
 
-// checkNetemOnVeth rejects link impairments on the endpoints of a link that is not a veth link.
-func checkNetemOnVeth(lt LinkType, endpoints ...*EndpointRaw) error {
-	if slices.ContainsFunc(endpoints, declaresNetem) {
-		return fmt.Errorf("netem is only supported on veth links, not on %s links", lt)
+// netemEndpoints returns the raw endpoints of the link and whether they support link impairments.
+func (ld *LinkDefinition) netemEndpoints() ([]*EndpointRaw, bool) {
+	switch l := ld.Link.(type) {
+	case *LinkVEthRaw:
+		return l.Endpoints, true
+	case *LinkVEthStitchedRaw:
+		return l.Endpoints, true
+	case *LinkHostRaw:
+		return []*EndpointRaw{l.Endpoint}, false
+	case *LinkMacVlanRaw:
+		return []*EndpointRaw{l.Endpoint}, false
+	case *LinkMgmtNetRaw:
+		return []*EndpointRaw{l.Endpoint}, false
+	case *LinkDummyRaw:
+		return []*EndpointRaw{l.Endpoint}, false
+	case *LinkVxlanRaw:
+		return []*EndpointRaw{&l.Endpoint}, false
+	}
+
+	return nil, false
+}
+
+// checkNetem validates the link impairments of the link. They are supported on the node endpoints
+// of veth and veth-stitch links.
+func (ld *LinkDefinition) checkNetem() error {
+	endpoints, supported := ld.netemEndpoints()
+
+	for _, e := range endpoints {
+		if !declaresNetem(e) {
+			continue
+		}
+
+		if !supported {
+			return fmt.Errorf("netem is only supported on veth links, not on %s links", ld.Type)
+		}
+
+		switch LinkType(e.Node) {
+		case LinkTypeHost, LinkTypeMgmtNet:
+			return fmt.Errorf("netem is not supported on %s endpoints", e.Node)
+		}
+
+		if _, err := e.Netem.Resolve(); err != nil {
+			return fmt.Errorf("invalid netem for %s:%s: %w", e.Node, e.Iface, err)
+		}
 	}
 
 	return nil
@@ -103,24 +143,36 @@ func checkNetemOnVeth(lt LinkType, endpoints ...*EndpointRaw) error {
 
 // DeclaresNetem reports whether the link sets a link impairment on any of its endpoints.
 func (ld *LinkDefinition) DeclaresNetem() bool {
-	var endpoints []*EndpointRaw
-
-	switch l := ld.Link.(type) {
-	case *LinkVEthRaw:
-		endpoints = l.Endpoints
-	case *LinkVEthStitchedRaw:
-		endpoints = l.Endpoints
-	case *LinkHostRaw:
-		endpoints = []*EndpointRaw{l.Endpoint}
-	case *LinkMacVlanRaw:
-		endpoints = []*EndpointRaw{l.Endpoint}
-	case *LinkMgmtNetRaw:
-		endpoints = []*EndpointRaw{l.Endpoint}
-	case *LinkDummyRaw:
-		endpoints = []*EndpointRaw{l.Endpoint}
-	case *LinkVxlanRaw:
-		endpoints = []*EndpointRaw{&l.Endpoint}
-	}
+	endpoints, _ := ld.netemEndpoints()
 
 	return slices.ContainsFunc(endpoints, declaresNetem)
+}
+
+// NetemEndpoint returns the endpoint whose interface gets the link impairment of e. On veth-stitch
+// links that is the root namespace end of the stitch that passes the packets of e on to the other
+// node, where tools netem sets impairments too, since impairments on the interfaces of nodes such
+// as SR-SIM have no effect.
+func NetemEndpoint(e Endpoint) Endpoint {
+	if l, ok := e.GetLink().(*LinkVEthStitched); ok {
+		switch e {
+		case l.segA.Endpoints[0]:
+			return l.epB
+		case l.segB.Endpoints[0]:
+			return l.epA
+		}
+	}
+
+	return e
+}
+
+// NetemNeedsVEthStitch reports whether the link impairment of e has no effect because its node,
+// such as SR-SIM, can only be impaired on veth-stitch links and e isn't on one.
+func NetemNeedsVEthStitch(e Endpoint) bool {
+	if _, ok := e.GetLink().(*LinkVEthStitched); ok {
+		return false
+	}
+
+	provider, ok := e.GetNode().(defaultLinkTypeProvider)
+
+	return ok && provider.DefaultLinkType() == LinkTypeVethStitch
 }
