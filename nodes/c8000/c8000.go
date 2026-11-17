@@ -131,12 +131,12 @@ func (n *c8000) create8000Files(ctx context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *c8000) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`^(Fi|Hu|FH)0_0_0_\d+$`)
+	ifRe := regexp.MustCompile(`^(Fi|Hu|TH|FH|EH)0_0_0_\d+$`)
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf(
-				"cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Fi0_0_0_X (50G interfaces), Hu0_0_0_X (100G interfaces) or FH0_0_0_X (400G interfaces) where X is the interface number",
+				"cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Fi0_0_0_X (50G interfaces), Hu0_0_0_X (100G interfaces), TH0_0_0_X (200G interfaces), FH0_0_0_X (400G interfaces) or EH0_0_0_X (800G interfaces) where X is the interface number",
 				e.GetIfaceName(),
 			)
 		}

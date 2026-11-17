@@ -6,6 +6,7 @@ package ipinfusion_ocnos
 
 import (
 	"fmt"
+	"path"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -64,6 +65,12 @@ func (n *IPInfusionOcNOS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.Node
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
+
+	// mount config dir to support startup-config functionality
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"),
+	)
 
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
