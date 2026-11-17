@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnames "github.com/srl-labs/containerlab/names"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -31,6 +33,12 @@ func (c *CLab) deployWithLabRuntime(
 
 	if len(c.renderedTopology) == 0 {
 		return nil, fmt.Errorf("rendered topology is empty")
+	}
+
+	if c.Config.Topology != nil &&
+		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
+		return nil, fmt.Errorf("link impairments (netem) are not supported for lab runtime %q",
+			c.globalRuntimeName)
 	}
 
 	if options != nil && options.reconfigure {

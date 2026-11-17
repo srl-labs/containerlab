@@ -59,4 +59,6 @@ topology:
         - {}
 ```
 
-Impairments are supported on veth links. Containerlab sets them again when a node is started or restarted, since a node's interfaces lose their impairments when it is stopped, and when the lab is reconciled with a changed topology. `tools netem` can still change them while the lab runs, until containerlab sets the topology's impairments again. Removing an impairment from the topology doesn't remove it from a running lab; use `tools netem reset` for that.
+Impairments are supported on the node endpoints of veth links; other link types and `host` or `mgmt-net` endpoints reject them. Lab runtimes such as [clabernetes](clabernetes/runtime.md) don't apply them yet, so deploying a topology with impairments there fails.
+
+Containerlab sets them again when a node is started or restarted, since a node's interfaces lose their impairments when it is stopped, and when the lab is reconciled with a changed topology. `tools netem` can still change them while the lab runs, until containerlab sets the topology's impairments again. Removing an impairment from the topology doesn't remove it from a running lab; use `tools netem reset` for that.
