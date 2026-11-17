@@ -3,6 +3,7 @@ package links
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -29,6 +30,13 @@ func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	for _, e := range r.Endpoints {
 		lc.Endpoints = append(lc.Endpoints, fmt.Sprintf("%s:%s", e.Node, e.Iface))
 	}
+
+	if slices.ContainsFunc(r.Endpoints, func(e *EndpointRaw) bool { return e.Netem != nil }) {
+		for _, e := range r.Endpoints {
+			lc.Netem = append(lc.Netem, e.Netem)
+		}
+	}
+
 	return lc
 }
 
@@ -60,6 +68,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
+		if (epr.Node == "host" || epr.Node == "mgmt-net") && declaresNetem(epr) {
+			return nil, fmt.Errorf("netem is not supported on %s endpoints", epr.Node)
+		}
+
 		ep, err := epr.Resolve(params, l)
 		if err != nil {
 			return nil, err
@@ -95,6 +107,13 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	// populate vars
 	if err := mapBriefVarsToEndpoints(lb, link.Endpoints); err != nil {
 		return nil, err
+	}
+
+	if len(lb.Netem) > len(link.Endpoints) {
+		return nil, fmt.Errorf("number of netem entries exceeds the number of endpoints")
+	}
+	for i, netem := range lb.Netem {
+		link.Endpoints[i].Netem = netem
 	}
 
 	// set default link mtu if MTU is unset

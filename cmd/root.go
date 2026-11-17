@@ -218,6 +218,12 @@ var labRuntimeUnsupportedCommands = map[string]struct{}{
 	"tools": {},
 }
 
+// labRuntimeSupportedCommands are the commands of an unsupported group that lab runtimes do
+// support, by command path.
+var labRuntimeSupportedCommands = map[string]struct{}{ //nolint:gochecknoglobals
+	"tools.netem": {},
+}
+
 // graphTopologyFileFlags select graph modes that render from the topology file alone, without
 // running containers. Lab runtimes support only these modes.
 var graphTopologyFileFlags = []string{ //nolint:gochecknoglobals
@@ -253,6 +259,9 @@ func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) 
 	}
 
 	for cmd := cobraCmd; cmd != nil; cmd = cmd.Parent() {
+		if _, ok := labRuntimeSupportedCommands[getCommandPath(cmd)]; ok {
+			break
+		}
 		if _, ok := labRuntimeUnsupportedCommands[cmd.Name()]; ok {
 			return fmt.Errorf("the %q command is not supported with lab runtime %q",
 				cmd.Name(), runtimeName)

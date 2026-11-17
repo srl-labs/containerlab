@@ -529,6 +529,44 @@ type PacketCapturer interface {
 	Capture(ctx context.Context, req CaptureRequest, w io.Writer) error
 }
 
+// Impairment is the link impairment of the packets a lab link interface sends, with the values
+// tools netem set takes.
+type Impairment struct {
+	Delay      time.Duration
+	Jitter     time.Duration
+	Loss       float64
+	Rate       uint64
+	Corruption float64
+}
+
+// ImpairmentRequest sets the impairment of one lab link interface.
+type ImpairmentRequest struct {
+	// Name is the lab name.
+	Name      string
+	Namespace string
+	// Node is the node name as the topology spells it.
+	Node      string
+	Interface string
+	// Impairment is the impairment to set; nil resets the interface.
+	Impairment *Impairment
+	// Identity overrides the runtime's configured identity for this call.
+	Identity Identity
+}
+
+// NodeImpairments is the impairment of each impaired lab link interface of a node.
+type NodeImpairments struct {
+	// Node is the node name as the topology spells it.
+	Node        string
+	Impairments []clabtypes.ImpairmentData
+}
+
+// LinkImpairer sets and lists the link impairments of a lab's link interfaces, like tools netem
+// does for local labs. Empty NodeRequest.Nodes lists every node of the lab.
+type LinkImpairer interface {
+	SetImpairment(ctx context.Context, req ImpairmentRequest) error
+	Impairments(ctx context.Context, req NodeRequest) ([]NodeImpairments, error)
+}
+
 // InterfaceInspector lists the link interfaces of a lab's nodes with their current state, in the
 // shape of `inspect interfaces`.
 type InterfaceInspector interface {

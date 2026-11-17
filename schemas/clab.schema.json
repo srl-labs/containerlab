@@ -1183,6 +1183,22 @@
                 "mtu": {
                     "$ref": "#/definitions/mtu"
                 },
+                "netem": {
+                    "description": "Link impairment per endpoint in brief veth links, in the order of the endpoints. An empty entry leaves its endpoint unimpaired",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/definitions/netem"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
                 "ipv4": {
                     "description": "Assign IPv4 per endpoint in brief links. Accepts ordered list of IPv4 prefixes as strings",
                     "type": "array",
@@ -1545,12 +1561,51 @@
                 },
                 "vars": {
                     "$ref": "#/definitions/endpoint-vars"
+                },
+                "netem": {
+                    "$ref": "#/definitions/netem"
                 }
             },
             "required": [
                 "node",
                 "interface"
             ],
+            "additionalProperties": false
+        },
+        "netem": {
+            "type": "object",
+            "description": "Link impairment of the packets the endpoint's interface sends, like containerlab tools netem set",
+            "markdownDescription": "Link [impairment](https://containerlab.dev/manual/impairments/) of the packets the endpoint's interface sends, like `containerlab tools netem set`",
+            "properties": {
+                "delay": {
+                    "type": "string",
+                    "description": "Time to delay the packets, e.g. 100ms",
+                    "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+                },
+                "jitter": {
+                    "type": "string",
+                    "description": "Delay variation, e.g. 10ms. Needs a delay and can be at most 2.147483647s",
+                    "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+                },
+                "loss": {
+                    "type": "number",
+                    "description": "Random packet loss in percent, e.g. 0.1 for 0.1%",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "rate": {
+                    "type": "integer",
+                    "description": "Rate limit in kbit/s",
+                    "minimum": 0,
+                    "maximum": 18446744073709551
+                },
+                "corruption": {
+                    "type": "number",
+                    "description": "Random packet corruption in percent, e.g. 0.1 for 0.1%",
+                    "minimum": 0,
+                    "maximum": 100
+                }
+            },
             "additionalProperties": false
         },
         "endpoint-vars": {

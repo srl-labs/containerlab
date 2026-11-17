@@ -2,10 +2,13 @@ package core
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"gopkg.in/yaml.v2"
 )
 
 type recordingDeployLabRuntime struct {
@@ -105,6 +108,74 @@ func TestDeployReconfigureWithLabRuntimeCleansUp(t *testing.T) {
 	if !runtime.request.Cleanup || !runtime.deployed {
 		t.Fatalf("reconfigure destroy = %+v, deployed = %t; want a cleanup destroy",
 			runtime.request, runtime.deployed)
+	}
+}
+
+func TestDeployWithLabRuntimeRejectsLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	var link clablinks.LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+endpoints: ["r1:eth1", "r2:eth1"]
+netem: [{delay: 10ms}]
+`), &link); err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := &recordingDeployLabRuntime{}
+	c := &CLab{
+		Config: &Config{
+			Name:     "lab1",
+			Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+		},
+		LabRuntime:        runtime,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		renderedTopology:  []byte("name: lab1\n"),
+		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+	}
+
+	_, err := c.deployWithLabRuntime(context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "link impairments (netem) are not supported") {
+		t.Fatalf("deployWithLabRuntime() = %v; want the link impairments rejected", err)
+	}
+	if runtime.deployed {
+		t.Fatal("the lab was deployed")
+	}
+}
+
+type impairingDeployLabRuntime struct {
+	recordingDeployLabRuntime
+	clablabruntime.LinkImpairer
+}
+
+func TestDeployWithLinkImpairingLabRuntimeKeepsLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	var link clablinks.LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+endpoints: ["r1:eth1", "r2:eth1"]
+netem: [{delay: 10ms}]
+`), &link); err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := &impairingDeployLabRuntime{}
+	c := &CLab{
+		Config: &Config{
+			Name:     "lab1",
+			Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+		},
+		LabRuntime:        runtime,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		renderedTopology:  []byte("name: lab1\n"),
+		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+	}
+
+	if _, err := c.deployWithLabRuntime(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if !runtime.deployed {
+		t.Fatal("the lab was not deployed")
 	}
 }
 

@@ -517,6 +517,33 @@ func TestCheckNodeRunStateSchema(t *testing.T) {
 	}
 }
 
+func TestCheckLinkNetemSchema(t *testing.T) {
+	t.Parallel()
+
+	// published by a cluster running clabernetes with Link netem, trimmed to the checked schemas
+	if err := checkLinkNetemSchema(
+		readOpenAPIFixture(t, "openapi-c9s-v1alpha1-netem.json"),
+	); err != nil {
+		t.Fatalf("schema with Link netem rejected: %v", err)
+	}
+
+	err := checkLinkNetemSchema(readOpenAPIFixture(t, "openapi-c9s-v1alpha1-runstate.json"))
+	if !errors.Is(err, clablabruntime.ErrUnsupportedRuntimeVersion) {
+		t.Fatalf("schema without Link netem: error = %v, want ErrUnsupportedRuntimeVersion", err)
+	}
+	for _, want := range []string{"spec.endpointA.netem", "Link netem impairments"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q does not mention %q", err, want)
+		}
+	}
+
+	// the run state check keeps naming its own release
+	err = checkNodeRunStateSchema(readOpenAPIFixture(t, "openapi-c9s-v1alpha1-0.10.json"))
+	if err == nil || strings.Contains(err.Error(), "netem") {
+		t.Fatalf("run state error = %v", err)
+	}
+}
+
 func TestSupportCheckRunsOnceBeforeTheFirstClusterCall(t *testing.T) {
 	t.Parallel()
 

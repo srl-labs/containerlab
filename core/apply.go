@@ -171,6 +171,9 @@ func (c *CLab) apply(
 		if err := c.syncTailscaleProxy(ctx); err != nil {
 			return nil, err
 		}
+		if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+			return nil, err
+		}
 		if options.finalizeNoop {
 			if err := c.prepareApply(
 				ctx,
@@ -237,6 +240,10 @@ func (c *CLab) apply(
 	}
 
 	if err := c.restartApplyNodes(ctx, plan.linkRestartNodeSet); err != nil {
+		return nil, err
+	}
+
+	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 		return nil, err
 	}
 

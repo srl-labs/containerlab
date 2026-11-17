@@ -391,3 +391,69 @@ topology:
 			deployedText.Data, deployedBinary.BinaryData)
 	}
 }
+
+func TestManifestsCarryLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	definition := `name: lab1
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: alpine:3
+    r2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+      netem:
+        - {delay: 50ms, jitter: 5ms}
+    - type: veth
+      endpoints:
+        - node: r1
+          interface: eth2
+        - node: r2
+          interface: eth2
+          netem: {loss: 1}
+`
+	topologyDir := t.TempDir()
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, definition, 0o644)
+
+	manifests, err := newTestRuntime().Manifests(context.Background(),
+		clablabruntime.DeployRequest{
+			Name:               "lab1",
+			Namespace:          "lab-ns",
+			NoTopologyCR:       true,
+			TopologyFile:       topologyFile,
+			TopologyLabDir:     filepath.Join(topologyDir, "clab-lab1"),
+			TopologyDefinition: []byte(definition),
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	impairments := map[string]map[string]any{}
+	for _, manifest := range manifests {
+		if manifest.Kind != "Link" {
+			continue
+		}
+		for _, endpoint := range []string{"endpointA", "endpointB"} {
+			node, _, _ := unstructured.NestedString(manifest.Object, "spec", endpoint, "nodeName")
+			iface, _, _ := unstructured.NestedString(manifest.Object,
+				"spec", endpoint, "interfaceName")
+			if netem, found, _ := unstructured.NestedMap(manifest.Object,
+				"spec", endpoint, "netem"); found {
+				impairments[node+":"+iface] = netem
+			}
+		}
+	}
+
+	want := map[string]map[string]any{
+		"r1:eth1": {"delay": "50ms", "jitter": "5ms"},
+		"r2:eth2": {"loss": float64(1)},
+	}
+	if !apiequality.Semantic.DeepEqual(impairments, want) {
+		t.Fatalf("link impairments = %#v, want %#v", impairments, want)
+	}
+}

@@ -30,6 +30,8 @@ type supportCheck struct {
 	// fetch returns the OpenAPI v3 document of the c9s.run/v1alpha1 group; nil reads it from
 	// the API server.
 	fetch func(ctx context.Context, r *Runtime) ([]byte, error)
+	// check validates the document; nil checks the Node run state the runtime needs.
+	check func(raw []byte) error
 
 	mu   sync.Mutex
 	done bool
@@ -40,11 +42,18 @@ type supportCheck struct {
 // runtime needs.
 type unsupportedClabernetesError struct {
 	reason string
+	// required names the release the failed check needs; empty means requiredClabernetes.
+	required string
 }
 
 func (e *unsupportedClabernetesError) Error() string {
+	required := e.required
+	if required == "" {
+		required = requiredClabernetes
+	}
+
 	return fmt.Sprintf("the clabernetes release on this cluster is not supported: %s; "+
-		"the c9s runtime needs %s", e.reason, requiredClabernetes)
+		"the c9s runtime needs %s", e.reason, required)
 }
 
 func (e *unsupportedClabernetesError) Unwrap() error {
@@ -81,7 +90,12 @@ func (s *supportCheck) ensure(ctx context.Context, r *Runtime) error {
 		return fmt.Errorf("failed to check the clabernetes release (%s): %w", c9sOpenAPIPath, err)
 	}
 
-	if err := checkNodeRunStateSchema(doc); err != nil {
+	check := s.check
+	if check == nil {
+		check = checkNodeRunStateSchema
+	}
+
+	if err := check(doc); err != nil {
 		var unsupported *unsupportedClabernetesError
 		if !asUnsupported(err, &unsupported) {
 			return fmt.Errorf("failed to check the clabernetes release: %w", err)
@@ -179,6 +193,52 @@ func checkNodeRunStateSchema(raw []byte) error {
 	}
 
 	return nil
+}
+
+// requiredClabernetesNetem names the clabernetes release link impairments need. An older
+// release prunes the unknown netem field from a Link, so a lab would deploy without its
+// impairments instead of failing.
+const requiredClabernetesNetem = "clabernetes with Link netem impairments"
+
+// checkLinkNetemSchema reports whether the published Link schema has an endpoint netem. It
+// returns an *unsupportedClabernetesError when it does not.
+func checkLinkNetemSchema(raw []byte) error {
+	var doc openAPIDocument
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return fmt.Errorf("failed to parse the c9s.run/v1alpha1 OpenAPI document: %w", err)
+	}
+
+	unsupported := &unsupportedClabernetesError{
+		reason:   "links.c9s.run has no spec.endpointA.netem (link impairments)",
+		required: requiredClabernetesNetem,
+	}
+
+	for name := range doc.Components.Schemas {
+		schema := doc.Components.Schemas[name]
+		for _, gvk := range schema.GVK {
+			if gvk.Group != "c9s.run" || gvk.Version != "v1alpha1" || gvk.Kind != "Link" {
+				continue
+			}
+
+			property := schema
+			for _, field := range []string{"spec", "endpointA", "netem"} {
+				var ok bool
+				if property, ok = resolveOpenAPIProperty(doc, property, field); !ok {
+					return unsupported
+				}
+			}
+
+			return nil
+		}
+	}
+
+	return unsupported
+}
+
+// ensureLinkNetemSupport checks once per runtime instance that the cluster's clabernetes
+// release takes Link impairments. It is skipped when the clients were injected (tests).
+func (r *Runtime) ensureLinkNetemSupport(ctx context.Context) error {
+	return r.netemSupport.ensure(ctx, r)
 }
 
 // resolveOpenAPIProperty returns a property of a schema, following $ref and allOf.

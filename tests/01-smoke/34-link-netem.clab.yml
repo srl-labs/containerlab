@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: link-netem
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      exec:
+        - ip address add 10.0.0.1/24 dev eth1
+    l2:
+      kind: linux
+      image: alpine:3
+      exec:
+        - ip address add 10.0.0.2/24 dev eth1
+
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]
+      netem:
+        - delay: {{ or .delay "50ms" }}
+          jitter: 5ms
+          loss: 1
+        - rate: 10000
+    - type: veth
+      endpoints:
+        - node: l1
+          interface: eth2
+        - node: l2
+          interface: eth2
+          netem:
+            corruption: 2

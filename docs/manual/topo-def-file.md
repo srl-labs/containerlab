@@ -261,15 +261,19 @@ links:
         mac: <NodeA-Interface-Mac>          # optional
         ipv4: <NodeA-IPv4-Address>          # optional e.g. 192.168.0.1/24
         ipv6: <NodeA-IPv6-Address>          # optional e.g. 2001:db8::1/64
+        netem: <NodeA-Impairment>           # optional, see link impairments
       - node: <NodeB-Name>                  # mandatory
         interface: <NodeB-Interface-Name>   # mandatory
         mac: <NodeB-Interface-Mac>          # optional
         ipv4: <NodeB-IPv4-Address>          # optional
         ipv6: <NodeB-IPv6-Address>          # optional
+        netem: <NodeB-Impairment>           # optional
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
+
+The `netem` key sets [link impairments](impairments.md#impairments-in-the-topology) on the interface of an endpoint.
 
 ###### veth-stitch
 
