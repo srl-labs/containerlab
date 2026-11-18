@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"syscall"
@@ -807,7 +808,7 @@ func TestAddOwnershipAltNameAllowsUnsupportedAltName(t *testing.T) {
 		return syscall.EOPNOTSUPP
 	}
 
-	if err := addOwnershipAltName(link, ep); err != nil {
+	if err := addOwnershipAltName(context.Background(), link, ep); err != nil {
 		t.Fatalf("expected unsupported altname error to be ignored, got %v", err)
 	}
 

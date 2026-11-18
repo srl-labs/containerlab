@@ -147,11 +147,11 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 		case notfound:
 			// The netdev may already be gone while its bridge port is not, which is how OVS
 			// keeps a port whose name is not the topology interface name.
-			return removeBridgePort(e.GetNode(), e.GetIfaceName())
+			return removeBridgePort(ctx, e.GetNode(), e.GetIfaceName())
 		case err != nil:
 			return err
 		}
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"Removing interface %q from namespace %q",
 			e.GetIfaceName(),
 			e.GetNode().GetShortName(),
@@ -160,7 +160,7 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 			return err
 		}
 
-		return removeBridgePort(e.GetNode(), e.GetIfaceName())
+		return removeBridgePort(ctx, e.GetNode(), e.GetIfaceName())
 	})
 }
 
@@ -245,7 +245,7 @@ func ensureOwnershipAltName(ctx context.Context, e Endpoint) error {
 			return err
 		}
 
-		return addOwnershipAltName(link, e)
+		return addOwnershipAltName(ctx, link, e)
 	})
 }
 

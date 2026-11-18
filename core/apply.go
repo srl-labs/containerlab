@@ -189,7 +189,7 @@ func (c *CLab) apply(
 				return nil, err
 			}
 		} else {
-			c.writeState()
+			c.writeState(ctx)
 		}
 		return applyResultFromPlan(plan), nil
 	}
@@ -288,7 +288,7 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 
-	return c.verifyTailscaleProxy()
+	return c.verifyTailscaleProxy(ctx)
 }
 
 func (c *CLab) prepareApply(

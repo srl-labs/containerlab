@@ -19,7 +19,11 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 	networks := make(clabtypes.MgmtNetworks, 0, len(defined))
 	for _, m := range defined {
 		if c.skipMgmtNetwork(m) {
-			log.Debug("Skipping management network, no node uses it", "network", m.Network)
+			log.FromContext(ctx).Debug(
+				"Skipping management network, no node uses it",
+				"network",
+				m.Network,
+			)
 			continue
 		}
 		networks = append(networks, m)

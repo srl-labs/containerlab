@@ -4,6 +4,7 @@
 package nodes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,6 +56,7 @@ func ExportConfigOverSSH(addr, username, password, command string) (string, erro
 // WriteSavedConfig writes a saved configuration to <LabDir>/<dir>/<file> of the node, the
 // path its startup config is read from on the next deployment.
 func WriteSavedConfig(
+	ctx context.Context,
 	cfg *clabtypes.NodeConfig,
 	dir, file string,
 	content []byte,
@@ -71,7 +73,13 @@ func WriteSavedConfig(
 		)
 	}
 
-	log.Info("Saved configuration to path", "nodeName", cfg.ShortName, "path", configPath)
+	log.FromContext(ctx).Info(
+		"Saved configuration to path",
+		"nodeName",
+		cfg.ShortName,
+		"path",
+		configPath,
+	)
 
 	return &SaveConfigResult{ConfigPath: configPath}, nil
 }

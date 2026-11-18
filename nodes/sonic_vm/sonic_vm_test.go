@@ -1,6 +1,7 @@
 package sonic_vm
 
 import (
+	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -31,7 +32,7 @@ func TestInitSetsMacAddressForStartupConfig(t *testing.T) {
 
 	dst := filepath.Join(t.TempDir(), "config_db.json")
 	template := `{"DEVICE_METADATA":{"localhost":{"mac":"{{ .MacAddress }}"}}}`
-	if err := node.GenerateConfig(dst, template); err != nil {
+	if err := node.GenerateConfig(context.Background(), dst, template); err != nil {
 		t.Fatalf("GenerateConfig() failed: %v", err)
 	}
 

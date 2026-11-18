@@ -172,7 +172,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		}
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
-		cfg, err := n.buildStartupConfig(false) // full config, not partial
+		cfg, err := n.buildStartupConfig(context.Background(), false) // full config, not partial
 		require.NoError(t, err)
 		assert.Contains(t, cfg, "system name foo")
 	})
@@ -200,7 +200,10 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		n.WithRuntime(mockRt)
 		n.swVersion = &SrosVersion{"0", "0", "0"}
 
-		cfg, err := n.buildStartupConfig(true) // no full config; use default + partial
+		cfg, err := n.buildStartupConfig(
+			context.Background(),
+			true,
+		) // no full config; use default + partial
 		require.NoError(t, err)
 		assert.NotEmpty(t, cfg)
 		// Default config should include typical SR OS snippets (banner, system, etc.)
@@ -291,7 +294,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			n := newSrosComponentConfigTestNode(tc.nodeType, nil, nil)
 
-			cfg := n.generateComponentConfig()
+			cfg := n.generateComponentConfig(context.Background())
 
 			assert.Contains(
 				t,
@@ -324,7 +327,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			{MDA: MDAS{{Slot: 1, Type: "custom-mda"}}},
 		})
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(t, cfg, "/configure card 1 card-type iom-1 admin-state enable")
 		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type custom-mda admin-state enable")
@@ -351,7 +354,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			},
 		})
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(t, cfg, "/configure card 1 card-type xcm-1s admin-state enable")
 		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
@@ -375,7 +378,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			nil,
 		)
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(
 			t,
@@ -397,7 +400,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			[]*Component{{MDA: MDAS{{Slot: 1, Type: "from-component"}}}},
 		)
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(
 			t,
@@ -417,7 +420,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			nil,
 		)
 
-		assert.Empty(t, n.generateComponentConfig())
+		assert.Empty(t, n.generateComponentConfig(context.Background()))
 	})
 
 	t.Run("integrated_component_override_adds_mda_slot", func(t *testing.T) {
@@ -425,7 +428,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			{MDA: MDAS{{Slot: 3, Type: "m20-1g-csfp"}}},
 		})
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(
 			t,
@@ -439,14 +442,14 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
 		kindSpecificConfig.Of(n.Cfg).GenComponentConfig = false
 
-		assert.Empty(t, n.generateComponentConfig())
+		assert.Empty(t, n.generateComponentConfig(context.Background()))
 	})
 
 	t.Run("classic_config_returns_empty", func(t *testing.T) {
 		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
 		kindSpecificConfig.Of(n.Cfg).ConfigMode = ConfigModeClassic
 
-		assert.Empty(t, n.generateComponentConfig())
+		assert.Empty(t, n.generateComponentConfig(context.Background()))
 	})
 
 	t.Run("distributed_components_still_generate", func(t *testing.T) {
@@ -468,7 +471,7 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 			},
 		}
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 
 		assert.Contains(t, cfg, "/configure card 1 card-type xcm-2s admin-state enable")
 		assert.Contains(t, cfg, "/configure sfm 1 sfm-type sfm-2s admin-state enable")
@@ -500,7 +503,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, "cpiom-ixr-r6", n.Cfg.Env[envNokiaSrosCard])
 		assert.Equal(t, "m20-1g-csfp", n.Cfg.Env[envNokiaSrosMDA+"_3"])
 
-		assert.Empty(t, n.generateComponentConfig())
+		assert.Empty(t, n.generateComponentConfig(context.Background()))
 	})
 
 	t.Run("integrated_component_xiom_sets_env", func(t *testing.T) {
@@ -520,7 +523,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, "iom-s-3.0t", n.Cfg.Env[envNokiaSrosXIOM+"_X1"])
 		assert.Equal(t, "ms18-100gb-qsfp28", n.Cfg.Env[envNokiaSrosMDA+"_X1_1"])
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
 		assert.Contains(
 			t,
@@ -564,7 +567,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		assert.Equal(t, "container:n1-netns", cpmA.Config().NetworkMode)
 		assert.Equal(t, "container:n1-netns", cpmB.Config().NetworkMode)
 
-		cfgA := cpmA.generateComponentConfig()
+		cfgA := cpmA.generateComponentConfig(context.Background())
 		assert.Contains(t, cfgA, "/configure card 1 card-type iom-ixr-r6 admin-state enable")
 		assert.Contains(
 			t,
@@ -573,7 +576,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		)
 		assert.Contains(t, cfgA, "/configure card 1 mda 3 mda-type m20-1g-csfp admin-state enable")
 
-		cfgB := cpmB.generateComponentConfig()
+		cfgB := cpmB.generateComponentConfig(context.Background())
 		assert.Contains(t, cfgB, "/configure card 1 card-type iom-ixr-r6 admin-state enable")
 		assert.NotContains(t, cfgB, "m20-1g-csfp")
 	})
@@ -599,7 +602,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		require.NoError(t, n.Init(n.Cfg))
 		assert.Equal(t, "from-env", n.Cfg.Env[envNokiaSrosMDA+"_1"])
 
-		cfg := n.generateComponentConfig()
+		cfg := n.generateComponentConfig(context.Background())
 		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type from-env admin-state enable")
 		assert.NotContains(t, cfg, "from-component")
 	})
@@ -630,7 +633,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 		linecard := n.componentNodes[1].(*sros)
 		assert.Equal(t, "from-env", linecard.Config().Env[envNokiaSrosMDA+"_1"])
 
-		cfg := n.componentNodes[0].(*sros).generateComponentConfig()
+		cfg := n.componentNodes[0].(*sros).generateComponentConfig(context.Background())
 		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type from-env admin-state enable")
 		assert.NotContains(t, cfg, "from-component")
 	})
@@ -662,7 +665,7 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 
 		require.NoError(t, n.Init(n.Cfg))
 		assert.Equal(t, "cpm-ixr-e2n/imm4-sfp+4-sfp+", n.Cfg.Env[envNokiaSrosCard])
-		assert.Empty(t, n.generateComponentConfig())
+		assert.Empty(t, n.generateComponentConfig(context.Background()))
 	})
 
 	t.Run("integrated_rejects_invalid_slot", func(t *testing.T) {
@@ -1032,7 +1035,7 @@ func TestDistributedNetnsLookupAndMgmtIPs(t *testing.T) {
 			},
 		}}, nil)
 
-	ips, err := n.distNodeMgmtIPs()
+	ips, err := n.distNodeMgmtIPs(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "172.20.20.10", ips.IPv4)
 	assert.Equal(t, "3fff:172:20:20::10", ips.IPv6)

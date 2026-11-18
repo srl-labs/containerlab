@@ -72,7 +72,7 @@ var g *gographviz.Graph
 
 // GenerateDotGraph generates a graph of the lab topology.
 func (c *CLab) GenerateDotGraph(ctx context.Context) error {
-	log.Info("Generating lab graph...")
+	log.FromContext(ctx).Info("Generating lab graph...")
 
 	g = gographviz.NewGraph()
 	graphName := dotIdentifier(c.TopoPaths.TopologyFilenameWithoutExt())
@@ -128,7 +128,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
 		// links would panic, so they are not rendered as edges.
 		if len(eps) != 2 {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"skipping non point-to-point link with %d endpoint(s) in dot graph",
 				len(eps),
 			)
@@ -156,7 +156,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	if err := clabutils.CreateFile(dotfile, g.String()); err != nil {
 		return fmt.Errorf("failed to write dot graph file: %w", err)
 	}
-	log.Infof("Created %s", dotfile)
+	log.FromContext(ctx).Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
 
@@ -167,7 +167,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 			return err
 		}
 
-		log.Info("Created ", pngfile)
+		log.FromContext(ctx).Info("Created ", pngfile)
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func dotIdentifier(id string) string {
 func generatePngFromDot(ctx context.Context, dotfile, outfile string) (err error) {
 	_, err = exec.CommandContext(ctx, "dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
-		log.Errorf(
+		log.FromContext(ctx).Errorf(
 			"failed to generate png (%v) from dot file (%v), with error (%v)",
 			outfile,
 			dotfile,
@@ -583,7 +583,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 
 // forcePull always does a Docker Pull, even if the image is already present locally.
 func forcePull(ctx context.Context, client *dockerC.Client, imageName string) error {
-	log.Infof("Pulling image %q forcibly", imageName)
+	log.FromContext(ctx).Infof("Pulling image %q forcibly", imageName)
 
 	rc, err := client.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
@@ -604,13 +604,13 @@ func pullImageIfNotPresent(ctx context.Context, client *dockerC.Client, imageNam
 	_, _, err := client.ImageInspectWithRaw(ctx, imageName)
 	if err == nil {
 		// Found locally
-		log.Debugf("Image %q already present locally; skipping pull", imageName)
+		log.FromContext(ctx).Debugf("Image %q already present locally; skipping pull", imageName)
 
 		return nil
 	}
 
 	if dockerC.IsErrNotFound(err) {
-		log.Infof("Image %q not found locally; pulling...", imageName)
+		log.FromContext(ctx).Infof("Image %q not found locally; pulling...", imageName)
 
 		rc, pErr := client.ImagePull(ctx, imageName, image.PullOptions{})
 		if pErr != nil {
@@ -632,7 +632,7 @@ func pullImageIfNotPresent(ctx context.Context, client *dockerC.Client, imageNam
 func resizeDockerTTY(ctx context.Context, client *dockerC.Client, containerID string) {
 	w, h, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
-		log.Debugf("Unable to get local terminal size: %v", err)
+		log.FromContext(ctx).Debugf("Unable to get local terminal size: %v", err)
 
 		return
 	}
@@ -641,7 +641,7 @@ func resizeDockerTTY(ctx context.Context, client *dockerC.Client, containerID st
 		Width:  uint(w),
 		Height: uint(h),
 	}); resizeErr != nil {
-		log.Debugf("Failed to resize container TTY: %v", resizeErr)
+		log.FromContext(ctx).Debugf("Failed to resize container TTY: %v", resizeErr)
 	}
 }
 

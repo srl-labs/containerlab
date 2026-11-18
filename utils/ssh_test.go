@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -31,7 +32,7 @@ func TestParseSSHVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseSSHVersion(tt.in)
+			got := parseSSHVersion(context.Background(), tt.in)
 			if got != tt.want {
 				t.Errorf("parseSSHVersion() = %v, want %v", got, tt.want)
 			}
@@ -58,7 +59,7 @@ func Test_MarshalAndCatenateSSHPubKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keys, err := LoadSSHPubKeysFromFiles(tt.fields.keyFiles)
+			keys, err := LoadSSHPubKeysFromFiles(context.Background(), tt.fields.keyFiles)
 			if err != nil {
 				t.Errorf("failed to load keys: %v", err)
 			}

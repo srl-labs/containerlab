@@ -192,11 +192,11 @@ func (c *CLab) deploy( //nolint: funlen
 		return nil, err
 	}
 
-	log.Debugf("lab Conf: %+v", c.Config)
+	log.FromContext(ctx).Debugf("lab Conf: %+v", c.Config)
 
 	if options.reconfigure {
 		_ = c.destroy(ctx, uint(len(c.Nodes)), true)
-		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
+		log.FromContext(ctx).Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
@@ -217,7 +217,7 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 
 	// Apply snapshot restore configuration to nodes
-	if err := c.configureSnapshotRestore(options); err != nil {
+	if err := c.configureSnapshotRestore(ctx, options); err != nil {
 		return nil, err
 	}
 
@@ -248,7 +248,7 @@ func (c *CLab) deploy( //nolint: funlen
 	for _, ep := range eps {
 		err = ep.Deploy(ctx)
 		if err != nil {
-			log.Warnf("failed deploying endpoint %s", ep)
+			log.FromContext(ctx).Warnf("failed deploying endpoint %s", ep)
 		}
 	}
 
@@ -260,14 +260,14 @@ func (c *CLab) deploy( //nolint: funlen
 	for _, link := range c.Links {
 		linkPostDeployWorkers.Go(func() error {
 			if err := link.PostDeploy(ctx); err != nil {
-				log.Warnf("failed post-deploying link: %v", err)
+				log.FromContext(ctx).Warnf("failed post-deploying link: %v", err)
 			}
 			return nil
 		})
 	}
 	_ = linkPostDeployWorkers.Wait()
 
-	execCollection.Log()
+	execCollection.Log(ctx)
 
 	return c.finalize(ctx, options.exportTemplate, options.graph)
 }
@@ -327,7 +327,7 @@ func (c *CLab) allocateLabManagementIPs(
 	preferred := make(map[string]clabtypes.NodeAddresses)
 	state, err := c.LoadState()
 	if err != nil {
-		log.Warn("Ignoring preferred management addresses", "error", err)
+		log.FromContext(ctx).Warn("Ignoring preferred management addresses", "error", err)
 	}
 
 	if state != nil {
@@ -411,11 +411,11 @@ func (c *CLab) collectReservedManagementAddresses(
 }
 
 func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bool) error {
-	if err := c.loadKernelModules(); err != nil {
+	if err := c.loadKernelModules(ctx); err != nil {
 		return err
 	}
 
-	c.prepareLabDirectory(skipLabDirFileACLs)
+	c.prepareLabDirectory(ctx, skipLabDirFileACLs)
 
 	if err := c.createPlaceholderArtifacts(); err != nil {
 		return err
@@ -425,13 +425,13 @@ func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bo
 		return err
 	}
 
-	c.populateExtraHosts()
+	c.populateExtraHosts(ctx)
 
 	return nil
 }
 
-func (c *CLab) prepareLabDirectory(skipFileACLs bool) {
-	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
+func (c *CLab) prepareLabDirectory(ctx context.Context, skipFileACLs bool) {
+	log.FromContext(ctx).Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
 	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
 
 	if skipFileACLs {
@@ -439,7 +439,7 @@ func (c *CLab) prepareLabDirectory(skipFileACLs bool) {
 	}
 
 	if err := clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir()); err != nil {
-		log.Infof("unable to adjust Labdir file ACLs: %v", err)
+		log.FromContext(ctx).Infof("unable to adjust Labdir file ACLs: %v", err)
 	}
 }
 
@@ -481,24 +481,24 @@ func (c *CLab) setupNodeAuth(ctx context.Context) error {
 	var err error
 	c.SSHPubKeys, err = c.RetrieveSSHPubKeys(ctx)
 	if err != nil {
-		log.Warn(err)
+		log.FromContext(ctx).Warn(err)
 	}
 
 	return c.createAuthzKeysFile()
 }
 
-func (c *CLab) populateExtraHosts() {
+func (c *CLab) populateExtraHosts(ctx context.Context) {
 	extraHosts := make([]string, 0, len(c.Nodes))
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
 		n := c.Nodes[nodeName]
 		if n.Config().MgmtIPv4Address != "" {
-			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
+			log.FromContext(ctx).Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
 				n.Config().ShortName, n.Config().MgmtIPv4Address)
 			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
 		}
 		if n.Config().MgmtIPv6Address != "" {
-			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
+			log.FromContext(ctx).Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
 				n.Config().ShortName, n.Config().MgmtIPv6Address)
 			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
 		}
@@ -597,12 +597,12 @@ func (c *CLab) createNodes(
 	}
 
 	// make network namespace shared containers start in the right order
-	c.createNamespaceSharingDependency()
+	c.createNamespaceSharingDependency(ctx)
 
 	// Add possible additional dependencies here
 
 	// make sure that there are no unresolvable dependencies, which would deadlock.
-	err = c.dependencyManager.CheckAcyclicity()
+	err = c.dependencyManager.CheckAcyclicity(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -668,7 +668,7 @@ func (c *CLab) deployNodes(
 		go func() {
 			for nodeName := range input {
 				if _, start := startNodeSet[nodeName]; start {
-					log.Info("Starting stopped node", "node", nodeName)
+					log.FromContext(ctx).Info("Starting stopped node", "node", nodeName)
 					err := c.Nodes[nodeName].Start(ctx)
 					if err != nil {
 						err = fmt.Errorf("failed starting node %q: %w", nodeName, err)
@@ -676,7 +676,7 @@ func (c *CLab) deployNodes(
 					finish(nodeName, err)
 					continue
 				}
-				log.Info("Creating node", "node", nodeName)
+				log.FromContext(ctx).Info("Creating node", "node", nodeName)
 				finish(nodeName, c.deployNode(ctx, c.Nodes[nodeName]))
 			}
 		}()
@@ -802,7 +802,11 @@ func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {
 	}
 
 	if err := node.UpdateConfigWithRuntimeInfo(ctx); err != nil {
-		log.Errorf("failed to update node runtime information for node %s: %v", nodeName, err)
+		log.FromContext(ctx).Errorf(
+			"failed to update node runtime information for node %s: %v",
+			nodeName,
+			err,
+		)
 	}
 
 	return nil
@@ -823,7 +827,7 @@ func (c *CLab) deployLinks(
 		touchedNodes[nodeName] = struct{}{}
 	}
 	for _, link := range links {
-		log.Info("Creating link", "link", applyLinkName(link))
+		log.FromContext(ctx).Info("Creating link", "link", applyLinkName(link))
 
 		for _, ep := range clablinks.RuntimeEndpoints(link) {
 			if err := ep.Deploy(ctx); err != nil {
@@ -870,11 +874,11 @@ func (c *CLab) postDeployApplyNodes(
 		}
 
 		if err := node.RunExecFromConfig(ctx, execCollection); err != nil {
-			log.Errorf("failed to run exec commands for %s: %v", nodeName, err)
+			log.FromContext(ctx).Errorf("failed to run exec commands for %s: %v", nodeName, err)
 		}
 	}
 
-	execCollection.Log()
+	execCollection.Log(ctx)
 
 	return nil
 }
@@ -900,7 +904,7 @@ func (c *CLab) finalize(
 
 	if graph {
 		if err := c.GenerateDotGraph(ctx); err != nil {
-			log.Error(err)
+			log.FromContext(ctx).Error(err)
 		}
 	}
 
@@ -910,32 +914,32 @@ func (c *CLab) finalize(
 	}
 
 	if !c.mgmtNetworksSkipped() {
-		log.Info("Adding host entries", "path", "/etc/hosts")
+		log.FromContext(ctx).Info("Adding host entries", "path", "/etc/hosts")
 		if err := c.appendHostsFileEntries(ctx); err != nil {
-			log.Errorf("failed to create hosts file: %v", err)
+			log.FromContext(ctx).Errorf("failed to create hosts file: %v", err)
 		}
 	}
 
-	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
-	if err := c.addSSHConfig(); err != nil {
-		log.Errorf("failed to create ssh config file: %v", err)
+	log.FromContext(ctx).Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
+	if err := c.addSSHConfig(ctx); err != nil {
+		log.FromContext(ctx).Errorf("failed to create ssh config file: %v", err)
 	}
 
-	c.writeState()
+	c.writeState(ctx)
 
 	return containers, nil
 }
 
-func (c *CLab) writeState() {
-	if err := c.WriteState(); err != nil {
-		log.Warnf("failed to write state file: %v", err)
+func (c *CLab) writeState(ctx context.Context) {
+	if err := c.WriteState(ctx); err != nil {
+		log.FromContext(ctx).Warnf("failed to write state file: %v", err)
 	}
 }
 
 // configureSnapshotRestore configures nodes for snapshot restoration.
 // It resolves snapshot files for each node and adds the necessary volume mounts
 // and environment variables to restore from snapshots.
-func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
+func (c *CLab) configureSnapshotRestore(ctx context.Context, options *DeployOptions) error {
 	// Build restore map from per-node specifications
 	restoreMap := make(map[string]string)
 	for _, mapping := range options.restoreNodeSnapshots {
@@ -954,7 +958,12 @@ func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
 		nodeName := node.Config().ShortName
 
 		// Resolve snapshot path for this node
-		snapshotPath, shouldRestore := resolveNodeSnapshot(nodeName, restoreMap, options.restoreAll)
+		snapshotPath, shouldRestore := resolveNodeSnapshot(
+			ctx,
+			nodeName,
+			restoreMap,
+			options.restoreAll,
+		)
 
 		if shouldRestore {
 			// Validate snapshot file exists
@@ -978,7 +987,7 @@ func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
 			}
 			node.Config().Env["RESTORE_SNAPSHOT"] = "1"
 
-			log.Infof("Node %s will restore from: %s", nodeName, snapshotPath)
+			log.FromContext(ctx).Infof("Node %s will restore from: %s", nodeName, snapshotPath)
 			restoredCount++
 		} else {
 			freshCount++
@@ -987,7 +996,11 @@ func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
 
 	// Log deployment mode summary if any restores are configured
 	if restoredCount > 0 {
-		log.Infof("Deploying %d nodes from snapshots, %d nodes fresh", restoredCount, freshCount)
+		log.FromContext(ctx).Infof(
+			"Deploying %d nodes from snapshots, %d nodes fresh",
+			restoredCount,
+			freshCount,
+		)
 	}
 
 	return nil
@@ -996,6 +1009,7 @@ func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
 // resolveNodeSnapshot determines the snapshot file path for a given node.
 // Priority: per-node override > restore-all directory > none.
 func resolveNodeSnapshot(
+	ctx context.Context,
 	nodeName string,
 	restoreMap map[string]string,
 	restoreAll string,
@@ -1014,7 +1028,11 @@ func resolveNodeSnapshot(
 		}
 
 		// Not found - this is OK, just deploy normally
-		log.Debugf("No snapshot found for node %s in %s, deploying normally", nodeName, restoreAll)
+		log.FromContext(ctx).Debugf(
+			"No snapshot found for node %s in %s, deploying normally",
+			nodeName,
+			restoreAll,
+		)
 		return "", false
 	}
 

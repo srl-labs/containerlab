@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
@@ -78,12 +79,12 @@ func GenMac(oui string) (net.HardwareAddr, error) {
 
 // DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS
 // func.
-func DeleteNetnsSymlink(n string) error {
-	log.Debug("Deleting netns symlink: ", n)
+func DeleteNetnsSymlink(ctx context.Context, n string) error {
+	log.FromContext(ctx).Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)
 	err := os.Remove(sl)
 	if err != nil {
-		log.Debug("Failed to delete netns symlink by path:", sl)
+		log.FromContext(ctx).Debug("Failed to delete netns symlink by path:", sl)
 	}
 	return nil
 }

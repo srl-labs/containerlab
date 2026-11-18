@@ -1125,7 +1125,7 @@ func TestPlanApplyAddsNewRootNamespaceNode(t *testing.T) {
 				Config:    &Config{Topology: oldTopo},
 				TopoPaths: paths,
 			}
-			if err := stateLab.WriteState(); err != nil {
+			if err := stateLab.WriteState(context.Background()); err != nil {
 				t.Fatal(err)
 			}
 

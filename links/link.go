@@ -566,7 +566,11 @@ const (
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
 // and return a function that can run in the netns.Do() call for execution in a network namespace.
-func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
+func SetNameMACAndUpInterface(
+	ctx context.Context,
+	l netlink.Link,
+	endpt Endpoint,
+) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the link created with random name if its length is acceptable by linux
 		if IsValidInterfaceName(endpt.GetIfaceName()) {
@@ -606,7 +610,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		}
 
-		if err := addOwnershipAltName(l, endpt); err != nil {
+		if err := addOwnershipAltName(ctx, l, endpt); err != nil {
 			return err
 		}
 
@@ -672,7 +676,7 @@ func HasOwnershipAltNameFor(link netlink.Link, nodeName, ifaceName string) bool 
 	return false
 }
 
-func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
+func addOwnershipAltName(ctx context.Context, link netlink.Link, endpt Endpoint) error {
 	if hasOwnershipAltName(link) {
 		return nil
 	}
@@ -680,7 +684,7 @@ func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 	altName := ownershipAltName(endpt)
 	if err := linkAddAltName(link, altName); err != nil {
 		if isAltNameNotSupportedErr(err) {
-			log.Warnf(
+			log.FromContext(ctx).Warnf(
 				"kernel does not support interface altname capability; consider upgrading the kernel for full containerlab compatibility. Continuing without containerlab ownership marker %q for %s",
 				altName,
 				endpt,
@@ -724,7 +728,7 @@ func retryTransientNetlink(ctx context.Context, operationDesc string, fn func() 
 			return lastErr
 		}
 
-		log.Debugf("transient netlink error during %s (attempt %d/%d): %v",
+		log.FromContext(ctx).Debugf("transient netlink error during %s (attempt %d/%d): %v",
 			operationDesc, attempt+1, linkDeployRetries, lastErr)
 
 		select {

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	_ "embed"
 	"os"
 	"path"
@@ -46,10 +47,10 @@ func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 }
 
 // addSSHConfig adds the lab specific ssh config file.
-func (c *CLab) addSSHConfig() error {
+func (c *CLab) addSSHConfig(ctx context.Context) error {
 	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
 	if !clabutils.FileOrDirExists(sshConfigDir) {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"ssh config directory %s does not exist, skipping ssh config generation",
 			sshConfigDir,
 		)
@@ -66,7 +67,7 @@ func (c *CLab) addSSHConfig() error {
 	// to use the PubkeyAuthentication=unbound
 	// which is only available in OpenSSH 8.9+
 	// if we fail to parse the version the return value is going to be empty
-	sshVersion := clabutils.GetSSHVersion()
+	sshVersion := clabutils.GetSSHVersion(ctx)
 
 	// add the data for all nodes to the template input.
 	// Usernames come from NodeConfig.Credentials (topology + kind registry merge in createNodeCfg).

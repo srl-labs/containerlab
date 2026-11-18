@@ -89,7 +89,7 @@ func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 }
 
 func (n *linux) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
+	log.FromContext(ctx).Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 
 	n.disableEth0TxOffload(ctx)
 
@@ -127,9 +127,9 @@ func (n *linux) disableEth0TxOffload(ctx context.Context) {
 		return
 	}
 
-	err := n.ExecFunction(ctx, clabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
+	err := n.ExecFunction(ctx, clabutils.NSEthtoolTXOff(ctx, n.GetShortName(), "eth0"))
 	if err != nil {
-		log.Error(err)
+		log.FromContext(ctx).Error(err)
 	}
 }
 

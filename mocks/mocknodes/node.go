@@ -176,17 +176,17 @@ func (mr *MockNodeMockRecorder) Delete(arg0 any) *gomock.Call {
 }
 
 // DeleteNetnsSymlink mocks base method.
-func (m *MockNode) DeleteNetnsSymlink() error {
+func (m *MockNode) DeleteNetnsSymlink(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteNetnsSymlink")
+	ret := m.ctrl.Call(m, "DeleteNetnsSymlink", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteNetnsSymlink indicates an expected call of DeleteNetnsSymlink.
-func (mr *MockNodeMockRecorder) DeleteNetnsSymlink() *gomock.Call {
+func (mr *MockNodeMockRecorder) DeleteNetnsSymlink(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNetnsSymlink", reflect.TypeOf((*MockNode)(nil).DeleteNetnsSymlink))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNetnsSymlink", reflect.TypeOf((*MockNode)(nil).DeleteNetnsSymlink), ctx)
 }
 
 // Deploy mocks base method.
@@ -232,17 +232,17 @@ func (mr *MockNodeMockRecorder) ExecFunction(arg0, arg1 any) *gomock.Call {
 }
 
 // GenerateConfig mocks base method.
-func (m *MockNode) GenerateConfig(dst, templ string) error {
+func (m *MockNode) GenerateConfig(ctx context.Context, dst, templ string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateConfig", dst, templ)
+	ret := m.ctrl.Call(m, "GenerateConfig", ctx, dst, templ)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateConfig indicates an expected call of GenerateConfig.
-func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ any) *gomock.Call {
+func (mr *MockNodeMockRecorder) GenerateConfig(ctx, dst, templ any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), ctx, dst, templ)
 }
 
 // GetContainerStatus mocks base method.

@@ -140,13 +140,13 @@ func (n *fortigate) PreDeploy(ctx context.Context, params *clabnodes.PreDeployPa
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		log.FromContext(ctx).Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 		n.Cfg.Binds = append(
 			n.Cfg.Binds,
 			fmt.Sprint(path.Join(n.Cfg.LabDir, tftpDirName), ":/"+tftpDirName),
 		)
 	} else {
-		log.Debugf("No license configured")
+		log.FromContext(ctx).Debugf("No license configured")
 	}
 
 	return nil

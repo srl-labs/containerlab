@@ -183,7 +183,7 @@ topology:
 				t.Fatalf("failed checking CA directory %q: %v", caDir, err)
 			}
 
-			c.prepareLabDirectory(true)
+			c.prepareLabDirectory(context.Background(), true)
 			if err := c.createPlaceholderArtifacts(); err != nil {
 				t.Fatal(err)
 			}

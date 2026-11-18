@@ -59,8 +59,8 @@ func (*host) WithMgmtNet(*clabtypes.MgmtNet)                {}
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (h *host) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, error) {
-	image := clabutils.GetOSRelease()
+func (h *host) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
+	image := clabutils.GetOSRelease(ctx)
 
 	return []clabruntime.GenericContainer{
 		{
