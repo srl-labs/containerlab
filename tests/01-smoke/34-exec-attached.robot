@@ -46,6 +46,12 @@ Exec with stdin exits with the exit code of the command
     ${result} =    Run Exec    ${EMPTY}    -t ${topo} ${l1} -i --cmd "sh -c 'exit 7'"
     Should Be Equal As Integers    ${result.rc}    7
 
+Exec with stdin fails for a command that doesn't start
+    ${result} =    Run Exec    ${EMPTY}    -t ${topo} ${l1} -i --cmd no-such-command
+    Should Not Be Equal As Integers    ${result.rc}    0
+    Should Be Empty    ${result.stdout}
+    Should Contain    ${result.stderr}    failed to start
+
 Exec with a TTY runs the command in a terminal
     ${result} =    Run Exec    ${EMPTY}    -t ${topo} ${l1} --tty --cmd tty
     Should Be Equal As Integers    ${result.rc}    0

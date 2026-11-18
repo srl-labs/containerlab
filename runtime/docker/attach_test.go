@@ -23,6 +23,8 @@ import (
 // and exits with exitCode.
 type fakeExecAPI struct {
 	exitCode int
+	// notStarted makes the exec fail to start, like a missing executable
+	notStarted bool
 
 	mu      sync.Mutex
 	options container.ExecOptions
@@ -44,7 +46,11 @@ func (f *fakeExecAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.resized = append(f.resized, r.URL.Query().Get("h")+"x"+r.URL.Query().Get("w"))
 		f.mu.Unlock()
 	case strings.HasSuffix(r.URL.Path, "/exec/exec1/json"):
-		_ = json.NewEncoder(w).Encode(map[string]any{"ExitCode": f.exitCode})
+		pid := 42
+		if f.notStarted {
+			pid = 0
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"ExitCode": f.exitCode, "Pid": pid})
 	default:
 		http.NotFound(w, r)
 	}
@@ -63,6 +69,11 @@ func (f *fakeExecAPI) echo(w http.ResponseWriter) {
 		"Content-Type: application/vnd.docker.raw-stream\r\n" +
 		"Connection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
 	_ = rw.Flush()
+
+	if f.notStarted {
+		_, _ = conn.Write([]byte("OCI runtime exec failed: exec: \"nope\": executable file not found\r\n"))
+		return
+	}
 
 	input, _ := io.ReadAll(rw)
 
@@ -161,5 +172,22 @@ func TestAttachContainerWithATTY(t *testing.T) {
 	}
 	if len(resized) != 1 || resized[0] != "33x101" {
 		t.Fatalf("terminal resizes = %q, want [33x101]", resized)
+	}
+}
+
+func TestAttachContainerWithACommandThatDoesNotStart(t *testing.T) {
+	api := &fakeExecAPI{exitCode: 127, notStarted: true}
+	d := newFakeExecRuntime(t, api)
+
+	var stdout strings.Builder
+	err := d.AttachContainer(context.Background(), "clab-lab1-r1", []string{"nope"}, true,
+		clablabruntime.AttachStreams{Stdin: strings.NewReader(""), Stdout: &stdout})
+
+	var exitErr *clablabruntime.CommandExitError
+	if err == nil || errors.As(err, &exitErr) || !strings.Contains(err.Error(), "executable file not found") {
+		t.Fatalf("AttachContainer() error = %v, want why the command didn't start", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout %q, want nothing", stdout.String())
 	}
 }

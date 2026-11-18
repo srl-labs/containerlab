@@ -180,7 +180,12 @@ func execAttachedFn(
 		streams.Resize = terminalSizes(ctx)
 	}
 
-	err := c.ExecAttached(ctx, o.Exec.Commands[0], o.Exec.TTY, streams, listOptions...)
+	execCmd, err := clabexec.NewExecCmdFromString(o.Exec.Commands[0])
+	if err != nil {
+		return err
+	}
+
+	err = c.ExecAttached(ctx, execCmd.GetCmd(), o.Exec.TTY, streams, listOptions...)
 
 	var exitErr *clablabruntime.CommandExitError
 	if errors.As(err, &exitErr) {
@@ -188,6 +193,13 @@ func execAttachedFn(
 		// terminal queries of printing one, whose answers the stdin copy would swallow
 		restoreTerminal()
 		os.Exit(exitErr.Code)
+	}
+
+	if err != nil && o.Exec.Stdin && o.Exec.TTY {
+		// the stdin copy still reads the terminal, so the error is printed without those queries
+		restoreTerminal()
+		fmt.Fprintln(cobraCmd.ErrOrStderr(), "Error:", err)
+		os.Exit(1)
 	}
 
 	return err

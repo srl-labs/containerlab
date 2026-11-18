@@ -68,17 +68,17 @@ func (c *CLab) Exec(
 
 // ExecAttached runs a command in the container of the one node the list options select, with
 // stdin, an optional TTY and terminal resizing, like docker exec -it. A command exiting nonzero
-// returns a *labruntime.CommandExitError.
+// returns a *labruntime.CommandExitError, a command that can't start, such as a missing
+// executable, returns an error without writing any output.
 func (c *CLab) ExecAttached(
 	ctx context.Context,
-	cmd string,
+	cmd []string,
 	tty bool,
 	streams clablabruntime.AttachStreams,
 	listOptions ...ListOption,
 ) error {
-	execCmd, err := clabexec.NewExecCmdFromString(cmd)
-	if err != nil {
-		return err
+	if len(cmd) == 0 {
+		return errors.New("an attached exec needs a command")
 	}
 
 	if c.LabRuntime != nil {
@@ -101,7 +101,7 @@ func (c *CLab) ExecAttached(
 			Name:      labName,
 			Namespace: namespace,
 			NodeName:  nodeName,
-			Command:   execCmd.GetCmd(),
+			Command:   cmd,
 			TTY:       tty,
 		}, streams)
 	}
@@ -122,7 +122,7 @@ func (c *CLab) ExecAttached(
 			target.Runtime.GetName())
 	}
 
-	return attacher.AttachContainer(ctx, target.Names[0], execCmd.GetCmd(), tty, streams)
+	return attacher.AttachContainer(ctx, target.Names[0], cmd, tty, streams)
 }
 
 // attachedExecTarget returns the container of an attached exec, which needs the filter to match

@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	cerrdefs "github.com/containerd/errdefs"
@@ -2140,13 +2141,17 @@ func (d *DockerRuntime) AttachContainer(
 		stderr = io.Discard
 	}
 
+	start := &execStartCheck{inspect: func() (container.ExecInspect, error) {
+		return d.Client.ContainerExecInspect(ctx, execID.ID)
+	}}
+
 	outputDone := make(chan error, 1)
 	go func() {
 		var err error
 		if tty {
-			_, err = io.Copy(stdout, rsp.Reader)
+			_, err = io.Copy(start.writer(stdout), rsp.Reader)
 		} else {
-			_, err = stdcopy.StdCopy(stdout, stderr, rsp.Reader)
+			_, err = stdcopy.StdCopy(start.writer(stdout), start.writer(stderr), rsp.Reader)
 		}
 		outputDone <- err
 	}()
@@ -2164,11 +2169,75 @@ func (d *DockerRuntime) AttachContainer(
 	if err != nil {
 		return err
 	}
+	if failed, reason := start.result(); failed || notStarted(execInspect) {
+		return fmt.Errorf("command %q failed to start in container %q: %s",
+			strings.Join(cmd, " "), containerName, strings.TrimSpace(reason))
+	}
 	if execInspect.ExitCode != 0 {
 		return &clablabruntime.CommandExitError{Code: execInspect.ExitCode}
 	}
 
 	return nil
+}
+
+// notStarted tells whether an exec ended without its process ever running, such as a missing
+// executable.
+func notStarted(inspect container.ExecInspect) bool {
+	return !inspect.Running && inspect.Pid == 0 && inspect.ExitCode != 0
+}
+
+// execStartCheck holds back the first output of an exec until Docker reports whether the command
+// started. Docker writes why a command didn't start into the output, which becomes the error
+// instead.
+type execStartCheck struct {
+	inspect func() (container.ExecInspect, error)
+
+	mu      sync.Mutex
+	checked bool
+	failed  bool
+	reason  []byte
+}
+
+func (c *execStartCheck) writer(w io.Writer) io.Writer {
+	return execStartWriter{check: c, w: w}
+}
+
+func (c *execStartCheck) result() (bool, string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.failed, string(c.reason)
+}
+
+// hold tells whether output must be held back, checking the exec on the first output.
+func (c *execStartCheck) hold(p []byte) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.checked {
+		c.checked = true
+		if inspect, err := c.inspect(); err == nil && !inspect.Running && inspect.Pid == 0 {
+			c.failed = true
+		}
+	}
+	if c.failed {
+		c.reason = append(c.reason, p...)
+	}
+
+	return c.failed
+}
+
+type execStartWriter struct {
+	check *execStartCheck
+	w     io.Writer
+}
+
+func (w execStartWriter) Write(p []byte) (int, error) {
+	if w.check.hold(p) {
+		return len(p), nil
+	}
+
+	return w.w.Write(p)
 }
 
 // resizeExec applies terminal size changes to an exec session until resize is closed or ctx
