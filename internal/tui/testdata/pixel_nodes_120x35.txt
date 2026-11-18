@@ -28,7 +28,7 @@
    group    leaf
    id       3f9c2a71b5e9
 
-    Shell  s   Ssh  S   Connect  c   Logs  l
+    Shell  s   SSH  S   Connect  c   Logs  l
 
 
   ⏎ open   a actions   s shell   S ssh   c connect   l logs   d describe   x run   R restart   O stop   t map   ? help

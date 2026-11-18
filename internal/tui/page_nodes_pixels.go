@@ -221,6 +221,9 @@ func (p *nodesPage) nodeButtons(
 		}
 
 		label := title(a.name)
+		if a.name == "ssh" {
+			label = "SSH" // an acronym is written in capitals
+		}
 		// A cell of padding on each side, and two between the label and the key.
 		w := clabinternaltuiui.Width(label) + clabinternaltuiui.Width(a.key) + 4
 		if x+w > end {
