@@ -4,6 +4,7 @@
 package podman
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/exec"
+	"github.com/srl-labs/containerlab/labruntime"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -786,6 +788,59 @@ func (r *PodmanRuntime) WriteContainerLogs(
 			return nil
 		}
 	}
+}
+
+// AttachContainer runs an interactive command in a container through a Podman exec session.
+// The Podman bindings size the terminal from the process's own stdin, so streams.Resize is not
+// used.
+func (r *PodmanRuntime) AttachContainer(
+	ctx context.Context,
+	containerName string,
+	cmd []string,
+	tty bool,
+	streams labruntime.AttachStreams,
+) error {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return err
+	}
+
+	execCreateConf := handlers.ExecCreateConfig{}
+	execCreateConf.User = "root"
+	execCreateConf.Tty = tty
+	execCreateConf.AttachStdin = streams.Stdin != nil
+	execCreateConf.AttachStdout = streams.Stdout != nil
+	execCreateConf.AttachStderr = streams.Stderr != nil
+	execCreateConf.Cmd = cmd
+	execID, err := containers.ExecCreate(ctx, containerName, &execCreateConf)
+	if err != nil {
+		return fmt.Errorf("failed to create exec in container %q: %w", containerName, err)
+	}
+
+	execSAAOpts := new(containers.ExecStartAndAttachOptions)
+	if streams.Stdin != nil {
+		execSAAOpts.WithInputStream(*bufio.NewReader(streams.Stdin)).WithAttachInput(true)
+	}
+	if streams.Stdout != nil {
+		execSAAOpts.WithOutputStream(streams.Stdout).WithAttachOutput(true)
+	}
+	if streams.Stderr != nil {
+		execSAAOpts.WithErrorStream(streams.Stderr).WithAttachError(true)
+	}
+
+	if err := containers.ExecStartAndAttach(ctx, execID, execSAAOpts); err != nil {
+		return fmt.Errorf("failed to start/attach exec in container %q: %w", containerName, err)
+	}
+
+	inspectOut, err := containers.ExecInspect(ctx, execID, nil)
+	if err != nil {
+		return err
+	}
+	if inspectOut.ExitCode != 0 {
+		return &labruntime.CommandExitError{Code: inspectOut.ExitCode}
+	}
+
+	return nil
 }
 
 func (*PodmanRuntime) StreamEvents(

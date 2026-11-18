@@ -401,6 +401,8 @@ type SaveOptions struct {
 type ExecOptions struct {
 	Format   string
 	Commands []string
+	Stdin    bool
+	TTY      bool
 }
 
 type LogsOptions struct {

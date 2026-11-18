@@ -38,6 +38,7 @@ import (
 	"github.com/google/shlex"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabnftables "github.com/srl-labs/containerlab/runtime/docker/firewall/nftables"
@@ -2090,6 +2091,110 @@ func (d *DockerRuntime) WriteContainerLogs(
 	}
 
 	return nil
+}
+
+// AttachContainer runs an interactive command in a container through a Docker exec session,
+// like docker exec -it.
+func (d *DockerRuntime) AttachContainer(
+	ctx context.Context,
+	containerName string,
+	cmd []string,
+	tty bool,
+	streams clablabruntime.AttachStreams,
+) error {
+	execID, err := d.Client.ContainerExecCreate(ctx, containerName, container.ExecOptions{
+		User:         "0", // root
+		Tty:          tty,
+		AttachStdin:  streams.Stdin != nil,
+		AttachStdout: streams.Stdout != nil,
+		AttachStderr: streams.Stderr != nil,
+		Cmd:          cmd,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create exec in container %q: %w", containerName, err)
+	}
+
+	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, container.ExecStartOptions{Tty: tty})
+	if err != nil {
+		return fmt.Errorf("failed to attach to exec in container %q: %w", containerName, err)
+	}
+	defer rsp.Close()
+
+	if tty && streams.Resize != nil {
+		go d.resizeExec(ctx, execID.ID, streams.Resize)
+	}
+
+	if streams.Stdin != nil {
+		go func() {
+			_, _ = io.Copy(rsp.Conn, streams.Stdin)
+			// the end of the input closes the command's stdin
+			_ = rsp.CloseWrite()
+		}()
+	}
+
+	stdout, stderr := streams.Stdout, streams.Stderr
+	if stdout == nil {
+		stdout = io.Discard
+	}
+	if stderr == nil {
+		stderr = io.Discard
+	}
+
+	outputDone := make(chan error, 1)
+	go func() {
+		var err error
+		if tty {
+			_, err = io.Copy(stdout, rsp.Reader)
+		} else {
+			_, err = stdcopy.StdCopy(stdout, stderr, rsp.Reader)
+		}
+		outputDone <- err
+	}()
+
+	select {
+	case err := <-outputDone:
+		if err != nil {
+			return fmt.Errorf("failed to read exec output of container %q: %w", containerName, err)
+		}
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	execInspect, err := d.Client.ContainerExecInspect(ctx, execID.ID)
+	if err != nil {
+		return err
+	}
+	if execInspect.ExitCode != 0 {
+		return &clablabruntime.CommandExitError{Code: execInspect.ExitCode}
+	}
+
+	return nil
+}
+
+// resizeExec applies terminal size changes to an exec session until resize is closed or ctx
+// ends.
+func (d *DockerRuntime) resizeExec(
+	ctx context.Context,
+	execID string,
+	resize <-chan clablabruntime.TerminalSize,
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case size, ok := <-resize:
+			if !ok {
+				return
+			}
+			err := d.Client.ContainerExecResize(ctx, execID, container.ResizeOptions{
+				Height: uint(size.Height),
+				Width:  uint(size.Width),
+			})
+			if err != nil {
+				log.Debugf("failed to resize the terminal of exec %s: %v", execID, err)
+			}
+		}
+	}
 }
 
 // InspectImage returns detailed information about a container image.

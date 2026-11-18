@@ -14,6 +14,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -121,6 +122,21 @@ type ContainerLogWriter interface {
 		containerName string,
 		opts ContainerLogOptions,
 		stdout, stderr io.Writer,
+	) error
+}
+
+// ContainerAttacher is implemented by container runtimes that can run an interactive command in
+// a container, the way lab runtimes do with labruntime.NodeAttacher.
+type ContainerAttacher interface {
+	// AttachContainer runs cmd in the container with the given streams attached and a terminal
+	// when tty is set; stdout then carries the combined output. It returns a
+	// *labruntime.CommandExitError when the command exits with a nonzero code.
+	AttachContainer(
+		ctx context.Context,
+		containerName string,
+		cmd []string,
+		tty bool,
+		streams clablabruntime.AttachStreams,
 	) error
 }
 

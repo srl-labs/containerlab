@@ -365,6 +365,24 @@ Logs follow streams new device log lines
         Remove File If Exists    ${events-err}
     END
 
+Exec with stdin and a TTY reaches the device container
+    ${copy} =    Run Clab Command
+    ...    exec -t ${topo} --label ${client-label} --stdin --cmd "sh -c 'cat > /tmp/clab-stdin.yml'" < ${topo}
+    Should Be Equal As Integers    ${copy.rc}    0
+    ${read} =    Run Clab Command
+    ...    exec -t ${topo} --label ${client-label} --stdin --cmd "cat /tmp/clab-stdin.yml" < /dev/null
+    Should Be Equal As Integers    ${read.rc}    0
+    ${want} =    Get File    ${topo}
+    Should Be Equal    ${read.stdout}    ${{ $want.rstrip("\n") }}
+
+    ${exit} =    Run Clab Command
+    ...    exec -t ${topo} --label ${client-label} --stdin --cmd "sh -c 'exit 7'" < /dev/null
+    Should Be Equal As Integers    ${exit.rc}    7
+
+    ${tty} =    Run Clab Command    exec -t ${topo} --label ${client-label} --tty --cmd tty < /dev/null
+    Should Be Equal As Integers    ${tty.rc}    0
+    Should Start With    ${tty.stdout}    /dev/pts/
+
 Library attaches, port-forwards, streams logs and samples stats as an impersonated user
     ${rbac} =    Process.Run Process
     ...    kubectl -n ${lab-namespace} create role c9s-lab-reader --verb\=get,list,watch --resource\=topologies.c9s.run,nodes.c9s.run,links.c9s.run,nodeprofiles.c9s.run,pods.metrics.k8s.io && kubectl -n ${lab-namespace} create rolebinding clab-alice-reader --role\=c9s-lab-reader --user\=clab:alice && kubectl -n ${lab-namespace} create rolebinding clab-alice-admin --clusterrole\=admin --user\=clab:alice
