@@ -68,8 +68,14 @@ func (c *CLab) Exec(
 
 // ExecAttached runs a command in the container of the one node the list options select, with
 // stdin, an optional TTY and terminal resizing, like docker exec -it. A command exiting nonzero
-// returns a *labruntime.CommandExitError, a command that can't start, such as a missing
-// executable, returns an error without writing any output.
+// returns a *labruntime.CommandExitError. With Docker and clabernetes, a command that can't
+// start, such as a missing executable, returns an error without writing any output; Podman
+// reports its exit code. Podman also sizes the terminal from containerlab's own terminal and
+// ignores streams.Resize, and clabernetes applies the first size just after the command started.
+//
+// Stdin is read until it ends, which can outlast the call, so callers end it (for example by
+// closing a pipe) once the session is over. With Docker, the end of stdin or the detach keys
+// (ctrl-p, ctrl-q) end a terminal session without ending the command, which returns an error.
 func (c *CLab) ExecAttached(
 	ctx context.Context,
 	cmd []string,

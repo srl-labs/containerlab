@@ -47,6 +47,7 @@ Exec with stdin exits with the exit code of the command
     Should Be Equal As Integers    ${result.rc}    7
 
 Exec with stdin fails for a command that doesn't start
+    Skip If    '${runtime}' == 'podman'    podman reports the exit code of a command that doesn't start
     ${result} =    Run Exec    ${EMPTY}    -t ${topo} ${l1} -i --cmd no-such-command
     Should Not Be Equal As Integers    ${result.rc}    0
     Should Be Empty    ${result.stdout}
@@ -61,6 +62,15 @@ Exec with stdin and a TTY needs a terminal
     ${result} =    Run Exec    ${EMPTY}    -t ${topo} ${l1} -i --tty --cmd sh
     Should Not Be Equal As Integers    ${result.rc}    0
     Should Contain    ${result.stderr}    not a TTY
+
+Exec with stdin and a TTY from a terminal exits with the exit code of the command
+    ${result} =    Run Exec In A Terminal    -i --tty --cmd "sh -c 'exit 5'"
+    Should Be Equal As Integers    ${result.rc}    5
+
+Exec with stdin and a TTY starts the command with the size of the terminal
+    ${result} =    Run Exec In A Terminal    -i --tty --cmd "stty size"    stty rows 30 cols 100;
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Contain    ${result.stdout}    30 100
 
 Exec with stdin needs a filter matching one node
     ${result} =    Run Exec    ${EMPTY}    -t ${topo} -i --cmd true
@@ -81,4 +91,14 @@ Run Exec
     ${result} =    Process.Run Process    ${cmd}    shell=True
     Log    stdout:${\n}${result.stdout}
     Log    stderr:${\n}${result.stderr}
+    RETURN    ${result}
+
+Run Exec In A Terminal
+    [Documentation]    Runs exec on l1 with the given args in a terminal script creates, after
+    ...    the setup command.
+    [Arguments]    ${args}    ${setup}=${EMPTY}
+    ${result} =    Process.Run Process
+    ...    script    -qec    ${setup} ${CLAB_BIN} --runtime ${runtime} exec -t ${topo} ${l1} ${args}
+    ...    /dev/null    stdin=/dev/null    timeout=60s
+    Log    output:${\n}${result.stdout}
     RETURN    ${result}

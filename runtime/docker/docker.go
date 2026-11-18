@@ -37,6 +37,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
+	dockerterm "github.com/moby/term"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
@@ -2103,12 +2104,31 @@ func (d *DockerRuntime) AttachContainer(
 	tty bool,
 	streams clablabruntime.AttachStreams,
 ) error {
+	// resizing ends with the session
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// the terminal starts with the size that was already sent, for commands that read it once
+	var consoleSize *[2]uint
+	if tty && streams.Resize != nil {
+		select {
+		case size, ok := <-streams.Resize:
+			if ok {
+				consoleSize = &[2]uint{uint(size.Height), uint(size.Width)}
+			}
+		default:
+		}
+	}
+
+	// the output is always attached, without it Docker ends the session before the command
+	// exits
 	execID, err := d.Client.ContainerExecCreate(ctx, containerName, container.ExecOptions{
 		User:         "0", // root
 		Tty:          tty,
+		ConsoleSize:  consoleSize,
 		AttachStdin:  streams.Stdin != nil,
-		AttachStdout: streams.Stdout != nil,
-		AttachStderr: streams.Stderr != nil,
+		AttachStdout: true,
+		AttachStderr: true,
 		Cmd:          cmd,
 	})
 	if err != nil {
@@ -2126,8 +2146,15 @@ func (d *DockerRuntime) AttachContainer(
 	}
 
 	if streams.Stdin != nil {
+		stdin := streams.Stdin
+		if tty {
+			// the detach keys end the input here, like docker exec does, so that Docker ends the
+			// session the same way as when stdin ends
+			stdin = dockerterm.NewEscapeProxy(stdin, detachKeys)
+		}
+
 		go func() {
-			_, _ = io.Copy(rsp.Conn, streams.Stdin)
+			_, _ = io.Copy(rsp.Conn, stdin)
 			// the end of the input closes the command's stdin
 			_ = rsp.CloseWrite()
 		}()
@@ -2162,6 +2189,9 @@ func (d *DockerRuntime) AttachContainer(
 			return fmt.Errorf("failed to read exec output of container %q: %w", containerName, err)
 		}
 	case <-ctx.Done():
+		// no output is written after the call returns
+		start.end()
+
 		return ctx.Err()
 	}
 
@@ -2170,8 +2200,19 @@ func (d *DockerRuntime) AttachContainer(
 		return err
 	}
 	if failed, reason := start.result(); failed || notStarted(execInspect) {
-		return fmt.Errorf("command %q failed to start in container %q: %s",
-			strings.Join(cmd, " "), containerName, strings.TrimSpace(reason))
+		err := fmt.Errorf("command %q failed to start in container %q",
+			strings.Join(cmd, " "), containerName)
+		if reason := strings.TrimSpace(reason); reason != "" {
+			err = fmt.Errorf("%w: %s", err, reason)
+		}
+
+		return err
+	}
+	if execInspect.Running {
+		// Docker ends the output of a terminal session when its stdin ends or on the detach
+		// keys, without ending the command
+		return fmt.Errorf("detached from command %q in container %q, which is still running",
+			strings.Join(cmd, " "), containerName)
 	}
 	if execInspect.ExitCode != 0 {
 		return &clablabruntime.CommandExitError{Code: execInspect.ExitCode}
@@ -2179,6 +2220,9 @@ func (d *DockerRuntime) AttachContainer(
 
 	return nil
 }
+
+// detachKeys are Docker's default detach keys, ctrl-p ctrl-q.
+var detachKeys = []byte{0x10, 0x11} //nolint: gochecknoglobals
 
 // notStarted tells whether an exec ended without its process ever running, such as a missing
 // executable.
@@ -2188,7 +2232,7 @@ func notStarted(inspect container.ExecInspect) bool {
 
 // execStartCheck holds back the first output of an exec until Docker reports whether the command
 // started. Docker writes why a command didn't start into the output, which becomes the error
-// instead.
+// instead. Output after the session ended is dropped.
 type execStartCheck struct {
 	inspect func() (container.ExecInspect, error)
 
@@ -2196,6 +2240,14 @@ type execStartCheck struct {
 	checked bool
 	failed  bool
 	reason  []byte
+	ended   bool
+}
+
+func (c *execStartCheck) end() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.ended = true
 }
 
 func (c *execStartCheck) writer(w io.Writer) io.Writer {
@@ -2209,11 +2261,14 @@ func (c *execStartCheck) result() (bool, string) {
 	return c.failed, string(c.reason)
 }
 
-// hold tells whether output must be held back, checking the exec on the first output.
+// hold tells whether output must be held back or dropped, checking the exec on the first output.
 func (c *execStartCheck) hold(p []byte) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.ended {
+		return true
+	}
 	if !c.checked {
 		c.checked = true
 		if inspect, err := c.inspect(); err == nil && !inspect.Running && inspect.Pid == 0 {
@@ -2252,7 +2307,7 @@ func (d *DockerRuntime) resizeExec(
 		case <-ctx.Done():
 			return
 		case size, ok := <-resize:
-			if !ok {
+			if !ok || ctx.Err() != nil {
 				return
 			}
 			err := d.Client.ContainerExecResize(ctx, execID, container.ResizeOptions{

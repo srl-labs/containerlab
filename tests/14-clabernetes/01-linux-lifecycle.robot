@@ -383,6 +383,16 @@ Exec with stdin and a TTY reaches the device container
     Should Be Equal As Integers    ${tty.rc}    0
     Should Start With    ${tty.stdout}    /dev/pts/
 
+    # an interactive session needs a terminal, which script creates; Kubernetes applies its size
+    # after the command started
+    ${session} =    Process.Run Process
+    ...    script    -qec
+    ...    stty rows 30 cols 100; ${CLAB_BIN} --runtime ${runtime} exec -t ${topo} --label ${client-label} -i --tty --cmd "sh -c 'until stty size | grep -q 100; do sleep 0.1; done; stty size; exit 5'"
+    ...    /dev/null    stdin=/dev/null    timeout=60s
+    Log    ${session.stdout}
+    Should Be Equal As Integers    ${session.rc}    5
+    Should Contain    ${session.stdout}    30 100
+
 Library attaches, port-forwards, streams logs and samples stats as an impersonated user
     ${rbac} =    Process.Run Process
     ...    kubectl -n ${lab-namespace} create role c9s-lab-reader --verb\=get,list,watch --resource\=topologies.c9s.run,nodes.c9s.run,links.c9s.run,nodeprofiles.c9s.run,pods.metrics.k8s.io && kubectl -n ${lab-namespace} create rolebinding clab-alice-reader --role\=c9s-lab-reader --user\=clab:alice && kubectl -n ${lab-namespace} create rolebinding clab-alice-admin --clusterrole\=admin --user\=clab:alice

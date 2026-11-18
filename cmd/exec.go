@@ -175,6 +175,9 @@ func execAttachedFn(
 			}
 			restoreTerminal = func() { _ = term.Restore(stdinFd, oldState) }
 			defer restoreTerminal()
+
+			restoreOnSignalExit.Store(&restoreTerminal)
+			defer restoreOnSignalExit.Store(nil)
 		}
 
 		streams.Resize = terminalSizes(ctx)
@@ -195,7 +198,7 @@ func execAttachedFn(
 		os.Exit(exitErr.Code)
 	}
 
-	if err != nil && o.Exec.Stdin && o.Exec.TTY {
+	if err != nil && o.Exec.Stdin && term.IsTerminal(int(os.Stdin.Fd())) {
 		// the stdin copy still reads the terminal, so the error is printed without those queries
 		restoreTerminal()
 		fmt.Fprintln(cobraCmd.ErrOrStderr(), "Error:", err)

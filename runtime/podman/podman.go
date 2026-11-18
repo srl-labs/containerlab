@@ -6,6 +6,7 @@ package podman
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/netip"
@@ -28,6 +29,7 @@ import (
 	"go.podman.io/podman/v6/pkg/bindings/containers"
 	"go.podman.io/podman/v6/pkg/bindings/images"
 	"go.podman.io/podman/v6/pkg/bindings/network"
+	"golang.org/x/term"
 )
 
 const (
@@ -791,8 +793,8 @@ func (r *PodmanRuntime) WriteContainerLogs(
 }
 
 // AttachContainer runs an interactive command in a container through a Podman exec session.
-// The Podman bindings size the terminal from the process's own stdin, so streams.Resize is not
-// used.
+// The Podman bindings run a terminal session from the process's own terminal, which they set
+// to raw mode and take the size from, so streams.Resize is not used.
 func (r *PodmanRuntime) AttachContainer(
 	ctx context.Context,
 	containerName string,
@@ -800,6 +802,11 @@ func (r *PodmanRuntime) AttachContainer(
 	tty bool,
 	streams labruntime.AttachStreams,
 ) error {
+	if tty && term.IsTerminal(int(os.Stdin.Fd())) && streams.Stdin != os.Stdin {
+		return errors.New("podman connects a terminal session to containerlab's terminal, " +
+			"so the session needs containerlab's stdin")
+	}
+
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
