@@ -616,6 +616,14 @@ If any selected command returns nonzero, or pod exec itself fails, the outer
 were received are still printed, so automation can use both the output and the
 process exit status.
 
+With `--stdin` and `--tty`, `exec` attaches containerlab's stdin and a terminal
+to the command in the device container of one node, like `kubectl exec -it`,
+and exits with the command's exit code:
+
+```bash
+containerlab --runtime c9s exec -t topo.clab.yml --label clab-node-name=srl1 --stdin --tty --cmd bash
+```
+
 ## Logs
 
 `logs` shows the log of a node's primary device container, the same container

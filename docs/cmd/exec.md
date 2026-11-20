@@ -40,6 +40,18 @@ The `--format | -f` flag allows selecting between plain text format output or a 
 
 Defaults to `plain` output format.
 
+### stdin
+
+With the `--stdin | -i` flag the command gets containerlab's stdin, like `docker exec -i`, for example to copy a file into a node. The output of the command is written to stdout and stderr as it comes, and containerlab exits with the command's exit code. A command that can't start, such as a missing executable, is reported as an error with the Docker and clabernetes runtimes, and containerlab exits with 1.
+
+The filter must then match exactly one node, and `--cmd` can be given once. `--format` is not supported with `--stdin` and `--tty`.
+
+### tty
+
+The `--tty` flag runs the command in a terminal, like `docker exec -t`; its output goes to stdout. Together with `--stdin` it opens an interactive session, for which containerlab's stdin must be a terminal. The same rules as for `--stdin` apply.
+
+With Docker, the detach keys `ctrl-p`, `ctrl-q` leave an interactive session like with `docker exec`; the command keeps running and containerlab exits with an error. With Podman, `--tty` from a terminal needs `--stdin`, as Podman connects the session to containerlab's terminal.
+
 ### label
 
 Using `--label` it is possible to filter the nodes to execute the command on using labels attached to the nodes. The label is provided as a string in the form of `key=value`. The `key` is the label name, and the `value` is the label value.
@@ -93,6 +105,19 @@ INFO[0000] Executed command "ip -4 addr show dummy-mgmt0" on the node "srl". std
 2: dummy-mgmt0: <BROADCAST,NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1000
     inet 172.20.20.3/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever 
+```
+
+### Open an interactive shell on a node
+
+```bash
+containerlab exec -t srl02.clab.yml --label clab-node-name=srl1 --stdin --tty --cmd bash
+```
+
+### Copy a file into a node
+
+```bash
+containerlab exec -t srl02.clab.yml --label clab-node-name=srl1 --stdin \
+  --cmd "sh -c 'cat > /tmp/config.sh'" < config.sh
 ```
 
 ### Execute a CLI Command

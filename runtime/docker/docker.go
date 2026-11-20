@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	cerrdefs "github.com/containerd/errdefs"
@@ -36,8 +37,10 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
+	dockerterm "github.com/moby/term"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabnftables "github.com/srl-labs/containerlab/runtime/docker/firewall/nftables"
@@ -2090,6 +2093,232 @@ func (d *DockerRuntime) WriteContainerLogs(
 	}
 
 	return nil
+}
+
+// AttachContainer runs an interactive command in a container through a Docker exec session,
+// like docker exec -it.
+func (d *DockerRuntime) AttachContainer(
+	ctx context.Context,
+	containerName string,
+	cmd []string,
+	tty bool,
+	streams clablabruntime.AttachStreams,
+) error {
+	// resizing ends with the session
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// the terminal starts with the size that was already sent, for commands that read it once
+	var consoleSize *[2]uint
+	if tty && streams.Resize != nil {
+		select {
+		case size, ok := <-streams.Resize:
+			if ok {
+				consoleSize = &[2]uint{uint(size.Height), uint(size.Width)}
+			}
+		default:
+		}
+	}
+
+	// the output is always attached, without it Docker ends the session before the command
+	// exits
+	execID, err := d.Client.ContainerExecCreate(ctx, containerName, container.ExecOptions{
+		User:         "0", // root
+		Tty:          tty,
+		ConsoleSize:  consoleSize,
+		AttachStdin:  streams.Stdin != nil,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create exec in container %q: %w", containerName, err)
+	}
+
+	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, container.ExecStartOptions{Tty: tty})
+	if err != nil {
+		return fmt.Errorf("failed to attach to exec in container %q: %w", containerName, err)
+	}
+	defer rsp.Close()
+
+	if tty && streams.Resize != nil {
+		go d.resizeExec(ctx, execID.ID, streams.Resize)
+	}
+
+	if streams.Stdin != nil {
+		stdin := streams.Stdin
+		if tty {
+			// the detach keys end the input here, like docker exec does, so that Docker ends the
+			// session the same way as when stdin ends
+			stdin = dockerterm.NewEscapeProxy(stdin, detachKeys)
+		}
+
+		go func() {
+			_, _ = io.Copy(rsp.Conn, stdin)
+			// the end of the input closes the command's stdin
+			_ = rsp.CloseWrite()
+		}()
+	}
+
+	stdout, stderr := streams.Stdout, streams.Stderr
+	if stdout == nil {
+		stdout = io.Discard
+	}
+	if stderr == nil {
+		stderr = io.Discard
+	}
+
+	start := &execStartCheck{inspect: func() (container.ExecInspect, error) {
+		return d.Client.ContainerExecInspect(ctx, execID.ID)
+	}}
+
+	outputDone := make(chan error, 1)
+	go func() {
+		var err error
+		if tty {
+			_, err = io.Copy(start.writer(stdout), rsp.Reader)
+		} else {
+			_, err = stdcopy.StdCopy(start.writer(stdout), start.writer(stderr), rsp.Reader)
+		}
+		outputDone <- err
+	}()
+
+	select {
+	case err := <-outputDone:
+		if err != nil {
+			return fmt.Errorf("failed to read exec output of container %q: %w", containerName, err)
+		}
+	case <-ctx.Done():
+		// no output is written after the call returns
+		start.end()
+
+		return ctx.Err()
+	}
+
+	execInspect, err := d.Client.ContainerExecInspect(ctx, execID.ID)
+	if err != nil {
+		return err
+	}
+	if failed, reason := start.result(); failed || notStarted(execInspect) {
+		err := fmt.Errorf("command %q failed to start in container %q",
+			strings.Join(cmd, " "), containerName)
+		if reason := strings.TrimSpace(reason); reason != "" {
+			err = fmt.Errorf("%w: %s", err, reason)
+		}
+
+		return err
+	}
+	if execInspect.Running {
+		// Docker ends the output of a terminal session when its stdin ends or on the detach
+		// keys, without ending the command
+		return fmt.Errorf("detached from command %q in container %q, which is still running",
+			strings.Join(cmd, " "), containerName)
+	}
+	if execInspect.ExitCode != 0 {
+		return &clablabruntime.CommandExitError{Code: execInspect.ExitCode}
+	}
+
+	return nil
+}
+
+// detachKeys are Docker's default detach keys, ctrl-p ctrl-q.
+var detachKeys = []byte{0x10, 0x11} //nolint: gochecknoglobals
+
+// notStarted tells whether an exec ended without its process ever running, such as a missing
+// executable.
+func notStarted(inspect container.ExecInspect) bool {
+	return !inspect.Running && inspect.Pid == 0 && inspect.ExitCode != 0
+}
+
+// execStartCheck holds back the first output of an exec until Docker reports whether the command
+// started. Docker writes why a command didn't start into the output, which becomes the error
+// instead. Output after the session ended is dropped.
+type execStartCheck struct {
+	inspect func() (container.ExecInspect, error)
+
+	mu      sync.Mutex
+	checked bool
+	failed  bool
+	reason  []byte
+	ended   bool
+}
+
+func (c *execStartCheck) end() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.ended = true
+}
+
+func (c *execStartCheck) writer(w io.Writer) io.Writer {
+	return execStartWriter{check: c, w: w}
+}
+
+func (c *execStartCheck) result() (bool, string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.failed, string(c.reason)
+}
+
+// hold tells whether output must be held back or dropped, checking the exec on the first output.
+func (c *execStartCheck) hold(p []byte) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.ended {
+		return true
+	}
+	if !c.checked {
+		c.checked = true
+		if inspect, err := c.inspect(); err == nil && !inspect.Running && inspect.Pid == 0 {
+			c.failed = true
+		}
+	}
+	if c.failed {
+		c.reason = append(c.reason, p...)
+	}
+
+	return c.failed
+}
+
+type execStartWriter struct {
+	check *execStartCheck
+	w     io.Writer
+}
+
+func (w execStartWriter) Write(p []byte) (int, error) {
+	if w.check.hold(p) {
+		return len(p), nil
+	}
+
+	return w.w.Write(p)
+}
+
+// resizeExec applies terminal size changes to an exec session until resize is closed or ctx
+// ends.
+func (d *DockerRuntime) resizeExec(
+	ctx context.Context,
+	execID string,
+	resize <-chan clablabruntime.TerminalSize,
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case size, ok := <-resize:
+			if !ok || ctx.Err() != nil {
+				return
+			}
+			err := d.Client.ContainerExecResize(ctx, execID, container.ResizeOptions{
+				Height: uint(size.Height),
+				Width:  uint(size.Width),
+			})
+			if err != nil {
+				log.Debugf("failed to resize the terminal of exec %s: %v", execID, err)
+			}
+		}
+	}
 }
 
 // InspectImage returns detailed information about a container image.
