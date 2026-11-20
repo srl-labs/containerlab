@@ -34,6 +34,18 @@ docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.32.0F
 
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
 
+### Post-deploy configuration
+
+After cEOS starts, containerlab configures its management address and any topology-assigned data
+interface addresses. The commands are sent to EOS as one non-interactive batch through the
+configured container runtime's `exec` API. This replaces the previous host-side
+`docker/podman exec -it` subprocess and keeps execution within containerlab's Docker or Podman
+runtime connection.
+
+The batch enters configuration mode, uses `--abort-on-error`, and finishes with `end` and
+`write memory`. Containerlab captures the command's return code, standard output, and standard
+error, and retries CLI startup up to 60 times while cEOS is becoming ready.
+
 /// tab | bash
 to connect to a `bash` shell of a running ceos container:
 
