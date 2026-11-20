@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,6 +37,8 @@ type fakeSource struct {
 	closed  chan struct{}
 	once    sync.Once
 	pending *fakeFrame
+	// removed is what Removed reports: the interface left the source's namespace.
+	removed atomic.Bool
 }
 
 func newFakeSource() *fakeSource {
@@ -73,6 +76,10 @@ func (s *fakeSource) ReadPacket() ([]byte, gopacket.CaptureInfo, error) {
 
 		return frame.data, info, nil
 	}
+}
+
+func (s *fakeSource) Removed() bool {
+	return s.removed.Load()
 }
 
 func (s *fakeSource) Close() {
@@ -452,6 +459,61 @@ func TestCaptureLocalReopensInterfacesAndReportsWhileTheyWereGone(t *testing.T) 
 	gap := gaps[0]
 	if gap.Node != "r1" || !slices.Equal(gap.Interfaces, []string{"e1"}) || gap.To.IsZero() ||
 		!gap.To.After(gap.From) || !strings.Contains(gap.Reason, "not available") {
+		t.Fatalf("gap = %+v", gap)
+	}
+}
+
+func TestCaptureLocalReportsAnInterfaceThatWasBackByTheFirstReopen(t *testing.T) {
+	t.Parallel()
+
+	host := newFakeHost()
+	targets := []LocalTarget{{Node: "r1", Interface: "e1", Exec: host.exec("r1")}}
+	req := localRequest(1, 0)
+	req.Targets = req.Targets[:1]
+
+	var mu sync.Mutex
+	var gaps []clablabruntime.CaptureGap
+	req.OnGap = func(gap clablabruntime.CaptureGap) {
+		mu.Lock()
+		defer mu.Unlock()
+		gaps = append(gaps, gap)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- host.capture().run(context.Background(), req, targets, io.Discard)
+	}()
+	host.waitOpened(t, 1)
+
+	// the node restarted so fast that the interface is back when the reader first reopens it,
+	// but it left the namespace of the failed socket: the time in between is a gap
+	host.source("e1", 0).removed.Store(true)
+	host.source("e1", 0).frames <- fakeFrame{err: afpacket.ErrPoll}
+	host.waitOpened(t, 1)
+	select {
+	case <-host.source("e1", 0).closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the failed source was not closed")
+	}
+	host.source("e1", 1).frames <- fakeFrame{data: []byte("b"), stamp: time.Now(), length: 1}
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("capture did not stop at the packet limit")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(gaps) != 1 {
+		t.Fatalf("gaps = %+v, want one for the restart", gaps)
+	}
+	gap := gaps[0]
+	if gap.To.IsZero() || gap.To.Before(gap.From) ||
+		!strings.Contains(gap.Reason, "removed from its network namespace") {
 		t.Fatalf("gap = %+v", gap)
 	}
 }

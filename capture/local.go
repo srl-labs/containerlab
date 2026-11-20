@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/afpacket"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -45,6 +47,9 @@ const (
 // errReadTimeout is returned by a packet source that has no packet within the poll timeout.
 var errReadTimeout = errors.New("no packet within the poll timeout")
 
+// errInterfaceRemoved is why an interface that was back by the first reopen was gone.
+var errInterfaceRemoved = errors.New("it was removed from its network namespace")
+
 // ExecFunc runs f in the network namespace of a node.
 type ExecFunc func(ctx context.Context, f func(ns.NetNS) error) error
 
@@ -63,6 +68,9 @@ type packetSource interface {
 	// ReadPacket returns the next packet; the data is only valid until the next call. It
 	// returns errReadTimeout when no packet arrived within the poll timeout.
 	ReadPacket() ([]byte, gopacket.CaptureInfo, error)
+	// Removed reports whether the interface was removed from the source's network namespace,
+	// deleted or moved to another one, as opposed to only going down.
+	Removed() bool
 	Close()
 }
 
@@ -244,8 +252,7 @@ func (r *localReader) run(ctx context.Context, source packetSource) {
 			// keeps reporting it: it is reopened.
 			log.Debug("Capture socket failed, reopening it", "node", r.target.Node,
 				"interface", r.target.Interface, "error", err)
-			source.Close()
-			source = r.reopen(ctx)
+			source = r.reopen(ctx, source)
 			if source == nil {
 				return
 			}
@@ -300,12 +307,28 @@ func (r *localReader) packet(data []byte, info gopacket.CaptureInfo) *Packet {
 	}
 }
 
-// reopen opens the interface's socket again once its node and interface are back. It returns
-// nil when the capture ended first. Time the interface could not be opened is reported as a gap;
-// an interface that only went down is not, as it has no traffic while down.
-func (r *localReader) reopen(ctx context.Context) packetSource {
+// reopen opens the interface's socket again once its node and interface are back, and closes
+// the failed one. It returns nil when the capture ended first. The time the interface was gone
+// is reported as a gap: while it could not be opened, or when it left the failed socket's
+// namespace, as a node restart that is over by the first attempt does. An interface that only
+// went down is not, as it has no traffic while down.
+func (r *localReader) reopen(ctx context.Context, failed packetSource) packetSource {
+	defer failed.Close()
+
 	from := time.Now()
 	var unavailable error
+	// gone is asked once the reopen ends: by then an interface that left the namespace was
+	// unregistered there, which the kernel does right after taking it down.
+	gone := func() error {
+		if unavailable != nil {
+			return unavailable
+		}
+		if failed.Removed() {
+			return errInterfaceRemoved
+		}
+
+		return nil
+	}
 
 	timer := time.NewTimer(r.capture.reopenInterval)
 	defer timer.Stop()
@@ -313,8 +336,8 @@ func (r *localReader) reopen(ctx context.Context) packetSource {
 	for {
 		select {
 		case <-ctx.Done():
-			if unavailable != nil {
-				r.reportGap(from, time.Time{}, unavailable)
+			if cause := gone(); cause != nil {
+				r.reportGap(from, time.Time{}, cause)
 			}
 
 			return nil
@@ -332,8 +355,8 @@ func (r *localReader) reopen(ctx context.Context) packetSource {
 
 			continue
 		}
-		if unavailable != nil {
-			r.reportGap(from, time.Now(), unavailable)
+		if cause := gone(); cause != nil {
+			r.reportGap(from, time.Now(), cause)
 		}
 
 		return opened[0]
@@ -381,9 +404,12 @@ func openPacketSockets(
 	return sources, nil
 }
 
-// afpacketSource is a TPACKET_V3 receive ring on one interface.
+// afpacketSource is a TPACKET_V3 receive ring on one interface, with a probe socket that tells
+// whether the interface was removed.
 type afpacketSource struct {
-	handle *afpacket.TPacket
+	handle  *afpacket.TPacket
+	probe   int
+	ifindex int
 }
 
 func openPacketSocket(name string, snapLength int) (*afpacketSource, error) {
@@ -412,8 +438,35 @@ func openPacketSocket(name string, snapLength int) (*afpacketSource, error) {
 		handle.Close()
 		return nil, fmt.Errorf("failed to enable promiscuous mode: %w", err)
 	}
+	probe, ifindex, err := openRemovalProbe(name)
+	if err != nil {
+		handle.Close()
+		return nil, err
+	}
 
-	return &afpacketSource{handle: handle}, nil
+	return &afpacketSource{handle: handle, probe: probe, ifindex: ifindex}, nil
+}
+
+// openRemovalProbe opens a packet socket bound to the interface that receives nothing: protocol
+// 0 registers no packet handler. When the interface is unregistered from the namespace, deleted
+// or moved to another one, the kernel resets the bound interface of the namespace's packet
+// sockets to -1; when it only goes down, it keeps it. The afpacket handle does not expose its
+// own socket, so the probe tells the two apart.
+func openRemovalProbe(name string) (fd, ifindex int, err error) {
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		return -1, 0, err
+	}
+	fd, err = unix.Socket(unix.AF_PACKET, unix.SOCK_RAW|unix.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return -1, 0, fmt.Errorf("failed to open the interface probe: %w", err)
+	}
+	if err := unix.Bind(fd, &unix.SockaddrLinklayer{Ifindex: iface.Index}); err != nil {
+		unix.Close(fd)
+		return -1, 0, fmt.Errorf("failed to bind the interface probe: %w", err)
+	}
+
+	return fd, iface.Index, nil
 }
 
 func (s *afpacketSource) ReadPacket() ([]byte, gopacket.CaptureInfo, error) {
@@ -425,6 +478,17 @@ func (s *afpacketSource) ReadPacket() ([]byte, gopacket.CaptureInfo, error) {
 	return data, info, err
 }
 
+func (s *afpacketSource) Removed() bool {
+	addr, err := unix.Getsockname(s.probe)
+	if err != nil {
+		return false
+	}
+	link, ok := addr.(*unix.SockaddrLinklayer)
+
+	return ok && link.Ifindex != s.ifindex
+}
+
 func (s *afpacketSource) Close() {
 	s.handle.Close()
+	unix.Close(s.probe)
 }
