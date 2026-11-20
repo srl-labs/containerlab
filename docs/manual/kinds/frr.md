@@ -106,6 +106,23 @@ Without a `startup-config` the node comes up with a minimal configuration that o
 
 The hostname is not set in the generated config on purpose. FRR picks up the container's hostname, which containerlab already sets to the node name.
 
+### Configuration check
+
+FRR skips any line of `frr.conf` it cannot parse and starts with the rest of the file, so a typo would leave a node running with part of its configuration missing and the mistake visible only in its log. To catch this, the deploy checks each node's `frr.conf` with `vtysh --dryrun` and fails if the file does not parse, quoting each line FRR would skip:
+
+```
+deployment failed for one or more nodes: node "router1" post-deploy:
+clab-frr01/router1/config/frr.conf has errors that FRR skips at startup, leaving those lines unconfigured:
+  line 5: % Unknown command[21]:  ip adress 10.0.0.1/32
+It is the lab's copy of router1/frr.conf, which later deploys keep: fix that file and deploy again with --reconfigure.
+```
+
+The node that failed the check is left running, with its ssh keys and password in place, so it can be inspected.
+
+The file checked is the lab directory's copy, which is the one the node uses. Created from `startup-config` on the first deploy, it is kept by later deploys unless [`enforce-startup-config`](../nodes.md#enforce-startup-config) is set, which is why a fixed `startup-config` needs `--reconfigure` to reach the node.
+
+The check covers what does not parse: unknown commands, invalid values and incomplete commands. A line that parses but that a daemon then rejects, such as a BGP neighbor assigned to a peer-group that does not exist, still deploys, as does configuration for a daemon that is not enabled in [`daemons`](#daemons). Look for `processing failure` in `docker logs <node>` to find the first kind.
+
 ### Daemons
 
 By default all daemons supported by this kind are enabled. To run only the daemons a lab actually needs, list them under the `daemons` [kind-specific config key](../nodes.md#kind-specific-config):

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -101,6 +102,10 @@ esac`
 )
 
 var (
+	// configErrorLine matches the lines in which vtysh names a line of the
+	// configuration it could not parse, e.g. "line 5: % Unknown command[21]: ...".
+	configErrorLine = regexp.MustCompile(`^\s*line \d+:`)
+
 	// defaultCredentials is the admin user the containerlab image ships, whose
 	// login shell is vtysh. It is what "ssh <node>" uses, so a bare ssh to a
 	// node reaches the routing CLI; "ssh root@<node>" still gets a shell. The
@@ -259,7 +264,85 @@ func (n *frr) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) err
 		return err
 	}
 
-	return n.installConfigSaveWrapper(ctx)
+	err = n.installConfigSaveWrapper(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Last, so that a node with a broken configuration can still be logged
+	// into to look at it.
+	return n.checkConfig(ctx)
+}
+
+// checkConfig fails the deploy when the node's frr.conf has lines FRR cannot
+// parse. FRR skips such a line, applies the rest of the file and keeps
+// running, and says so only in its log, so a typo would otherwise deploy
+// successfully with part of the configuration missing. vtysh's dry-run mode
+// parses the file without applying it, so it needs no running daemons.
+//
+// It catches what vtysh itself rejects: unknown commands, bad values and
+// incomplete commands. A line that parses but that a daemon refuses, or
+// configuration for a daemon that is not enabled, still goes unnoticed.
+func (n *frr) checkConfig(ctx context.Context) error {
+	confPath := filepath.Join(n.Cfg.LabDir, cfgDir, frrConfFile)
+
+	// suppress-startup-config leaves no frr.conf to check.
+	if !clabutils.FileExists(confPath) {
+		return nil
+	}
+
+	cmd := clabexec.NewExecCmdFromSlice(
+		[]string{"vtysh", "--dryrun", "--inputfile", filepath.Join(etcFRR, frrConfFile)})
+
+	result, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("failed to check the FRR configuration: %w", err)
+	}
+
+	if result.GetReturnCode() == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"%s has errors that FRR skips at startup, leaving those lines unconfigured:\n%s\n%s",
+		confPath, configCheckErrors(result), n.configFixHint())
+}
+
+// configCheckErrors returns the lines of a failed dry run that name a line of
+// frr.conf, or all of its output if none does.
+func configCheckErrors(result *clabexec.ExecResult) string {
+	out := strings.TrimSpace(result.GetStdOutString() + "\n" + result.GetStdErrString())
+
+	var errs []string
+
+	for l := range strings.SplitSeq(out, "\n") {
+		if configErrorLine.MatchString(l) {
+			errs = append(errs, "  "+strings.TrimSpace(l))
+		}
+	}
+
+	if len(errs) == 0 {
+		return "  " + strings.ReplaceAll(out, "\n", "\n  ")
+	}
+
+	return strings.Join(errs, "\n")
+}
+
+// configFixHint says where to fix the configuration. Where it came from a
+// startup-config, the lab directory holds a copy that later deploys keep, so
+// fixing the startup-config alone would not reach the node.
+func (n *frr) configFixHint() string {
+	switch {
+	case n.Cfg.StartupConfig == "":
+		return "Fix it, then destroy the lab without --cleanup and deploy again, " +
+			"which keeps the file."
+	case n.Cfg.EnforceStartupConfig:
+		return fmt.Sprintf("It is copied from %s on every deploy: fix that file and deploy again.",
+			n.Cfg.StartupConfig)
+	default:
+		return fmt.Sprintf("It is the lab's copy of %s, which later deploys keep: "+
+			"fix that file and deploy again with --reconfigure.", n.Cfg.StartupConfig)
+	}
 }
 
 func (n *frr) installConfigSaveWrapper(ctx context.Context) error {
