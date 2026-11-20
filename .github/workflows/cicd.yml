@@ -86,6 +86,7 @@ jobs:
               - 'constants/**'
               - 'exec/**'
               - 'labruntime/**'
+              - 'capture/**'
               - 'mgmt/**'
               - 'mocks/**'
               - 'names/**'
