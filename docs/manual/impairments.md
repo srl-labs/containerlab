@@ -7,7 +7,7 @@ tags:
 
 # Link Impairments
 
-Labs are meant to be a reflection of real-world scenarios. To make simulated networks exhibit real-life behavior you can set link impairments (delay, jitter, packet loss) on any link that belongs to a container node. Link impairment feature is powered by the `tools netem` command collection:
+Labs are meant to be a reflection of real-world scenarios. To make simulated networks exhibit behavior you see in life, you can set link impairments (delay, jitter, packet loss) on any link that belongs to a container node. Link impairment feature is powered by the `tools netem` command collection:
 
 * [`tools netem set`](../cmd/tools/netem/set.md)
 * [`tools netem show`](../cmd/tools/netem/show.md)
@@ -23,6 +23,19 @@ containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
 
 Impairments can also be defined declaratively in the topology definition file, so they are set whenever the lab is deployed. The `netem` key of a link endpoint takes the same impairments as `tools netem set`, which apply to the packets the endpoint's interface sends:
 
+/// tab | brief notation
+Brief links take a list with the impairment of each endpoint, in the order of the endpoints. An empty entry leaves its endpoint unimpaired:
+
+```yaml
+topology:
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+      netem:
+        - delay: 50ms # r1:eth1
+        - {}          # no impairment for r2:eth1
+```
+///
+/// tab | expanded notation
 ```yaml
 topology:
   links:
@@ -39,26 +52,20 @@ topology:
           netem:
             rate: 10000
 ```
+///
 
 | Key          | Meaning                                                               |
 | ------------ | --------------------------------------------------------------------- |
-| `delay`      | Time to delay the packets, e.g. `100ms`                               |
+| `delay`      | Time to delay the packets, e.g. `100ms`/`1s`.                         |
 | `jitter`     | Delay variation, e.g. `10ms`; needs a `delay`, at most `2.147483647s` |
-| `loss`       | Random packet loss in percent                                         |
-| `rate`       | Rate limit in kbit/s                                                  |
-| `corruption` | Random packet corruption in percent                                   |
+| `loss`       | Random packet loss in percent, e.g. `0.5`                             |
+| `rate`       | Rate limit in kbit/s, e.g. `10000`                                    |
+| `corruption` | Random packet corruption in percent, e.g. `10`                        |
 
-Brief links take a list with the impairment of each endpoint, in the order of the endpoints. An empty entry leaves its endpoint unimpaired:
 
-```yaml
-topology:
-  links:
-    - endpoints: ["r1:eth1", "r2:eth1"]
-      netem:
-        - delay: 50ms
-        - {}
-```
 
-Impairments are supported on the node endpoints of veth and [veth-stitch](topo-def-file.md#veth-stitch) links; other link types and `host` or `mgmt-net` endpoints reject them. On veth-stitch links, which brief links of SR-SIM nodes use, containerlab sets them on the stitch, like `tools netem set` does, since impairments on the interfaces of SR-SIM nodes have no effect. On SR-SIM endpoints of extended `veth` links they have no effect either, and containerlab warns about it. Lab runtimes such as [clabernetes](clabernetes/runtime.md) don't apply them yet, so deploying a topology with impairments there fails, as do starting or restarting its nodes.
+Impairments are supported on the node endpoints of [veth](topo-def-file.md#veth) and [veth-stitch](topo-def-file.md#veth-stitch) links; other link types and `host` or `mgmt-net` endpoints reject them. On veth-stitch links, which brief links of SR-SIM nodes use, containerlab sets them on the stitch, like `tools netem set` does, since impairments on the interfaces of SR-SIM nodes have no effect. On SR-SIM endpoints of extended `veth` links they have no effect either, and containerlab warns about it.
+
+> [clabernetes](clabernetes/runtime.md) lab runtime doesn't support declarative impairments yet, so deploying a topology with impairments there fails, as do starting or restarting its nodes.
 
 Containerlab sets them again when a node is started or restarted, since a node's interfaces lose their impairments when it is stopped, and whenever the lab is deployed again. `tools netem` can still change them while the lab runs, until containerlab sets the topology's impairments again. Removing an impairment from the topology, or setting all of its values to zero, doesn't remove it from a running lab; use `tools netem reset` for that.
