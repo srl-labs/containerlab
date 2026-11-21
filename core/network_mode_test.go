@@ -245,6 +245,7 @@ func newNetworkModePlanTestLab(
 		node := clabmocksmocknodes.NewMockNode(ctrl)
 		node.EXPECT().Config().Return(cfg).AnyTimes()
 		node.EXPECT().GetShortName().Return(name).AnyTimes()
+		node.EXPECT().GetLinkEndpointType().Return(clablinks.LinkEndpointType("veth")).AnyTimes()
 		node.EXPECT().GetContainerStatus(gomock.Any()).Return(status).AnyTimes()
 		node.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		node.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(&clabtypes.TopologyDiff{})

@@ -220,6 +220,7 @@ func CreateOrGetNamedNetNS(name string) (string, error) {
 	return CreateNamedNetNS(name)
 }
 
+// GetNamedNetNS returns the nspath of the named netns, if it exists.
 func GetNamedNetNS(name string) (string, error) {
 	nsPath := filepath.Join("/run/netns", name)
 	if !FileOrDirExists(nsPath) {
@@ -227,6 +228,15 @@ func GetNamedNetNS(name string) (string, error) {
 	}
 
 	return nsPath, nil
+}
+
+// UnlinkNamedNetNS removes the named netns symlink/mount, best effort.
+func UnlinkNamedNetNS(nsPath string) error {
+	if !FileOrDirExists(nsPath) {
+		return nil
+	}
+
+	return os.Remove(nsPath)
 }
 
 // SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.

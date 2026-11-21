@@ -239,6 +239,7 @@ func TestApplyWritesStateForNoChanges(t *testing.T) {
 			},
 		}, nil)
 	mockNode.EXPECT().Config().Return(nodeCfg).AnyTimes()
+	mockNode.EXPECT().GetLinkEndpointType().Return(clablinks.LinkEndpointType("veth")).AnyTimes()
 	mockNode.EXPECT().CheckDeploymentConditions(gomock.Any()).Return(nil)
 	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
 	mockNode.EXPECT().
@@ -1137,6 +1138,10 @@ func TestPlanApplyAddsNewRootNamespaceNode(t *testing.T) {
 				IsRootNamespaceBased: true,
 			}).AnyTimes()
 			br.EXPECT().GetShortName().Return("br1").AnyTimes()
+			br.EXPECT().
+				GetLinkEndpointType().
+				Return(clablinks.LinkEndpointType("bridge")).
+				AnyTimes()
 			br.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			if !tt.wantAdded {
 				// Only nodes known to the previous topology are checked for drift.
