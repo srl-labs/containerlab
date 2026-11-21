@@ -19,9 +19,9 @@ These commands allow users to set, show and reset link impairments (delay, jitte
 containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
 ```
 
-## Impairments in the topology
+## Declarative definition
 
-Impairments can also be part of the topology, so they are set whenever the lab is deployed. The `netem` key of a link endpoint takes the same impairments as `tools netem set`, which apply to the packets the endpoint's interface sends:
+Impairments can also be defined declaratively in the topology definition file, so they are set whenever the lab is deployed. The `netem` key of a link endpoint takes the same impairments as `tools netem set`, which apply to the packets the endpoint's interface sends:
 
 ```yaml
 topology:

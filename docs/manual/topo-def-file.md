@@ -273,7 +273,7 @@ links:
     labels: <link-labels>                   # optional (used in templating)
 ```
 
-The `netem` key sets [link impairments](impairments.md#impairments-in-the-topology) on the interface of an endpoint.
+The `netem` key sets [link impairments](impairments.md#declarative-definition) on the interface of an endpoint.
 
 ###### veth-stitch
 
@@ -305,7 +305,7 @@ links:
         netem: <NodeB-Impairment>           # optional
 ```
 
-The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them. [Link impairments](impairments.md#impairments-in-the-topology) set with `netem` are applied on the stitch.
+The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them. [Link impairments](impairments.md#declarative-definition) set with `netem` are applied on the stitch.
 
 ###### mgmt-net
 
