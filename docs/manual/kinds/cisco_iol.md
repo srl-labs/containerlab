@@ -52,6 +52,20 @@ docker exec -it <container-name/id> bash
 ```
 
 ///
+/// tab | Telnet
+to connect to the -{{ kind_short_display_name }}- console via telnet
+
+```bash
+telnet <container-name/id> 5000
+```
+
+The console is served on the node's management address, so it stays reachable when the IOS management configuration is broken. After the node boots, press Enter first: IOS ignores console input until it receives a lone Enter.
+
+/// warning | Console requires a recent image
+The telnet console requires an -{{ kind_short_display_name }}- image built with srl-labs/vrnetlab after November 2026. Images built from an older vrnetlab revision do not serve a console on port 5000.
+///
+
+///
 
 /// note
 Default credentials: `admin:admin`

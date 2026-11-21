@@ -196,7 +196,7 @@ func (n *xrd) genInterfacesEnv() {
 	// here we take the number of links users set in the topology to get the right # of links
 	var interfaceEnvVar string
 
-	for _, ep := range n.Endpoints {
+	for _, ep := range n.EndpointsWithParked() {
 		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
 		ifName := strings.ReplaceAll(ep.GetIfaceName(), "-", "/")
 		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.GetIfaceName(), ifName)

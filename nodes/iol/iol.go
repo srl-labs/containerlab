@@ -228,7 +228,7 @@ func (n *iol) ensureNumSlotsEnv() {
 	intfIdxRegexp := regexp.MustCompile(`\d+`)
 	needed := n.mgmtSlot + 1
 
-	for _, ep := range n.Endpoints {
+	for _, ep := range n.EndpointsWithParked() {
 		x, _ := strconv.Atoi(intfIdxRegexp.FindString(ep.GetIfaceName()))
 		if slot, _ := n.iolPortForLinuxIdx(x); slot+1 > needed {
 			needed = slot + 1
@@ -338,10 +338,11 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 		clabutils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
 		n.firstBoot = true
 	}
-
 	// create these files so the bind monut doesn't automatically
 	// make folders.
-	clabutils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
+	if bootCfg := path.Join(n.Cfg.LabDir, "boot_config.txt"); !clabutils.FileExists(bootCfg) {
+		clabutils.CreateFile(bootCfg, "")
+	}
 
 	return n.GenInterfaceConfig(ctx)
 }
@@ -368,7 +369,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	// Regexp to pull number out of linux'ethX' interface naming
 	IntfRegExpr := regexp.MustCompile(`\d+`)
 
-	for _, intf := range n.Endpoints {
+	for _, intf := range n.EndpointsWithParked() {
 		// get numeric interface number and cast to int
 		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
 
