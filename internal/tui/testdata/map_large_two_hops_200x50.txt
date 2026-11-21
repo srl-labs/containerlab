@@ -1,0 +1,50 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs                                                                                       lab: fabric · docker · ● 164/164 nodes · ↓427M ↑427M
+── labs ▸ fabric ▸ map ──────────────────────────────────────────────────────────────────────────────────────────────────────────── layout: tiers ── zoom: compact ── view: 2 hops ── 40 of 164 nodes ──
+                             [spine2]                                                                                     [spine3]                                 │ leaf17
+─────────┬───────────┬──────────┴┬───────────┬───────────┬───────────┬───────────┬────────┬───────────┬───────────┬──────────┴┬───────────┬───────────┬───────────┬│ ● ready
+ +4] [leaf11 +4] [leaf12 +4] [leaf13 +4] [leaf14 +4] [leaf15 +4] [leaf16 +4] [leaf17] [leaf18 +4] [leaf19 +4] [leaf20 +4] [leaf21 +4] [leaf22 +4] [leaf23 +4] [leaf│ nokia_srlinux
+                                                                     ┌──────────┼───┬────────┐                                                                     │ 172.20.27.95
+                                                                  [h17-1] [h17-2] [h17-3] [h17-4]                                                                  │ CPU   15% ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+                                                                                                                                                                   │ MEM  711M
+                                                                                                                                                                   │
+                                                                                                                                                                   │ links
+                                                                                                                                                                   │ ● e1-1      h17-1      ↓205k ↑33k
+                                                                                                                                                                   │ ● e1-2      h17-2      ↓463k ↑133k
+                                                                                                                                                                   │ ● e1-3      h17-3      ↓254k ↑183k
+                                                                                                                                                                   │ ● e1-4      h17-4      ↓368k ↑779k
+                                                                                                                                                                   │ ● e1-49     spine1     ↓980k ↑763k
+                                                                                                                                                                   │ ● e1-50     spine2     ↓2.2M ↑536k
+                                                                                                                                                                   │ ● e1-51     spine3     ↓1.2M ↑3.1M
+                                                                                                                                                                   │ ● e1-52     spine4     ↓2.1M ↑738k
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+                                                                                                                                                                   │
+ ←↑↓→ node  tab link  ⏎ open  s shell  S ssh  c connect  a actions  / go to  e extent  i names  r rates  + zoom in  - out  f fit  v layout  p panel  ? help
+ • showing: 2 hops — 40 of 164 nodes                                                                                                                                                               demo

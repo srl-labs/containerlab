@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── capture ▸ on my computer ────────────────────────────────────────────────────────────────────────────────────────────
+ Watch this capture in the Wireshark on your computer
+
+ Run this command in a terminal on your computer, not in this one.
+ It is on your clipboard already, y copies it again:
+
+   ssh demo@192.0.2.10 'containerlab capture --name dc1 --target leaf1:e1-49 --target spine1:e1-1 -w -'
+   | wireshark -k -i -
+
+ The capture runs for as long as that Wireshark stays open.
+
+ The address in the command is the one your SSH session came in on. Use the name or address you normally reach this
+ host with, should it differ.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ scroll  g/G top/end  / find  y copy  esc back  ? help
+ ✓ copied capture command: ssh demo@192.0.2.10 'containerlab capture --name dc1 --target leaf1:e1-49 --target spin…demo

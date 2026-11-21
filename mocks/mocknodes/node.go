@@ -231,6 +231,20 @@ func (mr *MockNodeMockRecorder) ExecFunction(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecFunction", reflect.TypeOf((*MockNode)(nil).ExecFunction), arg0, arg1)
 }
 
+// ExecInteractiveShell mocks base method.
+func (m *MockNode) ExecInteractiveShell() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecInteractiveShell")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// ExecInteractiveShell indicates an expected call of ExecInteractiveShell.
+func (mr *MockNodeMockRecorder) ExecInteractiveShell() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInteractiveShell", reflect.TypeOf((*MockNode)(nil).ExecInteractiveShell))
+}
+
 // GenerateConfig mocks base method.
 func (m *MockNode) GenerateConfig(dst, templ string) error {
 	m.ctrl.T.Helper()
