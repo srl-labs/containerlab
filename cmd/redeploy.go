@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -149,6 +151,18 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 func redeployFn(cobraCmd *cobra.Command, o *Options) error {
 	if err := validateDeployFlags(o); err != nil {
 		return err
+	}
+
+	// a lab runtime rejects some topologies only on deploy, so check them before the destroy
+	if clablabruntime.IsLabRuntimeName(o.Global.Runtime) {
+		c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+		if err != nil {
+			return err
+		}
+
+		if err := c.CheckLabRuntimeDeploy(); err != nil {
+			return err
+		}
 	}
 
 	// First destroy the lab
