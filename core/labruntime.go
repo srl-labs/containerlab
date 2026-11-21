@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnames "github.com/srl-labs/containerlab/names"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -33,6 +35,11 @@ func (c *CLab) deployWithLabRuntime(
 		return nil, fmt.Errorf("rendered topology is empty")
 	}
 
+	req, err := c.labRuntimeDeployRequest()
+	if err != nil {
+		return nil, err
+	}
+
 	if options != nil && options.reconfigure {
 		// --reconfigure regenerates the lab from scratch, like removing a local lab
 		// directory, so it also deletes the persistent node storage.
@@ -49,10 +56,6 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
-	req, err := c.labRuntimeDeployRequest()
-	if err != nil {
-		return nil, err
-	}
 	req.Wait = true
 	applyLabRuntimeDeployOptions(&req, options)
 
@@ -64,12 +67,23 @@ func (c *CLab) deployWithLabRuntime(
 	return c.containersFromLabState(state), nil
 }
 
+// CheckLabRuntimeDeploy returns the error a deploy with the lab runtime fails with before it
+// changes anything, such as link impairments the lab runtime doesn't support.
+func (c *CLab) CheckLabRuntimeDeploy() error {
+	_, err := c.labRuntimeDeployRequest()
+
+	return err
+}
+
 func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	if c.Config.Name == "" {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("topology name is required")
 	}
 	if len(c.renderedTopology) == 0 {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("rendered topology is empty")
+	}
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return clablabruntime.DeployRequest{}, err
 	}
 
 	topologyFile := ""
@@ -362,7 +376,21 @@ func (c *CLab) execWithLabRuntime(
 	return resultCollection, errors.Join(execErrors...)
 }
 
+func (c *CLab) checkLabRuntimeLinkImpairments() error {
+	if c.Config.Topology != nil &&
+		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
+		return fmt.Errorf(
+			"link impairments (netem) are not supported for lab runtime %q", c.globalRuntimeName)
+	}
+
+	return nil
+}
+
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return err
+	}
+
 	return c.LabRuntime.Start(ctx, clablabruntime.NodeRequest{
 		Identity: c.labRuntimeIdentity,
 		Name:     c.Config.Name,
@@ -381,6 +409,10 @@ func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) 
 }
 
 func (c *CLab) restartNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return err
+	}
+
 	return c.LabRuntime.Restart(ctx, clablabruntime.NodeRequest{
 		Identity: c.labRuntimeIdentity,
 		Name:     c.Config.Name,

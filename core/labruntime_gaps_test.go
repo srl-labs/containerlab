@@ -2,10 +2,13 @@ package core
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"gopkg.in/yaml.v2"
 )
 
 type recordingDeployLabRuntime struct {
@@ -105,6 +108,118 @@ func TestDeployReconfigureWithLabRuntimeCleansUp(t *testing.T) {
 	if !runtime.request.Cleanup || !runtime.deployed {
 		t.Fatalf("reconfigure destroy = %+v, deployed = %t; want a cleanup destroy",
 			runtime.request, runtime.deployed)
+	}
+}
+
+type requestRecordingLabRuntime struct {
+	recordingDeployLabRuntime
+	requested bool
+}
+
+func (r *requestRecordingLabRuntime) Plan(
+	context.Context,
+	clablabruntime.DeployRequest,
+) (*clablabruntime.DeployPlan, error) {
+	r.requested = true
+
+	return &clablabruntime.DeployPlan{}, nil
+}
+
+func (r *requestRecordingLabRuntime) Manifests(
+	context.Context,
+	clablabruntime.DeployRequest,
+) ([]clablabruntime.Manifest, error) {
+	r.requested = true
+
+	return nil, nil
+}
+
+func (r *requestRecordingLabRuntime) Validate(context.Context, clablabruntime.DeployRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func (r *requestRecordingLabRuntime) Start(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func (r *requestRecordingLabRuntime) Restart(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func TestLabRuntimeRejectsLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	var link clablinks.LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+endpoints: ["r1:eth1", "r2:eth1"]
+netem: [{delay: 10ms}]
+`), &link); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	tests := map[string]func(c *CLab) error{
+		"deploy": func(c *CLab) error {
+			_, err := c.deployWithLabRuntime(ctx, &DeployOptions{reconfigure: true})
+			return err
+		},
+		"dry run": func(c *CLab) error {
+			options, err := NewDeployOptions(0)
+			if err != nil {
+				return err
+			}
+			_, err = c.Deploy(ctx, options.SetDryRun(true))
+			return err
+		},
+		"manifests": func(c *CLab) error {
+			_, err := c.LabRuntimeManifests(ctx, nil)
+			return err
+		},
+		"validate": func(c *CLab) error {
+			return c.ValidateLabRuntimeTopology(ctx)
+		},
+		"start": func(c *CLab) error {
+			return c.StartNodes(ctx, nil)
+		},
+		"restart": func(c *CLab) error {
+			return c.RestartNodes(ctx, nil)
+		},
+		"check before a redeploy": func(c *CLab) error {
+			return c.CheckLabRuntimeDeploy()
+		},
+	}
+
+	for name, run := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runtime := &requestRecordingLabRuntime{}
+			c := &CLab{
+				Config: &Config{
+					Name:     "lab1",
+					Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+				},
+				LabRuntime:        runtime,
+				TopoPaths:         &clabtypes.TopoPaths{},
+				renderedTopology:  []byte("name: lab1\n"),
+				globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+			}
+
+			err := run(c)
+			if err == nil ||
+				!strings.Contains(err.Error(), "link impairments (netem) are not supported") {
+				t.Fatalf("%s = %v; want the link impairments rejected", name, err)
+			}
+			if runtime.requested || runtime.deployed || runtime.request.Name != "" {
+				t.Fatal("the request reached the lab runtime")
+			}
+		})
 	}
 }
 
