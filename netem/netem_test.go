@@ -122,7 +122,9 @@ func TestRateKbit(t *testing.T) {
 }
 
 func TestReplaceImpairmentsRejectsNegativeDurations(t *testing.T) {
-	for _, d := range [][2]time.Duration{{-time.Millisecond, 0}, {time.Millisecond, -time.Millisecond}} {
+	for _, d := range [][2]time.Duration{{-time.Millisecond, 0}, {
+		time.Millisecond, -time.Millisecond,
+	}} {
 		if err := ReplaceImpairments(nil, nil, d[0], d[1], 0, 0, 0); err == nil {
 			t.Fatalf("delay %s and jitter %s must be rejected", d[0], d[1])
 		}
