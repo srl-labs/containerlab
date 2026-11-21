@@ -275,7 +275,7 @@ func (c *CLab) deploy( //nolint: funlen
 	}
 
 	// set after finalizing, so a failed impairment doesn't skip the lab's exports and state
-	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+	if err := clablinks.ApplyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 		return nil, err
 	}
 

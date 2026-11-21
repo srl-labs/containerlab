@@ -82,10 +82,8 @@ func (c *CLab) labRuntimeDeployRequest() (clablabruntime.DeployRequest, error) {
 	if len(c.renderedTopology) == 0 {
 		return clablabruntime.DeployRequest{}, fmt.Errorf("rendered topology is empty")
 	}
-	if c.Config.Topology != nil &&
-		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
-		return clablabruntime.DeployRequest{}, fmt.Errorf(
-			"link impairments (netem) are not supported for lab runtime %q", c.globalRuntimeName)
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return clablabruntime.DeployRequest{}, err
 	}
 
 	topologyFile := ""
@@ -378,7 +376,21 @@ func (c *CLab) execWithLabRuntime(
 	return resultCollection, errors.Join(execErrors...)
 }
 
+func (c *CLab) checkLabRuntimeLinkImpairments() error {
+	if c.Config.Topology != nil &&
+		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
+		return fmt.Errorf(
+			"link impairments (netem) are not supported for lab runtime %q", c.globalRuntimeName)
+	}
+
+	return nil
+}
+
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return err
+	}
+
 	return c.LabRuntime.Start(ctx, clablabruntime.NodeRequest{
 		Identity: c.labRuntimeIdentity,
 		Name:     c.Config.Name,
@@ -397,6 +409,10 @@ func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) 
 }
 
 func (c *CLab) restartNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
+	if err := c.checkLabRuntimeLinkImpairments(); err != nil {
+		return err
+	}
+
 	return c.LabRuntime.Restart(ctx, clablabruntime.NodeRequest{
 		Identity: c.labRuntimeIdentity,
 		Name:     c.Config.Name,

@@ -140,6 +140,18 @@ func (r *requestRecordingLabRuntime) Validate(context.Context, clablabruntime.De
 	return nil
 }
 
+func (r *requestRecordingLabRuntime) Start(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func (r *requestRecordingLabRuntime) Restart(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
 func TestLabRuntimeRejectsLinkImpairments(t *testing.T) {
 	t.Parallel()
 
@@ -171,6 +183,12 @@ netem: [{delay: 10ms}]
 		},
 		"validate": func(c *CLab) error {
 			return c.ValidateLabRuntimeTopology(ctx)
+		},
+		"start": func(c *CLab) error {
+			return c.StartNodes(ctx, nil)
+		},
+		"restart": func(c *CLab) error {
+			return c.RestartNodes(ctx, nil)
 		},
 		"check before a redeploy": func(c *CLab) error {
 			return c.CheckLabRuntimeDeploy()
