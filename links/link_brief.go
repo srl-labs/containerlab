@@ -2,13 +2,15 @@ package links
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
 // LinkBriefRaw is the representation of any supported link in a brief format as defined in the
 // topology file.
 type LinkBriefRaw struct {
-	Endpoints        []string `yaml:"endpoints"`
+	Endpoints        []string    `yaml:"endpoints"`
+	Netem            []*NetemRaw `yaml:"netem,omitempty"`
 	LinkCommonParams `         yaml:",inline,omitempty"`
 }
 
@@ -30,6 +32,11 @@ func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 		lt, err := parseLinkType(node)
 		if err != nil {
 			continue
+		}
+
+		specialLinkTypes := []LinkType{LinkTypeMacVLan, LinkTypeMgmtNet, LinkTypeHost}
+		if len(l.Netem) > 0 && slices.Contains(specialLinkTypes, lt) {
+			return nil, fmt.Errorf("netem is only supported on veth links, not on %s links", lt)
 		}
 
 		switch lt {

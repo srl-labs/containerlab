@@ -18,6 +18,7 @@ type EndpointRaw struct {
 	IPv4  string         `yaml:"ipv4,omitempty"`
 	IPv6  string         `yaml:"ipv6,omitempty"`
 	Vars  map[string]any `yaml:"vars,omitempty"`
+	Netem *NetemRaw      `yaml:"netem,omitempty"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
@@ -69,11 +70,16 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		genericEndpoint.IPv6 = p
 	}
 
+	netem, err := er.Netem.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("invalid netem for %s:%s: %w", er.Node, er.Iface, err)
+	}
+	genericEndpoint.Netem = netem
+
 	// Normalize vars to ensure JSON serialization compatibility
 	// (converts map[interface{}]interface{} to map[string]any)
 	genericEndpoint.Vars = normalizeVars(er.Vars)
 
-	var err error
 	if er.MAC == "" {
 		// if mac is not present generate one
 		genericEndpoint.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)

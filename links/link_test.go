@@ -581,6 +581,55 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 	}
 }
 
+func TestLinkDefinitionMarshalYAMLRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name       string
+		definition string
+	}{
+		{
+			name: "host",
+			definition: `type: host
+host-interface: r1-eth1
+endpoint:
+  node: r1
+  interface: eth1
+`,
+		},
+		{
+			name: "vxlan-stitch",
+			definition: `type: vxlan-stitch
+remote: 192.0.2.1
+vni: 100
+endpoint:
+  node: r1
+  interface: eth1
+`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			original := &LinkDefinition{}
+			if err := yaml.Unmarshal([]byte(tt.definition), original); err != nil {
+				t.Fatal(err)
+			}
+
+			data, err := yaml.Marshal(original)
+			if err != nil {
+				t.Fatal(err)
+			}
+			roundTripped := &LinkDefinition{}
+			if err := yaml.Unmarshal(data, roundTripped); err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(original.Link, roundTripped.Link); diff != "" {
+				t.Fatalf("link changed after YAML round trip (-want +got):\n%s\nYAML:\n%s",
+					diff, data)
+			}
+		})
+	}
+}
+
 func Test_extractHostNodeInterfaceData(t *testing.T) {
 	type args struct {
 		lb             *LinkBriefRaw
