@@ -75,7 +75,7 @@ func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces
 	// Which is required by vrnetlab to determine if all configured interfaces are present
 	// such that the internal VM can be started with these interfaces assigned.
-	n.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(n.GetEndpoints()))
+	n.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(n.EndpointsWithParked()))
 
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
