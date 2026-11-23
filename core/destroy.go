@@ -452,6 +452,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			return err
 		}
 		c.deleteNodes(ctx, maxWorkers)
+		c.deleteLeftoverLabContainers(ctx)
 		c.deleteContainersDirect(ctx, orphanSidecars)
 	} else {
 		c.deleteContainersDirect(ctx, containers)
@@ -479,6 +480,36 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		if err != nil {
 			return fmt.Errorf("error while deleting netns symlinks: %w", err)
 		}
+	}
+
+	// Sweep this lab's leftover parking netns entries. Destroyed labs have
+	// nothing left to migrate or restore, so entries abandoned by an
+	// interrupted bridge-port migration are removed, parked ports included.
+	// Candidates are the deploy nodes plus every node recorded in the lab
+	// state, so slots of bridges that left the topology still get swept.
+	longNames := make([]string, 0, len(c.Nodes))
+	for _, node := range c.Nodes {
+		if cfg := node.Config(); cfg != nil {
+			longNames = append(longNames, cfg.LongName)
+		}
+	}
+
+	state, err := c.LoadState()
+	switch {
+	case err != nil:
+		// Mirror the management-network cleanup wording; a missing state only
+		// narrows the sweep to the current topology's nodes.
+		log.Debug("Unable to load the parking netns entries recorded in the lab state", "error", err)
+	case state != nil && state.Topology != nil:
+		// Slots of nodes that left the topology since the last deploy still
+		// get swept through the recorded state.
+		for nodeName := range state.Topology.Nodes {
+			longNames = append(longNames, fmt.Sprintf("clab-%s-%s", c.Config.Name, nodeName))
+		}
+	}
+
+	if err := clabutils.SweepParkingNetnses(longNames...); err != nil {
+		log.Warnf("failed to clean up parking namespaces: %v", err)
 	}
 
 	// delete every defined management network, including extra networks
@@ -750,9 +781,59 @@ func (c *CLab) deleteContainersDirect(
 	}
 }
 
+// deleteLeftoverLabContainers removes containers labeled for this lab whose
+// node is not part of the rendered topology. Deployments made with different
+// template variables, or nodes removed from the topology since, leave such
+// containers behind: topology-based destroy only deletes nodes of the rendered
+// node set, so these leftovers would survive every destroy otherwise.
+//
+// The sweep is skipped for node-filtered destroys (the filter deliberately
+// keeps non-selected nodes; nothing outside the filtered set may be removed)
+// and for tool containers (they are the deleteToolContainers flow's own
+// responsibility).
+func (c *CLab) deleteLeftoverLabContainers(ctx context.Context) {
+	if len(c.nodeFilter) > 0 {
+		log.Debug("Skipping lab leftover sweeps: destroy is node-filtered; non-selected containers must be preserved")
+		return
+	}
+
+	containers, err := c.ListContainers(ctx, WithListLabName(c.Config.Name))
+	if err != nil {
+		log.Warnf("Failed to list containers for the lab leftover sweep: %v", err)
+		return
+	}
+
+	ownedByTopology := make(map[string]struct{}, len(c.Nodes))
+	for _, node := range c.Nodes {
+		if cfg := node.Config(); cfg != nil {
+			ownedByTopology[cfg.LongName] = struct{}{}
+		}
+	}
+
+	rt := c.globalRuntime()
+
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			continue
+		}
+		if _, owned := ownedByTopology[cont.Names[0]]; owned {
+			continue
+		}
+		if cont.Labels[clabconstants.ToolType] != "" {
+			continue
+		}
+
+		log.Warnf("Removing leftover container %q; its node is not part of the rendered topology",
+			cont.Names[0])
+
+		if err := rt.DeleteContainer(ctx, cont.Names[0]); err != nil {
+			log.Errorf("could not remove leftover container %q: %v", cont.Names[0], err)
+		}
+	}
+}
+
 func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
-
 	if len(c.nodeFilter) == 0 {
 		toolTypes = append(toolTypes, clabnodestailscale.ToolType)
 	}

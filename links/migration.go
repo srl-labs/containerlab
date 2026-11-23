@@ -34,15 +34,20 @@ type BridgePortRelocation struct {
 
 // ParkBridgePortByOwnership finds the interface carrying the ownership altname
 // of (ownerName, ifaceName) in src's namespace and parks it into the parking
-// netns of longName. The pair survives: only the parked half is relocated.
+// netns keyed by the owner bridge's long name. Keying by the owner (not the
+// migration target) keeps a parked port attributable and resolvable even when
+// the target bridge later leaves the lab's topologies, and matches the
+// destroy-time sweep enumeration. The pair survives: only the parked half is
+// relocated. Idempotent: if the port is already parked, returns the existing
+// relocation.
 func ParkBridgePortByOwnership(
 	ctx context.Context,
 	src Node,
 	ownerName string,
 	ifaceName string,
-	longName string,
+	ownerLongName string,
 ) (*BridgePortRelocation, error) {
-	parkPath, err := clabutils.CreateOrGetNamedNetNS(clabutils.ParkingNetnsName(longName))
+	parkPath, err := clabutils.CreateOrGetNamedNetNS(clabutils.ParkingNetnsName(ownerLongName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parking netns for migration: %w", err)
 	}
@@ -51,7 +56,22 @@ func ParkBridgePortByOwnership(
 		parkNSPath:   parkPath,
 		OldOwnerName: ownerName,
 		IfaceName:    ifaceName,
-		LongName:     longName,
+		LongName:     ownerLongName,
+	}
+
+	// Idempotency: a previous apply may have parked the port and failed before
+	// restoring it. If the parking netns already holds the port, reuse the
+	// parked half so an interrupted migration resumes instead of aborting.
+	kernelName, parked, err := parkedKernelNameFor(parkPath, ownerName, ifaceName)
+	if err != nil {
+		return nil, err
+	}
+	if parked {
+		relocation.KernelName = kernelName
+		log.Debug("bridge port already parked, resuming migration",
+			"owner", ownerName, "iface", ifaceName,
+			"kernelName", kernelName, "parkNS", parkPath)
+		return relocation, nil
 	}
 
 	parkErr := src.ExecFunction(ctx, func(_ ns.NetNS) error {
@@ -76,11 +96,78 @@ func ParkBridgePortByOwnership(
 		return netlink.LinkSetNsFd(link, int(parkNs.Fd()))
 	})
 	if parkErr != nil {
-		_ = clabutils.UnlinkNamedNetNS(parkPath)
+		if unlinkErr := clabutils.UnlinkNamedNetNS(parkPath); unlinkErr != nil {
+			log.Debug("failed to clean up parking netns after park error",
+				"path", parkPath, "err", unlinkErr)
+		}
 		return nil, parkErr
 	}
 
 	return relocation, nil
+}
+
+// FindParkedBridgePortByOwnership reports whether a port carrying the
+// ownership altname of (ownerName, ifaceName) is currently parked in the
+// owner's parking netns and, when found, returns the relocation ready for
+// restore. It creates and mutates nothing.
+func FindParkedBridgePortByOwnership(
+	ownerLongName, ownerName, ifaceName string,
+) (*BridgePortRelocation, bool, error) {
+	parkPath, err := clabutils.GetNamedNetNS(clabutils.ParkingNetnsName(ownerLongName))
+	if err != nil {
+		// A missing slot means the port cannot be parked, not an error.
+		return nil, false, nil
+	}
+
+	kernelName, parked, err := parkedKernelNameFor(parkPath, ownerName, ifaceName)
+	if err != nil || !parked {
+		return nil, false, err
+	}
+
+	return &BridgePortRelocation{
+		parkNSPath:   parkPath,
+		KernelName:   kernelName,
+		OldOwnerName: ownerName,
+		IfaceName:    ifaceName,
+		LongName:     ownerLongName,
+	}, true, nil
+}
+
+// RemoveDesertedBridge removes a bridge device from node's namespace when no
+// interface is mastered to it anymore. That is the state an in-container
+// bridge's device reaches when all of its ports migrated out to a replacement
+// bridge under a different parent container that survives the apply.
+func RemoveDesertedBridge(
+	ctx context.Context,
+	node Node,
+	bridgeName string,
+) error {
+	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
+		bridgeLink, err := netlink.LinkByName(bridgeName)
+		if err != nil {
+			// Not present; nothing to remove.
+			return nil
+		}
+
+		links, linkErr := netlink.LinkList()
+		if linkErr != nil {
+			return linkErr
+		}
+		for _, link := range links {
+			if link.Attrs().MasterIndex == bridgeLink.Attrs().Index {
+				log.Debugf("Skipping removal of deserted bridge %q; it still masters %q",
+					bridgeName, link.Attrs().Name)
+				return nil
+			}
+		}
+
+		if err := netlink.LinkDel(bridgeLink); err != nil {
+			return fmt.Errorf("failed to remove deserted bridge %q: %w", bridgeName, err)
+		}
+		log.Info("Removed deserted in-container bridge", "bridge", bridgeName)
+
+		return nil
+	})
 }
 
 // RestoreBridgePort moves the parked half into the replacement bridge's
@@ -150,15 +237,20 @@ func (r *BridgePortRelocation) RestoreBridgePort(
 
 		// Re-enslave to the replacement bridge, if present.
 		if bridgeName != "" {
-			if bridgeLink, err := netlink.LinkByName(bridgeName); err == nil {
-				if link.Attrs().MasterIndex != bridgeLink.Attrs().Index {
-					if err := netlink.LinkSetMaster(link, bridgeLink); err != nil {
-						return fmt.Errorf("failed to enslave %q to %q: %w",
-							link.Attrs().Name, bridgeName, err)
-					}
-					log.Info("Re-enslaved migrated bridge port to replacement bridge",
-						"port", link.Attrs().Name, "bridge", bridgeName)
+			bridgeLink, bridgeErr := netlink.LinkByName(bridgeName)
+			if bridgeErr != nil {
+				// Unreachable in the current apply order (the replacement
+				// bridge deploys before ports restore); a silent skip would
+				// mask an un-bridged restored port if the order changes.
+				log.Warnf("replacement bridge %q not found; port %q restored without a master",
+					bridgeName, r.KernelName)
+			} else if link.Attrs().MasterIndex != bridgeLink.Attrs().Index {
+				if err := netlink.LinkSetMaster(link, bridgeLink); err != nil {
+					return fmt.Errorf("failed to enslave %q to %q: %w",
+						link.Attrs().Name, bridgeName, err)
 				}
+				log.Info("Re-attached migrated bridge port to replacement bridge",
+					"port", link.Attrs().Name, "bridge", bridgeName)
 			}
 		}
 
@@ -174,10 +266,16 @@ func (r *BridgePortRelocation) RestoreBridgePort(
 		return dstErr
 	}
 
-	// Clean up the now empty parking namespace.
-	_ = clabutils.UnlinkNamedNetNS(r.parkNSPath)
+	// Note: Parking netns cleanup is handled by the caller after all
+	// migrations for a given bridge are complete, to avoid race conditions
+	// when multiple ports migrate to the same bridge.
 
 	return nil
+}
+
+// ParkNSPath returns the path to the parking netns.
+func (r *BridgePortRelocation) ParkNSPath() string {
+	return r.parkNSPath
 }
 
 func (r *BridgePortRelocation) execInParkingNS(f func(ns.NetNS) error) error {
@@ -190,49 +288,67 @@ func (r *BridgePortRelocation) execInParkingNS(f func(ns.NetNS) error) error {
 	return parkNs.Do(f)
 }
 
-// RelabelOwnershipAltNameFor rewrites the ownership altname of the interface
-// identified by (oldOwner, ifaceName) to (newOwner, ifaceName) inside node's
-// namespace.
-func RelabelOwnershipAltNameFor(
-	ctx context.Context,
-	node Node,
-	oldOwnerName string,
-	ifaceName string,
-	newOwnerName string,
-) error {
-	if newOwnerName == oldOwnerName {
+// parkedKernelNameFor reports whether an interface carrying the ownership
+// altname of (ownerName, ifaceName) is already parked in the parking netns at
+// parkPath, returning its kernel-side name so restore can resume. A missing
+// netns means "not parked", not an error.
+func parkedKernelNameFor(
+	parkPath, ownerName, ifaceName string,
+) (string, bool, error) {
+	parkNs, err := ns.GetNS(parkPath)
+	if err != nil {
+		// If the netns doesn't exist, the port can't be parked there
+		return "", false, nil
+	}
+	defer parkNs.Close()
+
+	var kernelName string
+	execErr := parkNs.Do(func(_ ns.NetNS) error {
+		link, err := findLinkByOwnershipAltName(ownerName, ifaceName)
+		if err != nil {
+			return nil
+		}
+		kernelName = link.Attrs().Name
+		return nil
+	})
+	if execErr != nil {
+		return "", false, execErr
+	}
+	return kernelName, kernelName != "", nil
+}
+
+// UnlinkEmptyParkingNetNS removes the named parking netns only when it holds no
+// interfaces besides the loopback device. A netns that still carries a parked
+// port is left in place so an interrupted migration stays recoverable through
+// the idempotent park path.
+func UnlinkEmptyParkingNetNS(parkPath string) error {
+	parkNs, err := ns.GetNS(parkPath)
+	if err != nil {
+		// The mount is already gone; nothing to clean up.
+		return nil
+	}
+	defer parkNs.Close()
+
+	empty := true
+	execErr := parkNs.Do(func(_ ns.NetNS) error {
+		links, listErr := netlink.LinkList()
+		if listErr != nil {
+			return listErr
+		}
+		for _, link := range links {
+			if link.Attrs().Name != "lo" {
+				empty = false
+				return nil
+			}
+		}
+		return nil
+	})
+	// Keep the netns on inspection errors and on any retained port.
+	if execErr != nil || !empty {
 		return nil
 	}
 
-	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := findLinkByOwnershipAltName(oldOwnerName, ifaceName)
-		if err != nil {
-			// Fall back to the sanitized kernel name: short names kept their
-			// kernel name during relocation.
-			link, err = netlink.LinkByName(clabutils.SanitizeInterfaceName(ifaceName))
-			if err != nil {
-				return fmt.Errorf(
-					"interface to relabel ownership for %q (old owner %q) not found: %w",
-					ifaceName,
-					oldOwnerName,
-					err,
-				)
-			}
-		}
-
-		// Drop all previous ownership markers; ownership is single-valued.
-		for _, altName := range link.Attrs().AltNames {
-			if !strings.HasPrefix(altName, ownershipAltNamePrefix) {
-				continue
-			}
-			if delErr := netlink.LinkDelAltName(link, altName); delErr != nil &&
-				!isAltNameNotSupportedErr(delErr) {
-				return fmt.Errorf("failed to drop old ownership altname %q: %w", altName, delErr)
-			}
-		}
-
-		return linkAddAltName(link, ownershipAltNameFor(newOwnerName, ifaceName))
-	})
+	return clabutils.UnlinkNamedNetNS(parkPath)
 }
 
 // findLinkByOwnershipAltName scans the current namespace for the link carrying

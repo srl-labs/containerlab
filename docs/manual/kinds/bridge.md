@@ -121,3 +121,14 @@ topology:
 In the example above, the bridge `br01` is created inside the container namespace of the `bp1` node. The bridge will be named `br01` inside the `bp1` container and will have an interface `c1eth1` connected to it from the `c1` node.
 
 The extra `|<parent node>` suffix is used to distinguish the bridges and make them unique for containerlab, but this suffix will be dropped when the bridge is created inside the container namespace, so the bridge will still be named `br01` inside the `bp1` and `bp2` containers.
+
+### Reconciling in-container bridges with deploy
+
+When a topology deployed with an in-container bridge is re-applied with a modified definition, `deploy` reconciles bridge ports in place:
+
+- adding or removing a client to the bridge adds or removes the corresponding port without touching the other attached ports
+- moving the bridge to another parent node (`br01|bp1` becomes `br01|bp2`) does not recreate the client links: the bridge-side veth ends are parked in a temporary `clab-park-*` network namespace, moved into the new parent's namespace and renamed to their logical port names, so the client-side interfaces keep their addresses and MAC addresses
+- if an apply is interrupted after parking but before the port is restored, the next deploy resumes the migration from the parked port instead of failing, even when the next deploy no longer plans the move (for example, because it reverted the bridge change)
+- removing the in-container bridge node from the topology removes its device together with its ports from the surviving parent's namespace during the same apply
+
+Ports whose client side is removed, recreated, or rewired in the same apply cannot keep their pair intact; containerlab falls back to deleting and recreating such links.

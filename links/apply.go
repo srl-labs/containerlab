@@ -76,13 +76,6 @@ func RawLinkEndpoints(rl RawLink) [][2]string {
 	}
 }
 
-// LinkDeploymentStateSetter is implemented by links whose deployment progress
-// can be marked from the outside, e.g. after a migrated bridge port fully
-// re-establishes the pair without pair re-creation.
-type LinkDeploymentStateSetter interface {
-	SetDeploymentState(state LinkDeploymentState)
-}
-
 // SplitEndpointString splits "nodeName:ifaceName" into its parts; the iface
 // part may itself contain colons (e.g. interface names in brief endpoints).
 func SplitEndpointString(endpoint string) (nodeName, ifaceName string, err error) {

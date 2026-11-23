@@ -305,7 +305,7 @@ func (b *bridge) enslaveBridgePortsInNamespace() error {
 					continue
 				}
 
-				if link.Attrs().MasterIndex != bridgeLink.(*netlink.Bridge).Index {
+				if link.Attrs().MasterIndex != bridgeLink.Attrs().Index {
 					if err := netlink.LinkSetMaster(link, bridgeLink); err != nil {
 						return fmt.Errorf("failed to enslave %q to %q: %w",
 							link.Attrs().Name, bridgeName, err)
@@ -354,9 +354,8 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	}
 
 	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
-		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:] {
-			return fmt.Errorf("container based bridge requires container name as suffix %s != %s",
-				b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
+		if err := b.validateContainerModeName(); err != nil {
+			return err
 		}
 	}
 
@@ -373,6 +372,35 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	}
 
 	return err
+}
+
+// validateContainerModeName enforces the "<bridge>|<container>" naming
+// convention of a container-based bridge node before any name-based slicing
+// or parsing is done on it. The bridge device part must be non-empty and the
+// suffix must match the network-mode target exactly, which rejects names
+// carrying a second separator as well.
+func (b *bridge) validateContainerModeName() error {
+	target, err := clabutils.ContainerNameFromNetworkMode(b.Cfg.NetworkMode)
+	if err != nil {
+		return err
+	}
+	if target == "" {
+		return fmt.Errorf("container based bridge %q: network-mode %q names no container",
+			b.GetShortName(), b.Cfg.NetworkMode)
+	}
+	device, nameSuffix, found := strings.Cut(b.GetShortName(), bridgeNodeSep)
+	if !found || device == "" {
+		return fmt.Errorf(
+			"container based bridge %q requires the name pattern '<bridge>|<container>', e.g. 'br01|%s'",
+			b.GetShortName(),
+			target,
+		)
+	}
+	if nameSuffix != target {
+		return fmt.Errorf("container based bridge requires container name as suffix %s != %s",
+			target, nameSuffix)
+	}
+	return nil
 }
 
 func (*bridge) PullImage(_ context.Context) error { return nil }

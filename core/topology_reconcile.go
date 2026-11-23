@@ -34,13 +34,24 @@ type applyEndpointRef struct {
 
 // bridgeNSMigration describes a bridge-side veth end whose owning in-container
 // bridge node changed name (a parent move) while the client-side endpoint and
-// the veth pair itself stay valid. Applying the migration moves the parked half
-// into the new parent's namespace instead of destroying and recreating the
-// pair, which preserves container-local configuration (addresses, MACs).
+// the veth pair itself stay valid. Migration candidates are validated at
+// planning time (parent resolvable, client peer matching and surviving this
+// apply), so only resumable moves are planned. Applying the migration moves the
+// parked half into the new parent's namespace instead of destroying and
+// recreating the pair, which preserves container-local configuration
+// (addresses, MACs).
 type bridgeNSMigration struct {
 	staleRef   applyEndpointRef // bridge-side endpoint to be parked (not deleted)
 	newKey     applyEndpointKey // replacement claim under a different bridge node
 	relocation *clablinks.BridgePortRelocation
+}
+
+// desertedBridgeDevice is an in-container bridge's device left behind in a
+// parent namespace that survives the apply after the bridge node moved to
+// another parent.
+type desertedBridgeDevice struct {
+	parentName string
+	deviceName string
 }
 
 type applyPlan struct {
@@ -65,6 +76,9 @@ type applyPlan struct {
 	// e.g. "added link" or "config drift: image".
 	nodeChangeReasons  map[string]string
 	bridgeNSMigrations []bridgeNSMigration
+	// desertedBridgeDevices holds in-container bridge devices to delete from
+	// surviving parent namespaces after migrated ports are restored elsewhere.
+	desertedBridgeDevices []desertedBridgeDevice
 }
 
 func (p *applyPlan) empty() bool {
@@ -75,7 +89,8 @@ func (p *applyPlan) empty() bool {
 		len(p.restartNodeSet) == 0 &&
 		len(p.linkRestartNodeSet) == 0 &&
 		len(p.addedLinks) == 0 &&
-		len(p.staleEndpoints) == 0
+		len(p.staleEndpoints) == 0 &&
+		len(p.bridgeNSMigrations) == 0
 }
 
 func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *applyPlan {
@@ -258,6 +273,11 @@ func (c *CLab) planApply(
 		return nil, err
 	}
 
+	// Bridge devices of removed BridgeNS nodes must be collected before the
+	// removals fail any topology checks below, while the node-replacement
+	// sets are final.
+	c.planDesertedBridgeDeviceRemovals(plan)
+
 	c.planParkedNodes(ctx, plan)
 	c.planStoppedNodes(ctx, plan)
 
@@ -431,13 +451,16 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 // restored into the new parent's namespace) instead of deleted, which keeps
 // the pairwise integrity of the link and the client-side configuration.
 //
-// Detection runs on two sources: live-discovered stale endpoints (existing
-// bridge nodes) and the stored old topology (deleted bridge nodes, whose
-// ports are not discovered live).
+// Detection runs on three sources: live-discovered stale endpoints (existing
+// bridge nodes), the stored old topology (deleted bridge nodes, whose ports
+// are not discovered live), and parked ports of interrupted migrations that
+// the next apply no longer plans as a move (recovery).
 func (c *CLab) planBridgeNSMigrations(ctx context.Context, plan *applyPlan) {
 	if plan == nil {
 		return
 	}
+
+	c.recoverParkedBridgeNSPorts(plan)
 
 	// Live-discovered stale bridge-side ends (the bridge node still exists).
 	for _, ref := range plan.staleEndpoints {
@@ -445,44 +468,130 @@ func (c *CLab) planBridgeNSMigrations(ctx context.Context, plan *applyPlan) {
 			ref.node.GetLinkEndpointType() != clablinks.LinkEndpointTypeBridgeNS {
 			continue
 		}
-		c.addBridgeNSMigrationCandidate(plan, ref.key, ref.node)
+		// Get the client peer from the stale link
+		staleClientPeer := c.getClientPeerFromNode(ref.key, ref.node)
+		c.addBridgeNSMigrationCandidate(plan, ref.key, ref.node, staleClientPeer)
 	}
 
 	// Deleted in-container bridge nodes are absent from the desired topology,
-	// so their ports are not discovered live; recover them from the old state.
+	// so their ports are not discovered live; recover them from the old state,
+	// deriving the client-side peer from the stored link definition.
 	if plan.state != nil && plan.state.Topology != nil {
 		for _, link := range plan.state.Topology.Links {
 			if link == nil || link.Link == nil {
 				continue
 			}
 
+			endpoints := clablinks.RawLinkEndpoints(link.Link)
+			if len(endpoints) != 2 {
+				continue
+			}
+
 			var bridgeEndpointPoint *[2]string
-			for _, point := range clablinks.RawLinkEndpoints(link.Link) {
+			for i, point := range endpoints {
 				if strings.Contains(point[0], "|") {
-					bridgePoint := point
-					bridgeEndpointPoint = &bridgePoint
+					bridgeEndpointPoint = &endpoints[i]
 				}
 			}
 			if bridgeEndpointPoint == nil {
 				continue
 			}
 
+			// The client peer is the non-bridge endpoint of the stored link.
+			var clientPeer applyEndpointKey
+			for _, ep := range endpoints {
+				if ep[0] == bridgeEndpointPoint[0] && ep[1] == bridgeEndpointPoint[1] {
+					continue
+				}
+				clientPeer = applyEndpointKey{node: ep[0], iface: ep[1]}
+			}
+
 			c.addBridgeNSMigrationCandidate(
 				plan,
 				applyEndpointKey{node: bridgeEndpointPoint[0], iface: bridgeEndpointPoint[1]},
 				nil,
+				clientPeer,
 			)
+		}
+	}
+}
+
+// recoverParkedBridgePorts plans restores for desired in-container bridge
+// ports found parked in their owner bridge's parking netns. Such ports belong
+// to a migration that was interrupted before restore, for which this apply no
+// longer plans the same move (the move is superseded or reverted): without
+// recovery, the parked half would stay invisible to every later flow, leaving
+// the client link dead until destroy. Recovery restores the parked half
+// through the regular restore path of the planned migration.
+func (c *CLab) recoverParkedBridgeNSPorts(plan *applyPlan) {
+	if plan == nil {
+		return
+	}
+
+	for nodeName, node := range c.Nodes {
+		if !c.isBridgeNSNode(nodeName) {
+			continue
+		}
+
+		longName := node.Config().LongName
+
+		for key := range plan.desiredEndpointSet {
+			if key.node != nodeName || key.iface == "" {
+				continue
+			}
+
+			if _, live := plan.liveEndpointSet[key]; live {
+				continue
+			}
+
+			if c.isBridgeNSMigrationPlanned(plan, key) {
+				continue
+			}
+
+			relocation, parked, err := clablinks.FindParkedBridgePortByOwnership(
+				longName,
+				nodeName,
+				key.iface,
+			)
+			// Lookup failures stay out of planning; the deployment path
+			// recreates the pair when the port never shows up.
+			if err != nil {
+				log.Debug("Failed to inspect the parking netns for parked bridge port recovery",
+					"bridge", nodeName, "port", key.iface, "error", err)
+				continue
+			}
+			if !parked {
+				continue
+			}
+
+			plan.bridgeNSMigrations = append(plan.bridgeNSMigrations, bridgeNSMigration{
+				// The parked port's owner is this desired bridge itself; the
+				// restore paths treat same-owner migrations as label-and-
+				// master fixups only.
+				staleRef: applyEndpointRef{
+					key:  applyEndpointKey{node: nodeName, iface: key.iface},
+					node: node,
+				},
+				newKey:     key,
+				relocation: relocation,
+			})
+			log.Info("Planning recovery of parked bridge port",
+				"bridge", nodeName, "port", key.iface)
 		}
 	}
 }
 
 // addBridgeNSMigrationCandidate registers a bridge NS migration when the
 // desired topology re-claims the given bridge-side endpoint under a different
-// in-container bridge node with the same logical port name.
+// in-container bridge node with the same logical port name. Candidates are
+// validated at planning time: the old bridge's parent must resolve from the
+// desired topology, the old link's client-side endpoint must match the new
+// link's client endpoint, and the client side must survive this apply.
 func (c *CLab) addBridgeNSMigrationCandidate(
 	plan *applyPlan,
 	staleKey applyEndpointKey,
 	staleNode clablinks.Node,
+	staleClientPeer applyEndpointKey,
 ) {
 	if staleKey.node == "" || staleKey.iface == "" {
 		return
@@ -494,11 +603,43 @@ func (c *CLab) addBridgeNSMigrationCandidate(
 		return
 	}
 
+	if !c.canResolveBridgeMigParent(staleKey.node) {
+		log.Debug("Skipping bridge port migration; parent of old bridge is not in the desired topology",
+			"bridge", staleKey.node)
+		return
+	}
+
+	if staleClientPeer.node == "" && staleNode != nil {
+		staleClientPeer = c.getClientPeerFromNode(staleKey, staleNode)
+	}
+	if staleClientPeer.node == "" {
+		log.Debug("Skipping bridge port migration; client-side peer of the old link is unknown",
+			"bridge", staleKey.String())
+		return
+	}
+
+	// Client-side validation is candidate-independent; run it once.
+	if c.isClientPeerDropped(staleClientPeer, plan) {
+		log.Debug("Skipping bridge port migration; client side is deleted, recreated or not desired",
+			"bridge", staleKey.String(), "client", staleClientPeer.String())
+		return
+	}
+
+	newClientPeers := c.desiredBridgeClientPeers()
+
 	for candidate := range plan.desiredEndpointSet {
 		if candidate.iface != staleKey.iface || candidate.node == staleKey.node {
 			continue
 		}
 		if !c.isBridgeNSNode(candidate.node) {
+			continue
+		}
+
+		if newClientPeers[candidate] != staleClientPeer {
+			log.Debug("Skipping bridge port migration; rewired client endpoint would destroy the pair",
+				"bridge", staleKey.node, "port", staleKey.iface,
+				"oldClient", staleClientPeer.String(),
+				"newClient", newClientPeers[candidate].String())
 			continue
 		}
 
@@ -515,6 +656,118 @@ func (c *CLab) addBridgeNSMigrationCandidate(
 		)
 		return
 	}
+}
+
+// desiredBridgeClientPeers builds a bidirectional endpoint map from the
+// desired veth links once, so migration candidate validation does not rescan
+// the link set per candidate.
+func (c *CLab) desiredBridgeClientPeers() map[applyEndpointKey]applyEndpointKey {
+	peers := make(map[applyEndpointKey]applyEndpointKey)
+	for _, link := range c.Links {
+		veth, ok := link.(*clablinks.LinkVEth)
+		if !ok || len(veth.Endpoints) != 2 {
+			continue
+		}
+		var a, b applyEndpointKey
+		if veth.Endpoints[0].GetNode() != nil {
+			a = applyEndpointKey{
+				veth.Endpoints[0].GetNode().GetShortName(),
+				veth.Endpoints[0].GetIfaceName(),
+			}
+		}
+		if veth.Endpoints[1].GetNode() != nil {
+			b = applyEndpointKey{
+				veth.Endpoints[1].GetNode().GetShortName(),
+				veth.Endpoints[1].GetIfaceName(),
+			}
+		}
+		if a.node == "" || b.node == "" {
+			continue
+		}
+		peers[a] = b
+		peers[b] = a
+	}
+	return peers
+}
+
+// getClientPeerFromNode extracts the client-side peer of the given bridge-side
+// endpoint from the live bridge node's endpoint links.
+func (c *CLab) getClientPeerFromNode(
+	bridgeKey applyEndpointKey,
+	node clablinks.Node,
+) applyEndpointKey {
+	for _, ep := range node.GetEndpoints() {
+		if ep == nil || ep.GetLink() == nil {
+			continue
+		}
+		veth, ok := ep.GetLink().(*clablinks.LinkVEth)
+		// Only consider the link that actually holds bridgeKey; a bridge node
+		// with multiple ports exposes one link per port.
+		if !ok || len(veth.Endpoints) != 2 {
+			continue
+		}
+		for i := range veth.Endpoints {
+			e := veth.Endpoints[i]
+			if e.GetNode() == nil ||
+				e.GetNode().GetShortName() != bridgeKey.node ||
+				e.GetIfaceName() != bridgeKey.iface {
+				continue
+			}
+			peer := veth.Endpoints[1-i]
+			if peer.GetNode() == nil {
+				return applyEndpointKey{}
+			}
+			return applyEndpointKey{
+				peer.GetNode().GetShortName(),
+				peer.GetIfaceName(),
+			}
+		}
+	}
+	return applyEndpointKey{}
+}
+
+// isClientPeerDropped reports whether the migration's client side loses its
+// peer during this apply: node deleted or recreated (container teardown
+// destroys the peer), or the client endpoint no longer desired (the pair gets
+// torn down by endpoint deletion). In all such cases migration cannot keep the
+// pair intact and the delete/recreate path applies instead.
+func (c *CLab) isClientPeerDropped(
+	clientPeer applyEndpointKey,
+	plan *applyPlan,
+) bool {
+	if _, deleted := plan.deletedNodeSet[clientPeer.node]; deleted {
+		return true
+	}
+	if _, recreated := plan.recreatedNodeSet[clientPeer.node]; recreated {
+		return true
+	}
+	if _, desired := plan.desiredEndpointSet[clientPeer]; !desired {
+		return true
+	}
+	return false
+}
+
+// canResolveBridgeMigParent reports whether the parent container of the given
+// bridge node name is part of the desired topology, which is required to park
+// a port out of the old bridge's namespace. Unresolvable parents belong to the
+// delete/recreate path instead of the migration path.
+func (c *CLab) canResolveBridgeMigParent(bridgeNodeName string) bool {
+	parentName := c.extractBridgeParentName(bridgeNodeName)
+	if parentName == "" {
+		return false
+	}
+	_, exists := c.Nodes[parentName]
+	return exists
+}
+
+// extractBridgeParentName extracts the parent container name from an
+// name-encoded in-container bridge node name ("bridgeName|parentName").
+func (c *CLab) extractBridgeParentName(bridgeNodeName string) string {
+	parts := strings.SplitN(bridgeNodeName, "|", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[1]
 }
 
 // isBridgeNSMigrationPlanned reports whether the given bridge endpoint is
@@ -1187,13 +1440,9 @@ func bridgeMasterMismatch(ep clablinks.Endpoint, live clablinks.OwnedInterface) 
 
 	// Handle in-container bridge (BridgeNS) endpoints
 	if endpointType == clablinks.LinkEndpointTypeBridgeNS {
-		// For BridgeNS, the bridge name in the container is the node name without the namespace
-		// suffix
-		bridgeName := node.GetShortName()
-		if idx := strings.Index(bridgeName, "|"); idx != -1 {
-			bridgeName = bridgeName[:idx]
-		}
-		return live.MasterName != bridgeName
+		// For BridgeNS, the bridge name inside the parent's namespace is the
+		// node name without the "<bridge>|<parent>" suffix.
+		return live.MasterName != bridgeNSNameInNamespace(node.GetShortName())
 	}
 
 	return false
@@ -1225,19 +1474,22 @@ func (c *CLab) deleteApplyEndpoints(
 ) error {
 	refs := plan.staleEndpoints
 	for _, ref := range refs {
-		log.Info("Deleting link endpoint", "endpoint", ref.key.String())
-
-		// For BridgeNS bridges, use RemoveInterface instead of RemoveOwnedInterface.
-		// BridgeNS interfaces are owned by the remote endpoint (the container
-		// connecting to the bridge), not by the bridge itself, so per-node
-		// ownership checks would always fail here.
+		// Migrated endpoints are parked and restored later in apply instead
+		// of being deleted here; report the intent before any delete log.
 		if ref.node.GetLinkEndpointType() == clablinks.LinkEndpointTypeBridgeNS {
 			if c.isBridgeNSMigrationPlanned(plan, ref.key) {
-				// Migrated endpoints are parked and restored later in apply
-				// instead of being deleted here.
 				log.Info("Preserving bridge port for migration", "endpoint", ref.key.String())
 				continue
 			}
+		}
+
+		log.Info("Deleting link endpoint", "endpoint", ref.key.String())
+
+		// For BridgeNS bridges, use RemoveInterface instead of RemoveOwnedInterface.
+		// The bridge-attached interface's ownership marker refers to the bridge
+		// endpoint owner, not to the parent container this call executes in, so
+		// per-node ownership checks would always fail here.
+		if ref.node.GetLinkEndpointType() == clablinks.LinkEndpointTypeBridgeNS {
 			parentNode, err := c.bridgeNSParentNode(ref.key.node)
 			if err != nil {
 				return err

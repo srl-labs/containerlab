@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/jsimonetti/rtnetlink/rtnl"
@@ -106,6 +108,32 @@ func ParkingNetnsName(containerName string) string {
 	}
 
 	return name[:maxBaseLen] + "-" + suffix
+}
+
+// SweepParkingNetnses removes the parking netns entries of the given container
+// long names. Destroyed labs have nothing left to migrate or restore, so
+// entries abandoned by an interrupted bridge-port migration or by a node that
+// was parked outside of the lab's topology are swept, their parked ports
+// included. Long names of nodes that never parked are skipped silently.
+func SweepParkingNetnses(longNames ...string) error {
+	var errs []error
+	for _, longName := range longNames {
+		if longName == "" {
+			continue
+		}
+
+		name := ParkingNetnsName(longName)
+		if _, err := GetNamedNetNS(name); err != nil {
+			continue
+		}
+
+		if err := netns.DeleteNamed(name); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"failed to remove parking netns %q: %w", name, err,
+			))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.
@@ -230,10 +258,20 @@ func GetNamedNetNS(name string) (string, error) {
 	return nsPath, nil
 }
 
-// UnlinkNamedNetNS removes the named netns symlink/mount, best effort.
+// UnlinkNamedNetNS removes the named netns symlink/mount.
+// It umounts first (required for bind-mounted netns) then unlinks.
 func UnlinkNamedNetNS(nsPath string) error {
 	if !FileOrDirExists(nsPath) {
 		return nil
+	}
+
+	// Unmount first (required for bind-mounted netns created by netns.NewNamed)
+	// Use MNT_DETACH to allow lazy unmount if the namespace is still in use.
+	if err := syscall.Unmount(nsPath, syscall.MNT_DETACH); err != nil {
+		// EOPNOTSUPP means it's not a mount point, which is fine
+		if err != syscall.EOPNOTSUPP && err != syscall.EINVAL {
+			return fmt.Errorf("failed to unmount netns %q: %w", nsPath, err)
+		}
 	}
 
 	return os.Remove(nsPath)

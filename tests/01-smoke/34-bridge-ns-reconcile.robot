@@ -14,6 +14,7 @@ ${add-c3-vars}          34-bridge-ns-reconcile.vars.add-c3.yml
 ${remove-c2-vars}       34-bridge-ns-reconcile.vars.remove-c2.yml
 ${move-bridge-vars}     34-bridge-ns-reconcile.vars.move-bridge.yml
 ${drift-parent-vars}    34-bridge-ns-reconcile.vars.drift-parent.yml
+${no-bridge-vars}       34-bridge-ns-reconcile.vars.no-bridge.yml
 ${runtime}              docker
 ${bridge-cidr-gw}       192.168.0.1
 ${c1-if-ip}             192.168.0.2
@@ -96,6 +97,7 @@ Reconcile moves the bridge to a different parent container
     Container Interface Attached To Bridge    bp2    br01    c3eth1
     Endpoint Interface Does Not Exist    bp1    c1eth1
     Endpoint Interface Does Not Exist    bp1    c3eth1
+    Bridge Does Not Exist In Container    bp1    br01
     Ping From Node    c1    ${c3-if-ip}
     Ping From Node    c3    ${c1-if-ip}
     ${c1_after} =    Node Runtime Identity    c1
@@ -135,9 +137,59 @@ Parent drift reconcile is idempotent
     Should Not Contain    ${output}    added links
     Should Not Contain    ${output}    recreated nodes
 
+Interrupted move recovery after reverting the move
+    # Injection: a migration interrupted between park and restore leaves the
+    # bridge-side half parked, carrying the owner bridge's altname. Re-applying
+    # with the move reverted (same vars as the running lab) plans no migration
+    # of its own; apply must recover the parked port through the restore path
+    # instead of failing or silently stranding the link.
+    ${park-ns} =    Set Variable    clab-park-clab-${lab-name}-br01|bp2
+    ${bp2pid} =    Run    docker inspect -f '{{.State.Pid}}' clab-${lab-name}-bp2
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip netns add '${park-ns}'
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo nsenter -t ${bp2pid} -n ip link set dev c1eth1 netns '${park-ns}'
+    Should Be Equal As Integers    ${rc}    0
+    Run    sudo ip netns exec '${park-ns}' ip link show dev c1eth1
+
+    ${c1_before} =    Node Runtime Identity    c1
+    ${rc}    ${output} =    Run Clab Command
+    ...    deploy -t ${CURDIR}/${topo} --vars ${CURDIR}/${drift-parent-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    recovery of parked bridge port
+
+    Container Interface Attached To Bridge    bp2    br01    c1eth1
+    Container Interface Attached To Bridge    bp2    br01    c3eth1
+    Ping From Node    c1    ${c3-if-ip}
+    Ping From Node    c3    ${c1-if-ip}
+    ${c1_after} =    Node Runtime Identity    c1
+    Should Be Equal As Strings    ${c1_after}    ${c1_before}
+
+Reconcile removes the in-container bridge from the topology
+    # Removing the bridge node while its parent container keeps running must
+    # also drop the bridge device that lives inside the parent, together with
+    # its ports; the client-side veth halves die with their own pairs.
+    ${rc}    ${output} =    Run Clab Command
+    ...    deploy -t ${CURDIR}/${topo} --vars ${CURDIR}/${no-bridge-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    deleted endpoints
+    Should Not Contain    ${output}    recreated
+
+    Bridge Does Not Exist In Container    bp2    br01
+    Endpoint Interface Does Not Exist    bp2    c1eth1
+    Endpoint Interface Does Not Exist    bp2    c3eth1
+
+Bridge removal reconcile is idempotent
+    ${rc}    ${output} =    Run Clab Command
+    ...    deploy -t ${CURDIR}/${topo} --vars ${CURDIR}/${no-bridge-vars}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    deleted endpoints
+    Should Not Contain    ${output}    added links
+
 *** Keywords ***
 Teardown
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --cleanup -y
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy --name ${lab-name} --cleanup -y
 
 Setup
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -158,6 +210,13 @@ Bridge Exists In Container
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    UP,LOWER_UP
+
+Bridge Does Not Exist In Container
+    [Arguments]    ${container}    ${bridge}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-${container} ip link show dev ${bridge}
+    Log    ${output}
+    Should Not Be Equal As Integers    ${rc}    0
 
 Container Interface Attached To Bridge
     [Arguments]    ${container}    ${bridge}    ${iface}
@@ -184,6 +243,9 @@ Ping From Node
     Should Contain    ${output}    0% packet loss
 
 Node Runtime Identity
+    [Documentation]    Returns the container's PID and start time for a node,
+    ...    used to prove that a reconcile did not recreate the container:
+    ...    a recreation changes both values.
     [Arguments]    ${node}
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}

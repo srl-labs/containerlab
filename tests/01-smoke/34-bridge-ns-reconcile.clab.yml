@@ -12,7 +12,9 @@
 #   .bridgeParent - which container hosts br01 (bp1 or bp2)
 #   .parentEnv    - env value for the bridge-holding parent, used to trigger
 #                   config drift and force a parent recreation
+#   .includeBridge - keep the in-container bridge node; set false to remove it
 {{- $bp := or .bridgeParent "bp1" }}
+{{- $bridge := ne .includeBridge false }}
 
 name: bridge-ns-reconcile
 
@@ -29,9 +31,11 @@ topology:
       env:
         FOO: {{ or .parentEnv "v1" }}
 
+    {{ if $bridge }}
     br01|{{ $bp }}:
       kind: bridge
       network-mode: container:{{ $bp }}
+    {{ end }}
 
     c1:
       kind: linux
@@ -54,10 +58,12 @@ topology:
     {{ end }}
 
   links:
+    {{ if $bridge }}
     - endpoints: ["c1:eth1", "br01|{{ $bp }}:c1eth1"]
     {{ if .includeC2 }}
     - endpoints: ["c2:eth1", "br01|{{ $bp }}:c2eth1"]
     {{ end }}
     {{ if .includeC3 }}
     - endpoints: ["c3:eth1", "br01|{{ $bp }}:c3eth1"]
+    {{ end }}
     {{ end }}
