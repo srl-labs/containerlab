@@ -190,6 +190,12 @@ func (c *CLab) prepareLabRuntimeTopology() error {
 		*c.Config.Prefix = defaultPrefix
 	}
 
+	expandedTopology, err := c.labRuntimeTopologyWithExpandedMagicVars()
+	if err != nil {
+		return err
+	}
+	c.renderedTopology = expandedTopology
+
 	return nil
 }
 

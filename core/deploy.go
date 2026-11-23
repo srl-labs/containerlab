@@ -269,7 +269,17 @@ func (c *CLab) deploy( //nolint: funlen
 
 	execCollection.Log(ctx)
 
-	return c.finalize(ctx, options.exportTemplate, options.graph)
+	containers, err := c.finalize(ctx, options.exportTemplate, options.graph)
+	if err != nil {
+		return nil, err
+	}
+
+	// set after finalizing, so a failed impairment doesn't skip the lab's exports and state
+	if err := clablinks.ApplyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+		return nil, err
+	}
+
+	return containers, nil
 }
 
 func waitForNodeDeploy(

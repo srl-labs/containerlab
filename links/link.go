@@ -281,7 +281,7 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 		return fmt.Errorf("unknown link type %q", lt)
 	}
 
-	return nil
+	return ld.checkNetem()
 }
 
 // MarshalYAML serializes LinkDefinition (e.g when used with generate command).
@@ -296,7 +296,7 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 			Type        string `yaml:"type"`
 		}{
 			LinkHostRaw: *r.Link.(*LinkHostRaw),
-			Type:        string(LinkTypeVEth),
+			Type:        string(LinkTypeHost),
 		}
 		return x, nil
 	case LinkTypeVEth:
@@ -338,12 +338,17 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 		}
 		return x, nil
 	case LinkTypeVxlan:
+		raw := r.Link.(*LinkVxlanRaw)
+		linkType := raw.LinkType
+		if linkType == "" {
+			linkType = LinkTypeVxlan
+		}
 		x := struct {
 			Type         string `yaml:"type"`
 			LinkVxlanRaw `yaml:",inline"`
 		}{
-			LinkVxlanRaw: *r.Link.(*LinkVxlanRaw),
-			Type:         string(LinkTypeVxlan),
+			LinkVxlanRaw: *raw,
+			Type:         string(linkType),
 		}
 		return x, nil
 	case LinkTypeDummy:

@@ -29,10 +29,6 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const (
-	msPerSec = 1_000
-)
-
 func netemCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "netem",
@@ -344,7 +340,7 @@ func qdiscToTableData(qdisc *gotc.Object) tableWriter.Row {
 	loss = strconv.FormatFloat(
 		float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64,
 	) + "%"
-	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / msPerSec))
+	rate = strconv.FormatUint(clabnetem.RateKbit(qdisc.Netem), 10)
 	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
 		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
@@ -391,9 +387,7 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
 
-	if qdisc.Netem.Rate != nil && int(qdisc.Netem.Rate.Rate) != 0 {
-		rate = int(qdisc.Netem.Rate.Rate * 8 / msPerSec)
-	}
+	rate = int(clabnetem.RateKbit(qdisc.Netem))
 
 	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
 		// round to 2 decimal places

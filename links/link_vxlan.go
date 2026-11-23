@@ -31,7 +31,7 @@ type LinkVxlanRaw struct {
 
 	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the
 	// raw format
-	LinkType LinkType
+	LinkType LinkType `yaml:"-"`
 }
 
 func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
