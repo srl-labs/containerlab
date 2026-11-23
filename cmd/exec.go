@@ -199,7 +199,9 @@ func execAttachedFn(
 	}
 
 	if err != nil && o.Exec.Stdin && term.IsTerminal(int(os.Stdin.Fd())) {
-		// the stdin copy still reads the terminal, so the error is printed without those queries
+		// the stdin copy can still be blocked reading the terminal, also without raw mode, and
+		// would swallow the answers to the terminal queries of fang's error rendering, so the
+		// error is printed without them
 		restoreTerminal()
 		fmt.Fprintln(cobraCmd.ErrOrStderr(), "Error:", err)
 		os.Exit(1)

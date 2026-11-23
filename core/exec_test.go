@@ -85,7 +85,12 @@ func TestExecAttachedWithALabRuntime(t *testing.T) {
 		t.Fatalf("stdin reached the command as %q", stdout.String())
 	}
 
-	err = c.ExecAttached(context.Background(), []string{"sh"}, false, clablabruntime.AttachStreams{})
+	err = c.ExecAttached(
+		context.Background(),
+		[]string{"sh"},
+		false,
+		clablabruntime.AttachStreams{},
+	)
 	if err == nil || !strings.Contains(err.Error(), "matched 2") {
 		t.Fatalf("ExecAttached() on two nodes error = %v", err)
 	}
@@ -157,7 +162,12 @@ func TestExecAttachedWithALocalRuntime(t *testing.T) {
 			runtime.containerName, runtime.cmd, runtime.tty, stdout.String())
 	}
 
-	err := c.ExecAttached(context.Background(), []string{"bash"}, false, clablabruntime.AttachStreams{})
+	err := c.ExecAttached(
+		context.Background(),
+		[]string{"bash"},
+		false,
+		clablabruntime.AttachStreams{},
+	)
 	if err == nil || !strings.Contains(err.Error(), "matched 2") {
 		t.Fatalf("ExecAttached() on two containers error = %v", err)
 	}
@@ -177,7 +187,12 @@ func TestExecAttachedWithoutAnAttachingRuntime(t *testing.T) {
 		Runtimes: map[string]clabruntime.ContainerRuntime{"docker": mock},
 	}
 
-	err := c.ExecAttached(context.Background(), []string{"bash"}, false, clablabruntime.AttachStreams{})
+	err := c.ExecAttached(
+		context.Background(),
+		[]string{"bash"},
+		false,
+		clablabruntime.AttachStreams{},
+	)
 	if err == nil || !strings.Contains(err.Error(), "does not support attached exec") {
 		t.Fatalf("ExecAttached() error = %v", err)
 	}

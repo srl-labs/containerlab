@@ -44,7 +44,7 @@ Defaults to `plain` output format.
 
 With the `--stdin | -i` flag the command gets containerlab's stdin, like `docker exec -i`, for example to copy a file into a node. The output of the command is written to stdout and stderr as it comes, and containerlab exits with the command's exit code. A command that can't start, such as a missing executable, is reported as an error with the Docker and clabernetes runtimes, and containerlab exits with 1.
 
-The filter must then match exactly one node, and `--cmd` can be given once. `--format` is not supported with `--stdin` and `--tty`.
+The filter must then match exactly one node, and `--cmd` can be given once. As with other exec commands, the command runs as root with Docker and Podman, and as the container's user with clabernetes, where Kubernetes doesn't allow choosing the user. `--format` is not supported with `--stdin` and `--tty`.
 
 ### tty
 

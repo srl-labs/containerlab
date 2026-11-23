@@ -78,7 +78,9 @@ func (f *fakeExecAPI) echo(w http.ResponseWriter) {
 	_ = rw.Flush()
 
 	if f.notStarted {
-		_, _ = conn.Write([]byte("OCI runtime exec failed: exec: \"nope\": executable file not found\r\n"))
+		_, _ = conn.Write(
+			[]byte("OCI runtime exec failed: exec: \"nope\": executable file not found\r\n"),
+		)
 		return
 	}
 
@@ -301,7 +303,8 @@ func TestAttachContainerWithACommandThatDoesNotStart(t *testing.T) {
 		clablabruntime.AttachStreams{Stdin: strings.NewReader(""), Stdout: &stdout})
 
 	var exitErr *clablabruntime.CommandExitError
-	if err == nil || errors.As(err, &exitErr) || !strings.Contains(err.Error(), "executable file not found") {
+	if err == nil || errors.As(err, &exitErr) ||
+		!strings.Contains(err.Error(), "executable file not found") {
 		t.Fatalf("AttachContainer() error = %v, want why the command didn't start", err)
 	}
 	if stdout.Len() != 0 {
