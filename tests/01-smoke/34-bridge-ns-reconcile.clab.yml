@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2026 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Reconciliation scenarios for a layer-2 bridge living inside a container
+# namespace (bridge kind with network-mode: container:<parent>).
+#
+# Template parameters (given via --vars):
+#   .includeC2    - include node c2 and its link to the bridge
+#   .includeC3    - include node c3 and its link to the bridge
+#   .bridgeParent - which container hosts br01 (bp1 or bp2)
+#   .parentEnv    - env value for the bridge-holding parent, used to trigger
+#                   config drift and force a parent recreation
+#   .includeBridge - keep the in-container bridge node; set false to remove it
+{{- $bp := or .bridgeParent "bp1" }}
+{{- $bridge := ne .includeBridge false }}
+
+name: bridge-ns-reconcile
+
+topology:
+  nodes:
+    bp1:
+      kind: linux
+      image: alpine:latest
+      env:
+        FOO: {{ or .parentEnv "v1" }}
+    bp2:
+      kind: linux
+      image: alpine:latest
+      env:
+        FOO: {{ or .parentEnv "v1" }}
+
+    {{ if $bridge }}
+    br01|{{ $bp }}:
+      kind: bridge
+      network-mode: container:{{ $bp }}
+    {{ end }}
+
+    c1:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add dev eth1 192.168.0.2/24
+    {{ if .includeC2 }}
+    c2:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add dev eth1 192.168.0.3/24
+    {{ end }}
+    {{ if .includeC3 }}
+    c3:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add dev eth1 192.168.0.4/24
+    {{ end }}
+
+  links:
+    {{ if $bridge }}
+    - endpoints: ["c1:eth1", "br01|{{ $bp }}:c1eth1"]
+    {{ if .includeC2 }}
+    - endpoints: ["c2:eth1", "br01|{{ $bp }}:c2eth1"]
+    {{ end }}
+    {{ if .includeC3 }}
+    - endpoints: ["c3:eth1", "br01|{{ $bp }}:c3eth1"]
+    {{ end }}
+    {{ end }}

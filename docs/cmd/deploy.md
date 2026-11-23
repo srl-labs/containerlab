@@ -130,7 +130,9 @@ Only a subset of topology changes can be reconciled:
   does not create or delete their underlying resource
 - configuration drift that would require recreating an externally managed node is rejected
 - nodes with `auto-remove` enabled are not supported
-- `network-mode: container:<...>` users/providers are not supported
+- `network-mode: container:<...>` users/providers are not supported, except `kind: bridge`
+  namespace owners, which reconcile under deploy (see ["Bridges in container
+  namespace"](../manual/kinds/bridge.md#bridges-in-container-namespace))
 - existing node definition reconciliation is limited to fields captured in the state file
 - existing link parameter/type changes with the same runtime interface names are not applied in
   place; use `redeploy` for those changes

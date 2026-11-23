@@ -216,7 +216,11 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.deleteApplyEndpoints(ctx, plan.staleEndpoints); err != nil {
+	if err := c.deleteApplyEndpoints(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if err := c.parkMigratedBridgeNSPorts(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -233,6 +237,14 @@ func (c *CLab) apply(
 	}
 
 	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if err := c.restoreMigratedBridgeNSPorts(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if err := c.removeDesertedBridgeDevices(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -331,12 +343,34 @@ func (c *CLab) prepareApply(
 	return nil
 }
 
-func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Link) error {
+func (c *CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Link) error {
 	for _, link := range links {
 		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			node := ep.GetNode()
+
+			// For BridgeNS bridge endpoints, use RemoveInterface instead of
+			// RemoveOwnedInterface: the bridge-attached interface's ownership
+			// marker refers to the bridge endpoint owner, not to the parent
+			// container this call executes in, so per-node ownership checks
+			// would always fail.
+			if node.GetLinkEndpointType() == clablinks.LinkEndpointTypeBridgeNS {
+				parentNode, err := c.bridgeNSParentNode(node.GetShortName())
+				if err != nil {
+					return err
+				}
+				if err := clablinks.RemoveInterface(
+					ctx,
+					parentNode,
+					ep.GetIfaceName(),
+				); err != nil {
+					return err
+				}
+				continue
+			}
+
 			if err := clablinks.RemoveOwnedInterface(
 				ctx,
-				ep.GetNode(),
+				node,
 				ep.GetIfaceName(),
 			); err != nil {
 				return err

@@ -1,0 +1,6 @@
+# Bridge-free topology of the very same lab: matches the drift-parent state
+# (parentEnv v2 on bp1/bp2) so only the bridge node and its links vanish.
+includeBridge: false
+includeC3: true
+bridgeParent: bp2
+parentEnv: v2

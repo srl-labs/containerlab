@@ -1,0 +1,3 @@
+includeC2: false
+includeC3: true
+bridgeParent: bp2

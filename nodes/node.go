@@ -278,6 +278,26 @@ func WithRuntime(r clabruntime.ContainerRuntime) NodeOption {
 	}
 }
 
+// NamespaceSharerNodesSetter is an optional interface for nodes that execute
+// networking work in another topology node's network namespace (e.g. bridge
+// nodes with network-mode: container:<parent>). Core wires the nodes map into
+// such nodes after all nodes are constructed, so the node can resolve its
+// namespace host without waiting for DeployParams.
+type NamespaceSharerNodesSetter interface {
+	SetNodesMap(nodes map[string]Node)
+}
+
+// WireNodesMapToNodes pushes the constructed nodes map into every node that
+// wants a namespace-sharer view. Passing the live map by reference keeps
+// late-added nodes (tailscale sidecars, placeholders) visible.
+func WireNodesMapToNodes(nodes map[string]Node) {
+	for _, node := range nodes {
+		if setter, ok := node.(NamespaceSharerNodesSetter); ok {
+			setter.SetNodesMap(nodes)
+		}
+	}
+}
+
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
 // These nodes could only have interfaces named ethX, where X is >0.
 func GenericVMInterfaceCheck(nodeName string, eps []clablinks.Endpoint) error {

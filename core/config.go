@@ -171,7 +171,17 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	return c.injectTailscaleSidecars()
+	err = c.injectTailscaleSidecars()
+	if err != nil {
+		return err
+	}
+
+	// Namespace-sharing nodes (e.g. in-container bridges) resolve their parent
+	// container through the nodes map; wiring it here keeps them working in
+	// every path, including reconciles that never call node Deploy.
+	clabnodes.WireNodesMapToNodes(c.Nodes)
+
+	return nil
 }
 
 // LoadTopologyNodes builds the topology's nodes and links for a lab runtime, without a
@@ -281,6 +291,7 @@ func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
 		c.Nodes = make(map[string]clabnodes.Node)
 	}
 	c.Nodes[nodeCfg.ShortName] = n
+	clabnodes.WireNodesMapToNodes(c.Nodes)
 
 	return nil
 }

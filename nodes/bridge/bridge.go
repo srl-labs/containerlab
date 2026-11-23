@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -47,7 +48,8 @@ func Register(r *clabnodes.NodeRegistry) {
 type bridge struct {
 	clabnodes.DefaultNode
 	containerNs string
-	nodesMap    map[string]clabnodes.Node
+	// parentNode is the node whose container namespace hosts this bridge
+	parentNode clabnodes.Node
 }
 
 func (s *bridge) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -70,6 +72,34 @@ func (s *bridge) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	return nil
 }
 
+// SetNodesMap implements clabnodes.NamespaceSharerNodesSetter so core can wire
+// the topology's nodes into the bridge after construction. The bridge keeps
+// only the parent node hosting its namespace; the rest of the map is not
+// stored. This makes the parent container resolvable for link deployment and
+// namespace work even when the bridge node itself is never Deploy()ed (the
+// reconcile/apply path).
+func (n *bridge) SetNodesMap(nodes map[string]clabnodes.Node) {
+	if n.containerNs == "" {
+		return
+	}
+	if n.parentNode == nil {
+		n.parentNode = nodes[n.containerNs]
+	}
+}
+
+// resolveParentNode returns the wired parent node or an error explaining the
+// missing wiring.
+func (n *bridge) resolveParentNode() (clabnodes.Node, error) {
+	if n.parentNode == nil {
+		return nil, fmt.Errorf(
+			"bridge %q: parent container %q not available (nodes not wired)",
+			n.GetShortName(),
+			n.containerNs,
+		)
+	}
+	return n.parentNode, nil
+}
+
 // nameWithoutSeparatorSuffix returns the bridge name without the separator suffix
 // used to distinguish bridges attached to different namespaces in the topology.
 // For example, if the bridge name is "br0|ns1", it will return "br0".
@@ -82,28 +112,45 @@ func (n *bridge) nameWithoutSeparatorSuffix() string {
 }
 
 func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
-	// store nodes map for later use
-	n.nodesMap = dp.Nodes
-
-	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be
-	// created.
+	// Deploy's map is authoritative for wiring the parent node.
 	if n.Config().NetworkMode != "" {
 		cntName, err := clabutils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
-		err = dp.Nodes[cntName].ExecFunction(ctx, func(nn ns.NetNS) error {
-			// add the bridge
-			err := netlink.LinkAdd(&netlink.Bridge{
+		n.parentNode = dp.Nodes[cntName]
+
+		if n.parentNode == nil {
+			return fmt.Errorf(
+				"bridge %q: parent container %q not found in topology",
+				n.GetShortName(),
+				cntName,
+			)
+		}
+
+		// For BridgeNS, wait for parent container to be running before creating bridge
+		if err := n.waitForParentContainer(ctx, n.parentNode); err != nil {
+			return err
+		}
+		err = n.parentNode.ExecFunction(ctx, func(nn ns.NetNS) error {
+			bridgeName := n.nameWithoutSeparatorSuffix()
+			// check if bridge already exists
+			existingLink, err := netlink.LinkByName(bridgeName)
+			if err == nil {
+				// Bridge already exists, just ensure it's up
+				return netlink.LinkSetUp(existingLink)
+			}
+			// Bridge doesn't exist, create it
+			err = netlink.LinkAdd(&netlink.Bridge{
 				LinkAttrs: netlink.LinkAttrs{
-					Name: n.nameWithoutSeparatorSuffix(),
+					Name: bridgeName,
 				},
 			})
 			if err != nil {
 				return err
 			}
 			// retrieve link ref
-			netlinkLink, err := netlink.LinkByName(n.nameWithoutSeparatorSuffix())
+			netlinkLink, err := netlink.LinkByName(bridgeName)
 			if err != nil {
 				return err
 			}
@@ -122,6 +169,59 @@ func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 	return nil
 }
 
+// waitForParentContainer waits for the parent container to have a joinable network namespace.
+// This is necessary for BridgeNS bridges which execute operations in the parent container's
+// namespace.
+func (n *bridge) waitForParentContainer(ctx context.Context, parentNode clabnodes.Node) error {
+	// Poll until parent container has a joinable network namespace or context is cancelled
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			status := parentNode.GetContainerStatus(ctx)
+			if clabruntime.ContainerHasJoinableNetns(status) {
+				return nil
+			}
+			if status == clabruntime.NotFound {
+				// Parent container doesn't exist yet, keep waiting
+				continue
+			}
+			if status == clabruntime.Stopped {
+				return fmt.Errorf(
+					"parent container %q has stopped (status=%s)",
+					n.containerNs,
+					status,
+				)
+			}
+		}
+	}
+}
+
+// ExecFunction executes the given function in the bridge's network namespace.
+// For BridgeNS bridges (in-container bridges), this executes in the parent container's namespace.
+// For host bridges, this executes in the host's root namespace.
+func (b *bridge) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	// For BridgeNS bridges, we need to execute in the parent container's namespace
+	if b.containerNs != "" {
+		parentNode, err := b.resolveParentNode()
+		if err != nil {
+			// Without the wired parent there is no namespace to execute in.
+			return err
+		}
+		return parentNode.ExecFunction(ctx, f)
+	}
+	// For host bridges, execute in the current (host) namespace
+	curNs, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+	return curNs.Do(f)
+}
+
 func (*bridge) Delete(_ context.Context) error {
 	// we are not deleting iptables rules set up in the post deploy stage
 	// because we can't guarantee that the bridge is not used by another topology.
@@ -135,18 +235,110 @@ func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
 	if b.containerNs != "" {
-		return nil
+		return b.enslaveBridgePortsInNamespace()
 	}
 	return b.installIPTablesBridgeFwdRule()
 }
 
+// GetContainerStatus reports the parent container's status for in-container
+// bridges so lifecycle scheduling (parking, restart ordering) treats the
+// bridge as alive whenever its namespace host exists.
+func (b *bridge) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
+	if b.containerNs == "" {
+		return b.DefaultNode.GetContainerStatus(ctx)
+	}
+	if parentNode := b.ParentNode(ctx); parentNode != nil {
+		return parentNode.GetContainerStatus(ctx)
+	}
+	return clabruntime.NotFound
+}
+
+// ParentNode resolves the node that hosts this bridge's network namespace.
+func (b *bridge) ParentNode(_ context.Context) clabnodes.Node {
+	if b.containerNs == "" {
+		return nil
+	}
+	return b.parentNode
+}
+
+// ParkEndpoints and RestoreEndpoints are no-ops for in-container bridges: the
+// bridge-side veth ends live in the parent container's namespace and are
+// therefore carried through parent recreation by the parent's own park/restore
+// machinery. Parking them separately would move the same interfaces twice.
+func (*bridge) ParkEndpoints(_ context.Context) error { return nil }
+
+func (*bridge) RestoreEndpoints(_ context.Context) error { return nil }
+
+// enslaveBridgePortsInNamespace re-enslaves this bridge's tracked endpoint
+// interfaces (bridge-side veth ends) to the bridge inside the parent's
+// namespace. Moving interfaces between namespaces (e.g. parking during parent
+// recreation) clears the master, so restore paths need this fixup. Ports
+// already enslaved are left untouched; missing ports are skipped and remain
+// the link deployment path's responsibility.
+func (b *bridge) enslaveBridgePortsInNamespace() error {
+	bridgeName := b.nameWithoutSeparatorSuffix()
+	nodeName := b.GetShortName()
+
+	return b.ExecFunction(context.Background(), func(_ ns.NetNS) error {
+		bridgeLink, err := netlink.LinkByName(bridgeName)
+		if err != nil {
+			log.Debugf(
+				"bridge %q not found while enslaving ports, skipping: %v",
+				bridgeName,
+				err,
+			)
+			return nil
+		}
+
+		links, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+
+		for _, ep := range b.GetEndpoints() {
+			for _, link := range links {
+				if !clablinks.HasOwnershipAltNameFor(
+					link,
+					nodeName,
+					ep.GetIfaceName(),
+				) {
+					continue
+				}
+
+				if link.Attrs().MasterIndex != bridgeLink.Attrs().Index {
+					if err := netlink.LinkSetMaster(link, bridgeLink); err != nil {
+						return fmt.Errorf("failed to enslave %q to %q: %w",
+							link.Attrs().Name, bridgeName, err)
+					}
+					log.Info(
+						"Re-enslaved restored bridge port to bridge",
+						"node",
+						nodeName,
+						"port",
+						link.Attrs().Name,
+					)
+				}
+
+				if link.Attrs().OperState != netlink.OperUp {
+					if err := netlink.LinkSetUp(link); err != nil {
+						return fmt.Errorf("failed to bring up %q: %w",
+							link.Attrs().Name, err)
+					}
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
 	if b.containerNs != "" {
-		node, ok := b.nodesMap[b.containerNs]
-		if !ok {
-			return "", fmt.Errorf("unable to find node %s", b.containerNs)
+		parentNode, err := b.resolveParentNode()
+		if err != nil {
+			return "", err
 		}
-		return node.GetNSPath(ctx)
+		return parentNode.GetNSPath(ctx)
 	}
 	curns, err := ns.GetCurrentNS()
 	if err != nil {
@@ -162,9 +354,8 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	}
 
 	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
-		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:] {
-			return fmt.Errorf("container based bridge requires container name as suffix %s != %s",
-				b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
+		if err := b.validateContainerModeName(); err != nil {
+			return err
 		}
 	}
 
@@ -183,7 +374,43 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	return err
 }
 
+// validateContainerModeName enforces the "<bridge>|<container>" naming
+// convention of a container-based bridge node before any name-based slicing
+// or parsing is done on it. The bridge device part must be non-empty and the
+// suffix must match the network-mode target exactly, which rejects names
+// carrying a second separator as well.
+func (b *bridge) validateContainerModeName() error {
+	target, err := clabutils.ContainerNameFromNetworkMode(b.Cfg.NetworkMode)
+	if err != nil {
+		return err
+	}
+	if target == "" {
+		return fmt.Errorf("container based bridge %q: network-mode %q names no container",
+			b.GetShortName(), b.Cfg.NetworkMode)
+	}
+	device, nameSuffix, found := strings.Cut(b.GetShortName(), bridgeNodeSep)
+	if !found || device == "" {
+		return fmt.Errorf(
+			"container based bridge %q requires the name pattern '<bridge>|<container>', e.g. 'br01|%s'",
+			b.GetShortName(),
+			target,
+		)
+	}
+	if nameSuffix != target {
+		return fmt.Errorf("container based bridge requires container name as suffix %s != %s",
+			target, nameSuffix)
+	}
+	return nil
+}
+
 func (*bridge) PullImage(_ context.Context) error { return nil }
+
+// LinkApplyMode returns live: bridge enslaving/enslave-detach is hot-swappable
+// netlink work, so adding/removing/retargeting bridge ports must not restart or
+// recreate the bridge node. Intact links keep their endpoints untouched.
+func (*bridge) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeLive
+}
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
@@ -215,11 +442,11 @@ func (b *bridge) addLinkToContainerNamespace(
 	link netlink.Link,
 	f func(ns.NetNS) error,
 ) error {
-	cntName, err := clabutils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
+	parentNode, err := b.resolveParentNode()
 	if err != nil {
 		return err
 	}
-	err = b.nodesMap[cntName].AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
+	err = parentNode.AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
 		// get the bridge as netlink.Link
 		br, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
 		if err != nil {
