@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"os"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -322,8 +324,13 @@ func (c *CLab) prepareApply(
 		return err
 	}
 
+	reporter, stop := clabutilsprogress.New(ctx, os.Stderr)
+	defer stop()
+
+	pullCtx := clabutilsprogress.NewContext(ctx, reporter)
+
 	for _, nodeName := range addedNodes {
-		if err := c.Nodes[nodeName].PullImage(ctx); err != nil {
+		if err := c.Nodes[nodeName].PullImage(pullCtx); err != nil {
 			return err
 		}
 	}
