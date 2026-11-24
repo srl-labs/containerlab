@@ -69,11 +69,13 @@ With this flag inspect command will output every bit of information about the ru
 
 #### containers
 
-By default `inspect` shows one entry per topology node. 
+By default `inspect` shows one entry per topology node.
 
 Nodes that consist of several containers (ie. distributed SR-SIM) are represented by a single node that carries the management addresses of the node.
 
 The local flag `--containers` will list every container of a lab rather than just the logical nodes.
+
+When the lab is selected with the `--topo` flag, only the containers of the nodes defined in that topology file are listed.
 
 #### wide
 

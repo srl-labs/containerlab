@@ -195,8 +195,15 @@ func listContainers(
 		return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
 	}
 
-	// containers that containerlab did not create (ie. ext-container) have no lab labels.
 	if o.Global.TopologyFile != "" {
+		containers = slices.DeleteFunc(containers, func(ctr clabruntime.GenericContainer) bool {
+			_, isNode := c.Nodes[ctr.Labels[clabconstants.NodeName]]
+			_, isComponent := c.Nodes[ctr.Labels[clabconstants.RootNodeName]]
+
+			return !isNode && !isComponent
+		})
+
+		// containers that containerlab did not create (ie. ext-container) have no lab labels.
 		nodeContainers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
