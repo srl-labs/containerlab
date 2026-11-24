@@ -219,7 +219,7 @@ func listContainers(
 	return logicalNodeContainers(containers), nil
 }
 
-// logicalNodeContainers returns a single logical topology node
+// logicalNodeContainers returns a single logical topology node.
 func logicalNodeContainers(
 	containers []clabruntime.GenericContainer,
 ) []clabruntime.GenericContainer {
@@ -247,7 +247,10 @@ func logicalNodeContainers(
 	for idx := range containers {
 		ctr := containers[idx]
 		name := ctr.Labels[clabconstants.NodeName]
-		key := nodeKey{ctr.Labels[clabconstants.Containerlab], ctr.Labels[clabconstants.RootNodeName]}
+		key := nodeKey{
+			ctr.Labels[clabconstants.Containerlab],
+			ctr.Labels[clabconstants.RootNodeName],
+		}
 
 		// Components are named <root node>-<lowercase slot>.
 		isCPM := name == key.node+"-a" || (name == key.node+"-b" && !hasCPMA[key])
