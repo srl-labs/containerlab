@@ -1,6 +1,34 @@
 package types
 
-import "testing"
+import (
+	"bytes"
+	"encoding/json"
+	"testing"
+
+	"gopkg.in/yaml.v2"
+)
+
+func TestNodeConfigTopologyEnvNotSerialized(t *testing.T) {
+	t.Parallel()
+
+	cfg := &NodeConfig{TopologyEnv: []string{"CLAB_TEST_SECRET=secret"}}
+	serializers := map[string]func(any) ([]byte, error){
+		"json": json.Marshal,
+		"yaml": yaml.Marshal,
+	}
+
+	for name, marshal := range serializers {
+		t.Run(name, func(t *testing.T) {
+			out, err := marshal(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Contains(out, []byte("CLAB_TEST_SECRET")) {
+				t.Fatalf("TopologyEnv was serialized: %s", out)
+			}
+		})
+	}
+}
 
 func TestLabContainerName(t *testing.T) {
 	t.Parallel()

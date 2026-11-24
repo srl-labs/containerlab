@@ -1,4 +1,4 @@
-package core
+package links
 
 import (
 	"context"
@@ -9,25 +9,23 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
-func linksEndpoints(links map[int]clablinks.Link) []clablinks.Endpoint {
-	var endpoints []clablinks.Endpoint
-	for _, link := range links {
-		endpoints = append(endpoints, link.GetEndpoints()...)
-	}
-
-	return endpoints
-}
-
-// applyLinkImpairments sets the link impairments of the given endpoints on their interfaces.
+// ApplyLinkImpairments sets the link impairments of the given endpoints on their interfaces.
 // Impairments don't survive moving an interface to another namespace, so they have to be set
 // again whenever the interfaces of a node are restored.
-func applyLinkImpairments(ctx context.Context, endpoints []clablinks.Endpoint) error {
+func ApplyLinkImpairments(ctx context.Context, endpoints []Endpoint) error {
+	return applyLinkImpairments(ctx, endpoints, loadNetemModule)
+}
+
+func applyLinkImpairments(
+	ctx context.Context,
+	endpoints []Endpoint,
+	loadModule func(context.Context),
+) error {
 	var errs []error
 	moduleLoaded := false
 
@@ -38,7 +36,7 @@ func applyLinkImpairments(ctx context.Context, endpoints []clablinks.Endpoint) e
 		}
 
 		if !moduleLoaded {
-			loadNetemModule(ctx)
+			loadModule(ctx)
 			moduleLoaded = true
 		}
 
@@ -55,10 +53,10 @@ func applyLinkImpairments(ctx context.Context, endpoints []clablinks.Endpoint) e
 
 func applyEndpointImpairment(
 	ctx context.Context,
-	endpoint clablinks.Endpoint,
-	netem *clablinks.Netem,
+	endpoint Endpoint,
+	netem *Netem,
 ) error {
-	if clablinks.NetemNeedsVEthStitch(endpoint) {
+	if NetemNeedsVEthStitch(endpoint) {
 		log.Warn(
 			"Link impairments of this node only take effect on veth-stitch links",
 			"node", endpoint.GetNode().GetShortName(),
@@ -66,7 +64,7 @@ func applyEndpointImpairment(
 		)
 	}
 
-	target := clablinks.NetemEndpoint(endpoint)
+	target := NetemEndpoint(endpoint)
 
 	return target.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
 		nodeNS, err := ns.GetCurrentNS()

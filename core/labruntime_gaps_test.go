@@ -140,8 +140,20 @@ func (r *requestRecordingLabRuntime) Validate(context.Context, clablabruntime.De
 	return nil
 }
 
-// labRuntimeDeployPaths run the commands that send the topology to the lab runtime, or check it
-// before a redeploy, by name.
+func (r *requestRecordingLabRuntime) Start(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+func (r *requestRecordingLabRuntime) Restart(context.Context, clablabruntime.NodeRequest) error {
+	r.requested = true
+
+	return nil
+}
+
+// labRuntimeDeployPaths run the commands that send the topology or the nodes to start or restart
+// to the lab runtime, or check the topology before a redeploy, by name.
 func labRuntimeDeployPaths(ctx context.Context) map[string]func(c *CLab) error {
 	return map[string]func(c *CLab) error{
 		"deploy": func(c *CLab) error {
@@ -162,6 +174,12 @@ func labRuntimeDeployPaths(ctx context.Context) map[string]func(c *CLab) error {
 		},
 		"validate": func(c *CLab) error {
 			return c.ValidateLabRuntimeTopology(ctx)
+		},
+		"start": func(c *CLab) error {
+			return c.StartNodes(ctx, nil)
+		},
+		"restart": func(c *CLab) error {
+			return c.RestartNodes(ctx, nil)
 		},
 		"check before a redeploy": func(c *CLab) error {
 			return c.CheckLabRuntimeDeploy()

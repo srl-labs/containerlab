@@ -42,8 +42,6 @@ tests/out
 **/.*clab.y*ml.bak
 **/*.y*ml.bak
 
-.python-version
-
 .devcontainer/private-*
 .devcontainer/*/devcontainer-lock.json
 

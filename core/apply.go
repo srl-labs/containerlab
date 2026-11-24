@@ -10,6 +10,15 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 )
 
+func linksEndpoints(links map[int]clablinks.Link) []clablinks.Endpoint {
+	var endpoints []clablinks.Endpoint
+	for _, link := range links {
+		endpoints = append(endpoints, link.GetEndpoints()...)
+	}
+
+	return endpoints
+}
+
 // ApplyResult summarizes the changes applied by an apply operation.
 type ApplyResult struct {
 	DryRun           bool     `json:"dry-run"`
@@ -191,7 +200,7 @@ func (c *CLab) apply(
 		} else {
 			c.writeState()
 		}
-		if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+		if err := clablinks.ApplyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 			return nil, err
 		}
 		return applyResultFromPlan(plan), nil
@@ -257,7 +266,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := applyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
+	if err := clablinks.ApplyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 		return nil, err
 	}
 

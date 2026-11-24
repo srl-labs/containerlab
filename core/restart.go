@@ -25,15 +25,15 @@ func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 	var endpoints []clablinks.Endpoint
 	for _, n := range nodes {
 		if err := n.Stop(ctx); err != nil {
-			return errors.Join(err, applyLinkImpairments(ctx, endpoints))
+			return errors.Join(err, clablinks.ApplyLinkImpairments(ctx, endpoints))
 		}
 
 		if err := n.Start(ctx); err != nil {
-			return errors.Join(err, applyLinkImpairments(ctx, endpoints))
+			return errors.Join(err, clablinks.ApplyLinkImpairments(ctx, endpoints))
 		}
 
 		endpoints = append(endpoints, n.GetEndpoints()...)
 	}
 
-	return applyLinkImpairments(ctx, endpoints)
+	return clablinks.ApplyLinkImpairments(ctx, endpoints)
 }

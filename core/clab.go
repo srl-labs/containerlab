@@ -159,6 +159,10 @@ func resolveRuntimeName(name string) string {
 }
 
 func (c *CLab) prepareLabRuntimeTopology() error {
+	if c.topologyEnv != nil {
+		return errors.New("topology env is not supported with lab runtimes")
+	}
+
 	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
 
 	if strings.Contains(c.Config.Name, gitBranchVar) ||
@@ -185,6 +189,12 @@ func (c *CLab) prepareLabRuntimeTopology() error {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
 	}
+
+	expandedTopology, err := c.labRuntimeTopologyWithExpandedMagicVars()
+	if err != nil {
+		return err
+	}
+	c.renderedTopology = expandedTopology
 
 	return nil
 }

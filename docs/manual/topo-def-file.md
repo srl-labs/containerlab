@@ -273,7 +273,7 @@ links:
     labels: <link-labels>                   # optional (used in templating)
 ```
 
-The `netem` key sets [link impairments](impairments.md#impairments-in-the-topology) on the interface of an endpoint.
+The `netem` key sets [link impairments](impairments.md#declarative-definition) on the interface of an endpoint.
 
 ###### veth-stitch
 
@@ -305,7 +305,7 @@ links:
         netem: <NodeB-Impairment>           # optional
 ```
 
-The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them. [Link impairments](impairments.md#impairments-in-the-topology) set with `netem` are applied on the stitch.
+The `mac`, `ipv4`, and `ipv6` parameters configure the node-facing endpoints. The stitch itself remains transparent to the Ethernet frames passing between them. [Link impairments](impairments.md#declarative-definition) set with `netem` are applied on the stitch.
 
 ###### mgmt-net
 
@@ -797,7 +797,7 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 | `$$var`            | Escape expressions. Result will be `$var`.                           |
 
 /// note
-Programs that use containerlab as a Go library can pass the environment variables to expand with the `core.WithTopologyEnv` option. The topology, the startup-config templates and `__IMPORT_ENVS` then use only these variables instead of the environment of the program, which keeps the program's own settings, such as secrets, out of the topologies it deploys. The variables are only used by the program that passes them and aren't stored with the lab, so commands run later from a shell, such as `containerlab destroy -t <topology>`, expand the topology with the environment of that shell and need the same variables to be set.
+Programs that use containerlab as a Go library can pass the environment variables to expand with the `core.WithTopologyEnv` option. The topology, the startup-config templates and `__IMPORT_ENVS` then use only these variables instead of the environment of the program, which keeps the program's own settings, such as secrets, out of the topologies it deploys. The option is not supported with lab runtimes such as Clabernetes (`c9s`). The variables are only used by the program that passes them and aren't stored with the lab, so commands run later from a shell, such as `containerlab destroy -t <topology>`, expand the topology with the environment of that shell and need the same variables to be set.
 ///
 
 ## Magic Variables

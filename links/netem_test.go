@@ -289,6 +289,43 @@ endpoints:
 	}
 }
 
+func TestBriefNetemUsesDefaultVEthStitch(t *testing.T) {
+	var ld LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+endpoints: ["r1:eth1", "srsim:1/1/c1/1"]
+netem:
+  - {}
+  - {delay: 25ms, rate: 10000}
+`), &ld); err != nil {
+		t.Fatal(err)
+	}
+
+	link, err := ld.Link.Resolve(&ResolveParams{LabName: "lab", Nodes: map[string]Node{
+		"r1": newFakeNode("r1"),
+		"srsim": &fakeDefaultLinkTypeNode{
+			fakeNode: newFakeNode("srsim"),
+			linkType: LinkTypeVethStitch,
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := link.(*LinkVEthStitched); !ok {
+		t.Fatalf("brief link type = %T, want *LinkVEthStitched", link)
+	}
+
+	endpoint := link.GetEndpoints()[1]
+	if got := endpoint.GetNetem(); got == nil ||
+		got.Delay != 25*time.Millisecond || got.Rate != 10000 {
+		t.Fatalf("SR-SIM netem = %+v, want 25ms delay and 10000 kbit/s rate", got)
+	}
+	target := NetemEndpoint(endpoint)
+	if target.GetNode() != GetHostLinkNode() ||
+		target.GetIfaceName() != stitchFarEndName("lab", "r1", "eth1") {
+		t.Fatalf("SR-SIM netem target = %s, want the host-side egress toward r1", target)
+	}
+}
+
 func TestNetemNeedsVEthStitch(t *testing.T) {
 	nodes := map[string]Node{
 		"r1": newFakeNode("r1"),
