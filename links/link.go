@@ -580,7 +580,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 		name := l.Attrs().Name
 		link, err := netlink.LinkByName(name)
 		if err != nil {
-			return fmt.Errorf("failed to find link %q: %w", name, err)
+			return fmt.Errorf("endpoint %s: failed to find link %q: %w", endpt, name, err)
 		}
 		l = link
 

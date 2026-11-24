@@ -226,8 +226,14 @@ func (b *bridge) addLinkToContainerNamespace(
 			return err
 		}
 
+		// The link's ifindex may have changed when it entered this namespace.
+		movedLink, err := netlink.LinkByName(link.Attrs().Name)
+		if err != nil {
+			return fmt.Errorf("failed to find link %q in bridge namespace: %w", link.Attrs().Name, err)
+		}
+
 		// assign the bridge to the link as master
-		err = netlink.LinkSetMaster(link, br)
+		err = netlink.LinkSetMaster(movedLink, br)
 		if err != nil {
 			return err
 		}
