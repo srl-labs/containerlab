@@ -42,7 +42,7 @@ Check SR-14s namespace holder owns mgmt IPv4 addr
 
 Confirm SR-14s component doesn't have any IPv4 address
     ${rc}    ${output} =    Run Checked Pipeline
-    ...    ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name == "clab-${lab-name}-sr14s-a") | .ipv4_address'
+    ...    ${CLAB_BIN} --runtime ${runtime} ins -a --containers -f json | jq -r '.["${lab-name}"][] | select(.name == "clab-${lab-name}-sr14s-a") | .ipv4_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Strings    ${output}    N/A
@@ -66,7 +66,7 @@ Check SR-14s namespace holder owns mgmt IPv6 addr
 
 Confirm SR-14s component doesn't have any IPv6 address
     ${rc}    ${output} =    Run Checked Pipeline
-    ...    ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name == "clab-${lab-name}-sr14s-a") | .ipv6_address'
+    ...    ${CLAB_BIN} --runtime ${runtime} ins -a --containers -f json | jq -r '.["${lab-name}"][] | select(.name == "clab-${lab-name}-sr14s-a") | .ipv6_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Strings    ${output}    N/A
@@ -78,17 +78,17 @@ Confirm topology inspect hides namespace holder
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Strings    ${output}    true
 
-Confirm inspect all includes namespace holder
+Confirm inspect lists namespace holder only when containers are requested
     FOR    ${selector}    IN    --all    --name ${lab-name}
-        FOR    ${format}    IN    -f json    --details
+        FOR    ${format}    IN    -f json    --containers -f json    --details
             ${rc}    ${output} =    Run And Return Rc And Output
             ...    ${CLAB_BIN} --runtime ${runtime} ins ${selector} ${format}
             Should Be Equal As Integers    ${rc}    0
             Should Contain    ${output}    clab-${lab-name}-sr14s-a
-            IF    $selector == '--all'
-                Should Contain    ${output}    clab-${lab-name}-sr14s-netns
-            ELSE
+            IF    $format == '-f json'
                 Should Not Contain    ${output}    clab-${lab-name}-sr14s-netns
+            ELSE
+                Should Contain    ${output}    clab-${lab-name}-sr14s-netns
             END
         END
     END
