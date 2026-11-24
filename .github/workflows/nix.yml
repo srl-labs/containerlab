@@ -38,7 +38,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 1
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
 
       # Query upstream directly instead of importing tags into the checkout.
       # This prevents fork-only tags from affecting the selected version.
