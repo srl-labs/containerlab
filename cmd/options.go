@@ -414,6 +414,7 @@ type InspectOptions struct {
 	Format           string
 	Details          bool
 	Wide             bool
+	Containers       bool
 	InterfacesFormat string
 	InterfacesNode   string
 }

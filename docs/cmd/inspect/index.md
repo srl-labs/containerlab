@@ -67,6 +67,14 @@ The `inspect` command produces a brief summary about the running lab components.
 
 With this flag inspect command will output every bit of information about the running containers. This is what `docker inspect` command provides.
 
+#### containers
+
+By default `inspect` shows one entry per topology node. 
+
+Nodes that consist of several containers (ie. distributed SR-SIM) are represented by a single node that carries the management addresses of the node.
+
+The local flag `--containers` will list every container of a lab rather than just the logical nodes.
+
 #### wide
 
 The local `-w | --wide` flag adds all available columns to the `inspect` output table.
