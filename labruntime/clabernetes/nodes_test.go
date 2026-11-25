@@ -531,7 +531,7 @@ func TestCheckLinkNetemSchema(t *testing.T) {
 	if !errors.Is(err, clablabruntime.ErrUnsupportedRuntimeVersion) {
 		t.Fatalf("schema without Link netem: error = %v, want ErrUnsupportedRuntimeVersion", err)
 	}
-	for _, want := range []string{"spec.endpointA.netem", "Link netem impairments"} {
+	for _, want := range []string{"spec.endpointA.netem", "Link netem impairments", "0.12 or newer"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("error %q does not mention %q", err, want)
 		}

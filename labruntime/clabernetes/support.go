@@ -198,7 +198,7 @@ func checkNodeRunStateSchema(raw []byte) error {
 // requiredClabernetesNetem names the clabernetes release link impairments need. An older
 // release prunes the unknown netem field from a Link, so a lab would deploy without its
 // impairments instead of failing.
-const requiredClabernetesNetem = "clabernetes with Link netem impairments"
+const requiredClabernetesNetem = "clabernetes with Link netem impairments (0.12 or newer)"
 
 // checkLinkNetemSchema reports whether the published Link schema has an endpoint netem. It
 // returns an *unsupportedClabernetesError when it does not.
