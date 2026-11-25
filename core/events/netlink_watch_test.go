@@ -371,8 +371,8 @@ func TestProcessUpdateDeleteOnlyTrackedLinks(t *testing.T) {
 
 	states := map[int]ifaceSnapshot{7: snapshotFromLink(link)}
 
-	watcher.processUpdate(states, nil, update, registry, nil)
-	watcher.processUpdate(states, nil, update, registry, nil)
+	watcher.processUpdate(context.Background(), states, nil, update, registry, nil)
+	watcher.processUpdate(context.Background(), states, nil, update, registry, nil)
 	close(events)
 
 	var got []string

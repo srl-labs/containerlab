@@ -89,7 +89,7 @@ func Stream(ctx context.Context, opts Options) error {
 		select {
 		case ev := <-eventCh:
 			if err := printer(ev); err != nil {
-				log.Debugf("failed to write event: %v", err)
+				log.FromContext(ctx).Debugf("failed to write event: %v", err)
 			}
 		case err, ok := <-runtimeErrors:
 			if !ok {
@@ -131,7 +131,7 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 			}
 
 			if err := printer(aggregatedEventFromLabRuntimeEvent(clab, ev)); err != nil {
-				log.Debugf("failed to write event: %v", err)
+				log.FromContext(ctx).Debugf("failed to write event: %v", err)
 			}
 		case err, ok := <-runtimeErrs:
 			if !ok {
@@ -387,7 +387,7 @@ func ensureContainerAttributes(
 
 	containers, err := runtime.ListContainers(ctx, filters)
 	if err != nil {
-		log.Debugf("failed to resolve container for event: %v", err)
+		log.FromContext(ctx).Debugf("failed to resolve container for event: %v", err)
 
 		return attributes
 	}

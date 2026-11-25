@@ -115,6 +115,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `logs` | streams the device container log |
 | `capture` | captures lab link interfaces through the `clabwire` sidecar into one pcapng stream |
 | `inspect interfaces` | lists the capturable link interfaces with their sysfs state |
+| `tui` | opens the [terminal UI](../../cmd/tui.md#labs-in-a-kubernetes-cluster) on the labs of the cluster |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, NodeProfile, Link, and Node resources without changing them |
 | `deploy --emit-crs` | prints the Namespace, ConfigMap, and Topology (or NodeProfile, Link, and Node) manifests deploy would create, without contacting the cluster |
@@ -702,6 +703,44 @@ interfaces, with the MAC address, index, MTU and operational state read from
 sysfs in the device container (type `veth`, which is how `clabwire` realizes
 lab links).
 
+## Link impairments
+
+[Impairments in the topology](../impairments.md#declarative-definition)
+become the `netem` of the matching endpoint of each c9s Link. On a link between
+Pods, the peer Pod's `clabwire` sidecar programs the impairment on its own
+sidecar leg, where it receives the endpoint's packets. On same-Pod and host
+links, it programs the endpoint's interface instead. It also sets the impairment
+again when the interface is recreated, so it survives node restarts without
+containerlab.
+
+In a lab deployed with `--no-topology-cr`, [`tools netem`](../../cmd/tools/netem/set.md)
+changes the Link instead of a local network namespace, and `clabwire` applies
+the change live, without restarting the node. The change reaches `clabwire`
+through a ConfigMap the kubelet syncs into its pod, which can take a minute. It needs `--topo` or `--name`,
+and no root privileges:
+
+```bash
+containerlab -r c9s tools netem set -t clos.clab.yml -n srl1 -i e1-1 --delay 50ms --loss 1
+containerlab -r c9s tools netem show -t clos.clab.yml
+containerlab -r c9s tools netem reset -t clos.clab.yml -n srl1 -i e1-1
+```
+
+`set` replaces the complete impairment, so values omitted from a later `set`
+do not survive. An all-zero `set` is equivalent to `reset`.
+
+`show` lists the impairments the Links declare. A later `deploy` replaces each
+Link with the one the topology compiles to, which restores the topology's
+impairments, like `start` and `apply` do for local labs. A lab owned by a
+Topology resource (the default) rejects `set` and `reset`: the clabernetes
+controller renders its Links and reverts any direct change, so its impairments
+come from the topology.
+
+Link impairments need a clabernetes release whose Link has an endpoint
+`netem`. containerlab checks the published Link schema the first time a lab
+uses them, because an older release would drop the field and deploy the lab
+unimpaired. clabernetes programs the delay in 32-bit kernel ticks, so it
+accepts delays up to `4m`.
+
 ## Start, stop, and restart
 
 Node lifecycle commands ask the clabernetes controllers for a run state; they
@@ -1142,6 +1181,29 @@ decides what a user may do and its audit log names the user:
 The kubeconfig identity then needs the `impersonate` verb on the users and
 groups it acts as.
 
+### Logging per lab
+
+Operations that take a `context.Context`, such as deploy, destroy, start, stop,
+save, exec and capture, log to the [charmbracelet/log](https://github.com/charmbracelet/log)
+logger stored in that context, and to the default logger when the context holds
+none. This applies to Docker and Podman labs too, so a server can collect the
+output of each lab separately:
+
+```go
+var labLog bytes.Buffer
+
+ctx = log.WithContext(ctx, log.NewWithOptions(&labLog, log.Options{
+	Formatter: log.JSONFormatter,
+}))
+
+_, err = c.Deploy(ctx, deployOpts)
+```
+
+The logger in the context has its own level, independent of the default
+logger's. Image pulls are logged to it as one line per image instead of the
+progress bars. Loading a topology with `NewContainerLab` takes no context, so
+its messages still go to the default logger.
+
 ## RBAC requirements
 
 clabernetes ships two ClusterRoles meant to be bound per lab namespace with a
@@ -1391,15 +1453,14 @@ Known command differences:
   the local lab directory; a plain destroy keeps the claims.
 - Local Docker commands on the outer host are not authoritative for c9s labs.
 - `inspect interfaces` lists only the lab link interfaces (those `capture`
-  accepts), not the management or pod interfaces. Host-side `tc` or netem
-  operations do not have the same local namespace access they have with Docker
-  labs.
+  accepts), not the management or pod interfaces.
 - `graph` renders from the topology file only: `--mermaid`, `--dot`, `--drawio`
   and `--offline` work, the default mode that reads running containers is
   rejected, and so is `--node-filter`. `--drawio` runs the clab-io-draw
   container, so it needs Docker or Podman on the outer host.
 - `tools` commands operate on local containers and host networking and are
-  rejected with an error when the `c9s` runtime is selected.
+  rejected with an error when the `c9s` runtime is selected, except
+  [`tools netem`](#link-impairments), which changes the lab's Links.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting
   the global `c9s` lab runtime.
 - A lab name maps to one canonical `c9s-<lab-name>` namespace in the selected

@@ -877,7 +877,7 @@ func ProcessDownloadableAndEmbeddedFile(
 
 	switch {
 	case isEmbeddedFile:
-		log.Debugf("%q of node %q is an embedded blob", fileRef, nodeName)
+		log.FromContext(ctx).Debugf("%q of node %q is an embedded blob", fileRef, nodeName)
 
 		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, filenamePostfix)
 		if err := CreateFile(dstFileAbsPath, fileRef); err != nil {
@@ -890,7 +890,12 @@ func ProcessDownloadableAndEmbeddedFile(
 		fname := FilenameForURL(ctx, fileRef)
 		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, fname)
 
-		log.Debugf("Fetching %q for node %q storing at %q", fileRef, nodeName, dstFileAbsPath)
+		log.FromContext(ctx).Debugf(
+			"Fetching %q for node %q storing at %q",
+			fileRef,
+			nodeName,
+			dstFileAbsPath,
+		)
 
 		out, cleanup, err := CreateFileWithPermissions(
 			dstFileAbsPath,
@@ -948,7 +953,7 @@ func customHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
 var osRelease string
 
 // GetOSRelease returns the OS release of the host by inspecting /etc/*-release files.
-func GetOSRelease() string {
+func GetOSRelease(ctx context.Context) string {
 	// return cached result
 	if osRelease != "" {
 		return osRelease
@@ -965,7 +970,7 @@ func GetOSRelease() string {
 	for _, match := range matches {
 		data, err := os.ReadFile(match)
 		if err != nil {
-			log.Error(err)
+			log.FromContext(ctx).Error(err)
 		}
 
 		match := re.FindSubmatch(data)

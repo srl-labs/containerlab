@@ -1,0 +1,42 @@
+{
+  "freeTextAnnotations": [],
+  "freeShapeAnnotations": [],
+  "trafficRateAnnotations": [],
+  "groupStyleAnnotations": [
+    { "id": "racks", "name": "racks", "level": "2" }
+  ],
+  "networkNodeAnnotations": [
+    { "id": "host:leaf1-eth3", "type": "host", "position": { "x": 40, "y": 400 } }
+  ],
+  "nodeAnnotations": [
+    {
+      "id": "spine1",
+      "interfacePattern": "eth{n}",
+      "position": { "x": 300, "y": 100 }
+    },
+    {
+      "id": "leaf1",
+      "icon": "pe",
+      "level": "L3",
+      "group": "group-leaves",
+      "position": { "x": 200.5, "y": 260 }
+    },
+    {
+      "id": "leaf2",
+      "icon": "leaf",
+      "level": 2,
+      "groupId": "racks",
+      "position": { "x": 400, "y": 260 }
+    },
+    {
+      "id": "removed-node",
+      "icon": "server",
+      "position": { "x": 1, "y": 2 }
+    }
+  ],
+  "edgeAnnotations": [],
+  "aliasEndpointAnnotations": [],
+  "viewerSettings": {
+    "nodeStyle": "boxed"
+  }
+}

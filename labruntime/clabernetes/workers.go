@@ -1,6 +1,7 @@
 package clabernetes
 
 import (
+	"context"
 	"errors"
 
 	"github.com/charmbracelet/log"
@@ -21,11 +22,16 @@ func (r *Runtime) kubernetesWorkers(maxWorkers uint) (workers, clientBurst int) 
 	return workers, clientBurst
 }
 
-func warnWorkersExceedBurst(operation string, workers uint, burst, itemCount int) bool {
+func warnWorkersExceedBurst(
+	ctx context.Context,
+	operation string,
+	workers uint,
+	burst, itemCount int,
+) bool {
 	if workers <= uint(burst) || itemCount <= burst {
 		return false
 	}
-	log.Warn(
+	log.FromContext(ctx).Warn(
 		operation+" workers exceed the Kubernetes client burst; requests may be throttled",
 		"workers", workers,
 		"burst", burst,

@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs·1           lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── jobs ▸ #1 capture leaf1:e1-49 spine1:e1-1 ▸ packets [0] ─────────────────────────────────────────────── running 0s ──
+   NO  TIME          INTERFACE  SOURCE           DESTINATION      PROTOCOL  LENGTH  INFO
+
+                             waiting for packets — they show up here as they cross the link
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ capturing… 0 packets
+ ⏎ details  f pause  C stop  / filter  y copy  l log  esc back  ? help
+                                                                                                                   demo

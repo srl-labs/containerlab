@@ -58,9 +58,9 @@ func (n *rare) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	return nil
 }
 
-func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *rare) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}

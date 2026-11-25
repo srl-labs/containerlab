@@ -429,7 +429,7 @@ func checkRoute(want *netlink.Route, routes []netlink.Route) (bool, error) {
 	return found, nil
 }
 
-func (h MacvlanHost) Remove(networkID string) error {
+func (h MacvlanHost) Remove(ctx context.Context, networkID string) error {
 	if networkID == "" {
 		return fmt.Errorf("cannot remove macvlan host interface without a network ID")
 	}
@@ -447,7 +447,7 @@ func (h MacvlanHost) Remove(networkID string) error {
 	if h.TCPChecksumFill != nil {
 		for _, family := range []int{netlink.FAMILY_V4, netlink.FAMILY_V6} {
 			if err := h.TCPChecksumFill(name, family, false); err != nil {
-				log.Debugf("remove TCP checksum fill on %s: %v", name, err)
+				log.FromContext(ctx).Debugf("remove TCP checksum fill on %s: %v", name, err)
 			}
 		}
 	}
@@ -474,7 +474,10 @@ func macvlanHostNetworkID(link netlink.Link) (string, bool) {
 }
 
 // RemoveOrphans deletes host macvlans whose Docker network no longer exists.
-func (h MacvlanHost) RemoveOrphans(alive func(networkID string) bool) error {
+func (h MacvlanHost) RemoveOrphans(
+	ctx context.Context,
+	alive func(networkID string) bool,
+) error {
 	links, err := h.Links.LinkList()
 	if err != nil {
 		return fmt.Errorf("list host interfaces for macvlan cleanup: %w", err)
@@ -484,7 +487,7 @@ func (h MacvlanHost) RemoveOrphans(alive func(networkID string) bool) error {
 		if !ok || alive(id) {
 			continue
 		}
-		if err := h.Remove(id); err != nil {
+		if err := h.Remove(ctx, id); err != nil {
 			return err
 		}
 	}

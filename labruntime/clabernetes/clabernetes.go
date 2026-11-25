@@ -100,6 +100,9 @@ type Runtime struct {
 	// cluster runs a clabernetes release with the contract this runtime needs. Every view
 	// shares it. It is nil when the clients were injected (tests).
 	support *supportCheck
+	// netemSupport checks, the first time a lab uses link impairments, that the clabernetes
+	// release takes them. It is nil when the clients were injected (tests).
+	netemSupport *supportCheck
 }
 
 // kubeClients is the set of Kubernetes clients a runtime view operates with.
@@ -241,11 +244,11 @@ func (r *Runtime) connect(
 
 func withKubernetesClientDebugLogs(ctx context.Context) context.Context {
 	verbosity := -1
-	if log.GetLevel() <= log.DebugLevel {
+	if log.FromContext(ctx).GetLevel() <= log.DebugLevel {
 		verbosity = 3
 	}
 	logger := funcr.New(func(prefix, args string) {
-		log.Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
+		log.FromContext(ctx).Debug("Kubernetes client", "log", strings.TrimSpace(prefix+" "+args))
 	}, funcr.Options{Verbosity: verbosity})
 
 	return klog.NewContext(ctx, logger)
@@ -265,6 +268,7 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		identity:             cfg.Identity,
 		clients:              newClientLoader(),
 		support:              &supportCheck{},
+		netemSupport:         &supportCheck{check: checkLinkNetemSchema},
 		captureSegment:       captureSegmentFromEnv(),
 		captureReorderWindow: captureReorderWindowFromEnv(),
 	}, nil

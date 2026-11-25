@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs            all labs · docker · ● 54/59 nodes · ↓430M ↑430M
+── jobs [1] ────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    ID  KIND    LAB   STATE  TIME  STARTED   WHAT
+▌ ● #1  deploy  clos  done     0s  12:04:11  deploy clos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏎ output  C cancel  / filter  ? help
+                                                                                                                   demo

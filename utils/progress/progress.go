@@ -18,31 +18,51 @@ type Reporter interface {
 	Done(image string, err error)
 }
 
-func New(w io.Writer) (Reporter, func()) {
-	if f, ok := w.(interface{ Fd() uintptr }); ok && term.IsTerminal(f.Fd()) {
+// isTerminal reports whether fd is a terminal. Tests replace it.
+var isTerminal = term.IsTerminal
+
+// New returns a reporter that renders progress bars on w when it is a terminal, and logs to the
+// logger in ctx otherwise.
+func New(ctx context.Context, w io.Writer) (Reporter, func()) {
+	if useTUI(ctx, w) {
 		return newTUIReporter(w)
 	}
 
-	return plainReporter{}, func() {}
+	return plainReporter{logger: log.FromContext(ctx)}, func() {}
 }
 
-// plainReporter emits one log line per image and is used when there is no TTY.
-type plainReporter struct{}
+// useTUI reports whether pulls are rendered as progress bars on w. A logger in ctx means the
+// caller collects the output, so the pulls are logged to it even when w is a terminal.
+func useTUI(ctx context.Context, w io.Writer) bool {
+	if _, ok := ctx.Value(log.ContextKey).(*log.Logger); ok {
+		return false
+	}
 
-func (plainReporter) Start(image string) {
-	log.Info("Pulling image", "image", image)
+	f, ok := w.(interface{ Fd() uintptr })
+
+	return ok && isTerminal(f.Fd())
+}
+
+// plainReporter emits one log line per image to a logger. It is used when there is no TTY or
+// when the context holds a logger.
+type plainReporter struct {
+	logger *log.Logger
+}
+
+func (r plainReporter) Start(image string) {
+	r.logger.Info("Pulling image", "image", image)
 }
 
 func (plainReporter) Update(_, _ string, _ float64) {}
 
-func (plainReporter) Done(image string, err error) {
+func (r plainReporter) Done(image string, err error) {
 	if err != nil {
-		log.Error("Failed to pull image", "image", image, "err", err)
+		r.logger.Error("Failed to pull image", "image", image, "err", err)
 
 		return
 	}
 
-	log.Info("Done pulling image", "image", image)
+	r.logger.Info("Done pulling image", "image", image)
 }
 
 type reporterKey struct{}

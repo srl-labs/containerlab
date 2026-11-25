@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"syscall"
@@ -11,11 +12,15 @@ import (
 
 // stitch provisions the tc rules to stitch two endpoints together in a unidirectional fashion
 // it should take the veth and the vxlan endpoints of the root namespace.
-func stitch(ep1, ep2 Endpoint) error {
+func stitch(ctx context.Context, ep1, ep2 Endpoint) error {
 	var err error
 	// collection of netlink links for the given endpoints
 	netlinkLinks := make([]netlink.Link, 0, 2)
-	log.Debugf("configuring ingress mirroring with tc in the direction of %s -> %s", ep1, ep2)
+	log.FromContext(ctx).Debugf(
+		"configuring ingress mirroring with tc in the direction of %s -> %s",
+		ep1,
+		ep2,
+	)
 
 	// retrieve the respective netlink Links
 	for _, endpointName := range []string{ep1.GetIfaceName(), ep2.GetIfaceName()} {

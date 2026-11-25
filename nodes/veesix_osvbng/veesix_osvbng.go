@@ -74,7 +74,7 @@ func (n *veesix_osvbng) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOp
 	return nil
 }
 
-func (n *veesix_osvbng) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *veesix_osvbng) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	nodeCfg := n.Config()
@@ -90,7 +90,7 @@ func (n *veesix_osvbng) PreDeploy(_ context.Context, params *clabnodes.PreDeploy
 		osvbngCfgTpl = string(c)
 	}
 
-	err := n.GenerateConfig(n.Cfg.ResStartupConfig, osvbngCfgTpl)
+	err := n.GenerateConfig(ctx, n.Cfg.ResStartupConfig, osvbngCfgTpl)
 	if err != nil {
 		return err
 	}

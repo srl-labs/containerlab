@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs       lab: fabric · docker · ● 164/164 nodes · ↓427M ↑427M
+── labs ▸ fabric ▸ map ─────────────────────────── layout: tiers ── zoom: detail ── view: neighbors ── 5 of 164 nodes ──
+                              ┏━━━━━━━━━━━━━━━━━━┓                                 │ spine1
+                              ┃    spine1 +28    ┃                                 │ ● ready
+                              ┃     32% 705M     ┃                                 │ nokia_srlinux
+                              ┗━┯━━━┯━━━┯━━━┯━━━━┛                                 │ 172.20.27.11
+          ┌─────── 581k ─ e1-1 ─┘   │   │   └─ e1-4 ── 3.3M ──────────┐            │ CPU   32% ▄▄▄▄▄▄▄▃▄▄▄▄▃▄▄▃
+          │ e1-49▾            ┌1.6M─┘   └─ 3.0M ──┐                   │ e1-49▾     │ MEM  705M
+┌─────────┴─────┐    ┌────────┴──────┐    ┌───────┴───────┐    ┌──────┴────────┐   │
+│   leaf1 +7    │    │   leaf2 +7    │    │   leaf3 +7    │    │   leaf4 +7    │   │ links
+│   11% 711M    │    │   13% 701M    │    │   13% 708M    │    │   15% 704M    │   │ ● e1-1      leaf1      ↓581k ↑164k
+└───────────────┘    └───────────────┘    └───────────────┘    └───────────────┘   │ ● e1-2      leaf2      ↓1.6M ↑1.3M
+                                                                                   │ ● e1-3      leaf3      ↓3.0M ↑1.9M
+                                                                                   │ ● e1-4      leaf4      ↓3.3M ↑3.3M
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+                                                                                   │
+ ←↑↓→ node  tab link  ⏎ open  s shell  S ssh  c connect  a actions  / go to  e extent  i names  r rates  ? help
+                                                                                                                   demo

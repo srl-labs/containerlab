@@ -64,8 +64,6 @@ topology:
 
 
 
-Impairments are supported on the node endpoints of [veth](topo-def-file.md#veth) and [veth-stitch](topo-def-file.md#veth-stitch) links; other link types and `host` or `mgmt-net` endpoints reject them. On veth-stitch links, which brief links of SR-SIM nodes use, containerlab sets them on the stitch, like `tools netem set` does, since impairments on the interfaces of SR-SIM nodes have no effect. On SR-SIM endpoints of extended `veth` links they have no effect either, and containerlab warns about it.
-
-> [clabernetes](clabernetes/runtime.md) lab runtime doesn't support declarative impairments yet, so deploying a topology with impairments there fails, as do starting or restarting its nodes.
+Impairments are supported on the node endpoints of [veth](topo-def-file.md#veth) and [veth-stitch](topo-def-file.md#veth-stitch) links; other link types and `host` or `mgmt-net` endpoints reject them. On veth-stitch links, which brief links of SR-SIM nodes use, containerlab sets them on the stitch, like `tools netem set` does, since impairments on the interfaces of SR-SIM nodes have no effect. On SR-SIM endpoints of extended `veth` links they have no effect either, and containerlab warns about it. With the [clabernetes runtime](clabernetes/runtime.md#link-impairments), the impairments become part of the lab's Links, and `tools netem` changes them there.
 
 Containerlab sets them again when a node is started or restarted, since a node's interfaces lose their impairments when it is stopped, and whenever the lab is deployed again. `tools netem` can still change them while the lab runs, until containerlab sets the topology's impairments again. Removing an impairment from the topology, or setting all of its values to zero, doesn't remove it from a running lab; use `tools netem reset` for that.

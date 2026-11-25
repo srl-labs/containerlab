@@ -76,11 +76,11 @@ func (n *k8s_kind) GetImages(_ context.Context) map[string]string { return map[s
 func (n *k8s_kind) PullImage(_ context.Context) error             { return nil }
 
 // DeleteNetnsSymlink is a noop since kind takes care of the Netlinks.
-func (n *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
+func (n *k8s_kind) DeleteNetnsSymlink(context.Context) (err error) { return nil }
 
-func (n *k8s_kind) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
+func (n *k8s_kind) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// create the Provider with the above runtime based options
-	kindProvider, err := n.getProvider()
+	kindProvider, err := n.getProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]clabruntime.GenericCont
 
 func (n *k8s_kind) Delete(ctx context.Context) error {
 	// create the Provider with the above runtime based options
-	kindProvider, err := n.getProvider()
+	kindProvider, err := n.getProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -175,12 +175,12 @@ func (n *k8s_kind) Delete(ctx context.Context) error {
 	}
 	defer serializeDelete.Release(1)
 
-	log.Infof("Deleting kind cluster %q", n.Cfg.ShortName)
+	log.FromContext(ctx).Infof("Deleting kind cluster %q", n.Cfg.ShortName)
 	return kindProvider.Delete(n.Cfg.ShortName, "")
 }
 
 // getProvider returns the kind provider (runtime for kind).
-func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
+func (n *k8s_kind) getProvider(ctx context.Context) (*cluster.Provider, error) {
 	var kindProviderOptions cluster.ProviderOption
 	// instantiate the Provider which is runtime dependent
 	switch n.Runtime.GetName() {
@@ -198,7 +198,7 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	// create the Provider with the above runtime based options
 	return cluster.NewProvider(
 		kindProviderOptions,
-		cluster.ProviderWithLogger(newKindLogger(n.Cfg.ShortName, 0)),
+		cluster.ProviderWithLogger(newKindLogger(ctx, n.Cfg.ShortName, 0)),
 	), nil
 }
 
@@ -231,15 +231,18 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 }
 
 // RunExec is not implemented for this kind.
-func (n *k8s_kind) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
+func (n *k8s_kind) RunExec(ctx context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	log.FromContext(ctx).Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, clabexec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
-func (n *k8s_kind) RunExecNotWait(_ context.Context, _ *clabexec.ExecCmd) error {
-	log.Warnf("RunExecNotWait operation is not implemented for kind %q", n.Config().Kind)
+func (n *k8s_kind) RunExecNotWait(ctx context.Context, _ *clabexec.ExecCmd) error {
+	log.FromContext(ctx).Warnf(
+		"RunExecNotWait operation is not implemented for kind %q",
+		n.Config().Kind,
+	)
 
 	return clabexec.ErrRunExecNotSupported
 }

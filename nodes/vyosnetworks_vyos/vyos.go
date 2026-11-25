@@ -94,7 +94,7 @@ func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	if err := n.fixdirACL(); err != nil {
+	if err := n.fixdirACL(ctx); err != nil {
 		return err
 	}
 
@@ -102,12 +102,12 @@ func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 	n.Cfg.Certificate = &clabtypes.CertificateConfig{
 		Issue: &issueTrue,
 	}
-	cert, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	cert, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
 
-	key, err := pkcs1To8(cert.Key)
+	key, err := pkcs1To8(ctx, cert.Key)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 }
 
 func (n *vyos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
-	cli, err := n.newCli()
+	cli, err := n.newCli(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -142,19 +142,19 @@ func (n *vyos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 
 func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	nodeCfg := n.Config()
-	cli, err := n.newCli()
+	cli, err := n.newCli(ctx)
 	if err != nil {
 		return err
 	}
 
 	defer cli.Close()
 
-	log.Debug("Configuring management interface", "int", nodeCfg.MgmtIntf)
+	log.FromContext(ctx).Debug("Configuring management interface", "int", nodeCfg.MgmtIntf)
 
 	var cfgs []string
 
 	addressCmd := func(iface, a string, p int) string {
-		log.Debug("Setting address", "interface", iface, "address", a, "subnet", p)
+		log.FromContext(ctx).Debug("Setting address", "interface", iface, "address", a, "subnet", p)
 		return fmt.Sprintf(
 			"set interfaces ethernet %s address %s/%d",
 			iface,
@@ -208,10 +208,14 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		cfgs = slices.Concat(cfgs, n.authorizedKeyCmds())
 	}
 
-	log.Debugf("VyOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+	log.FromContext(ctx).Debugf(
+		"VyOS PostDeploy configuration for node %s: %v",
+		n.Cfg.ShortName,
+		cfgs,
+	)
 
 	resp, err := cli.SendConfigs(cfgs)
-	log.Debug("CLI", "response", resp.JoinedResult())
+	log.FromContext(ctx).Debug("CLI", "response", resp.JoinedResult())
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
@@ -220,7 +224,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
-	log.Info("PostDeploy complete", "node", n.Cfg.ShortName)
+	log.FromContext(ctx).Info("PostDeploy complete", "node", n.Cfg.ShortName)
 	return nil
 }
 

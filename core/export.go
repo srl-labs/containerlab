@@ -22,11 +22,17 @@ import (
 func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
-		log.Warn("Failed to execute the export template", "template", p, "err", err)
+		log.FromContext(ctx).Warn(
+			"Failed to execute the export template",
+			"template",
+			p,
+			"err",
+			err,
+		)
 
 		// a minimal topology data file that just provides the name of a lab that failed to
 		// generate a proper export data
-		err = c.exportTopologyDataWithMinimalTemplate(f)
+		err = c.exportTopologyDataWithMinimalTemplate(ctx, f)
 		if err != nil {
 			return err
 		}
@@ -54,7 +60,7 @@ var fullExportTemplate string
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template
 // referenced by path `p`.
-func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
+func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, p string) error {
 	name := "export"
 	if p != "" {
 		name = filepath.Base(p)
@@ -95,13 +101,13 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 		return err
 	}
 
-	log.Debugf("Exported topology data using %s template", p)
+	log.FromContext(ctx).Debugf("Exported topology data using %s template", p)
 
 	return err
 }
 
 // generates and writes topology data file to w using a default built-in template.
-func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
+func (c *CLab) exportTopologyDataWithMinimalTemplate(ctx context.Context, w io.Writer) error {
 	tdef := `{
   "name": "{{ .Name }}",
   "type": "{{ .Type }}"
@@ -122,7 +128,7 @@ func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
 		return err
 	}
 
-	log.Debug("Exported topology data using built-in template")
+	log.FromContext(ctx).Debug("Exported topology data using built-in template")
 
 	return err
 }

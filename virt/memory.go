@@ -1,6 +1,8 @@
 package virt
 
 import (
+	"context"
+
 	"github.com/charmbracelet/log"
 	"github.com/mackerelio/go-osstat/memory"
 )
@@ -13,10 +15,10 @@ const (
 )
 
 // GetSysMemory reports on total installed or available memory (in bytes).
-func GetSysMemory(mt MemoryType) uint64 {
+func GetSysMemory(ctx context.Context, mt MemoryType) uint64 {
 	memoryResult, err := memory.Get()
 	if err != nil {
-		log.Errorf("unable to determine available memory: %v", err)
+		log.FromContext(ctx).Errorf("unable to determine available memory: %v", err)
 		return 0
 	}
 	switch mt {

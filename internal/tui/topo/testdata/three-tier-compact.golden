@@ -1,0 +1,6 @@
+      [spine1]            [spine2]
+ ┌───────┴───┬────────┬───────│┐
+ │     ┌─────│──┬─────│──┬────┴│─────┐
+ [leaf1]   [leaf2]   [leaf3]   [leaf4]
+    │        ║ 2x       │         │
+[client1] [client2] [client3] [client4]

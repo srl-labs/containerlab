@@ -132,10 +132,10 @@ func (n *srl) GetNSPath(ctx context.Context) (string, error) {
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
-func (n *srl) DeleteNetnsSymlink() error {
+func (n *srl) DeleteNetnsSymlink(ctx context.Context) error {
 	if n.netnsNode == nil {
-		return n.DefaultNode.DeleteNetnsSymlink()
+		return n.DefaultNode.DeleteNetnsSymlink(ctx)
 	}
 
-	return errors.Join(n.DefaultNode.DeleteNetnsSymlink(), n.netnsNode.DeleteNetnsSymlink())
+	return errors.Join(n.DefaultNode.DeleteNetnsSymlink(ctx), n.netnsNode.DeleteNetnsSymlink(ctx))
 }
