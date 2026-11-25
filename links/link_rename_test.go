@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -91,5 +92,14 @@ func TestSetNameMACAndUpInterfaceAfterIndexChange(t *testing.T) {
 			renamed.Type(),
 			renamed.Attrs().Flags,
 		)
+	}
+}
+
+func TestSetNameMACAndUpInterfaceMissingLink(t *testing.T) {
+	link := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "clab-missing"}}
+	ep := NewEndpointVeth(NewEndpointGeneric(newFakeNode("node1"), "eth1", nil))
+	err := SetNameMACAndUpInterface(context.Background(), link, ep)(nil)
+	if err == nil || !strings.Contains(err.Error(), "node1:eth1") || !strings.Contains(err.Error(), "clab-missing") {
+		t.Fatalf("missing endpoint or link context in error: %v", err)
 	}
 }
