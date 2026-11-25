@@ -98,6 +98,13 @@ func (r *Runtime) Deploy(
 		return r.deployTopology(ctx, req, namespace, prepared, primitiveExists)
 	}
 
+	// The Links are written as compiled here, and an older release would drop their netem.
+	if linksDeclareNetem(primitives.links) {
+		if err = r.ensureLinkNetemSupport(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	managedNamespace := req.Namespace == "" && r.labNamespaceOverride == ""
 	namespaceCreated, err := r.ensureLabNamespace(
 		ctx,

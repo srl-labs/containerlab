@@ -172,10 +172,13 @@ func TestCheckLabRuntimeCommandSupport(t *testing.T) {
 	graph := &cobra.Command{Use: "graph"}
 	tools := &cobra.Command{Use: "tools"}
 	sshx := &cobra.Command{Use: "sshx"}
+	netem := &cobra.Command{Use: "netem"}
+	netemSet := &cobra.Command{Use: "set"}
 	deploy := &cobra.Command{Use: "deploy"}
 
 	root.AddCommand(graph, tools, deploy)
-	tools.AddCommand(sshx)
+	tools.AddCommand(sshx, netem)
+	netem.AddCommand(netemSet)
 
 	tests := []struct {
 		name    string
@@ -206,6 +209,12 @@ func TestCheckLabRuntimeCommandSupport(t *testing.T) {
 			runtime: clablabruntime.ClabernetesRuntimeName,
 			cmd:     sshx,
 			wantErr: true,
+		},
+		{
+			name:    "tools netem with clabernetes runtime",
+			runtime: clablabruntime.ClabernetesRuntimeName,
+			cmd:     netemSet,
+			wantErr: false,
 		},
 	}
 
