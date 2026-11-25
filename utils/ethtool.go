@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"syscall"
 	"unsafe"
@@ -42,12 +43,12 @@ func ioctlEthtool(fd int, argp uintptr) error {
 }
 
 // NSEthtoolTXOff EthtoolTXOff wrapper that can be handed straight to Node.ExecFunc().
-func NSEthtoolTXOff(cntName, ifaceName string) func(ns.NetNS) error {
+func NSEthtoolTXOff(ctx context.Context, cntName, ifaceName string) func(ns.NetNS) error {
 	return func(ns.NetNS) error {
 		// disabling offload on given interface
 		err := EthtoolTXOff(ifaceName)
 		if err != nil {
-			log.Infof(
+			log.FromContext(ctx).Infof(
 				"failed to disable TX checksum offload for %s interface for %s container",
 				ifaceName,
 				cntName,
@@ -113,20 +114,24 @@ func VethPeerIndex(ifaceName string, peerIndex *int) func(ns.NetNS) error {
 }
 
 // DisableTxOffloadByIndex disables TX checksum offload on an interface by its index.
-func DisableTxOffloadByIndex(index int) error {
+func DisableTxOffloadByIndex(ctx context.Context, index int) error {
 	link, err := netlink.LinkByIndex(index)
 	if err != nil {
 		return fmt.Errorf("failed to find interface with index %d: %w", index, err)
 	}
 
 	ifaceName := link.Attrs().Name
-	log.Debugf("Disabling TX offload on interface %s (index %d)", ifaceName, index)
+	log.FromContext(ctx).Debugf("Disabling TX offload on interface %s (index %d)", ifaceName, index)
 
 	if err := EthtoolTXOff(ifaceName); err != nil {
 		return fmt.Errorf("failed to disable TX offload on %s: %w", ifaceName, err)
 	}
 
-	log.Debug("Successfully disabled TX offload on the host ns interface", "interface", ifaceName)
+	log.FromContext(ctx).Debug(
+		"Successfully disabled TX offload on the host ns interface",
+		"interface",
+		ifaceName,
+	)
 
 	return nil
 }

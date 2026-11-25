@@ -86,7 +86,7 @@ func TestCgroupParentCoexistsWithCgroupnsMode(t *testing.T) {
 }
 
 func TestConvertVolumeMounts(t *testing.T) {
-	mounts, err := new(DockerRuntime).convertVolumeMounts([]string{
+	mounts, err := new(DockerRuntime).convertVolumeMounts(context.Background(), []string{
 		"shared:/shared:ro,nocopy",
 		"/cache",
 	})
@@ -116,7 +116,9 @@ func TestConvertVolumeMounts(t *testing.T) {
 }
 
 func TestConvertVolumeMountsRejectsUnsupportedOptions(t *testing.T) {
-	_, err := new(DockerRuntime).convertVolumeMounts([]string{"shared:/shared:Z"})
+	_, err := new(
+		DockerRuntime,
+	).convertVolumeMounts(context.Background(), []string{"shared:/shared:Z"})
 	if err == nil || !strings.Contains(err.Error(), "unsupported volume option") {
 		t.Fatalf("convertVolumeMounts() error = %v, want unsupported-option error", err)
 	}

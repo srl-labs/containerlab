@@ -5,6 +5,8 @@
 package k8s_kind
 
 import (
+	"context"
+
 	"github.com/charmbracelet/log"
 	kindLog "sigs.k8s.io/kind/pkg/log"
 )
@@ -15,9 +17,9 @@ type kindLogger struct {
 	v kindLog.Level
 }
 
-func newKindLogger(clusterName string, v kindLog.Level) *kindLogger {
+func newKindLogger(ctx context.Context, clusterName string, v kindLog.Level) *kindLogger {
 	return &kindLogger{
-		l: log.With("kind-cluster", clusterName),
+		l: log.FromContext(ctx).With("kind-cluster", clusterName),
 		v: v,
 	}
 }

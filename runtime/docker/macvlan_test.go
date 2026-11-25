@@ -233,10 +233,10 @@ func TestMacvlanHostRepairAndReuse(t *testing.T) {
 		if f.routes[0].Dst.String() != "192.0.2.140/32" {
 			t.Fatalf("route = %v", f.routes[0])
 		}
-		if err := host.Remove("network-id"); err != nil {
+		if err := host.Remove(context.Background(), "network-id"); err != nil {
 			t.Fatal(err)
 		}
-		if err := host.Remove("network-id"); err != nil {
+		if err := host.Remove(context.Background(), "network-id"); err != nil {
 			t.Fatal(err)
 		}
 		if f.deletes != 1 {
@@ -282,7 +282,7 @@ func TestMacvlanHostOwnership(t *testing.T) {
 				t.Fatal("modified incompatible host interface")
 			}
 			if kind == "foreign macvlan" || kind == "wrong type" {
-				if err := host.Remove("network-id"); err == nil {
+				if err := host.Remove(context.Background(), "network-id"); err == nil {
 					t.Fatal("removed foreign interface")
 				}
 				if f.deletes != 0 {

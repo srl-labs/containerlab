@@ -50,7 +50,10 @@ func (l *ixiacOne) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 }
 
 func (l *ixiacOne) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
+	log.FromContext(ctx).Infof(
+		"Running postdeploy actions for keysight_ixia-c-one '%s' node",
+		l.Cfg.ShortName,
+	)
 	return l.ixiacPostDeploy(ctx)
 }
 

@@ -90,7 +90,7 @@ func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
 	if err := n.AddLinkToContainer(
 		context.Background(),
 		first,
-		clablinks.SetNameMACAndUpInterface(first, ep),
+		clablinks.SetNameMACAndUpInterface(context.Background(), first, ep),
 	); err != nil {
 		t.Fatalf("add link: %v", err)
 	}
@@ -128,7 +128,7 @@ func assertReattachKeepsOnePort(t *testing.T, endpoint string) {
 	if err := n.AddLinkToContainer(
 		context.Background(),
 		second,
-		clablinks.SetNameMACAndUpInterface(second, ep),
+		clablinks.SetNameMACAndUpInterface(context.Background(), second, ep),
 	); err != nil {
 		t.Fatalf("reattach: %v", err)
 	}

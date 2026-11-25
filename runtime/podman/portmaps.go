@@ -24,10 +24,10 @@ import (
 
 // convertPortMap takes a nat.PortMap Docker type and produces a podman-compatible PortMapping.
 func (*PodmanRuntime) convertPortMap(
-	_ context.Context,
+	ctx context.Context,
 	portMap nat.PortMap,
 ) ([]netTypes.PortMapping, error) {
-	log.Debugf("Method convertPortMap was called with inputs %+v", portMap)
+	log.FromContext(ctx).Debugf("Method convertPortMap was called with inputs %+v", portMap)
 	toReturn := make([]netTypes.PortMapping, 0, len(portMap))
 	for port, hostpmap := range portMap {
 		var (
@@ -60,10 +60,10 @@ func (*PodmanRuntime) convertPortMap(
 }
 
 func (*PodmanRuntime) convertExpose(
-	_ context.Context,
+	ctx context.Context,
 	exposePorts nat.PortSet,
 ) (map[uint16]string, error) {
-	log.Debugf("Method convertExpose was called with inputs %+v", exposePorts)
+	log.FromContext(ctx).Debugf("Method convertExpose was called with inputs %+v", exposePorts)
 	toReturn := make(map[uint16]string, len(exposePorts))
 	for portProto := range exposePorts {
 		proto := portProto.Proto()

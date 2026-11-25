@@ -34,7 +34,7 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 
 			err = node.ExecFunction(
 				ctx,
-				clabutils.NSEthtoolTXOff(o.ToolsTxOffload.ContainerName, "eth0"),
+				clabutils.NSEthtoolTXOff(ctx, o.ToolsTxOffload.ContainerName, "eth0"),
 			)
 			if err != nil {
 				return err

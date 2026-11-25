@@ -1,6 +1,7 @@
 package sros
 
 import (
+	"context"
 	"testing"
 
 	"github.com/srl-labs/containerlab/nodes"
@@ -154,7 +155,7 @@ func Test_sros_mapSSHPubKeys(t *testing.T) {
 
 			tmplData := &srosTemplateData{SwVersion: tt.version}
 
-			s.prepareSSHPubKeys(tmplData)
+			s.prepareSSHPubKeys(context.Background(), tmplData)
 
 			if len(tmplData.SSHPubKeysRSA) != tt.expectedRSA {
 				t.Errorf(

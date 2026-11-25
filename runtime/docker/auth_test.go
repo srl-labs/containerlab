@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,7 +44,7 @@ var authTests = map[string]struct {
 
 func TestGetImageDomainName(t *testing.T) {
 	for _, test := range imageDomainNameTests {
-		if got := getImageDomainName(test.imageName); got != test.want {
+		if got := getImageDomainName(context.Background(), test.imageName); got != test.want {
 			t.Errorf("Image domain names do not match, got %v, want %v", got, test.want)
 		}
 	}
@@ -80,9 +81,9 @@ func TestGetDockerConfigPath(t *testing.T) {
 func TestGetDockerAuth(t *testing.T) {
 	for _, data := range authTests {
 		img := clabutils.GetCanonicalImageName(data.Image)
-		cfg, _ := GetDockerConfig(data.ConfigPath)
+		cfg, _ := GetDockerConfig(context.Background(), data.ConfigPath)
 
-		auth, err := GetDockerAuth(cfg, img)
+		auth, err := GetDockerAuth(context.Background(), cfg, img)
 		if err != nil {
 			t.Error(err)
 		}

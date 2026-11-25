@@ -123,6 +123,7 @@ nav:
       - capture: cmd/capture.md
       - save: cmd/save.md
       - exec: cmd/exec.md
+      - tui: cmd/tui.md
       - generate: cmd/generate.md
       - graph: cmd/graph.md
       - validate: cmd/validate.md

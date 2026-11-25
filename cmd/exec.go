@@ -128,7 +128,7 @@ func execFn(cobraCmd *cobra.Command, o *Options) error {
 	if resultCollection != nil {
 		switch outputFormat {
 		case clabconstants.FormatPlain:
-			resultCollection.Log()
+			resultCollection.Log(ctx)
 		case clabconstants.FormatJSON:
 			out, dumpErr := resultCollection.Dump(outputFormat)
 			if dumpErr != nil {

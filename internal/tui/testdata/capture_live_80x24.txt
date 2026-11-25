@@ -1,0 +1,24 @@
+ clab  1 Labs  2 Nodes  3 Ifaces  4 Links  5 Map  6 Jobs·1         dc1 · ● 9/10
+── jobs ▸ #1 capture leaf1:e1-49 spine1:e1-1 ▸ packets [32]
+   NO  SOURCE             DESTINATION        PROTOCOL  INFO
+   15  1a:2b:00:00:02:02  1a:2b:00:00:02:01  ARP       10.1.2.2 is at 1a:2b:00…
+   16  10.1.2.1           10.1.2.2           ICMP      echo request id=7 seq=2
+   17  10.1.2.2           10.1.2.1           ICMP      echo reply id=7 seq=2
+   18  10.1.2.1           10.1.2.2           TCP       41794 → 179 [SYN] seq=2…
+   19  10.1.2.1           10.1.2.2           BGP       OPEN as=65001 hold=90 i…
+   20  10.1.2.2           10.1.2.1           BGP       KEEPALIVE
+   21  10.1.2.1           10.1.2.2           BGP       UPDATE ×2
+   22  10.1.2.1           10.1.2.2           BFD       state=Up my=0x1 your=0x2
+   23  10.1.2.1           224.0.0.5          OSPF      Hello router=10.1.2.1 a…▐
+   24  10.1.2.1           10.1.2.2           BGP       KEEPALIVE               ▐
+   25  1a:2b:00:00:01:01  01:80:c2:00:00:0e  LLDP      system=leaf1 chassis=1a…▐
+   26  1a:2b:00:00:01:01  ff:ff:ff:ff:ff:ff  ARP       who has 10.1.1.2? tell …▐
+   27  1a:2b:00:00:01:02  1a:2b:00:00:01:01  ARP       10.1.1.2 is at 1a:2b:00…▐
+   28  10.1.1.1           10.1.1.2           ICMP      echo request id=7 seq=3 ▐
+   29  10.1.1.2           10.1.1.1           ICMP      echo reply id=7 seq=3   ▐
+   30  10.1.1.1           10.1.1.2           TCP       41794 → 179 [SYN] seq=2…▐
+   31  10.1.1.1           10.1.1.2           BGP       OPEN as=65001 hold=90 i…▐
+▌  32  10.1.1.2           10.1.1.1           BGP       KEEPALIVE               ▐
+ capturing… 32 packets
+ ⏎ details  f pause  C stop  / filter  y copy  l log  esc back  ? help
+                                                                           demo
