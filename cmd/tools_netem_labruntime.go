@@ -39,19 +39,25 @@ func netemSetLabRuntime(ctx context.Context, o *Options) error {
 		return err
 	}
 
+	impairment := &clablabruntime.Impairment{
+		Delay:      o.ToolsNetem.Delay,
+		Jitter:     o.ToolsNetem.Jitter,
+		Loss:       o.ToolsNetem.Loss,
+		Rate:       o.ToolsNetem.Rate,
+		Corruption: o.ToolsNetem.Corruption,
+	}
 	err = c.SetLinkImpairment(ctx, clablabruntime.ImpairmentRequest{
-		Node:      o.ToolsNetem.ContainerName,
-		Interface: o.ToolsNetem.Interface,
-		Impairment: &clablabruntime.Impairment{
-			Delay:      o.ToolsNetem.Delay,
-			Jitter:     o.ToolsNetem.Jitter,
-			Loss:       o.ToolsNetem.Loss,
-			Rate:       o.ToolsNetem.Rate,
-			Corruption: o.ToolsNetem.Corruption,
-		},
+		Node: o.ToolsNetem.ContainerName, Interface: o.ToolsNetem.Interface, Impairment: impairment,
 	})
 	if err != nil {
 		return err
+	}
+
+	if *impairment == (clablabruntime.Impairment{}) {
+		fmt.Printf("Reset impairments on node %q, interface %q\n",
+			o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
+
+		return nil
 	}
 
 	nodes, err := c.LinkImpairments(ctx, []string{o.ToolsNetem.ContainerName})

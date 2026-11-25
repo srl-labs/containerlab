@@ -21,7 +21,8 @@ import (
 var linkEndpointFields = []string{"endpointA", "endpointB"} //nolint:gochecknoglobals
 
 // SetImpairment sets the netem impairment of one lab link interface on the endpoint of its c9s
-// Link, or removes it when the request carries none. The connectivity sidecar of the node's pod
+// Link, or removes it when the request carries none or an all-zero value. The connectivity
+// sidecar of the node's pod
 // applies the change live; a later deploy restores the impairments the topology declares. A lab
 // owned by a Topology resource is rejected: its controller renders the Links and reverts any
 // direct change, so its impairments come from the topology.
@@ -70,21 +71,28 @@ func (r *Runtime) SetImpairment(
 			req.Interface, req.Node, location.Namespace, req.Name)
 	}
 
-	// a merge patch with a null netem removes it
-	var netem any
-	if req.Impairment != nil {
-		netem = linkNetem(req.Impairment)
+	patchType := types.MergePatchType
+	var patch []byte
+	if req.Impairment == nil || *req.Impairment == (clablabruntime.Impairment{}) {
+		// A merge patch with a null netem removes it. All-zero impairments reset too.
+		patch, err = json.Marshal(map[string]any{
+			"spec": map[string]any{endpoint: map[string]any{"netem": nil}},
+		})
+	} else {
+		// JSON Patch add replaces the whole netem member. A nested merge patch would retain
+		// fields the new impairment omits, unlike tools netem set on local labs.
+		patchType = types.JSONPatchType
+		patch, err = json.Marshal([]map[string]any{{
+			"op": "add", "path": "/spec/" + endpoint + "/netem",
+			"value": linkNetem(req.Impairment),
+		}})
 	}
-
-	patch, err := json.Marshal(map[string]any{
-		"spec": map[string]any{endpoint: map[string]any{"netem": netem}},
-	})
 	if err != nil {
 		return err
 	}
 
 	_, err = r.client.Resource(linkGVR).Namespace(location.Namespace).Patch(
-		ctx, link.GetName(), types.MergePatchType, patch, metav1.PatchOptions{},
+		ctx, link.GetName(), patchType, patch, metav1.PatchOptions{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to set the impairment of c9s link %s/%s: %w",

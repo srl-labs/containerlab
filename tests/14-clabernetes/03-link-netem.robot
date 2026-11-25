@@ -66,6 +66,23 @@ Tools netem resets the impairment
     Should Be Equal As Integers    ${output.rc}    0
     Wait Until Keyword Succeeds    180s    5s    Server Sidecar Should Have No Impairment
 
+Tools netem set replaces fields omitted from the request
+    ${output} =    Run Clab Command    tools netem set -t ${topo} -n client -i eth1 --delay 200ms --loss 1
+    Should Be Equal As Integers    ${output.rc}    0
+    ${output} =    Run Clab Command    tools netem set -t ${topo} -n client -i eth1 --delay 75ms
+    Should Be Equal As Integers    ${output.rc}    0
+    ${output} =    Run Clab Command    tools netem show -t ${topo} -n client -f json
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${output.stdout}    "delay": "75ms"
+    Should Contain    ${output.stdout}    "packet_loss": 0
+    Wait Until Keyword Succeeds    180s    5s    Server Sidecar Qdisc Should Contain    delay 75ms
+
+All-zero tools netem set clears the impairment
+    ${output} =    Run Clab Command    tools netem set -t ${topo} -n client -i eth1
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${output.stdout}    Reset impairments
+    Wait Until Keyword Succeeds    180s    5s    Server Sidecar Should Have No Impairment
+
 A deploy restores the topology's impairments
     ${output} =    Run Clab Command    deploy -t ${topo} --no-topology-cr
     Should Be Equal As Integers    ${output.rc}    0

@@ -725,6 +725,9 @@ containerlab -r c9s tools netem show -t clos.clab.yml
 containerlab -r c9s tools netem reset -t clos.clab.yml -n srl1 -i e1-1
 ```
 
+`set` replaces the complete impairment, so values omitted from a later `set`
+do not survive. An all-zero `set` is equivalent to `reset`.
+
 `show` lists the impairments the Links declare. A later `deploy` replaces each
 Link with the one the topology compiles to, which restores the topology's
 impairments, like `start` and `apply` do for local labs. A lab owned by a

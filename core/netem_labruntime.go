@@ -7,7 +7,7 @@ import (
 )
 
 // SetLinkImpairment sets the impairment of a lab link interface through the lab runtime, or
-// resets it when the request carries none.
+// resets it when the request carries no impairment or an all-zero one.
 func (c *CLab) SetLinkImpairment(
 	ctx context.Context,
 	req clablabruntime.ImpairmentRequest,

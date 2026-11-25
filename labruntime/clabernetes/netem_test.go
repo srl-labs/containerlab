@@ -148,6 +148,66 @@ func TestSetImpairmentChangesTheLinkEndpoint(t *testing.T) {
 	}
 }
 
+func TestSetImpairmentReplacesTheWholeNetemAndAllZeroResets(t *testing.T) {
+	t.Parallel()
+
+	r := netemTestRuntime(t)
+	ctx := context.Background()
+
+	for _, impairment := range []*clablabruntime.Impairment{
+		{Delay: 50 * time.Millisecond, Jitter: 5 * time.Millisecond, Loss: 1, Rate: 10000},
+		{Delay: 200 * time.Millisecond},
+	} {
+		if err := r.SetImpairment(ctx, clablabruntime.ImpairmentRequest{
+			Name: "lab1", Node: "r1", Interface: "eth1", Impairment: impairment,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	link, err := r.client.Resource(linkGVR).Namespace("lab-ns").
+		Get(ctx, "r1-eth1-r2-eth1", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	netem, _, _ := unstructured.NestedMap(link.Object, "spec", "endpointA", "netem")
+	raw, err := json.Marshal(netem)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"delay":"200ms"}`; string(raw) != want {
+		t.Fatalf("replacement left fields from the old netem: %s, want %s", raw, want)
+	}
+
+	if err = r.SetImpairment(ctx, clablabruntime.ImpairmentRequest{
+		Name: "lab1", Node: "r1", Interface: "eth1",
+		Impairment: &clablabruntime.Impairment{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	link, err = r.client.Resource(linkGVR).Namespace("lab-ns").
+		Get(ctx, "r1-eth1-r2-eth1", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found, _ := unstructured.NestedFieldNoCopy(
+		link.Object, "spec", "endpointA", "netem",
+	); found {
+		t.Fatalf("all-zero set left an impairment on the link: %#v", link.Object["spec"])
+	}
+
+	nodes, err := r.Impairments(ctx, clablabruntime.NodeRequest{Name: "lab1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, node := range nodes {
+		if len(node.Impairments) != 0 {
+			t.Fatalf("all-zero set still reports impairments: %#v", node.Impairments)
+		}
+	}
+}
+
 func TestSetImpairmentRejectsAnInterfaceOffTheLabLinks(t *testing.T) {
 	t.Parallel()
 

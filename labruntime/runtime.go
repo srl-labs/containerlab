@@ -547,7 +547,7 @@ type ImpairmentRequest struct {
 	// Node is the node name as the topology spells it.
 	Node      string
 	Interface string
-	// Impairment is the impairment to set; nil resets the interface.
+	// Impairment is the impairment to set; nil or an all-zero value resets the interface.
 	Impairment *Impairment
 	// Identity overrides the runtime's configured identity for this call.
 	Identity Identity
