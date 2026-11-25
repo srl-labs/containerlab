@@ -705,9 +705,12 @@ lab links).
 ## Link impairments
 
 [Impairments in the topology](../impairments.md#declarative-definition)
-become the `netem` of the matching endpoint of each c9s Link. The `clabwire`
-sidecar programs them on the node's interface and sets them again when the
-interface is recreated, so they survive node restarts without containerlab.
+become the `netem` of the matching endpoint of each c9s Link. On a link between
+Pods, the peer Pod's `clabwire` sidecar programs the impairment on its own
+sidecar leg, where it receives the endpoint's packets. On same-Pod and host
+links, it programs the endpoint's interface instead. It also sets the impairment
+again when the interface is recreated, so it survives node restarts without
+containerlab.
 
 In a lab deployed with `--no-topology-cr`, [`tools netem`](../../cmd/tools/netem/set.md)
 changes the Link instead of a local network namespace, and `clabwire` applies

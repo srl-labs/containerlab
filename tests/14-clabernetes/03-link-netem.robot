@@ -1,7 +1,7 @@
 *** Comments ***
 This suite tests link impairments with the c9s runtime: the topology's impairments become the
-netem of the c9s Links and clabwire programs them on the node interfaces, and tools netem changes
-the Links of a lab deployed with --no-topology-cr.
+netem of the c9s Links and clabwire programs them on the receiving sidecar legs, and tools netem
+changes the Links of a lab deployed with --no-topology-cr.
 
 
 *** Settings ***
@@ -20,7 +20,7 @@ ${runtime}          c9s
 ${lab-name}         c9s-link-netem
 ${topo}             ${CURDIR}/03-link-netem.clab.yml
 ${lab-namespace}    c9s-${lab-name}
-${client-label}     clab-node-name\=client
+${server-label}     clab-node-name\=server
 
 
 *** Test Cases ***
@@ -35,8 +35,8 @@ The Link declares the topology's impairment
     Should Be Equal As Integers    ${links.rc}    0
     Should Be Equal    ${links.stdout}    50ms
 
-Clabwire programs the impairment on the node interface
-    Wait Until Keyword Succeeds    120s    5s    Client Qdisc Should Contain    delay 50ms
+Clabwire programs the impairment on the receiving sidecar leg
+    Wait Until Keyword Succeeds    120s    5s    Server Sidecar Qdisc Should Contain    delay 50ms
 
 Tools netem shows the impairment
     ${output} =    Run Clab Command    tools netem show -t ${topo} -n client -f json
@@ -53,23 +53,23 @@ Deploy the lab without a Topology resource
     Should Be Equal As Integers    ${output.rc}    0
     ${output} =    Run Clab Command    deploy -t ${topo} --no-topology-cr
     Should Be Equal As Integers    ${output.rc}    0
-    Wait Until Keyword Succeeds    120s    5s    Client Qdisc Should Contain    delay 50ms
+    Wait Until Keyword Succeeds    120s    5s    Server Sidecar Qdisc Should Contain    delay 50ms
 
 Tools netem changes the impairment live
     ${output} =    Run Clab Command    tools netem set -t ${topo} -n client -i eth1 --delay 200ms --loss 1
     Should Be Equal As Integers    ${output.rc}    0
     Should Contain    ${output.stdout}    200ms
-    Wait Until Keyword Succeeds    180s    5s    Client Qdisc Should Contain    delay 200ms
+    Wait Until Keyword Succeeds    180s    5s    Server Sidecar Qdisc Should Contain    delay 200ms
 
 Tools netem resets the impairment
     ${output} =    Run Clab Command    tools netem reset -t ${topo} -n client -i eth1
     Should Be Equal As Integers    ${output.rc}    0
-    Wait Until Keyword Succeeds    180s    5s    Client Qdisc Should Contain    noqueue
+    Wait Until Keyword Succeeds    180s    5s    Server Sidecar Should Have No Impairment
 
 A deploy restores the topology's impairments
     ${output} =    Run Clab Command    deploy -t ${topo} --no-topology-cr
     Should Be Equal As Integers    ${output.rc}    0
-    Wait Until Keyword Succeeds    180s    5s    Client Qdisc Should Contain    delay 50ms
+    Wait Until Keyword Succeeds    180s    5s    Server Sidecar Qdisc Should Contain    delay 50ms
 
 
 *** Keywords ***
@@ -87,9 +87,17 @@ Run Clab Command
     Log    stderr:${\n}${output.stderr}    console=${True}
     RETURN    ${output}
 
-Client Qdisc Should Contain
+Server Sidecar Qdisc Should Contain
     [Arguments]    ${expected}
-    ${output} =    Run Clab Command
-    ...    exec -t ${topo} --label ${client-label} --cmd 'tc qdisc show dev eth1'
-    Should Be Equal As Integers    ${output.rc}    0
+    ${output} =    Server Sidecar Qdiscs
     Should Contain    ${output.stdout}${output.stderr}    ${expected}
+
+Server Sidecar Should Have No Impairment
+    ${output} =    Server Sidecar Qdiscs
+    Should Not Contain    ${output.stdout}${output.stderr}    netem c9:
+
+Server Sidecar Qdiscs
+    ${output} =    Run Clab Command
+    ...    exec -t ${topo} --label ${server-label} --cmd 'tc qdisc show'
+    Should Be Equal As Integers    ${output.rc}    0
+    RETURN    ${output}
