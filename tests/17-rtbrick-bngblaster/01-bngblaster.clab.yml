@@ -1,0 +1,33 @@
+name: bngblaster
+
+topology:
+  kinds:
+    rtbrick_bngblaster:
+      image: ghcr.io/rtbrick/bngblaster:latest
+      binds:
+        - 01-run.json:/var/bngblaster/clab/run.json:ro
+  nodes:
+    # PPPoE server and clients back to back on one node
+    pppoe:
+      kind: rtbrick_bngblaster
+      startup-config: 01-pppoe.json
+    # IS-IS adjacency between two nodes
+    isis1:
+      kind: rtbrick_bngblaster
+      startup-config: 01-isis1.json
+    isis2:
+      kind: rtbrick_bngblaster
+      startup-config: 01-isis2.json
+    # peer that removes its link at once on destroy, like a device under test
+    peer:
+      kind: linux
+      image: alpine:3
+    # controller only, with the kind alias
+    ctrl:
+      kind: bngblaster
+      image: ghcr.io/rtbrick/bngblaster:latest
+
+  links:
+    - endpoints: [pppoe:eth1, pppoe:eth2]
+    - endpoints: [isis1:eth1, isis2:eth1]
+    - endpoints: [isis1:eth2, peer:eth1]

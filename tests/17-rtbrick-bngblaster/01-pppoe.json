@@ -1,0 +1,46 @@
+{
+    "interfaces": {
+        "a10nsp": [
+            {
+                "__comment__": "PPPoE Server",
+                "interface": "eth1"
+            }
+        ],
+        "access": [
+            {
+                "__comment__": "PPPoE Client",
+                "interface": "eth2",
+                "type": "pppoe",
+                "outer-vlan-min": 1,
+                "outer-vlan-max": 4000,
+                "inner-vlan": 7,
+                "a10nsp-interface": "eth1",
+                "stream-group-id": 1
+            }
+        ]
+    },
+    "sessions": {
+        "count": 10
+    },
+    "pppoe": {
+        "reconnect": true
+    },
+    "dhcpv6": {
+        "enable": false
+    },
+    "session-traffic": {
+        "ipv4-pps": 1
+    },
+    "streams": [
+        {
+            "stream-group-id": 1,
+            "name": "S1",
+            "type": "ipv4",
+            "direction": "both",
+            "priority": 128,
+            "length": 256,
+            "pps": 1,
+            "a10nsp-interface": "eth1"
+        }
+    ]
+}

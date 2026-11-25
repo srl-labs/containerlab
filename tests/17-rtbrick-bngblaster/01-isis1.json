@@ -1,0 +1,24 @@
+{
+    "interfaces": {
+        "network": [
+            {
+                "interface": "eth1",
+                "address": "10.0.0.1/24",
+                "gateway": "10.0.0.2",
+                "isis-instance-id": 1,
+                "isis-level": 1,
+                "isis-p2p": true
+            }
+        ]
+    },
+    "isis": [
+        {
+            "instance-id": 1,
+            "level": 1,
+            "area": ["49.0001/24"],
+            "system-id": "0100.0000.0001",
+            "router-id": "10.10.0.1",
+            "hostname": "isis1"
+        }
+    ]
+}

@@ -1,0 +1,5 @@
+{
+    "report": true,
+    "logging": true,
+    "logging_flags": ["info", "error", "pppoe", "isis"]
+}
