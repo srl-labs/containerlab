@@ -2,6 +2,7 @@ package iptables
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +38,7 @@ type IpTablesClient struct {
 }
 
 // NewIpTablesClient returns a new IpTablesClient.
-func NewIpTablesClient() (*IpTablesClient, error) {
+func NewIpTablesClient(ctx context.Context) (*IpTablesClient, error) {
 	v4ModLoaded, err := clabutils.IsKernelModuleLoaded("ip_tables")
 	if err != nil {
 		return nil, err
@@ -46,7 +47,7 @@ func NewIpTablesClient() (*IpTablesClient, error) {
 	v6ModLoaded, _ := clabutils.IsKernelModuleLoaded("ip6_tables")
 
 	if !v4ModLoaded {
-		log.Debug("ip_tables kernel module not available")
+		log.FromContext(ctx).Debug("ip_tables kernel module not available")
 		// module is not loaded
 		return nil, definitions.ErrNotAvailable
 	}
@@ -64,14 +65,17 @@ func (*IpTablesClient) Name() string {
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the
 // provided
 // input or output interface and chain.
-func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
-	err := c.InstallForwardingRulesForAF(v4AF, rule)
+func (c *IpTablesClient) InstallForwardingRules(
+	ctx context.Context,
+	rule *definitions.FirewallRule,
+) error {
+	err := c.InstallForwardingRulesForAF(ctx, v4AF, rule)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(v6AF, rule)
+		err = c.InstallForwardingRulesForAF(ctx, v6AF, rule)
 	}
 
 	return err
@@ -79,6 +83,7 @@ func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) 
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
 func (c *IpTablesClient) InstallForwardingRulesForAF(
+	ctx context.Context,
 	af string,
 	rule *definitions.FirewallRule,
 ) error {
@@ -90,7 +95,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(
 	iface := rule.Interface
 
 	// first check if a rule already exists to not create duplicates
-	if c.ruleExists(af, rule) {
+	if c.ruleExists(ctx, af, rule) {
 		return nil
 	}
 
@@ -101,11 +106,11 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(
 		return err
 	}
 
-	log.Debugf("Installing iptables (%s) rules for bridge %q", af, iface)
+	log.FromContext(ctx).Debugf("Installing iptables (%s) rules for bridge %q", af, iface)
 
 	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
-		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
+		log.FromContext(ctx).Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to install iptables rule using '%s' command: %w", cmd, err)
 	}
 
@@ -113,14 +118,17 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(
 }
 
 // DeleteForwardingRules deletes the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) error {
-	err := c.DeleteForwardingRulesForAF(v4AF, rule)
+func (c *IpTablesClient) DeleteForwardingRules(
+	ctx context.Context,
+	rule *definitions.FirewallRule,
+) error {
+	err := c.DeleteForwardingRulesForAF(ctx, v4AF, rule)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.DeleteForwardingRulesForAF(v6AF, rule)
+		err = c.DeleteForwardingRulesForAF(ctx, v6AF, rule)
 	}
 
 	return err
@@ -128,6 +136,7 @@ func (c *IpTablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
 func (c *IpTablesClient) DeleteForwardingRulesForAF(
+	ctx context.Context,
 	af string,
 	rule *definitions.FirewallRule,
 ) error {
@@ -149,7 +158,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	}
 
 	if !bytes.Contains(res, []byte(iface)) {
-		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
+		log.FromContext(ctx).Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
 	}
 
@@ -158,7 +167,10 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 	// or it is managed externally (created manually)
 	_, err = clabutils.BridgeByName(iface)
 	if err == nil {
-		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
+		log.FromContext(ctx).Debugf(
+			"bridge %s is still in use, not removing the forwarding rule",
+			iface,
+		)
 		return nil
 	}
 
@@ -169,12 +181,12 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 		return err
 	}
 
-	log.Debugf("removing clab iptables rules for bridge %q", iface)
-	log.Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
+	log.FromContext(ctx).Debugf("removing clab iptables rules for bridge %q", iface)
+	log.FromContext(ctx).Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
 
 	stdOutErr, err := newIptablesCmd(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
-		log.Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
+		log.FromContext(ctx).Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to delete iptables rules: %w", err)
 	}
 
@@ -182,12 +194,16 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(
 }
 
 // ruleExists checks if an allow rule for the provided `rule` exists.
-func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) bool {
+func (c *IpTablesClient) ruleExists(
+	ctx context.Context,
+	af string,
+	rule *definitions.FirewallRule,
+) bool {
 	iptCmd := iptablesCmd[af]
 
 	res, err := newIptablesCmd(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
 	if err != nil {
-		log.Warnf("iptables check error: %s. Output: %s", err, string(res))
+		log.FromContext(ctx).Warnf("iptables check error: %s. Output: %s", err, string(res))
 		// if we errored on check we don't want to try setting up the rule
 		return true
 	}
@@ -206,7 +222,7 @@ func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) b
 	}
 
 	if bytes.Contains(res, []byte(matcher)) {
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"found iptables forwarding rule targeting the interface %q direction %s. Skipping creation of the forwarding rule",
 			rule.Interface,
 			rule.Direction,

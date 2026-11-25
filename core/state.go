@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,13 +23,13 @@ type LabState struct {
 }
 
 // WriteState saves the topology to the state file.
-func (c *CLab) WriteState() error {
+func (c *CLab) WriteState(ctx context.Context) error {
 	state := &LabState{
 		Topology: c.Config.Topology,
 	}
 
-	c.writeIPAMState(state)
-	c.writeMgmtNetworksState(state)
+	c.writeIPAMState(ctx, state)
+	c.writeMgmtNetworksState(ctx, state)
 
 	data, err := yaml.Marshal(state)
 	if err != nil {
@@ -66,11 +67,15 @@ func (c *CLab) WriteState() error {
 	return nil
 }
 
-func (c *CLab) writeIPAMState(state *LabState) {
+func (c *CLab) writeIPAMState(ctx context.Context, state *LabState) {
 	state.IPAM = make(map[string]clabtypes.NodeAddresses)
 	previous, err := c.LoadState()
 	if err != nil {
-		log.Warn("Unable to preserve previous allocation preferences", "error", err)
+		log.FromContext(ctx).Warn(
+			"Unable to preserve previous allocation preferences",
+			"error",
+			err,
+		)
 	}
 	for name, node := range c.Nodes {
 		cfg := node.Config()
@@ -92,7 +97,7 @@ func (c *CLab) writeIPAMState(state *LabState) {
 // networks and the ones recorded by previous deployments. Keeping dropped
 // networks recorded lets destroy remove them even though they are no longer
 // part of the topology.
-func (c *CLab) writeMgmtNetworksState(state *LabState) {
+func (c *CLab) writeMgmtNetworksState(ctx context.Context, state *LabState) {
 	seen := make(map[string]bool)
 	for _, m := range c.allMgmtNetworks() {
 		if m == nil || m.Network == "" || seen[m.Network] {
@@ -104,7 +109,11 @@ func (c *CLab) writeMgmtNetworksState(state *LabState) {
 
 	previous, err := c.LoadState()
 	if err != nil {
-		log.Warn("Unable to preserve previously defined management networks", "error", err)
+		log.FromContext(ctx).Warn(
+			"Unable to preserve previously defined management networks",
+			"error",
+			err,
+		)
 		return
 	}
 	if previous == nil {

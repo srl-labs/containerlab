@@ -267,7 +267,7 @@ func (r *Runtime) devicePod(
 	}
 
 	if len(list.Items) > 1 {
-		log.Warn("multiple C9s device pods matched node, using newest",
+		log.FromContext(ctx).Warn("multiple C9s device pods matched node, using newest",
 			"namespace", namespace,
 			"lab", name,
 			"node", nodeName,

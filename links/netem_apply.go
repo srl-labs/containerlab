@@ -57,7 +57,7 @@ func applyEndpointImpairment(
 	netem *Netem,
 ) error {
 	if NetemNeedsVEthStitch(endpoint) {
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"Link impairments of this node only take effect on veth-stitch links",
 			"node", endpoint.GetNode().GetShortName(),
 			"interface", endpoint.GetIfaceName(),
@@ -79,7 +79,7 @@ func applyEndpointImpairment(
 		}
 		defer func() {
 			if err := tcnl.Close(); err != nil {
-				log.Debugf("could not close rtnetlink socket: %v", err)
+				log.FromContext(ctx).Debugf("could not close rtnetlink socket: %v", err)
 			}
 		}()
 
@@ -88,7 +88,7 @@ func applyEndpointImpairment(
 			clabutils.SanitizeInterfaceName(target.GetIfaceName()))
 		if _, notFound := err.(netlink.LinkNotFoundError); notFound {
 			// e.g. links to filtered-out nodes or containers stopped outside containerlab
-			log.Warn(
+			log.FromContext(ctx).Warn(
 				"Skipping the link impairment of a missing interface",
 				"node", endpoint.GetNode().GetShortName(),
 				"interface", endpoint.GetIfaceName(),
@@ -117,7 +117,7 @@ func applyEndpointImpairment(
 			return err
 		}
 
-		log.Info(
+		log.FromContext(ctx).Info(
 			"Set link impairments",
 			"node", endpoint.GetNode().GetShortName(),
 			"interface", endpoint.GetIfaceName(),
@@ -131,6 +131,6 @@ func applyEndpointImpairment(
 // their own.
 func loadNetemModule(ctx context.Context) {
 	if err := exec.CommandContext(ctx, "modprobe", "sch_netem").Run(); err != nil {
-		log.Debug("failed to load the sch_netem kernel module", "err", err)
+		log.FromContext(ctx).Debug("failed to load the sch_netem kernel module", "err", err)
 	}
 }

@@ -94,8 +94,11 @@ func (n *spirentStc) PreDeploy(_ context.Context, _ *clabnodes.PreDeployParams) 
 	return createCgroupV1Files(n.Cfg.LabDir)
 }
 
-func (n *spirentStc) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Infof("Running postdeploy actions for Spirent STC '%s' node", n.Cfg.ShortName)
+func (n *spirentStc) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
+	log.FromContext(ctx).Infof(
+		"Running postdeploy actions for Spirent STC '%s' node",
+		n.Cfg.ShortName,
+	)
 
 	return nil
 }

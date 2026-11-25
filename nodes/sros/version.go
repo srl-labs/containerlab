@@ -49,7 +49,7 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 		return nil, err
 	}
 
-	log.Debug(
+	log.FromContext(ctx).Debug(
 		"Extracted raw SR OS version",
 		"node",
 		n.Cfg.ShortName,
@@ -89,7 +89,7 @@ func (v *SrosVersion) MajorMinorSemverString() string {
 // by inspecting the image layers without spawning a container.
 func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	// Try to read from image config labels first (if set by image build)
-	log.Debugf("Inspecting image %v for SR OS version retrieval", n.Cfg.Image)
+	log.FromContext(ctx).Debugf("Inspecting image %v for SR OS version retrieval", n.Cfg.Image)
 	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", n.Cfg.Image, err)
@@ -103,13 +103,20 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	}
 
 	// Fallback: read directly from image layers via graph driver
-	log.Debug("Image label not found, reading version from image layers",
+	log.FromContext(ctx).Debug("Image label not found, reading version from image layers",
 		"node", n.Cfg.ShortName, "image", n.Cfg.Image)
 
 	version, err = n.readVersionFromImageLayers(ctx, imageInspect)
 	if err != nil {
-		log.Warn("Failed to extract SR OS version from image layers, using default",
-			"node", n.Cfg.ShortName, "image", n.Cfg.Image, "error", err)
+		log.FromContext(ctx).Warn(
+			"Failed to extract SR OS version from image layers, using default",
+			"node",
+			n.Cfg.ShortName,
+			"image",
+			n.Cfg.Image,
+			"error",
+			err,
+		)
 		// Return nil for version when error occurs
 		return nil, err
 	}
@@ -165,7 +172,7 @@ func ReadFileFromImageInspect(
 // directly from image layers using the Docker graph driver's UpperDir
 // without extracting the entire image.
 func (n *sros) readVersionFromImageLayers(
-	_ context.Context,
+	ctx context.Context,
 	imageInspect *clabruntime.ImageInspect,
 ) (string, error) {
 	content, err := ReadFileFromImageInspect(imageInspect, srosVersionFilePath)
@@ -173,7 +180,7 @@ func (n *sros) readVersionFromImageLayers(
 		return "", err
 	}
 	version := strings.TrimSpace(string(content))
-	log.Debug("Found SR OS version in image layers",
+	log.FromContext(ctx).Debug("Found SR OS version in image layers",
 		"node", n.Cfg.ShortName,
 		"version", version)
 	return version, nil

@@ -104,7 +104,7 @@ func (d *DependencyNode) getExecs(stage clabtypes.WaitForStage,
 // or until the context is cancelled (e.g. on a Ctrl-C), in which case it returns without
 // running the stage execs so the worker can unwind instead of hanging until SIGQUIT.
 func (d *DependencyNode) EnterStage(ctx context.Context, p clabtypes.WaitForStage) {
-	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.GetShortName(), p)
+	log.FromContext(ctx).Debugf("Stage Change: Enter Wait -> %s - %s", d.GetShortName(), p)
 
 	wgDone := make(chan struct{})
 
@@ -115,13 +115,13 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p clabtypes.WaitForStag
 
 	select {
 	case <-ctx.Done():
-		log.Debugf("Stage Change: Enter Cancelled -> %s - %s", d.GetShortName(), p)
+		log.FromContext(ctx).Debugf("Stage Change: Enter Cancelled -> %s - %s", d.GetShortName(), p)
 
 		return
 	case <-wgDone:
 	}
 
-	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
+	log.FromContext(ctx).Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
 
 	d.runExecs(ctx, clabtypes.CommandExecutionPhaseEnter, p)
 }
@@ -133,7 +133,11 @@ func (d *DependencyNode) runExecs(
 ) {
 	execs, err := d.getExecs(stage, execPhase)
 	if err != nil {
-		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
+		log.FromContext(ctx).Errorf(
+			"error getting exec commands defined for %s: %v",
+			d.GetShortName(),
+			err,
+		)
 	}
 
 	if len(execs) == 0 {
@@ -150,7 +154,7 @@ func (d *DependencyNode) runExecs(
 	for _, exec := range execs {
 		execCmd, err := exec.GetExecCmd()
 		if err != nil {
-			log.Errorf(
+			log.FromContext(ctx).Errorf(
 				"%s stage %s error parsing command: %s", d.GetShortName(), stage, exec.String(),
 			)
 		}
@@ -167,13 +171,18 @@ func (d *DependencyNode) runExecs(
 		}
 
 		if err != nil {
-			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), stage, err)
+			log.FromContext(ctx).Errorf(
+				"error on exec in node %s for stage %s: %v",
+				d.GetShortName(),
+				stage,
+				err,
+			)
 		} else {
 			execResultCollection.Add(hostname, execResult)
 		}
 	}
 
-	execResultCollection.Log()
+	execResultCollection.Log(ctx)
 }
 
 // Done is called by a node that has finished all tasks for the provided stage.
@@ -182,12 +191,16 @@ func (d *DependencyNode) runExecs(
 func (d *DependencyNode) Done(ctx context.Context, p clabtypes.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
 	// and reduce the waitgroup
-	log.Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
+	log.FromContext(ctx).Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
 
 	d.runExecs(ctx, clabtypes.CommandExecutionPhaseExit, p)
 
 	for _, depender := range d.depender[p] {
-		log.Debugf("StateChange: Node %s unblocking %s", d.GetShortName(), depender.String())
+		log.FromContext(ctx).Debugf(
+			"StateChange: Node %s unblocking %s",
+			d.GetShortName(),
+			depender.String(),
+		)
 		depender.SignalDone()
 	}
 }

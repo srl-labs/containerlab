@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,7 +126,7 @@ func TestLoadSSHPubKeysFromFiles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			paths := tt.setup()
 
-			got, err := LoadSSHPubKeysFromFiles(paths)
+			got, err := LoadSSHPubKeysFromFiles(context.Background(), paths)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("LoadSSHPubKeysFromFiles() error = %v, wantErr %v", err, tt.wantErr)
@@ -167,7 +168,7 @@ func TestLoadSSHPubKeysFromFiles_InvalidKey(t *testing.T) {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	_, err := LoadSSHPubKeysFromFiles([]string{invalidKeyFile})
+	_, err := LoadSSHPubKeysFromFiles(context.Background(), []string{invalidKeyFile})
 	if err == nil {
 		t.Fatalf("expected error for invalid key, got nil")
 	}
@@ -180,7 +181,7 @@ func TestLoadSSHPubKeysFromFiles_InvalidKey(t *testing.T) {
 }
 
 func TestLoadSSHPubKeysFromFiles_EmptyPaths(t *testing.T) {
-	got, err := LoadSSHPubKeysFromFiles([]string{})
+	got, err := LoadSSHPubKeysFromFiles(context.Background(), []string{})
 	if err != nil {
 		t.Fatalf("unexpected error with empty paths: %v", err)
 	}

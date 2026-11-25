@@ -882,7 +882,7 @@ func (r *Runtime) applyStagedConfigMaps(
 	}
 
 	workers, clientBurst := r.kubernetesWorkers(maxWorkers)
-	warnWorkersExceedBurst("ConfigMap", maxWorkers, clientBurst, len(configMaps))
+	warnWorkersExceedBurst(ctx, "ConfigMap", maxWorkers, clientBurst, len(configMaps))
 
 	return runWithWorkers(configMaps, workers, func(staged stagedConfigMap) error {
 		return r.applyStagedConfigMap(ctx, namespace, topologyName, staged)
@@ -1066,7 +1066,7 @@ func (r *Runtime) deleteStagedConfigMaps(
 		err := r.kubeClient.CoreV1().ConfigMaps(namespace).
 			Delete(ctx, staged.name, metav1.DeleteOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
-			log.Debug("failed to delete staged C9s ConfigMap",
+			log.FromContext(ctx).Debug("failed to delete staged C9s ConfigMap",
 				"namespace", namespace,
 				"name", staged.name,
 				"error", err,

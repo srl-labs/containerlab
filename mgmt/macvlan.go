@@ -29,6 +29,7 @@ func NewMacvlanHost(
 // PrepareMacvlanParent looks up the parent and resolves management subnets
 // without modifying host interfaces or routes.
 func PrepareMacvlanParent(
+	ctx context.Context,
 	m *clabtypes.MgmtNet,
 	links clabutils.MacvlanHostNetlink,
 ) (netlink.Link, error) {
@@ -37,7 +38,7 @@ func PrepareMacvlanParent(
 		return nil, fmt.Errorf("macvlan parent %q: %w", m.MacvlanParent, err)
 	}
 	if parent.Attrs().Flags&net.FlagUp == 0 {
-		log.Warn("Macvlan parent interface is down", "interface", m.MacvlanParent)
+		log.FromContext(ctx).Warn("Macvlan parent interface is down", "interface", m.MacvlanParent)
 	}
 	if err := resolveMacvlanSubnets(m, links, parent); err != nil {
 		return nil, err

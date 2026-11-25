@@ -172,7 +172,7 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(clabutils.SanitizeInterfaceName(ifaceName))
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
-			return removeBridgePort(node, ifaceName)
+			return removeBridgePort(ctx, node, ifaceName)
 		}
 		if err != nil {
 			return err
@@ -190,7 +190,7 @@ func RemoveOwnedInterface(ctx context.Context, node Node, ifaceName string) erro
 			return err
 		}
 
-		return removeBridgePort(node, ifaceName)
+		return removeBridgePort(ctx, node, ifaceName)
 	})
 }
 
@@ -201,7 +201,7 @@ type bridgePortDeleter interface {
 	DeleteBridgePort(string) error
 }
 
-func removeBridgePort(node Node, ifaceName string) error {
+func removeBridgePort(ctx context.Context, node Node, ifaceName string) error {
 	if node == nil || ifaceName == "" {
 		return nil
 	}
@@ -214,7 +214,7 @@ func removeBridgePort(node Node, ifaceName string) error {
 	// Best-effort, matching ovs.Delete. A missing bridge or a down ovsdb must not abort
 	// destroy or reconcile and leave the container running.
 	if err := cleaner.DeleteBridgePort(ifaceName); err != nil {
-		log.Errorf(
+		log.FromContext(ctx).Errorf(
 			"Could not remove bridge port %q on node %q: %v",
 			ifaceName,
 			node.GetShortName(),

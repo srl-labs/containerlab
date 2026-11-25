@@ -19,7 +19,7 @@ type pullResult struct {
 // pullImagesForNodes concurrently pulls images for all nodes, avoiding duplicate pulls for the
 // same image.
 func (c *CLab) pullImagesForNodes(ctx context.Context) error {
-	reporter, stop := clabutilsprogress.New(os.Stderr)
+	reporter, stop := clabutilsprogress.New(ctx, os.Stderr)
 	defer stop()
 
 	ctx = clabutilsprogress.NewContext(ctx, reporter)

@@ -235,7 +235,7 @@ func (*mikrotikCHR) PreStop(_ context.Context) error {
 // without the objects the launcher creates at every boot. Explicit discovery=static
 // and vrf=main settings retain user choices that compact export omits as defaults,
 // without adding unrelated verbose defaults that older RouterOS may not understand.
-func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+func (n *mikrotikCHR) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	exported, err := clabnodes.ExportConfigOverSSH(
 		net.JoinHostPort(n.Cfg.LongName, "22"),
 		n.Cfg.Credentials.Username,
@@ -250,7 +250,7 @@ func (n *mikrotikCHR) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult
 		return nil, err
 	}
 
-	return clabnodes.WriteSavedConfig(n.Cfg, n.ConfigDirName, n.StartupCfgFName,
+	return clabnodes.WriteSavedConfig(ctx, n.Cfg, n.ConfigDirName, n.StartupCfgFName,
 		[]byte(filterLauncherConfig(exported)+"\n"))
 }
 

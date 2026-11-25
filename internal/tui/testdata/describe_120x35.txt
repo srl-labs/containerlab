@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── labs ▸ dc1 ▸ spine1 ▸ describe ──────────────────────────────────────────────────────────────────────────────────────
+ name:        clab-dc1-spine1
+ id:          3f9c2a71b0e4
+ lab:         dc1
+ kind:        nokia_srlinux
+ type:        ixrd3l
+ group:       spine
+ image:       ghcr.io/nokia/srlinux:25.10.1
+ state:       running
+ status:      Up 3 hours
+ ipv4:        172.20.20.11/24
+ ipv6:        3fff:172:20:20::b/64
+ pid:         4100
+ owner:       demo
+ labels:
+   clab-node-kind: nokia_srlinux
+   clab-node-name: spine1
+   clab-owner: demo
+   clab-topo-file: /home/demo/labs/dc1/dc1.clab.yml
+   containerlab: dc1
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑↓ scroll  g/G top/end  / find  y copy  esc back  ? help
+                                                                                                                   demo

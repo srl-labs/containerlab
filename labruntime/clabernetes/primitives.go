@@ -5,6 +5,7 @@
 package clabernetes
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -45,6 +46,7 @@ func (s *primitiveResourceSet) groups() []primitiveResourceGroup {
 // but keeps the Topology in memory. Only the resulting O(1)-per-object NodeProfile, Link, and
 // Node resources are sent to the Kubernetes API server.
 func compilePrimitiveResources(
+	ctx context.Context,
 	desiredTopology *unstructured.Unstructured,
 ) (*primitiveResourceSet, error) {
 	if desiredTopology == nil {
@@ -57,7 +59,7 @@ func compilePrimitiveResources(
 	}
 
 	compiled, err := clabernetescompiler.CompileWithOptions(
-		clabCompileLogger{},
+		clabCompileLogger{logger: log.FromContext(ctx)},
 		input,
 		clabernetescompiler.Options{
 			UnsupportedFieldPolicy: clabernetescompiler.UnsupportedFieldPolicyError,
@@ -238,8 +240,10 @@ func primitiveObject(
 }
 
 // clabCompileLogger adapts compiler diagnostics to containerlab's logger.
-type clabCompileLogger struct{}
+type clabCompileLogger struct {
+	logger *log.Logger
+}
 
-func (clabCompileLogger) Debugf(format string, args ...any) { log.Debugf(format, args...) }
-func (clabCompileLogger) Warnf(format string, args ...any)  { log.Warnf(format, args...) }
-func (clabCompileLogger) Errorf(format string, args ...any) { log.Errorf(format, args...) }
+func (l clabCompileLogger) Debugf(format string, args ...any) { l.logger.Debugf(format, args...) }
+func (l clabCompileLogger) Warnf(format string, args ...any)  { l.logger.Warnf(format, args...) }
+func (l clabCompileLogger) Errorf(format string, args ...any) { l.logger.Errorf(format, args...) }

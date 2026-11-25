@@ -225,7 +225,7 @@ func (d *DADClient) close() error {
 
 func (d *DADClient) check(ctx context.Context, ip netip.Addr) error {
 	err := d.scheduler.Check(ctx, ip)
-	log.Debug("DAD check completed", "mac", d.mac, "address", ip, "error", err)
+	log.FromContext(ctx).Debug("DAD check completed", "mac", d.mac, "address", ip, "error", err)
 	return err
 }
 

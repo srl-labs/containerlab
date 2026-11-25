@@ -1,6 +1,7 @@
 package vr_sros
 
 import (
+	"context"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
@@ -90,7 +91,7 @@ func Test_vrSROS_mapSSHPubKeys(t *testing.T) {
 
 			tmplData := &SROSTemplateData{}
 
-			s.prepareSSHPubKeys(tmplData)
+			s.prepareSSHPubKeys(context.Background(), tmplData)
 
 			if len(tmplData.SSHPubKeysRSA) != tt.expectedRSA {
 				t.Errorf(

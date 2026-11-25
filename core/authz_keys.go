@@ -53,7 +53,7 @@ func (c *CLab) createAuthzKeysFile() error {
 
 // RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
 // and ~/.ssh/*.pub files.
-func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
+func RetrieveSSHPubKeysFromFiles(ctx context.Context) ([]ssh.PublicKey, error) {
 	var keys []ssh.PublicKey
 
 	p := clabutils.ResolvePath(pubKeysGlob, "")
@@ -66,11 +66,14 @@ func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	f := clabutils.ResolvePath(authzKeysFPath, "")
 
 	if clabutils.FileExists(f) {
-		log.Debugf("%s found, adding it to the list of files to get public keys from", f)
+		log.FromContext(ctx).Debugf(
+			"%s found, adding it to the list of files to get public keys from",
+			f,
+		)
 		all = append(all, f)
 	}
 
-	keys, err = clabutils.LoadSSHPubKeysFromFiles(all)
+	keys, err = clabutils.LoadSSHPubKeysFromFiles(ctx, all)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +90,7 @@ func (c *CLab) RetrieveSSHPubKeys(ctx context.Context) ([]ssh.PublicKey, error) 
 
 	// any errors encountered during the retrieval of the keys are not fatal
 	// we accumulate them and log.
-	fkeys, err := RetrieveSSHPubKeysFromFiles()
+	fkeys, err := RetrieveSSHPubKeysFromFiles(ctx)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -120,7 +123,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if socket == "" {
-		log.Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
+		log.FromContext(ctx).Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 		return nil, nil
 	}
 
@@ -137,7 +140,7 @@ func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 		// the invoking user. Retry the dial as the real user.
 		conn, err = dialSSHAgentAsRealUser(ctx, socket)
 		if err != nil {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"unable to connect to SSH_AUTH_SOCK %q, skipping agent pubkey fetching: %v",
 				socket,
 				err,
@@ -154,7 +157,7 @@ func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
 	}
 
-	log.Debugf("extracted %d keys from ssh-agent", len(keys))
+	log.FromContext(ctx).Debugf("extracted %d keys from ssh-agent", len(keys))
 
 	pubKeys := make([]ssh.PublicKey, len(keys))
 

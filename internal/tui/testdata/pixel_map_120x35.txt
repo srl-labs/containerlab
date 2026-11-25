@@ -1,0 +1,35 @@
+
+        1 Labs   2 Nodes   3 Interfaces   4 Links   5 Map   6 Jobs                  dc1 · docker     9/10  ↓147M ↑147M
+
+  labs › dc1 › map                                                layout: tiers   zoom: normal   10 nodes · 12 links
+
+                                                                                   spine1
+                   spine1                        spine2                            ● ready
+                                                                                   nokia_srlinux
+           6.0M               e1-4                                                 172.20.20.11
+                                                                                   CPU   33% ▃▃▃▃▄▃▃▄▃▃▄▃▃▃▄▃
+                                          e1-49                                    MEM  698M
+                                28M
+                      13M         7.7M                                             links
+    e1-49          e1-49▾           e1-49       16M                                ● e1-1      leaf1      ↓6.0M ↑3.1M
+                                                                                   ● e1-2      leaf2      ↓2.4M ↑13M
+           leaf1          leaf2          leaf3          leaf4                      ● e1-3      leaf3      ↓23M ↑28M
+                                                                                   ● e1-4      leaf4      ↓0 ↑0
+                2.8M          175k            16M
+
+
+           client1        client2        client3        client4
+
+
+
+
+
+
+
+
+
+
+
+
+  ←↑↓→ node   tab link   ⏎ open   s shell   S ssh   c connect   a actions   / go to   e extent   i names   ? help
+                                                                                                                  demo
