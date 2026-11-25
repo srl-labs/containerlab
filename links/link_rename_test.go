@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"net"
 	"os"
 	"runtime"
@@ -72,7 +73,7 @@ func TestSetNameMACAndUpInterfaceAfterIndexChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	ep := NewEndpointVeth(NewEndpointGeneric(newFakeNode("node1"), "eth1", nil))
-	if err := SetNameMACAndUpInterface(link, ep)(nil); err != nil {
+	if err := SetNameMACAndUpInterface(context.Background(), link, ep)(nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range occupied {
