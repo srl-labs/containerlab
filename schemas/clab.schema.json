@@ -288,6 +288,8 @@
                         "openwrt",
                         "spirent_stc",
                         "veesix_osvbng",
+                        "rtbrick_bngblaster",
+                        "bngblaster",
                         "ostinato",
                         "plvision_sonic"
                     ]
@@ -3990,6 +3992,26 @@
                             ]
                         },
                         "veesix_osvbng": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-other"
+                                }
+                            ]
+                        },
+                        "rtbrick_bngblaster": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                },
+                                {
+                                    "$ref": "#/definitions/kind-specific-config-other"
+                                }
+                            ]
+                        },
+                        "bngblaster": {
                             "allOf": [
                                 {
                                     "$ref": "#/definitions/node-config"

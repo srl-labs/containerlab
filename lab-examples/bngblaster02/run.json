@@ -1,0 +1,6 @@
+{
+    "report": true,
+    "report_flags": ["streams"],
+    "logging": true,
+    "logging_flags": ["info", "error", "isis"]
+}

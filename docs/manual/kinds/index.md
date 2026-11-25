@@ -84,6 +84,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
 | **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)     | supported | container |
 | **Spirent TestCenter**     | [`spirent_stc`](spirent_stc.md)                     | supported | container |
+| **RtBrick BNG Blaster**    | [`rtbrick_bngblaster`](rtbrick_bngblaster.md)       | supported | container |
 | **Arrcus ArcOS**           | [`arrcus_arcos`](arrcus_arcos.md)                   | supported | container |
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |

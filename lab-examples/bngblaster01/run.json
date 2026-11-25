@@ -1,0 +1,6 @@
+{
+    "report": true,
+    "report_flags": ["sessions", "streams"],
+    "logging": true,
+    "logging_flags": ["info", "error", "pppoe"]
+}
