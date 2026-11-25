@@ -1,0 +1,9 @@
+---
+description: Run the repository formatter for code changes
+alwaysApply: true
+---
+
+# Formatting
+
+- After making code changes and before committing, run `make format` from the repository root.
+- Include the formatting changes it produces and verify that a subsequent `make format` run leaves the working tree unchanged.
