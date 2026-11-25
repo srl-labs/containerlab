@@ -61,7 +61,7 @@ require (
 	go.podman.io/image/v5 v5.42.0
 	go.podman.io/podman/v6 v6.1.4
 	go.uber.org/mock v0.6.0
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	golang.org/x/image v0.47.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
@@ -273,9 +273,9 @@ require (
 	go.opentelemetry.io/otel v1.46.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	golang.org/x/mod v0.43.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.63.0
 	golang.org/x/sync v0.25.0
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
