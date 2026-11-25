@@ -34,7 +34,9 @@ func TestSetNameMACAndUpInterfaceAfterIndexChange(t *testing.T) {
 	defer target.Close()
 	occupied := map[int]string{}
 	for _, name := range []string{"occupied1", "occupied2"} {
-		if err := netlink.LinkAdd(&netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: name}}); err != nil {
+		if err := netlink.LinkAdd(
+			&netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: name}},
+		); err != nil {
 			t.Fatal(err)
 		}
 		link, err := netlink.LinkByName(name)
@@ -50,7 +52,9 @@ func TestSetNameMACAndUpInterfaceAfterIndexChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer source.Close()
-	if err := netlink.LinkAdd(&netlink.Veth{LinkAttrs: netlink.LinkAttrs{Name: "clab-test-a"}, PeerName: "clab-test-b"}); err != nil {
+	if err := netlink.LinkAdd(
+		&netlink.Veth{LinkAttrs: netlink.LinkAttrs{Name: "clab-test-a"}, PeerName: "clab-test-b"},
+	); err != nil {
 		t.Fatal(err)
 	}
 	link, err := netlink.LinkByName("clab-test-a")
@@ -81,6 +85,10 @@ func TestSetNameMACAndUpInterfaceAfterIndexChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if renamed.Type() != "veth" || renamed.Attrs().Flags&net.FlagUp == 0 {
-		t.Fatalf("eth1 is %s with flags %v, want the moved veth up", renamed.Type(), renamed.Attrs().Flags)
+		t.Fatalf(
+			"eth1 is %s with flags %v, want the moved veth up",
+			renamed.Type(),
+			renamed.Attrs().Flags,
+		)
 	}
 }
