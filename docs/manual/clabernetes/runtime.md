@@ -704,7 +704,7 @@ lab links).
 
 ## Link impairments
 
-[Impairments in the topology](../impairments.md#impairments-in-the-topology)
+[Impairments in the topology](../impairments.md#declarative-definition)
 become the `netem` of the matching endpoint of each c9s Link. The `clabwire`
 sidecar programs them on the node's interface and sets them again when the
 interface is recreated, so they survive node restarts without containerlab.
