@@ -1,0 +1,35 @@
+ clab  1 Labs  2 Nodes  3 Interfaces  4 Links  5 Map  6 Jobs             lab: dc1 · docker · ● 9/10 nodes · ↓147M ↑147M
+── labs ▸ dc1 ▸ links [12] ─────────────────────────────────────────────────────────────────────────────────────────────
+    A             Z               STATE  A → Z  Z → A            NETEM
+▌ ● leaf1:e1-49   spine1:e1-1     up      6.0M   3.1M  ▆▆▆▇▇███  leaf1: 50ms ±5ms 1% loss
+  ○ leaf1:e1-50   spine2:e1-1     down       0      0  ▁▁▁▁▁▁▁▁  —
+  ● leaf2:e1-49   spine1:e1-2     up      2.4M    13M  ██▇█▇▇██  —
+  ● leaf2:e1-50   spine2:e1-2     up      7.7M   5.7M  █▇▇█▇███  —
+  ● leaf3:e1-49   spine1:e1-3     up       23M    28M  ▇▇▇▇▇███  —
+  ● leaf3:e1-50   spine2:e1-3     up       16M   7.6M  ▇▇▇████▇  —
+  ● leaf4:e1-49   spine1:e1-4     up         0      0  ▁▁▁▁▁▁▁▁  —
+  ● leaf4:e1-50   spine2:e1-4     up         0      0  ▁▁▁▁▁▁▁▁  —
+  ● client1:eth1  leaf1:e1-1      up      1.4M   2.8M  ▇▇▇█████  —
+  ● client2:eth1  leaf2:e1-1      up      175k   114k  █▇▇▇▆▆▆▆  —
+  ● client3:eth1  l╭─ Capture 2 interface(s) ───────────────────────────────────────────────────────╮
+  ● client4:eth1  l│ leaf1:e1-49, spine1:e1-1                                                       │
+                   │                                                                                │
+                   │ ▸ send to     ‹ live view ›  shows the packets in this window, live            │
+                   │   file        [dc1-20261110-120411.pcapng ] used when the packets go to a file │
+                   │   stop after  [                           ] empty: until stopped               │
+                   │                                                                                │
+                   │                                                            Cancel      Start   │
+                   ╰────────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+ tab next  ␣ toggle  ⏎ start  esc cancel
+                                                                                                                   demo

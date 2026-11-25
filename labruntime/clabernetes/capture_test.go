@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -291,6 +292,25 @@ func (f *fakeClabwire) capture(
 	f.audit(stderr, captureAuditSucceeded, node, interfaces, "")
 
 	return nil
+}
+
+// waitWritten waits until clabwire wrote at least want[node] packets for every node, at most
+// 10s, and returns the counts it saw last.
+func (f *fakeClabwire) waitWritten(want map[string]int) map[string]int {
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		f.mu.Lock()
+		seen := maps.Clone(f.written)
+		f.mu.Unlock()
+		reached := true
+		for node, n := range want {
+			reached = reached && seen[node] >= n
+		}
+		if reached || time.Now().After(deadline) {
+			return seen
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 func (f *fakeClabwire) captureCommands() [][]string {
@@ -764,12 +784,14 @@ func TestInspectInterfacesReportsStateFromSysfs(t *testing.T) {
 	}
 }
 
-// TestCaptureClosesStdinWhenItEnds ends every clabwire process through its stdin, whether the
-// caller cancels the capture or the output fails, so no capture is left running in the pod.
 // TestCaptureWritesWhatItReadWhenTheContextEnds stops a capture while the output is slow and
 // the chains have packets queued: every packet clabwire wrote before it ended is in the file.
 func TestCaptureWritesWhatItReadWhenTheContextEnds(t *testing.T) {
 	t.Parallel()
+
+	// queued is how many packets each node writes while the output is blocked, below the 256
+	// events a chain holds before its segments stop reading
+	const queued = 200
 
 	r, clabwire := captureTestRuntime(t, time.Millisecond)
 	// without a reorder window, a blocked output blocks the chains
@@ -778,13 +800,19 @@ func TestCaptureWritesWhatItReadWhenTheContextEnds(t *testing.T) {
 	defer cancel()
 
 	out := &gatedWriter{open: make(chan struct{})}
+	blockedAt := make(chan map[string]int, 1)
 	go func() {
-		time.Sleep(50 * time.Millisecond)
+		clabwire.waitWritten(map[string]int{"r1": 20, "r2": 20})
 		out.block()
 		// the segments keep reading while the chains wait for the output
-		time.Sleep(400 * time.Millisecond)
+		atBlock := clabwire.waitWritten(nil)
+		clabwire.waitWritten(map[string]int{
+			"r1": atBlock["r1"] + queued,
+			"r2": atBlock["r2"] + queued,
+		})
 		cancel()
 		close(out.open)
+		blockedAt <- atBlock
 	}()
 
 	if err := r.Capture(ctx, clablabruntime.CaptureRequest{
@@ -803,12 +831,14 @@ func TestCaptureWritesWhatItReadWhenTheContextEnds(t *testing.T) {
 		node, _, _ := strings.Cut(packetOrigin(packet), ":")
 		got[node]++
 	}
+	atBlock := <-blockedAt
 	clabwire.mu.Lock()
 	defer clabwire.mu.Unlock()
 	for _, node := range []string{"r1", "r2"} {
-		if clabwire.written[node] < 300 || got[node] != clabwire.written[node] {
-			t.Fatalf("%s: clabwire wrote %d packets, the capture has %d", node,
-				clabwire.written[node], got[node])
+		written := clabwire.written[node]
+		if written-atBlock[node] < queued || got[node] != written {
+			t.Fatalf("%s: clabwire wrote %d packets, %d of them while the output was blocked, "+
+				"the capture has %d", node, written, written-atBlock[node], got[node])
 		}
 	}
 }
@@ -848,6 +878,8 @@ func (w *gatedWriter) bytes() []byte {
 	return w.data.Bytes()
 }
 
+// TestCaptureClosesStdinWhenItEnds ends every clabwire process through its stdin, whether the
+// caller cancels the capture or the output fails, so no capture is left running in the pod.
 func TestCaptureClosesStdinWhenItEnds(t *testing.T) {
 	t.Parallel()
 

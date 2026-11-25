@@ -115,6 +115,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 | `logs` | streams the device container log |
 | `capture` | captures lab link interfaces through the `clabwire` sidecar into one pcapng stream |
 | `inspect interfaces` | lists the capturable link interfaces with their sysfs state |
+| `tui` | opens the [terminal UI](../../cmd/tui.md#labs-in-a-kubernetes-cluster) on the labs of the cluster |
 | `validate` | checks c9s compatibility without creating Kubernetes resources |
 | `deploy --dry-run` | compiles and diffs Namespace, ConfigMap, NodeProfile, Link, and Node resources without changing them |
 | `deploy --emit-crs` | prints the Namespace, ConfigMap, and Topology (or NodeProfile, Link, and Node) manifests deploy would create, without contacting the cluster |

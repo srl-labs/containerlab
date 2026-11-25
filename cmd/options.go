@@ -8,6 +8,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clabinternaltui "github.com/srl-labs/containerlab/internal/tui"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
@@ -48,6 +49,7 @@ func GetOptions() *Options {
 			Exec: &ExecOptions{
 				Format: "plain",
 			},
+			TUI: &TUIOptions{Graphics: clabinternaltui.GraphicsAuto},
 			Inspect: &InspectOptions{
 				Format:           "table",
 				InterfacesFormat: "table",
@@ -144,6 +146,7 @@ type Options struct {
 	Destroy        *DestroyOptions
 	Save           *SaveOptions
 	Exec           *ExecOptions
+	TUI            *TUIOptions
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
 	Events         *EventsOptions
@@ -401,6 +404,15 @@ type SaveOptions struct {
 type ExecOptions struct {
 	Format   string
 	Commands []string
+}
+
+type TUIOptions struct {
+	Theme    string
+	NoMouse  bool
+	ReadOnly bool
+	LabsDirs []string
+	Demo     bool
+	Graphics string
 }
 
 type LogsOptions struct {
