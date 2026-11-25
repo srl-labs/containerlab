@@ -27,6 +27,7 @@ interface {{ .MgmtIntf }}
  description clab-mgmt
  ip address {{ .MgmtIPv4Addr }} {{ .MgmtIPv4SubnetMask }}
  ipv6 address {{ .MgmtIPv6Addr }}/{{ .MgmtIPv6PrefixLen }}
+ ipv6 nd ra suppress all
  no shutdown
 !{{ range $index, $item := .DataIFaces }}
 interface Ethernet{{ .Slot }}/{{ .Port }}
