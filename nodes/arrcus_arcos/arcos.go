@@ -58,7 +58,7 @@ func (n *arcos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 	clabutils.CreateDirectory(n.Cfg.LabDir, 0o755)
 
 	// Create/load certificate
-	if _, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName); err != nil {
+	if _, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName); err != nil {
 		return err
 	}
 

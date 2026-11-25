@@ -90,14 +90,14 @@ func (n *plvision_sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeO
 	return nil
 }
 
-func (n *plvision_sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *plvision_sonic) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 	if err != nil {
 		return err
 	}
 
-	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+	return clabnodes.LoadStartupConfigFileVr(ctx, n, configDirName, startupCfgFName)
 }
 
 func (n *plvision_sonic) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
@@ -116,7 +116,7 @@ func (n *plvision_sonic) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigR
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
-	log.Infof(
+	log.FromContext(ctx).Infof(
 		"saved /etc/sonic/config_db.json backup from %s node to %s\n",
 		n.Cfg.ShortName,
 		confPath,

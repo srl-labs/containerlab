@@ -45,7 +45,7 @@ func (p *imagePullProgress) observe(
 		}.String(),
 	})
 	if err != nil {
-		p.reportListError(err)
+		p.reportListError(ctx, err)
 
 		return
 	}
@@ -70,7 +70,7 @@ func (p *imagePullProgress) observe(
 		FieldSelector: "involvedObject.kind=Pod",
 	})
 	if err != nil {
-		p.reportListError(err)
+		p.reportListError(ctx, err)
 
 		return
 	}
@@ -107,7 +107,7 @@ func (p *imagePullProgress) observe(
 		}
 		p.reportedPullStates[stateKey] = struct{}{}
 
-		p.reportEvent(event, pullContext, image)
+		p.reportEvent(ctx, event, pullContext, image)
 	}
 }
 
@@ -129,13 +129,14 @@ func eventOrderTime(event *corev1.Event) metav1.Time {
 }
 
 func (p *imagePullProgress) reportEvent(
+	ctx context.Context,
 	event *corev1.Event,
 	pullContext podPullContext,
 	image string,
 ) {
 	switch event.Reason {
 	case "Pulling":
-		log.Info(
+		log.FromContext(ctx).Info(
 			"Pulling C9s node image",
 			"node", pullContext.node,
 			"image", image,
@@ -143,7 +144,7 @@ func (p *imagePullProgress) reportEvent(
 		)
 	case "Pulled":
 		if strings.Contains(event.Message, "already present") {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"C9s node image already present on kubernetes node",
 				"node", pullContext.node,
 				"image", image,
@@ -152,7 +153,7 @@ func (p *imagePullProgress) reportEvent(
 
 			return
 		}
-		log.Info(
+		log.FromContext(ctx).Info(
 			"C9s node image pull completed",
 			"node", pullContext.node,
 			"image", image,
@@ -162,7 +163,7 @@ func (p *imagePullProgress) reportEvent(
 		if !strings.Contains(event.Message, "image") {
 			return
 		}
-		log.Warn(
+		log.FromContext(ctx).Warn(
 			"C9s node image pull is failing",
 			"node", pullContext.node,
 			"image", image,
@@ -182,11 +183,11 @@ func quotedImageFromMessage(message string) string {
 	return match[1]
 }
 
-func (p *imagePullProgress) reportListError(err error) {
+func (p *imagePullProgress) reportListError(ctx context.Context, err error) {
 	if p.listErrorReported {
 		return
 	}
-	log.Debug("Unable to inspect C9s image pulls", "error", err)
+	log.FromContext(ctx).Debug("Unable to inspect C9s image pulls", "error", err)
 	p.listErrorReported = true
 }
 
@@ -248,7 +249,7 @@ func (p *nodePhaseProgress) observe(
 	nodes, err := r.nodesForTopology(ctx, name, namespace)
 	if err != nil {
 		if !p.listErrorReported {
-			log.Debug("Unable to inspect C9s node conditions", "error", err)
+			log.FromContext(ctx).Debug("Unable to inspect C9s node conditions", "error", err)
 			p.listErrorReported = true
 		}
 
@@ -305,7 +306,7 @@ func (p *nodePhaseProgress) observe(
 		if checkCmd != "" {
 			fields = append(fields, "check-cmd", checkCmd)
 		}
-		log.Info("C9s node progress", fields...)
+		log.FromContext(ctx).Info("C9s node progress", fields...)
 	}
 }
 

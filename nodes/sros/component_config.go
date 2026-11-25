@@ -5,6 +5,7 @@
 package sros
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"slices"
@@ -266,7 +267,7 @@ func integratedSrosSlotAllowed(nodeType, slot string) bool {
 	return slices.Contains(integratedSrosAllowedSlots(nodeType), slot)
 }
 
-func (n *sros) generateComponentConfig() string {
+func (n *sros) generateComponentConfig(ctx context.Context) string {
 	if !n.kindSpecificCfg().GenComponentConfig {
 		return ""
 	}
@@ -275,7 +276,7 @@ func (n *sros) generateComponentConfig() string {
 	}
 
 	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
-		return n.generateIntegratedComponentConfig()
+		return n.generateIntegratedComponentConfig(ctx)
 	}
 
 	components := n.rootComponents
@@ -289,7 +290,7 @@ func (n *sros) generateComponentConfig() string {
 			continue
 		}
 		if c.Type == "" {
-			log.Warn(
+			log.FromContext(ctx).Warn(
 				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
 				"node",
 				n.Cfg.ShortName,
@@ -350,10 +351,10 @@ func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
 	return config.String()
 }
 
-func (n *sros) generateIntegratedComponentConfig() string {
+func (n *sros) generateIntegratedComponentConfig(ctx context.Context) string {
 	card := strings.TrimSpace(n.Cfg.Env[envNokiaSrosCard])
 	if card != "" {
-		log.Info(
+		log.FromContext(ctx).Info(
 			"Card type override set on integrated chassis type, skipping component SR OS config generation",
 			"node",
 			n.Cfg.ShortName,

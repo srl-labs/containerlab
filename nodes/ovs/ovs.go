@@ -88,7 +88,7 @@ func (n *ovs) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
 func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
-func (n *ovs) Delete(_ context.Context) error {
+func (n *ovs) Delete(ctx context.Context) error {
 	c := goOvs.New(goOvs.Timeout(ovsTimeoutSeconds))
 
 	for _, ep := range n.GetEndpoints() {
@@ -99,7 +99,7 @@ func (n *ovs) Delete(_ context.Context) error {
 			err = n.removeEndpointPorts(ep.GetIfaceName())
 		}
 		if err != nil {
-			log.Errorf(
+			log.FromContext(ctx).Errorf(
 				"Could not remove OVS port %q from bridge %q: %v",
 				ep.GetIfaceName(),
 				n.Config().ShortName,
@@ -110,8 +110,8 @@ func (n *ovs) Delete(_ context.Context) error {
 
 	// One sweep for ports created before they were tagged. Per-endpoint deletion already
 	// removes ports this version tagged at attach time.
-	if err := n.removeMissingAutoPorts(); err != nil {
-		log.Errorf(
+	if err := n.removeMissingAutoPorts(ctx); err != nil {
+		log.FromContext(ctx).Errorf(
 			"Could not remove stale OVS ports from bridge %q: %v",
 			n.Config().ShortName,
 			err,
@@ -127,7 +127,7 @@ func (n *ovs) DeleteBridgePort(endpoint string) error {
 	return n.removeEndpointPorts(endpoint)
 }
 
-func (*ovs) DeleteNetnsSymlink() (err error) { return nil }
+func (*ovs) DeleteNetnsSymlink(context.Context) (err error) { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
@@ -138,8 +138,8 @@ func (*ovs) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, er
 }
 
 // RunExec is noop for ovs kind.
-func (n *ovs) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
+func (n *ovs) RunExec(ctx context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	log.FromContext(ctx).Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, clabexec.ErrRunExecNotSupported
 }
@@ -256,7 +256,7 @@ func (n *ovs) removeEndpointPorts(endpoint string) error {
 
 // removeMissingAutoPorts deletes clab-* ports whose netdev is already gone. Deleting the container
 // side of the veth removes the device and leaves the OVS port in place under that random name.
-func (n *ovs) removeMissingAutoPorts() error {
+func (n *ovs) removeMissingAutoPorts(ctx context.Context) error {
 	if n.Cfg == nil || n.Cfg.ShortName == "" {
 		return nil
 	}
@@ -278,7 +278,7 @@ func (n *ovs) removeMissingAutoPorts() error {
 		if !missing {
 			continue
 		}
-		log.Debugf(
+		log.FromContext(ctx).Debugf(
 			"Removing stale OVS port %q from bridge %q",
 			port,
 			n.Cfg.ShortName,

@@ -358,7 +358,7 @@ func TestPrepareMacvlanParent(t *testing.T) {
 				MacvlanParent: "parent",
 				IPv4Subnet:    tc.subnet,
 			}
-			got, err := PrepareMacvlanParent(m, tc.links)
+			got, err := PrepareMacvlanParent(context.Background(), m, tc.links)
 			if tc.wantErr {
 				if !errors.Is(err, failure) {
 					t.Fatalf("lost parent error: %v", err)

@@ -120,7 +120,7 @@ func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	return nil
 }
 
-func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *fdio_vpp) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
@@ -145,13 +145,13 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 		vppCfgTpl = string(c)
 	}
 
-	err := n.GenerateConfig(n.Cfg.ResStartupConfig, vppCfgTpl)
+	err := n.GenerateConfig(ctx, n.Cfg.ResStartupConfig, vppCfgTpl)
 	if err != nil {
 		return err
 	}
 
 	// template the vpp dataplane config (aka vpp startup config)
-	err = n.GenerateConfig(n.vppStartupCfgSrcPath, vppStartupConfigTpl)
+	err = n.GenerateConfig(ctx, n.vppStartupCfgSrcPath, vppStartupConfigTpl)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (n *fdio_vpp) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult,
 		return nil, fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
-	log.Infof("Saved VPP configuration from %s node\n", n.Cfg.ShortName)
+	log.FromContext(ctx).Infof("Saved VPP configuration from %s node\n", n.Cfg.ShortName)
 
 	return nil, nil
 }

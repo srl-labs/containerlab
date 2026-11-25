@@ -91,21 +91,21 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
-func (n *sros) DeleteNetnsSymlink() error {
+func (n *sros) DeleteNetnsSymlink(ctx context.Context) error {
 	var errs []error
 
 	// if it is the base node, then we need to delete the symlink for all the components.
 	if n.isDistributedBaseNode() {
 		for _, componentNode := range n.componentNodes {
-			errs = append(errs, componentNode.DeleteNetnsSymlink())
+			errs = append(errs, componentNode.DeleteNetnsSymlink(ctx))
 		}
 		if n.netnsNode != nil {
-			errs = append(errs, n.netnsNode.DeleteNetnsSymlink())
+			errs = append(errs, n.netnsNode.DeleteNetnsSymlink(ctx))
 		}
-		errs = append(errs, clabutils.DeleteNetnsSymlink(n.Cfg.LongName))
+		errs = append(errs, clabutils.DeleteNetnsSymlink(ctx, n.Cfg.LongName))
 	}
 
-	errs = append(errs, n.DefaultNode.DeleteNetnsSymlink(), n.cleanupParkingNetNS())
+	errs = append(errs, n.DefaultNode.DeleteNetnsSymlink(ctx), n.cleanupParkingNetNS())
 
 	return errors.Join(errs...)
 }

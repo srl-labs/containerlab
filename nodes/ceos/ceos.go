@@ -162,7 +162,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	if *n.Cfg.Certificate.Issue {
-		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+		certificate, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName)
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,10 @@ func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 }
 
 func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
-	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
+	log.FromContext(ctx).Infof(
+		"Running postdeploy actions for Arista cEOS '%s' node",
+		n.Cfg.ShortName,
+	)
 	return n.ceosPostDeploy(ctx)
 }
 
@@ -200,7 +203,11 @@ func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 	}
 
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
-	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, cfgPath)
+	log.FromContext(ctx).Infof(
+		"saved cEOS configuration from %s node to %s\n",
+		n.Cfg.ShortName,
+		cfgPath,
+	)
 
 	return &clabnodes.SaveConfigResult{
 		ConfigPath: cfgPath,
@@ -222,7 +229,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
 
 	// set the mgmt interface name for the node
-	err := setMgmtInterface(nodeCfg)
+	err := setMgmtInterface(ctx, nodeCfg)
 	if err != nil {
 		return err
 	}
@@ -239,7 +246,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		currentCfgTemplate = string(c)
 	}
 
-	err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
+	err = n.GenerateConfig(ctx, nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -318,7 +325,7 @@ func (n *ceos) createCEOSCertificates() error {
 	return nil
 }
 
-func setMgmtInterface(node *clabtypes.NodeConfig) error {
+func setMgmtInterface(ctx context.Context, node *clabtypes.NodeConfig) error {
 	// use interface mapping file to set the Management interface if it is provided in the binds
 	// section
 	// default is Management0
@@ -343,7 +350,7 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 		var intfMappingJson intfMap
 		err = json.Unmarshal(m, &intfMappingJson)
 		if err != nil {
-			log.Debugf(
+			log.FromContext(ctx).Debugf(
 				"Management interface could not be read from intfMapping file for '%s' node.",
 				node.ShortName,
 			)
@@ -351,16 +358,20 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 		}
 		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
 	}
-	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
+	log.FromContext(ctx).Debugf(
+		"Management interface for '%s' node is set to %s.",
+		node.ShortName,
+		mgmtInterface,
+	)
 	node.MgmtIntf = mgmtInterface
 
 	return nil
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
+func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
+	d, err := clabutils.SpawnCLIviaExec(ctx, "arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {
 		return err
 	}
@@ -423,7 +434,11 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
 
-	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+	log.FromContext(ctx).Debugf(
+		"cEOS PostDeploy configuration for node %s: %v",
+		n.Cfg.ShortName,
+		cfgs,
+	)
 
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {

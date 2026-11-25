@@ -355,7 +355,7 @@ func TestIdentityImpersonatesOnEveryTransport(t *testing.T) {
 	// pod exec: websocket first, then SPDY
 	_, _, _, _ = view.execInPod(ctx, pod, "node-r1-x", []string{"true"})
 	// port-forward over SPDY
-	if conn, err := view.dialPodPort("lab-ns", "lab1-r1-abc", 22); err == nil {
+	if conn, err := view.dialPodPort(ctx, "lab-ns", "lab1-r1-abc", 22); err == nil {
 		_ = conn.Close()
 	}
 	// a call without identity uses the configured one

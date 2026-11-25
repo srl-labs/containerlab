@@ -9,7 +9,7 @@ import (
 	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
-func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
+func (n *srl) setCustomPrompt(ctx context.Context, tplData *srlTemplateData) {
 	if !n.kindSpecificCfg().CustomPrompt {
 		return
 	}
@@ -17,9 +17,9 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 	tplData.EnableCustomPrompt = true
 
 	// get the current prompt
-	prompt, err := n.currentPrompt(context.Background())
+	prompt, err := n.currentPrompt(ctx)
 	if err != nil {
-		log.Errorf("failed to get current prompt: %v", err)
+		log.FromContext(ctx).Errorf("failed to get current prompt: %v", err)
 
 		tplData.EnableCustomPrompt = false
 
@@ -39,8 +39,12 @@ func (n *srl) currentPrompt(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("fetching prompt for node %s. stdout: %s, stderr: %s", n.Cfg.ShortName,
-		execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.FromContext(ctx).Debugf(
+		"fetching prompt for node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return getPrompt(execResult.GetStdOutString())
 }

@@ -207,7 +207,7 @@ func (c *CLab) planApply(
 ) (*applyPlan, error) {
 	state, err := c.LoadState()
 	if err != nil {
-		log.Warn("Failed to load state file", "error", err)
+		log.FromContext(ctx).Warn("Failed to load state file", "error", err)
 	}
 
 	plan := newApplyPlan(currentNodes, state)
@@ -675,7 +675,7 @@ func (c *CLab) planAffectedApplyNode(
 		return
 	}
 	if plan.isExternallyManaged(nodeName) {
-		log.Info(
+		log.FromContext(ctx).Info(
 			"Applying link change without node lifecycle action",
 			"node", nodeName,
 			"change", change,
@@ -684,11 +684,11 @@ func (c *CLab) planAffectedApplyNode(
 		return
 	}
 
-	overridden := clabnodes.LinkApplyModeOverrideForNode(node) != ""
+	overridden := clabnodes.LinkApplyModeOverrideForNode(ctx, node) != ""
 
 	switch clabnodes.LinkApplyModeForNode(ctx, node) {
 	case clabnodes.LinkApplyModeLive:
-		log.Info(
+		log.FromContext(ctx).Info(
 			"Applying link change without node lifecycle action",
 			"node",
 			nodeName,
@@ -698,7 +698,13 @@ func (c *CLab) planAffectedApplyNode(
 	case clabnodes.LinkApplyModeRestart:
 		plan.linkRestartNodeSet[nodeName] = struct{}{}
 		plan.nodeChangeReasons[nodeName] = change
-		log.Info("Node will be restarted to apply link change", "node", nodeName, "change", change)
+		log.FromContext(ctx).Info(
+			"Node will be restarted to apply link change",
+			"node",
+			nodeName,
+			"change",
+			change,
+		)
 	case clabnodes.LinkApplyModeRecreate:
 		plan.recreatedNodeSet[nodeName] = struct{}{}
 		delete(plan.restartNodeSet, nodeName)
@@ -706,10 +712,10 @@ func (c *CLab) planAffectedApplyNode(
 		plan.nodeChangeReasons[nodeName] = change
 
 		if overridden {
-			log.Info("Node will be recreated to apply link change",
+			log.FromContext(ctx).Info("Node will be recreated to apply link change",
 				"node", nodeName, "change", change, "link-apply-mode", "recreate")
 		} else {
-			log.Info(
+			log.FromContext(ctx).Info(
 				"Node will be recreated to apply link change since its kind does not declare "+
 					"live link support; if the NOS detects hot-plugged interfaces, set "+
 					"link-apply-mode: live on the node to avoid the recreation",
@@ -963,10 +969,10 @@ func (c *CLab) deleteApplyEndpoints(
 	refs []applyEndpointRef,
 ) error {
 	for _, ref := range refs {
-		log.Info("Deleting link endpoint", "endpoint", ref.key.String())
+		log.FromContext(ctx).Info("Deleting link endpoint", "endpoint", ref.key.String())
 		if err := clablinks.RemoveOwnedInterface(ctx, ref.node, ref.key.iface); err != nil {
 			if ref.bestEffort && errors.Is(err, clablinks.ErrInterfaceUnowned) {
-				log.Debugf("skipping best-effort endpoint delete: %v", err)
+				log.FromContext(ctx).Debugf("skipping best-effort endpoint delete: %v", err)
 				continue
 			}
 			return err

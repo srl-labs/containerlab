@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"os"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 )
@@ -198,7 +200,7 @@ func (c *CLab) apply(
 				return nil, err
 			}
 		} else {
-			c.writeState()
+			c.writeState(ctx)
 		}
 		if err := clablinks.ApplyLinkImpairments(ctx, linksEndpoints(c.Links)); err != nil {
 			return nil, err
@@ -304,7 +306,7 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 
-	return c.verifyTailscaleProxy()
+	return c.verifyTailscaleProxy(ctx)
 }
 
 func (c *CLab) prepareApply(
@@ -322,8 +324,13 @@ func (c *CLab) prepareApply(
 		return err
 	}
 
+	reporter, stop := clabutilsprogress.New(ctx, os.Stderr)
+	defer stop()
+
+	pullCtx := clabutilsprogress.NewContext(ctx, reporter)
+
 	for _, nodeName := range addedNodes {
-		if err := c.Nodes[nodeName].PullImage(ctx); err != nil {
+		if err := c.Nodes[nodeName].PullImage(pullCtx); err != nil {
 			return err
 		}
 	}
