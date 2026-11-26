@@ -33,7 +33,7 @@ topology:
 ```
 
 ///note
-Containerlab provides a [JSON schema file](https://github.com/srl-labs/containerlab/blob/main/schemas/clab.schema.json) for the topology file. The schema is used to live-validate user's input if a code editor supports this feature.
+Containerlab provides a [JSON schema file](https://github.com/srl-labs/containerlab/blob/main/schemas/clab.schema.json) for the topology file. The schema is used to live-validate user's input if a code editor supports this feature. Programs that use containerlab as a Go library get the schema of their containerlab version with `schemas.Topology()` from the `github.com/srl-labs/containerlab/schemas` package.
 
 <!-- Additionally, the [auto-generated schema documentation](https://json-schema.app/view/%23?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-labs%2Fcontainerlab%2Fmain%2Fschemas%2Fclab.schema.json) can be explored to understand the full scope of the configuration options containerlab provides. -->
 ///
