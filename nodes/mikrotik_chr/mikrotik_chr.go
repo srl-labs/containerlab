@@ -49,6 +49,7 @@ const (
 
 	launcherFName = "chr-launch.sh"
 	launcherPath  = "/chr-launch.sh"
+
 	// readyFile is written by the launcher once RouterOS accepted the credentials and the
 	// startup config, and removed at every container start.
 	readyFile = "/.chr-launch-ready"
@@ -80,7 +81,8 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs).
+		WithKindSpecificConfig(kindSpecificConfig)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(mikrotikCHR)
@@ -139,7 +141,18 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	n.InterfaceHelp = InterfaceHelp
 	n.goarch = runtime.GOARCH
 
+	speeds, err := portSpeeds(n.kindSpecificCfg(), dataNICLimit(n.goarch)+1)
+	if err != nil {
+		return err
+	}
+	n.Cfg.Env[portSpeedsEnv] = speeds
+
 	return nil
+}
+
+// kindSpecificCfg returns the node's kind-specific config (port-speeds).
+func (n *mikrotikCHR) kindSpecificCfg() *KindSpecificConfig {
+	return kindSpecificConfig.Of(n.Cfg)
 }
 
 // dataNICLimit is the highest data NIC index the launcher's NIC layout holds on goarch.

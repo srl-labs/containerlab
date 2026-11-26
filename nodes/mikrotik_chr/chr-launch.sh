@@ -208,10 +208,20 @@ check_nic_index() { # check_nic_index <max-index>: reject indices beyond the NIC
     fi
 }
 
+data_nic_speed() { # data_nic_speed <index>: the data NIC's speed in Mb/s
+    # The kind writes the validated port-speeds key to CHR_PORT_SPEEDS as
+    # "<port>:<Mb/s>" pairs; data NIC <index> is ether<index+1>. Other ports
+    # report 10G, the speed a container veth reports.
+    for _pair in ${CHR_PORT_SPEEDS:-}; do
+        [ "${_pair%%:*}" = "$(( $1 + 1 ))" ] && { printf '%s' "${_pair#*:}"; return; }
+    done
+    printf '%s' 10000
+}
+
 data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (also used to re-plug it)
     # A virtio NIC reports no speed and half duplex unless told otherwise, and
-    # RouterOS bonds in 802.3ad mode only with full-duplex ports. Advertise
-    # 10G full duplex, as vrnetlab does for its RouterOS image.
+    # RouterOS bonds in 802.3ad mode only with full-duplex ports.
+    _link="speed=$(data_nic_speed "$1"),duplex=full"
     case "$PCI_BRIDGES" in
         1)
             # The default PC has only 29 free PCI slots, including management.
@@ -221,11 +231,11 @@ data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (al
             # Keep MSI-X, but share one vector between RX/TX queues (plus one
             # for config) to reduce IRQ pressure.
             # Disabling MSI-X entirely can leave NICs missing in RouterOS.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2,speed=10000,duplex=full"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2,$_link"
             ;;
         *)
             # ARM64 uses the virt machine and keeps its existing NIC layout.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,speed=10000,duplex=full"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,$_link"
             ;;
     esac
 }
@@ -369,14 +379,19 @@ watch_links() {
 }
 
 i=1
+speeds=""
 while [ "$i" -le "$max" ]; do
     tap="tap$i"
     tunctl -t "$tap" >/dev/null 2>&1 || ip tuntap add dev "$tap" mode tap
     [ -e "$SYSNET/eth$i" ] && bridge_eth "$i"
     ip link set "$tap" up
     NET="$NET $(qemu_data_nic "$i" "$(nic_mac "$i")")"
+    speeds="$speeds ether$((i + 1))=$(data_nic_speed "$i")"
     i=$((i + 1))
 done
+# One line with the speed of every data NIC, so a port-speeds entry for a
+# port this node does not create is visible here.
+[ "$max" -gt 0 ] && log "data NIC speeds (Mb/s):$speeds"
 
 # shellcheck disable=SC2086
 $QEMU $ACCEL -display none -monitor none \

@@ -648,6 +648,51 @@ topology:
 	}
 }
 
+// TestMikrotikCHRPortSpeedsInheritance checks that port-speeds set in a group reaches every node
+// of the group, and that a node's own port-speeds replaces the group's list as a whole.
+func TestMikrotikCHRPortSpeedsInheritance(t *testing.T) {
+	const topology = `name: chr-port-speeds
+topology:
+  groups:
+    crs326-24g-2s:
+      kind: mikrotik_chr
+      image: mikrotik/chr:test
+      port-speeds:
+        - port: 2..3
+          speed: 1000
+        - port: 26..27
+          speed: 10000
+  nodes:
+    access1:
+      group: crs326-24g-2s
+    access2:
+      group: crs326-24g-2s
+      port-speeds:
+        - port: 2
+          speed: 2500
+    router:
+      kind: mikrotik_chr
+      image: mikrotik/chr:test
+`
+	filename := filepath.Join(t.TempDir(), "chr.clab.yml")
+	if err := os.WriteFile(filename, []byte(topology), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, err := NewContainerLab(WithTopoPath(filename, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{
+		"access1": "2:1000 3:1000 26:10000 27:10000",
+		"access2": "2:2500",
+		"router":  "",
+	} {
+		if got := c.Nodes[name].Config().Env["CHR_PORT_SPEEDS"]; got != want {
+			t.Errorf("%s: CHR_PORT_SPEEDS = %q, want %q", name, got, want)
+		}
+	}
+}
+
 func TestLabelsInit(t *testing.T) {
 	owner := os.Getenv("SUDO_USER")
 

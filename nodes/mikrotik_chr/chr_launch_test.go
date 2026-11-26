@@ -108,13 +108,16 @@ func TestQEMUDataNIC(t *testing.T) {
 	}
 
 	// qemu_data_nic takes the -device value from data_nic_device, which also re-plugs NICs.
-	fn := launcherFunction(t, "data_nic_device") + launcherFunction(t, "qemu_data_nic")
+	fn := launcherFunction(t, "data_nic_speed") + launcherFunction(t, "data_nic_device") +
+		launcherFunction(t, "qemu_data_nic")
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			mac := fmt.Sprintf("52:54:00:12:34:%02x", tc.index)
 			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c",
 				fn+"PCI_BRIDGES=\"$1\"; qemu_data_nic \"$2\" \"$3\"",
 				"chr-launch-test", fmt.Sprint(tc.pciBridges), fmt.Sprint(tc.index), mac)
+			// A CHR_PORT_SPEEDS of the host must not change the expected default speed.
+			cmd.Env = []string{"PATH=/usr/bin:/bin"}
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				t.Fatalf("qemu_data_nic failed: %v\n%s", err, out)
@@ -148,6 +151,60 @@ func TestQEMUDataNIC(t *testing.T) {
 			}
 			if diff := cmp.Diff(strings.Fields(want), strings.Fields(string(out))); diff != "" {
 				t.Errorf("QEMU arguments mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestDataNICSpeed(t *testing.T) {
+	tests := map[string]struct {
+		speeds string // CHR_PORT_SPEEDS as the kind writes it
+		index  int    // data NIC index: ether<index+1>
+		want   string
+	}{
+		"default":         {index: 1, want: "10000"},
+		"empty":           {speeds: "", index: 1, want: "10000"},
+		"listed-port":     {speeds: "2:1000 3:1000", index: 1, want: "1000"},
+		"last-listed":     {speeds: "2:25000 18:100000 19:100000", index: 18, want: "100000"},
+		"unlisted-port":   {speeds: "2:1000 26:10000", index: 2, want: "10000"},
+		"no-prefix-match": {speeds: "12:1000", index: 1, want: "10000"},
+		"highest-port":    {speeds: "64:100000", index: 63, want: "100000"},
+	}
+
+	fn := launcherFunction(t, "data_nic_speed")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c",
+				fn+"data_nic_speed \"$1\"", "chr-launch-test", fmt.Sprint(tc.index))
+			// Only the test's variables: a CHR_PORT_SPEEDS of the host must not leak in.
+			cmd.Env = []string{"PATH=/usr/bin:/bin", "CHR_PORT_SPEEDS=" + tc.speeds}
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("data_nic_speed failed: %v\n%s", err, out)
+			}
+			if string(out) != tc.want {
+				t.Errorf("data_nic_speed %d = %q, want %q", tc.index, out, tc.want)
+			}
+		})
+	}
+}
+
+// The re-plug after boot rebuilds the NIC from data_nic_device, so the port speed must be in
+// that device string, not only on the QEMU command line.
+func TestDataNICDeviceSpeed(t *testing.T) {
+	fn := launcherFunction(t, "data_nic_speed") + launcherFunction(t, "data_nic_device")
+	for _, pciBridges := range []string{"0", "1"} {
+		t.Run("pci-bridges-"+pciBridges, func(t *testing.T) {
+			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c",
+				fn+"PCI_BRIDGES=\"$1\"; data_nic_device 2 52:54:00:12:34:02",
+				"chr-launch-test", pciBridges)
+			cmd.Env = []string{"PATH=/usr/bin:/bin", "CHR_PORT_SPEEDS=2:1000 3:25000"}
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("data_nic_device failed: %v\n%s", err, out)
+			}
+			if !strings.HasSuffix(string(out), ",speed=25000,duplex=full") {
+				t.Errorf("data_nic_device 2 = %q, want it to end in ,speed=25000,duplex=full", out)
 			}
 		})
 	}

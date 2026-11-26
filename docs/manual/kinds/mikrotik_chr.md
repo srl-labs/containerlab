@@ -71,14 +71,12 @@ The container interface `ethN` is RouterOS `ether(N+1)`, also when links leave g
 
 On AMD64, data NICs are placed behind PCI bridges rather than sharing the default PC's root bus with all other devices. This removes the default layout's limit of 29 total Ethernet interfaces (management plus 28 data ports), so links can use `ether30` and higher without a custom launcher. ARM64 still uses a single PCI bus on the `virt` machine, shared with the disk and the management NIC; the PCI-bridge expansion applies only to AMD64.
 
-Data interfaces report 10 Gbit/s full duplex. RouterOS needs a full-duplex link to bond it in 802.3ad (LACP) mode.
-
 /// admonition
     type: warning
-The highest interface depends on the architecture, and larger indices are rejected during deployment:
+Containerlab checks the highest interface index against these architecture limits:
 
 * AMD64: `eth63` / `ether64`, the highest port tested. More interfaces exhaust the guest's interrupt vectors (with the default single vCPU) and, from about 200, the virtual PC firmware's PCI address space, which stops the VM before RouterOS boots.
-* ARM64: `eth29` / `ether30`, the last data port that fits on the `virt` machine's PCI bus.
+* ARM64: `eth29` / `ether30`, the last data port that fits on the `virt` machine's PCI bus. RouterOS may stop earlier. With QEMU software emulation (TCG), RouterOS 7.25.1 and 7.26beta7 brought up only 22 data NICs, through `eth22` / `ether23`. A topology that links `ether24` or higher can pass validation but leave the node unhealthy. Keep links at or below `ether23` on these ARM64 setups.
 
 The check uses the architecture of the containerlab binary, which matches the image's except in emulated setups.
 ///
@@ -86,6 +84,44 @@ The check uses the architecture of the containerlab binary, which matches the im
 With more than about 30 data ports, RouterOS can reject a NIC while it boots, and the interface does not appear. The launcher checks that RouterOS has an interface for every data NIC and re-plugs the missing ones before the node reports ready; RouterOS keeps their configuration. It checks again after RouterOS reboots itself (for example with `/system reboot`), when the container keeps running. If a NIC is still missing, the launcher logs `data NIC check FAILED` and the node is not healthy. The node is also not healthy while RouterOS does not answer within `CHR_BOOT_WAIT` after such a reboot.
 
 Sparse interface numbering also consumes VM resources for the intervening ports; memory defaults scale with the highest index, not just the number of links.
+
+### Port speed
+
+Data interfaces report 10 Gbit/s and full duplex by default, matching a container veth. RouterOS needs full-duplex member links for an 802.3ad bond. Each data bridge must also forward LACP frames between the container veth and the QEMU tap so RouterOS and its peer can negotiate the bond.
+
+To model the ports of a real device, set `port-speeds`, a [kind-specific config](../nodes.md#kind-specific-config) key. Each entry sets the speed in Mb/s for one data port or an inclusive range: `port` is the RouterOS port number (`2` for `ether2`) or a range such as `2..25`. Ports that are not listed keep 10 Gbit/s. The speed is what RouterOS shows; it does not limit traffic.
+
+Set `port-speeds` in a [group](../topo-def-file.md#groups) to describe a device model once and reuse it. A device's own management port is `ether1`, the node's management interface. Assign data ports starting at `ether2`. The CRS518 example puts the 25G ports first. A QSFP cage counts as one port, as RouterOS runs the full 40G or 100G link on its first lane.
+
+```yaml
+name: chr-port-speeds
+topology:
+  groups:
+    crs317-1g-16s: # 16 x 10G SFP+
+      kind: mikrotik_chr
+      image: mikrotik/chr:7.24.5
+      port-speeds:
+        - port: 2..17
+          speed: 10000
+    crs518-16xs-2xq: # 16 x 25G SFP28, 2 x 100G QSFP28
+      kind: mikrotik_chr
+      image: mikrotik/chr:7.24.5
+      port-speeds:
+        - port: 2..17
+          speed: 25000
+        - port: 18..19
+          speed: 100000
+  nodes:
+    access1:
+      group: crs317-1g-16s
+    core1:
+      group: crs518-16xs-2xq
+  links:
+    - endpoints: ["access1:ether16", "core1:ether2"]
+    - endpoints: ["access1:ether17", "core1:ether19"]
+```
+
+A node that sets `port-speeds` itself replaces the group's list. Use `port-speeds: []` to restore the defaults. Containerlab rejects `ether1`, a port above the [architecture limit](#interface-naming), a duplicate port, or a speed outside 1 to 2147483647 Mb/s. A group may list ports without links. The container log lists the speed of each data NIC the node creates.
 
 ## Node configuration
 
