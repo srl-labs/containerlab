@@ -43,6 +43,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		saveCmd,
 		toolsCmd,
 		validateCmd,
+		schemaCmd,
 	}
 }
 
