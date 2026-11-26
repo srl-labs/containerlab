@@ -100,6 +100,9 @@ type Runtime struct {
 	// cluster runs a clabernetes release with the contract this runtime needs. Every view
 	// shares it. It is nil when the clients were injected (tests).
 	support *supportCheck
+	// netemSupport checks, the first time a lab uses link impairments, that the clabernetes
+	// release takes them. It is nil when the clients were injected (tests).
+	netemSupport *supportCheck
 }
 
 // kubeClients is the set of Kubernetes clients a runtime view operates with.
@@ -265,6 +268,7 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		identity:             cfg.Identity,
 		clients:              newClientLoader(),
 		support:              &supportCheck{},
+		netemSupport:         &supportCheck{check: checkLinkNetemSchema},
 		captureSegment:       captureSegmentFromEnv(),
 		captureReorderWindow: captureReorderWindowFromEnv(),
 	}, nil

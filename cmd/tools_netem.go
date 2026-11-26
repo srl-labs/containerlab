@@ -151,6 +151,10 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		return fmt.Errorf("--node/-n must be specified for 'set' command")
 	}
 
+	if netemLabRuntimeSelected(o) {
+		return netemSetLabRuntime(ctx, o)
+	}
+
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
 	if err := exec.CommandContext(ctx, "modprobe", "sch_netem").Run(); err != nil {
 		log.Warn(
@@ -229,6 +233,11 @@ func validateInputAndRoot(o *Options) error {
 
 	if o.ToolsNetem.Jitter != 0 && o.ToolsNetem.Delay == 0 {
 		return fmt.Errorf("jitter cannot be set without setting delay")
+	}
+
+	// a lab runtime changes its links through its API, not local network namespaces
+	if netemLabRuntimeSelected(o) {
+		return nil
 	}
 
 	if err := clabutils.CheckAndGetRootPrivs(); err != nil {
@@ -414,6 +423,10 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 func netemShowFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if netemLabRuntimeSelected(o) {
+		return netemShowLabRuntime(ctx, o)
+	}
 
 	if o.ToolsNetem.ContainerName == "" {
 		if o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
@@ -710,6 +723,10 @@ func netemResetFn(o *Options) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if netemLabRuntimeSelected(o) {
+		return netemResetLabRuntime(ctx, o)
+	}
 
 	node, err := resolveNetemNode(ctx, o)
 	if err != nil {

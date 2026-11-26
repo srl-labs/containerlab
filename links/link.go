@@ -577,6 +577,17 @@ func SetNameMACAndUpInterface(
 	endpt Endpoint,
 ) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
+		// l was resolved in the namespace that created the link. Moving it to
+		// another namespace keeps its name but changes its ifindex when that
+		// index is taken there, and netlink addresses links by ifindex.
+		// Resolve it again here so an unrelated interface is never changed.
+		name := l.Attrs().Name
+		link, err := netlink.LinkByName(name)
+		if err != nil {
+			return fmt.Errorf("endpoint %s: failed to find link %q: %w", endpt, name, err)
+		}
+		l = link
+
 		// rename the link created with random name if its length is acceptable by linux
 		if IsValidInterfaceName(endpt.GetIfaceName()) {
 			err := netlink.LinkSetName(l, endpt.GetIfaceName())

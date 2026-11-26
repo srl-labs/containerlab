@@ -381,6 +381,10 @@ func (c *CLab) execWithLabRuntime(
 }
 
 func (c *CLab) checkLabRuntimeLinkImpairments() error {
+	if _, ok := c.LabRuntime.(clablabruntime.LinkImpairer); ok {
+		return nil
+	}
+
 	if c.Config.Topology != nil &&
 		slices.ContainsFunc(c.Config.Topology.Links, (*clablinks.LinkDefinition).DeclaresNetem) {
 		return fmt.Errorf(

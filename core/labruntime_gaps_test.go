@@ -152,19 +152,10 @@ func (r *requestRecordingLabRuntime) Restart(context.Context, clablabruntime.Nod
 	return nil
 }
 
-func TestLabRuntimeRejectsLinkImpairments(t *testing.T) {
-	t.Parallel()
-
-	var link clablinks.LinkDefinition
-	if err := yaml.Unmarshal([]byte(`
-endpoints: ["r1:eth1", "r2:eth1"]
-netem: [{delay: 10ms}]
-`), &link); err != nil {
-		t.Fatal(err)
-	}
-
-	ctx := context.Background()
-	tests := map[string]func(c *CLab) error{
+// labRuntimeDeployPaths run the commands that send the topology or the nodes to start or restart
+// to the lab runtime, or check the topology before a redeploy, by name.
+func labRuntimeDeployPaths(ctx context.Context) map[string]func(c *CLab) error {
+	return map[string]func(c *CLab) error{
 		"deploy": func(c *CLab) error {
 			_, err := c.deployWithLabRuntime(ctx, &DeployOptions{reconfigure: true})
 			return err
@@ -194,30 +185,72 @@ netem: [{delay: 10ms}]
 			return c.CheckLabRuntimeDeploy()
 		},
 	}
+}
 
-	for name, run := range tests {
+// impairedLabRuntimeLab is a lab with a link impairment on the given lab runtime.
+func impairedLabRuntimeLab(t *testing.T, runtime clablabruntime.LabRuntime) *CLab {
+	t.Helper()
+
+	var link clablinks.LinkDefinition
+	if err := yaml.Unmarshal([]byte(`
+endpoints: ["r1:eth1", "r2:eth1"]
+netem: [{delay: 10ms}]
+`), &link); err != nil {
+		t.Fatal(err)
+	}
+
+	return &CLab{
+		Config: &Config{
+			Name:     "lab1",
+			Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
+		},
+		LabRuntime:        runtime,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		renderedTopology:  []byte("name: lab1\n"),
+		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
+	}
+}
+
+func TestLabRuntimeRejectsLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	for name, run := range labRuntimeDeployPaths(context.Background()) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			runtime := &requestRecordingLabRuntime{}
-			c := &CLab{
-				Config: &Config{
-					Name:     "lab1",
-					Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{&link}},
-				},
-				LabRuntime:        runtime,
-				TopoPaths:         &clabtypes.TopoPaths{},
-				renderedTopology:  []byte("name: lab1\n"),
-				globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
-			}
 
-			err := run(c)
+			err := run(impairedLabRuntimeLab(t, runtime))
 			if err == nil ||
 				!strings.Contains(err.Error(), "link impairments (netem) are not supported") {
 				t.Fatalf("%s = %v; want the link impairments rejected", name, err)
 			}
 			if runtime.requested || runtime.deployed || runtime.request.Name != "" {
 				t.Fatal("the request reached the lab runtime")
+			}
+		})
+	}
+}
+
+type impairingLabRuntime struct {
+	requestRecordingLabRuntime
+	clablabruntime.LinkImpairer
+}
+
+func TestLinkImpairingLabRuntimeKeepsLinkImpairments(t *testing.T) {
+	t.Parallel()
+
+	for name, run := range labRuntimeDeployPaths(context.Background()) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			runtime := &impairingLabRuntime{}
+
+			if err := run(impairedLabRuntimeLab(t, runtime)); err != nil {
+				t.Fatal(err)
+			}
+			if name != "check before a redeploy" && !runtime.requested && !runtime.deployed {
+				t.Fatal("the request didn't reach the lab runtime")
 			}
 		})
 	}

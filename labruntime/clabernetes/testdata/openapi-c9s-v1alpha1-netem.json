@@ -1,0 +1,306 @@
+{
+ "components": {
+  "schemas": {
+   "run.c9s.v1alpha1.Node": {
+    "properties": {
+     "apiVersion": {
+      "type": "string"
+     },
+     "kind": {
+      "type": "string"
+     },
+     "metadata": {
+      "allOf": [
+       {
+        "$ref": "#/components/schemas/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
+       }
+      ]
+     },
+     "spec": {
+      "properties": {
+       "aliases": {
+        "type": "array"
+       },
+       "appProtocols": {
+        "type": "array"
+       },
+       "binds": {
+        "type": "array"
+       },
+       "cap-add": {
+        "type": "array"
+       },
+       "certificate": {
+        "type": "object"
+       },
+       "cmd": {
+        "type": "string"
+       },
+       "components": {
+        "type": "array"
+       },
+       "config": {
+        "type": "object"
+       },
+       "cpu": {
+        "type": "number"
+       },
+       "devices": {
+        "type": "array"
+       },
+       "dns": {
+        "type": "object"
+       },
+       "enforce-startup-config": {
+        "type": "boolean"
+       },
+       "entrypoint": {
+        "type": "string"
+       },
+       "env": {
+        "type": "object"
+       },
+       "env-files": {
+        "type": "array"
+       },
+       "exec": {
+        "type": "array"
+       },
+       "filesFromConfigMap": {
+        "type": "array"
+       },
+       "filesFromSecret": {
+        "type": "array"
+       },
+       "filesFromURL": {
+        "type": "array"
+       },
+       "group": {
+        "type": "string"
+       },
+       "healthcheck": {
+        "type": "object"
+       },
+       "image": {
+        "type": "string"
+       },
+       "image-pull-policy": {
+        "type": "string"
+       },
+       "kind": {
+        "type": "string"
+       },
+       "kind-specific-config": {
+        "type": "object"
+       },
+       "license": {
+        "type": "string"
+       },
+       "link-apply-mode": {
+        "type": "string"
+       },
+       "memory": {
+        "type": "string"
+       },
+       "mgmt-ipv4": {
+        "type": "string"
+       },
+       "mgmt-ipv6": {
+        "type": "string"
+       },
+       "mgmt-net": {
+        "type": "string"
+       },
+       "network-mode": {
+        "type": "string"
+       },
+       "ports": {
+        "type": "array"
+       },
+       "privileged": {
+        "type": "boolean"
+       },
+       "profileRef": {
+        "type": "object"
+       },
+       "restart-policy": {
+        "type": "string"
+       },
+       "runState": {
+        "default": "Running",
+        "enum": [
+         "Running",
+         "Stopped"
+        ],
+        "type": "string"
+       },
+       "security-opts": {
+        "type": "array"
+       },
+       "shm-size": {
+        "type": "string"
+       },
+       "startup-config": {
+        "type": "string"
+       },
+       "startup-delay": {
+        "type": "integer"
+       },
+       "suppress-startup-config": {
+        "type": "boolean"
+       },
+       "sysctls": {
+        "type": "object"
+       },
+       "tmpfs": {
+        "type": "object"
+       },
+       "type": {
+        "type": "string"
+       },
+       "user": {
+        "type": "string"
+       }
+      },
+      "type": "object"
+     },
+     "status": {
+      "type": "object"
+     }
+    },
+    "type": "object",
+    "x-kubernetes-group-version-kind": [
+     {
+      "group": "c9s.run",
+      "kind": "Node",
+      "version": "v1alpha1"
+     }
+    ]
+   },
+   "run.c9s.v1alpha1.Link": {
+    "type": "object",
+    "x-kubernetes-group-version-kind": [
+     {
+      "group": "c9s.run",
+      "kind": "Link",
+      "version": "v1alpha1"
+     }
+    ],
+    "x-kubernetes-selectable-fields": [
+     {
+      "fieldPath": "spec.endpointA.nodeName"
+     },
+     {
+      "fieldPath": "spec.endpointB.nodeName"
+     }
+    ],
+    "properties": {
+     "spec": {
+      "type": "object",
+      "required": [
+       "endpointA",
+       "endpointB"
+      ],
+      "properties": {
+       "endpointA": {
+        "type": "object",
+        "required": [
+         "interfaceName",
+         "nodeName"
+        ],
+        "properties": {
+         "nodeName": {
+          "type": "string",
+          "minLength": 1
+         },
+         "interfaceName": {
+          "type": "string",
+          "minLength": 1
+         },
+         "netem": {
+          "type": "object",
+          "properties": {
+           "corruption": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+           },
+           "delay": {
+            "type": "string",
+            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+           },
+           "jitter": {
+            "type": "string",
+            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+           },
+           "loss": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+           },
+           "rate": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+           }
+          }
+         }
+        }
+       },
+       "endpointB": {
+        "type": "object",
+        "required": [
+         "interfaceName",
+         "nodeName"
+        ],
+        "properties": {
+         "nodeName": {
+          "type": "string",
+          "minLength": 1
+         },
+         "interfaceName": {
+          "type": "string",
+          "minLength": 1
+         },
+         "netem": {
+          "type": "object",
+          "properties": {
+           "corruption": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+           },
+           "delay": {
+            "type": "string",
+            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+           },
+           "jitter": {
+            "type": "string",
+            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+           },
+           "loss": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+           },
+           "rate": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "info": {
+  "title": "Kubernetes CRD Swagger",
+  "version": "v0.1.0"
+ },
+ "openapi": "3.0.0"
+}
