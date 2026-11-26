@@ -2,7 +2,9 @@
 
 ### Description
 
-The `schema` command prints the [JSON schema](../manual/topo-def-file.md) of the topology definition file to stdout. The schema is the one of the installed containerlab version, so it describes exactly the topology options this version accepts.
+The `schema` command prints the JSON schema of the [topology definition file](../manual/topo-def-file.md) to stdout. The schema is the one of the installed containerlab version, so it describes exactly the topology options this version accepts.
+
+It doesn't use the container runtime, so it runs without root privileges whatever runtime is selected.
 
 Code editors and other tools can use it to validate topology files and to complete their keys, without fetching the schema of another version from the repository.
 
