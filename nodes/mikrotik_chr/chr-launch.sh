@@ -348,10 +348,12 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         # (01:80:c2:00:00:02, bit 2), so each port forwards it (below).
         echo 16384 > "$SYSNET/br$1/bridge/group_fwd_mask" 2>/dev/null
         brctl addif "br$1" "tap$1"
-        echo 4 > "$SYSNET/tap$1/brport/group_fwd_mask" 2>/dev/null
+        echo 4 > "$SYSNET/tap$1/brport/group_fwd_mask" ||
+            log "could not enable LACP forwarding on tap$1 (bridge br$1)"
     fi
     brctl addif "br$1" "eth$1"
-    echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" 2>/dev/null
+    echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" ||
+        log "could not enable LACP forwarding on eth$1 (bridge br$1)"
     ip link set "eth$1" up
     ip link set "br$1" up
 }
