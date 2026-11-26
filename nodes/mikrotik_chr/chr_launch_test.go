@@ -127,14 +127,14 @@ func TestQEMUDataNIC(t *testing.T) {
 			)
 			if tc.bus == "" {
 				want += fmt.Sprintf(
-					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s",
+					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s,speed=10000,duplex=full",
 					tc.index,
 					tc.index,
 					mac,
 				)
 			} else {
 				want += fmt.Sprintf(
-					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s,bus=chrpci%s,addr=%s,romfile=,vectors=2",
+					"-device virtio-net,id=nic%d,netdev=d%d,mac=%s,bus=chrpci%s,addr=%s,romfile=,vectors=2,speed=10000,duplex=full",
 					tc.index,
 					tc.index,
 					mac,

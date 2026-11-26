@@ -209,6 +209,9 @@ check_nic_index() { # check_nic_index <max-index>: reject indices beyond the NIC
 }
 
 data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (also used to re-plug it)
+    # A virtio NIC reports no speed and half duplex unless told otherwise, and
+    # RouterOS bonds in 802.3ad mode only with full-duplex ports. Advertise
+    # 10G full duplex, as vrnetlab does for its RouterOS image.
     case "$PCI_BRIDGES" in
         1)
             # The default PC has only 29 free PCI slots, including management.
@@ -218,11 +221,11 @@ data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (al
             # Keep MSI-X, but share one vector between RX/TX queues (plus one
             # for config) to reduce IRQ pressure.
             # Disabling MSI-X entirely can leave NICs missing in RouterOS.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2,speed=10000,duplex=full"
             ;;
         *)
             # ARM64 uses the virt machine and keeps its existing NIC layout.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,speed=10000,duplex=full"
             ;;
     esac
 }

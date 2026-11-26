@@ -71,6 +71,8 @@ The container interface `ethN` is RouterOS `ether(N+1)`, also when links leave g
 
 On AMD64, data NICs are placed behind PCI bridges rather than sharing the default PC's root bus with all other devices. This removes the default layout's limit of 29 total Ethernet interfaces (management plus 28 data ports), so links can use `ether30` and higher without a custom launcher. ARM64 still uses a single PCI bus on the `virt` machine, shared with the disk and the management NIC; the PCI-bridge expansion applies only to AMD64.
 
+Data interfaces report 10 Gbit/s full duplex. RouterOS needs a full-duplex link to bond it in 802.3ad (LACP) mode.
+
 /// admonition
     type: warning
 The highest interface depends on the architecture, and larger indices are rejected during deployment:
