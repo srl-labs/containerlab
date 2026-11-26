@@ -681,6 +681,16 @@ Verify containerlab version
     Should Contain    ${output}    commit:
     Should Contain    ${output}    date:
 
+Verify containerlab schema
+    [Documentation]    Ensures that 'containerlab schema' prints the topology schema of this version
+    ...    with the selected runtime.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} schema
+    Should Be Equal As Integers    ${rc}    0
+    ${schema} =    Get File    ${CURDIR}/../../schemas/clab.schema.json
+    # Run And Return Rc And Output strips the trailing newline
+    Should Be Equal    ${output}    ${schema.rstrip()}
+
 Verify containerlab version check
     [Documentation]    Ensures that 'containerlab version check' either says you're on latest version
     ...    or that a new version is available. Also verifies the command succeeds.
