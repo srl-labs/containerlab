@@ -113,8 +113,12 @@ func (n *bngblaster) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 	return nil
 }
 
-func (n *bngblaster) PreDeploy(ctx context.Context, _ *clabnodes.PreDeployParams) error {
+func (n *bngblaster) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+
+	if _, err := n.LoadOrGenerateCertificate(ctx, params.Cert, params.TopologyName); err != nil {
+		return err
+	}
 
 	if n.Cfg.StartupConfig == "" {
 		return nil
