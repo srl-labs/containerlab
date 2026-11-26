@@ -174,7 +174,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if err != nil {
 		return err
 	}
-	if globalRuntimeRequiresRoot(o.Global.Runtime) {
+	if globalRuntimeRequiresRoot(o.Global.Runtime) && !commandIsRuntimeIndependent(cobraCmd) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -212,6 +212,18 @@ func globalRuntimeRequiresRoot(name string) bool {
 
 func commandSkipsRoot(name string) bool {
 	return clablabruntime.IsLabRuntimeName(name)
+}
+
+// runtimeIndependentCommands don't use the container runtime, so they run without root
+// whatever runtime is selected.
+var runtimeIndependentCommands = map[string]struct{}{ //nolint:gochecknoglobals
+	"schema": {},
+}
+
+func commandIsRuntimeIndependent(cobraCmd *cobra.Command) bool {
+	_, ok := runtimeIndependentCommands[getCommandPath(cobraCmd)]
+
+	return ok
 }
 
 // labRuntimeUnsupportedCommands operate on local containers or host networking
