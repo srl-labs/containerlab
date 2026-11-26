@@ -63,9 +63,15 @@ Exec with stdin and a TTY needs a terminal
     Should Not Be Equal As Integers    ${result.rc}    0
     Should Contain    ${result.stderr}    not a TTY
 
-Exec with stdin and a TTY from a terminal exits with the exit code of the command
-    ${result} =    Run Exec In A Terminal    -i --tty --cmd "sh -c 'exit 5'"
-    Should Be Equal As Integers    ${result.rc}    5
+Exec with stdin and a TTY runs an interactive shell and restores the terminal
+    ${state} =    Set Variable    ${TEMPDIR}/exec-attached-terminal
+    ${result} =    Process.Run Process
+    ...    python    ${CURDIR}/34-exec-attached-pty.py    ${state}
+    ...    ${CLAB_BIN}    --runtime    ${runtime}    exec    -t    ${topo}    --label    clab-node-name\=l1    -i    --tty    --cmd    sh
+    ...    timeout=60s
+    Log    output:${\n}${result.stdout}
+    Should Be Equal As Integers    ${result.rc}    7
+    Should Contain    ${result.stdout}    interactive-42
 
 Exec with stdin and a TTY starts the command with the size of the terminal
     ${result} =    Run Exec In A Terminal    -i --tty --cmd "stty size"    stty rows 30 cols 100;
