@@ -27,6 +27,10 @@ var (
 	// commands tell a user-requested cancellation apart from an ordinary failure.
 	cancellationSignaled = make(chan struct{}) //nolint: gochecknoglobals
 
+	// restoreOnSignalExit restores a terminal a command set to raw mode before a signal ends
+	// the process.
+	restoreOnSignalExit atomic.Pointer[func()] //nolint: gochecknoglobals
+
 	// signalDelegate, while set, receives the signals in place of the handling below. A
 	// command that put the terminal into a special state, like the TUI, uses it to shut
 	// down in an orderly way instead of having the process end underneath it.
@@ -81,13 +85,13 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 			log.Errorf("received signal %q while stopping, exiting", sig)
 
-			os.Exit(1)
+			exitOnSignal()
 		}
 
 		if !options.Global.CleanOnCancel.Load() {
 			log.Debug("clean on cancel is not true, exiting")
 
-			os.Exit(1)
+			exitOnSignal()
 		}
 
 		log.Info("Cleaning up the cancelled deployment, press Ctrl+C again to abort")
@@ -99,10 +103,19 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 		log.Errorf("received signal %q during cleanup, exiting", sig)
 
-		os.Exit(1)
+		exitOnSignal()
 	}()
 
 	return ctx, cancel
+}
+
+// exitOnSignal ends the process after a signal, restoring the terminal first.
+func exitOnSignal() {
+	if restore := restoreOnSignalExit.Load(); restore != nil {
+		(*restore)()
+	}
+
+	os.Exit(1)
 }
 
 // cancellationRequested reports whether a SIGINT or SIGTERM has been received.
