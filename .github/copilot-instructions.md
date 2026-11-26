@@ -4,7 +4,7 @@ This is a Go based repository that contains a cli tool for deploying network os 
 
 ### Required Before Each Commit
 
-- The code should be formatted with `make format` command.
+- Run `make format` after making code changes and before committing. Include any formatting changes it produces, and check that a subsequent run leaves the working tree unchanged.
 
 - The repository uses golangci-lint for linting Go code. Make sure linting passes with `make lint` command when golangci is locally installed or `make clint` when using docker container.
 
