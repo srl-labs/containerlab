@@ -33,6 +33,20 @@ type PortSpeed struct {
 	Speed int    `yaml:"speed" json:"speed"`
 }
 
+// UnmarshalYAML checks for a fraction before yaml.v2 can truncate it to an int.
+func (p *PortSpeed) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if speed, ok := raw["speed"].(float64); ok && speed != math.Trunc(speed) {
+		return fmt.Errorf("speed must be a whole number of Mb/s, got %v", speed)
+	}
+
+	type plainPortSpeed PortSpeed
+	return unmarshal((*plainPortSpeed)(p))
+}
+
 var kindSpecificConfig clabnodes.KindSpecificConfigSpec[KindSpecificConfig]
 
 // portSpeeds validates the port-speeds key and returns its "<port>:<Mb/s>" pairs in port order.
