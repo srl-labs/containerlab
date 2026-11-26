@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -42,6 +44,70 @@ func TestIsKernelModuleLoaded(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("IsKernelModuleLoaded() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsKernelModuleLoadable(t *testing.T) {
+	dir := t.TempDir()
+
+	modules := filepath.Join(dir, "modules")
+	if err := os.WriteFile(
+		modules,
+		[]byte("ip_tables 32768 0 - Live 0x0000000000000000\n"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		module  string
+		want    bool
+		wantErr bool
+	}{
+		{
+			name:   "loaded",
+			path:   modules,
+			module: "ip_tables",
+			want:   true,
+		},
+		{
+			name:   "not loaded",
+			path:   modules,
+			module: "vrf",
+			want:   false,
+		},
+		{
+			name:   "no /proc/modules",
+			path:   filepath.Join(dir, "missing"),
+			module: "ip_tables",
+			want:   false,
+		},
+		{
+			name:    "unreadable /proc/modules",
+			path:    dir,
+			module:  "ip_tables",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			orig := procModulesPath
+			procModulesPath = tt.path
+
+			t.Cleanup(func() { procModulesPath = orig })
+
+			got, err := isKernelModuleLoadable(tt.module)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("isKernelModuleLoadable() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if d := cmp.Diff(tt.want, got); d != "" {
+				t.Errorf("isKernelModuleLoadable() mismatch (-want +got):\n%s", d)
 			}
 		})
 	}
