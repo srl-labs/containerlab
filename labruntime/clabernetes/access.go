@@ -196,7 +196,11 @@ func (r *Runtime) Attach(
 		Tty:    req.TTY,
 	}
 	if req.TTY && streams.Resize != nil {
-		options.TerminalSizeQueue = newTerminalSizeQueue(ctx, streams.Resize)
+		// resizing ends with the session
+		sizeCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		options.TerminalSizeQueue = newTerminalSizeQueue(sizeCtx, streams.Resize)
 	}
 
 	err = executor.StreamWithContext(ctx, options)

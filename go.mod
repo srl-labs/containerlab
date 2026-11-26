@@ -252,7 +252,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2
 	github.com/miekg/pkcs11 v1.1.2 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
-	github.com/moby/term v0.5.2 // indirect
+	github.com/moby/term v0.5.2
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
