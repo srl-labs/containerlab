@@ -624,3 +624,202 @@ esac`
 		t.Fatalf("exit error = %v, want exit code 42", err)
 	}
 }
+
+// newCheckNode returns a node whose lab directory holds a frr.conf, as it does
+// after PreDeploy, with a runtime whose Exec answers the dry run with rc, stdout
+// and stderr. The command run is recorded in *ran.
+func newCheckNode(
+	t *testing.T,
+	cfg *clabtypes.NodeConfig,
+	rc int,
+	stdout, stderr string,
+	ran *[]string,
+) *frr {
+	t.Helper()
+
+	n := newTestNode(t, cfg)
+
+	dir := filepath.Join(n.Cfg.LabDir, cfgDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, frrConfFile), []byte("hostname r1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			*ran = cmd.GetCmd()
+
+			res := clabexec.NewExecResult(cmd)
+			res.SetReturnCode(rc)
+			res.SetStdOut([]byte(stdout))
+			res.SetStdErr([]byte(stderr))
+
+			return res, nil
+		})
+
+	return n
+}
+
+// The dry run parses the file the node actually uses, without applying it.
+func TestCheckConfigPassesValidConfig(t *testing.T) {
+	var ran []string
+
+	n := newCheckNode(t, &clabtypes.NodeConfig{ShortName: "router1"}, 0, "", "", &ran)
+
+	if err := n.checkConfig(context.Background()); err != nil {
+		t.Fatalf("checkConfig() = %v, want nil", err)
+	}
+
+	want := []string{"vtysh", "--dryrun", "--inputfile", "/etc/frr/frr.conf"}
+	if strings.Join(ran, " ") != strings.Join(want, " ") {
+		t.Errorf("ran %q, want %q", ran, want)
+	}
+}
+
+// FRR skips a line it cannot parse and starts without it, so the deploy has to
+// fail, naming the file and each offending line wherever vtysh printed it.
+func TestCheckConfigFailsOnParseErrors(t *testing.T) {
+	var ran []string
+
+	stdout := "% Can't open configuration file /etc/frr/vtysh.conf due to 'No such file'.\n" +
+		"line 5: % Unknown command[21]:  ip adress 10.0.0.1/32\n"
+	stderr := "line 9: % Command incomplete[44]:  network 10.0.0.1/32\n"
+
+	n := newCheckNode(t, &clabtypes.NodeConfig{ShortName: "router1"}, 4, stdout, stderr, &ran)
+
+	err := n.checkConfig(context.Background())
+	if err == nil {
+		t.Fatal("checkConfig() = nil, want an error for a config that does not parse")
+	}
+
+	msg := err.Error()
+	for _, want := range []string{
+		filepath.Join(n.Cfg.LabDir, cfgDir, frrConfFile),
+		"line 5: % Unknown command[21]:  ip adress 10.0.0.1/32",
+		"line 9: % Command incomplete[44]:  network 10.0.0.1/32",
+	} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error %q does not contain %q", msg, want)
+		}
+	}
+
+	// Only the lines that point into frr.conf are worth repeating.
+	if strings.Contains(msg, "vtysh.conf") {
+		t.Errorf("error repeats unrelated vtysh output: %q", msg)
+	}
+}
+
+// Should vtysh fail without naming a line, its output is all there is to go on.
+func TestCheckConfigReportsUnstructuredFailure(t *testing.T) {
+	var ran []string
+
+	n := newCheckNode(t, &clabtypes.NodeConfig{ShortName: "router1"},
+		1, "", "vtysh: something unexpected\n", &ran)
+
+	err := n.checkConfig(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "vtysh: something unexpected") {
+		t.Fatalf("checkConfig() = %v, want the raw vtysh output", err)
+	}
+}
+
+// suppress-startup-config leaves no frr.conf, and there is then nothing to
+// check; the mock fails the test on any Exec.
+func TestCheckConfigWithoutConfigRunsNothing(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+	n.WithRuntime(clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t)))
+
+	if err := n.checkConfig(context.Background()); err != nil {
+		t.Fatalf("checkConfig() = %v, want nil", err)
+	}
+}
+
+// The lab directory keeps its frr.conf across deploys unless the startup-config
+// is enforced, so where to fix the configuration depends on where it came from.
+func TestConfigFixHint(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		cfg     clabtypes.NodeConfig
+		want    string
+		notWant string
+	}{
+		{
+			name:    "no startup-config",
+			cfg:     clabtypes.NodeConfig{},
+			want:    "without --cleanup",
+			notWant: "--reconfigure",
+		},
+		{
+			name:    "startup-config",
+			cfg:     clabtypes.NodeConfig{StartupConfig: "/topo/r1.conf"},
+			want:    "fix that file and deploy again with --reconfigure",
+			notWant: "--cleanup",
+		},
+		{
+			name:    "enforced startup-config",
+			cfg:     clabtypes.NodeConfig{StartupConfig: "/topo/r1.conf", EnforceStartupConfig: true},
+			want:    "copied from /topo/r1.conf on every deploy",
+			notWant: "--reconfigure",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.cfg
+			cfg.ShortName = "router1"
+
+			got := newTestNode(t, &cfg).configFixHint()
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("hint %q does not contain %q", got, tt.want)
+			}
+
+			if strings.Contains(got, tt.notWant) {
+				t.Errorf("hint %q should not mention %q", got, tt.notWant)
+			}
+		})
+	}
+}
+
+// PostDeploy runs the check after everything else, so a failed deploy still
+// leaves a node that can be logged into, and returns its error so the deploy
+// fails.
+func TestPostDeployFailsOnBadConfig(t *testing.T) {
+	n := newTestNode(t, &clabtypes.NodeConfig{ShortName: "router1"})
+
+	dir := filepath.Join(n.Cfg.LabDir, cfgDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, frrConfFile), []byte("hostname r1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var ran [][]string
+
+	rt := clabmocksmockruntime.NewMockContainerRuntime(gomock.NewController(t))
+	n.WithRuntime(rt)
+	rt.EXPECT().Exec(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, cmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+			ran = append(ran, cmd.GetCmd())
+
+			res := clabexec.NewExecResult(cmd)
+			if cmd.GetCmd()[0] == "vtysh" {
+				res.SetReturnCode(2)
+				res.SetStdOut([]byte("line 1: % Unknown command[21]: hostnme r1\n"))
+			}
+
+			return res, nil
+		}).Times(2)
+
+	err := n.PostDeploy(context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "hostnme r1") {
+		t.Fatalf("PostDeploy() = %v, want the config check's error", err)
+	}
+
+	if len(ran) != 2 || ran[len(ran)-1][0] != "vtysh" {
+		t.Errorf("exec calls %q: the config check must run last", ran)
+	}
+}
