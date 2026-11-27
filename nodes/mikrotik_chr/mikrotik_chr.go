@@ -116,6 +116,13 @@ func (n *mikrotikCHR) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
+	// Apply before the entrypoint runs: data veths may arrive before the launcher
+	// sets its default. br0 explicitly enables IPv6 for the management bootstrap.
+	if n.Cfg.Sysctls == nil {
+		n.Cfg.Sysctls = map[string]string{}
+	}
+	n.Cfg.Sysctls["net.ipv6.conf.default.disable_ipv6"] = "1"
+
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/ftpboot"),
 		fmt.Sprint(path.Join(n.Cfg.LabDir, launcherFName), ":", launcherPath, ":ro"),

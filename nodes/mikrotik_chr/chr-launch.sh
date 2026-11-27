@@ -112,6 +112,21 @@ MGMT_FILE=/.chr-launch-mgmt
 SYSNET=/sys/class/net
 
 log() { echo "chr-launch: $*"; }
+
+# The kind sets this default before the entrypoint runs. Repeat it for direct
+# launcher use, and disable IPv6 on data veths already here before any waits.
+# This fallback cannot undo packets sent before the launcher started.
+# Keep eth0's addresses until the management hand-over; br0 enables IPv6 itself.
+sysctl -qw net.ipv6.conf.default.disable_ipv6=1 ||
+    log "could not disable IPv6 for new interfaces"
+for d in "$SYSNET"/eth[1-9]*; do
+    [ -e "$d" ] || continue
+    n="${d##*/eth}"
+    case "$n" in *[!0-9]*) continue ;; esac
+    sysctl -qw "net.ipv6.conf.eth$n.disable_ipv6=1" ||
+        log "could not disable IPv6 on eth$n before setup"
+done
+
 rm -f "$READY_FILE"
 
 FETCH_PORT=8080
@@ -143,13 +158,6 @@ if [ "$cur_bytes" -lt "$want_bytes" ] 2>/dev/null; then
 fi
 
 # ---- wait for containerlab's data interfaces ------------------------------
-# Interfaces made from here on start without IPv6: a veth containerlab
-# attaches later would otherwise send router solicitations, MLD reports and
-# DAD probes of its own into the lab before it joins its bridge (a veth
-# already here gets IPv6 off when it joins). The management bridge turns
-# IPv6 on for itself.
-sysctl -qw net.ipv6.conf.default.disable_ipv6=1 ||
-    log "could not disable IPv6 for new interfaces"
 # shellcheck disable=SC2012  # interface names are ethN, ls is safe here
 count_intfs() { ls -d "$SYSNET"/eth[1-9]* 2>/dev/null | wc -l; }
 waited=0
