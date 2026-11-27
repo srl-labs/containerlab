@@ -19,8 +19,9 @@
 #      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
-#      LLDP and LACP forwarded). NIC order in the VM follows the eth index, so
-#      container ethN is always RouterOS ether(N+1), even with gaps
+#      LLDP and LACP forwarded, no MAC learning). NIC order in the VM follows
+#      the eth index, so container ethN is always RouterOS ether(N+1), even
+#      with gaps
 #   4. after boot, over IPv6 link-local on the management bridge (no address is
 #      added to the management network): sets the credentials and the identity,
 #      configures ether1 with the management addresses and keeps their return
@@ -350,10 +351,23 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         brctl addif "br$1" "tap$1"
         echo 4 > "$SYSNET/tap$1/brport/group_fwd_mask" ||
             log "could not enable LACP forwarding on tap$1 (bridge br$1)"
+        # The bridge stands in for a cable, so neither port learns MACs. A
+        # learning bridge drops a frame whose destination it learned on the
+        # port the frame came in on: after a MAC moves between the two sides
+        # (an MLAG peer link, a bond failover), frames to it from that side
+        # are dropped until the MAC is seen on the other port or ages out
+        # (300 s). busybox brctl has no learning option.
+        echo 0 > "$SYSNET/tap$1/brport/learning" ||
+            log "could not turn MAC learning off on tap$1 (bridge br$1)"
     fi
     brctl addif "br$1" "eth$1"
     echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" ||
         log "could not enable LACP forwarding on eth$1 (bridge br$1)"
+    # A veth that rejoins a bridge already up forwards before learning is off:
+    # drop what it learned in between.
+    echo 0 > "$SYSNET/eth$1/brport/learning" ||
+        log "could not turn MAC learning off on eth$1 (bridge br$1)"
+    echo 1 > "$SYSNET/eth$1/brport/flush" 2>/dev/null
     ip link set "eth$1" up
     ip link set "br$1" up
 }
