@@ -19,9 +19,10 @@
 #      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
-#      LLDP and LACP forwarded, no MAC learning). NIC order in the VM follows
-#      the eth index, so container ethN is always RouterOS ether(N+1), even
-#      with gaps
+#      forwarded like a cable: LLDP, LACP and 802.1X pass, no MAC learning,
+#      no multicast snooping, no netfilter, no IPv6 of its own). NIC order
+#      in the VM follows the eth index, so container ethN is always RouterOS
+#      ether(N+1), even with gaps
 #   4. after boot, over IPv6 link-local on the management bridge (no address is
 #      added to the management network): sets the credentials and the identity,
 #      configures ether1 with the management addresses and keeps their return
@@ -142,6 +143,13 @@ if [ "$cur_bytes" -lt "$want_bytes" ] 2>/dev/null; then
 fi
 
 # ---- wait for containerlab's data interfaces ------------------------------
+# Interfaces made from here on start without IPv6: a veth containerlab
+# attaches later would otherwise send router solicitations, MLD reports and
+# DAD probes of its own into the lab before it joins its bridge (a veth
+# already here gets IPv6 off when it joins). The management bridge turns
+# IPv6 on for itself.
+sysctl -qw net.ipv6.conf.default.disable_ipv6=1 ||
+    log "could not disable IPv6 for new interfaces"
 # shellcheck disable=SC2012  # interface names are ethN, ls is safe here
 count_intfs() { ls -d "$SYSNET"/eth[1-9]* 2>/dev/null | wc -l; }
 waited=0
@@ -274,7 +282,7 @@ if [ ! -e "$SYSNET/$MGMT_BR" ]; then
     ip addr flush dev eth0
     # The launcher's side of the bootstrap channel: IPv6 link-local on the
     # bridge only. eth0 and tap0 are plain bridge ports.
-    sysctl -qw net.ipv6.conf.default.disable_ipv6=0 net.ipv6.conf.default.accept_ra=0 2>/dev/null
+    sysctl -qw net.ipv6.conf.default.accept_ra=0 2>/dev/null
     brctl addbr "$MGMT_BR"
     brctl setfd "$MGMT_BR" 0 2>/dev/null
     echo 16384 > "$SYSNET/$MGMT_BR/bridge/group_fwd_mask" 2>/dev/null
@@ -287,7 +295,8 @@ if [ ! -e "$SYSNET/$MGMT_BR" ]; then
     brctl addif "$MGMT_BR" tap0
     sysctl -qw net.ipv6.conf.eth0.disable_ipv6=1 net.ipv6.conf.tap0.disable_ipv6=1 \
         "net.ipv6.conf.$MGMT_BR.disable_ipv6=0" "net.ipv6.conf.$MGMT_BR.accept_ra=0" \
-        "net.ipv6.conf.$MGMT_BR.router_solicitations=0" 2>/dev/null
+        "net.ipv6.conf.$MGMT_BR.router_solicitations=0" ||
+        log "could not set IPv6 on $MGMT_BR, eth0 and tap0"
 fi
 ip link set tap0 up
 ip link set "$MGMT_BR" up
@@ -345,9 +354,17 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         brctl addbr "br$1"
         ip link set "br$1" mtu "$_mtu"
         ip link set "tap$1" mtu "$_mtu"
-        # forward LLDP (01:80:c2:00:00:0e, bit 14). The bridge refuses LACP
-        # (01:80:c2:00:00:02, bit 2), so each port forwards it (below).
-        echo 16384 > "$SYSNET/br$1/bridge/group_fwd_mask" 2>/dev/null
+        # Forward the reserved 01:80:c2:00:00:0X groups, as tc mirred does:
+        # 802.1X (bit 3), LLDP (bit 14) and every other bit the bridge
+        # accepts (65528, the value netlab sets). STP BPDUs pass because STP
+        # is off. The bridge refuses LACP (bit 2), so each port forwards it
+        # (below); pause frames (bit 1) never cross a bridge.
+        echo 65528 > "$SYSNET/br$1/bridge/group_fwd_mask" ||
+            log "could not enable link-local forwarding on bridge br$1"
+        # A cable does not filter multicast: without snooping the bridge
+        # floods every group, also once a lab runs an IGMP or MLD querier.
+        echo 0 > "$SYSNET/br$1/bridge/multicast_snooping" ||
+            log "could not turn multicast snooping off on bridge br$1"
         brctl addif "br$1" "tap$1"
         echo 4 > "$SYSNET/tap$1/brport/group_fwd_mask" ||
             log "could not enable LACP forwarding on tap$1 (bridge br$1)"
@@ -362,11 +379,24 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         # A cable sends nothing of its own: no IPv6 on the bridge or its
         # ports, so they send no router solicitations, MLD reports or DAD
         # probes to RouterOS or the peer (vrnetlab flushes IPv6 on its taps).
-        sysctl -qw "net.ipv6.conf.br$1.disable_ipv6=1" "net.ipv6.conf.tap$1.disable_ipv6=1" ||
-            log "could not disable IPv6 on br$1 and tap$1"
+        sysctl -qw "net.ipv6.conf.br$1.disable_ipv6=1" ||
+            log "could not disable IPv6 on bridge br$1"
+        sysctl -qw "net.ipv6.conf.tap$1.disable_ipv6=1" ||
+            log "could not disable IPv6 on tap$1 (bridge br$1)"
     fi
     sysctl -qw "net.ipv6.conf.eth$1.disable_ipv6=1" ||
         log "could not disable IPv6 on eth$1 (bridge br$1)"
+    # Bridged frames skip netfilter, as with vrnetlab's tc mirred: Docker's
+    # DNS NAT rules in this namespace would otherwise track and defragment
+    # them. Per network namespace (Linux 5.3 and later), present only while
+    # br_netfilter is loaded (it can load later, so set on every join); the
+    # per-bridge nf_call_* cannot turn it off.
+    if [ -d /proc/sys/net/bridge ]; then
+        sysctl -qw net.bridge.bridge-nf-call-iptables=0 \
+            net.bridge.bridge-nf-call-ip6tables=0 \
+            net.bridge.bridge-nf-call-arptables=0 ||
+            log "could not keep bridged frames out of netfilter (bridge br$1)"
+    fi
     brctl addif "br$1" "eth$1"
     echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" ||
         log "could not enable LACP forwarding on eth$1 (bridge br$1)"
@@ -382,12 +412,16 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
 # right after a restart --node, a large lab attaches late, a peer node's
 # redeploy recreates the pair) joins its bridge as it appears, so the RouterOS
 # interface behind tapN gets its link back without a restart here.
+# Only an up veth is bridged: one that containerlab parks for a restart, or
+# that leaves with a deleted pair, is set down before the kernel takes it out
+# of its bridge, and bridging it then would only fail.
 watch_links() {
     _warned=""
     while kill -0 "$QEMU_PID" 2>/dev/null; do
         i=1
         while [ "$i" -le "$max" ]; do
-            if [ -e "$SYSNET/eth$i" ] && [ ! -e "$SYSNET/br$i/brif/eth$i" ]; then
+            if [ -e "$SYSNET/eth$i" ] && [ ! -e "$SYSNET/br$i/brif/eth$i" ] &&
+                [ $(( $(cat "$SYSNET/eth$i/flags" 2>/dev/null || echo 0) & 1 )) -eq 1 ]; then
                 bridge_eth "$i" && log "link eth$i attached: bridged to tap$i"
             fi
             i=$((i + 1))
