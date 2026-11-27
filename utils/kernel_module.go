@@ -32,11 +32,19 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 	return isKernelModuleBuiltin(name)
 }
 
+// procModulesPath is the file that lists the loaded kernel modules.
+var procModulesPath = "/proc/modules"
+
 // isKernelModuleLoadable checks if a kernel module is loaded by parsing the
-// /proc/modules file.
+// /proc/modules file. A kernel built without loadable module support
+// (CONFIG_MODULES=n) has no /proc/modules, so no module is loaded.
 func isKernelModuleLoadable(name string) (bool, error) {
-	f, err := os.Open("/proc/modules")
+	f, err := os.Open(procModulesPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
 		return false, err
 	}
 	defer f.Close() // skipcq: GO-S2307
