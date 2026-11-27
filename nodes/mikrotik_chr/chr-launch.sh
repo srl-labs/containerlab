@@ -359,7 +359,14 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         # (300 s). busybox brctl has no learning option.
         echo 0 > "$SYSNET/tap$1/brport/learning" ||
             log "could not turn MAC learning off on tap$1 (bridge br$1)"
+        # A cable sends nothing of its own: no IPv6 on the bridge or its
+        # ports, so they send no router solicitations, MLD reports or DAD
+        # probes to RouterOS or the peer (vrnetlab flushes IPv6 on its taps).
+        sysctl -qw "net.ipv6.conf.br$1.disable_ipv6=1" "net.ipv6.conf.tap$1.disable_ipv6=1" ||
+            log "could not disable IPv6 on br$1 and tap$1"
     fi
+    sysctl -qw "net.ipv6.conf.eth$1.disable_ipv6=1" ||
+        log "could not disable IPv6 on eth$1 (bridge br$1)"
     brctl addif "br$1" "eth$1"
     echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" ||
         log "could not enable LACP forwarding on eth$1 (bridge br$1)"

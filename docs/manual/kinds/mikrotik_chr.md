@@ -67,7 +67,7 @@ You can use [interface names](../topo-def-file.md#interface-naming) in the topol
 Data ports start at `ether2`: `ether1` is the management interface. Using `ether1` in a topology results in an error.
 ///
 
-The container interface `ethN` is RouterOS `ether(N+1)`, also when links leave gaps: a link on `eth12` alone still lands on `ether13`, with `ether2` to `ether12` present and unlinked. Interface MTU follows the link MTU, and LLDP and LACP frames are forwarded, so `/ip neighbor` shows the peers and 802.3ad bonds can form. The bridge between a container interface and its RouterOS port does not learn MAC addresses, so it forwards like a cable when a MAC moves between its two sides, as on an MLAG peer link.
+The container interface `ethN` is RouterOS `ether(N+1)`, also when links leave gaps: a link on `eth12` alone still lands on `ether13`, with `ether2` to `ether12` present and unlinked. Interface MTU follows the link MTU, and LLDP and LACP frames are forwarded, so `/ip neighbor` shows the peers and 802.3ad bonds can form. The bridge between a container interface and its RouterOS port does not learn MAC addresses and sends no IPv6 traffic of its own, so it forwards like a cable, also when a MAC moves between its two sides, as on an MLAG peer link.
 
 On AMD64, data NICs are placed behind PCI bridges rather than sharing the default PC's root bus with all other devices. This removes the default layout's limit of 29 total Ethernet interfaces (management plus 28 data ports), so links can use `ether30` and higher without a custom launcher. ARM64 still uses a single PCI bus on the `virt` machine, shared with the disk and the management NIC; the PCI-bridge expansion applies only to AMD64.
 
