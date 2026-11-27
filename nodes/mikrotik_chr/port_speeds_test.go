@@ -157,6 +157,10 @@ func TestDecodePortSpeeds(t *testing.T) {
 			yaml:    "- port: 2\n  speed: 1G\n",
 			errText: `invalid value for key "port-speeds" (set in nodes.r1)`,
 		},
+		"speed-fraction": {
+			yaml:    "- port: 2\n  speed: 1000.5\n",
+			errText: "whole number",
+		},
 		"unknown-field": {
 			yaml:    "- port: 2\n  speed: 1000\n  duplex: half\n",
 			errText: "field duplex not found",
