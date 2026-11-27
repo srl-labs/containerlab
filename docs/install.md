@@ -499,7 +499,7 @@ Users who are _not_ part of this group can still execute non-privileged commands
 * version (no upgrade)
 
 Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.  
-All of these run without root privileges only with the default container runtime, Docker. With other runtimes, such as Podman, only the commands that don't use the container runtime do:
+All of these run without root privileges only with the default container runtime, Docker. With other container runtimes, such as Podman, only the commands that don't use the container runtime do:
 
 * completion
 * generate (no `--deploy`)
