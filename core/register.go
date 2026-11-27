@@ -39,6 +39,7 @@ import (
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
 	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
 	clabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
+	clabnodesrtbrick_bngblaster "github.com/srl-labs/containerlab/nodes/rtbrick_bngblaster"
 	clabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
 	clabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
 	clabnodesspirent_stc "github.com/srl-labs/containerlab/nodes/spirent_stc"
@@ -136,6 +137,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesarrcus_arcos.Register(c.Reg)
 	clabnodesveesix_osvbng.Register(c.Reg)
 	clabnodesspirent_stc.Register(c.Reg)
+	clabnodesrtbrick_bngblaster.Register(c.Reg)
 	clabnodesplvision_sonic.Register(c.Reg)
 	clabnodesfrr.Register(c.Reg)
 	clabnodestailscale.Register(c.Reg)

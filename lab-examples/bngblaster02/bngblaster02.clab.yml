@@ -1,0 +1,23 @@
+name: bngblaster02
+
+topology:
+  nodes:
+    bngblaster:
+      kind: rtbrick_bngblaster
+      image: ghcr.io/rtbrick/bngblaster:latest
+      startup-config: isis.json
+      binds:
+        - isis.mrt:/var/bngblaster/clab/isis.mrt:ro
+        - run.json:/var/bngblaster/clab/run.json:ro
+    frr:
+      kind: frr
+      image: quay.io/frrouting/frr:containerlab-10.7.1
+      daemons:
+        - isisd
+      startup-config: frr.conf
+
+  links:
+    # FRR pads its IS-IS hellos to the link MTU (containerlab default 9500),
+    # which isis.json matches with mtu and max-pdu-size.
+    - endpoints: ["bngblaster:eth1", "frr:eth1"]
+    - endpoints: ["bngblaster:eth2", "frr:eth2"]

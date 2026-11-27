@@ -60,6 +60,7 @@ nav:
       - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
       - Ostinato: manual/kinds/ostinato.md
       - Spirent TestCenter: manual/kinds/spirent_stc.md
+      - RtBrick BNG Blaster: manual/kinds/rtbrick_bngblaster.md
       - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
       - Ciena SAOS 10: manual/kinds/ciena_saos.md
       - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
@@ -198,6 +199,8 @@ nav:
       - Cisco IOL: lab-examples/cisco_iol.md
       - F5 BIG-IP VE: lab-examples/f5bigipve01.md
       - v::n osvbng: lab-examples/osvbng01.md
+      - RtBrick BNG Blaster PPPoE: lab-examples/bngblaster01.md
+      - RtBrick BNG Blaster and FRR IS-IS: lab-examples/bngblaster02.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md

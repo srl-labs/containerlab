@@ -1,0 +1,13 @@
+name: bngblaster01
+
+topology:
+  nodes:
+    bngblaster:
+      kind: rtbrick_bngblaster
+      image: ghcr.io/rtbrick/bngblaster:latest
+      startup-config: pppoe.json
+      binds:
+        - run.json:/var/bngblaster/clab/run.json:ro
+
+  links:
+    - endpoints: ["bngblaster:eth1", "bngblaster:eth2"]
