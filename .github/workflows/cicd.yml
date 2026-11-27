@@ -585,6 +585,11 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          # External contributors' PRs get patch coverage, but not project coverage.
+          flags: >-
+            ${{ (github.event_name != 'pull_request' ||
+            contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+            github.event.pull_request.author_association)) && 'project-coverage' || '' }}
 
   docs-test:
     runs-on: ubuntu-24.04

@@ -1,5 +1,11 @@
 coverage:
   status:
+    default_rules:
+      flag_coverage_not_uploaded_behavior: exclude
+    project:
+      default:
+        flags:
+          - project-coverage
     patch:
       default:
         informational: true # don't fail the build if PR coverage is missing
