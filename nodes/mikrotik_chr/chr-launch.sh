@@ -19,8 +19,10 @@
 #      reach it directly, nothing is port-forwarded. The image ships only
 #      busybox (no tc), so this uses a bridge where vrnetlab uses tc-mirred
 #   3. data: one tap per container interface, bridged pairwise (ethN <-> tapN,
-#      LLDP forwarded). NIC order in the VM follows the eth index, so container
-#      ethN is always RouterOS ether(N+1), even with gaps
+#      forwarded like a cable: LLDP, LACP and 802.1X pass, no MAC learning,
+#      no multicast snooping, no netfilter, no IPv6 of its own). NIC order
+#      in the VM follows the eth index, so container ethN is always RouterOS
+#      ether(N+1), even with gaps
 #   4. after boot, over IPv6 link-local on the management bridge (no address is
 #      added to the management network): sets the credentials and the identity,
 #      configures ether1 with the management addresses and keeps their return
@@ -110,6 +112,21 @@ MGMT_FILE=/.chr-launch-mgmt
 SYSNET=/sys/class/net
 
 log() { echo "chr-launch: $*"; }
+
+# The kind sets this default before the entrypoint runs. Repeat it for direct
+# launcher use, and disable IPv6 on data veths already here before any waits.
+# This fallback cannot undo packets sent before the launcher started.
+# Keep eth0's addresses until the management hand-over; br0 enables IPv6 itself.
+sysctl -qw net.ipv6.conf.default.disable_ipv6=1 ||
+    log "could not disable IPv6 for new interfaces"
+for d in "$SYSNET"/eth[1-9]*; do
+    [ -e "$d" ] || continue
+    n="${d##*/eth}"
+    case "$n" in *[!0-9]*) continue ;; esac
+    sysctl -qw "net.ipv6.conf.eth$n.disable_ipv6=1" ||
+        log "could not disable IPv6 on eth$n before setup"
+done
+
 rm -f "$READY_FILE"
 
 FETCH_PORT=8080
@@ -208,7 +225,20 @@ check_nic_index() { # check_nic_index <max-index>: reject indices beyond the NIC
     fi
 }
 
+data_nic_speed() { # data_nic_speed <index>: the data NIC's speed in Mb/s
+    # The kind writes the validated port-speeds key to CHR_PORT_SPEEDS as
+    # "<port>:<Mb/s>" pairs; data NIC <index> is ether<index+1>. Other ports
+    # report 10G, the speed a container veth reports.
+    for _pair in ${CHR_PORT_SPEEDS:-}; do
+        [ "${_pair%%:*}" = "$(( $1 + 1 ))" ] && { printf '%s' "${_pair#*:}"; return; }
+    done
+    printf '%s' 10000
+}
+
 data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (also used to re-plug it)
+    # A virtio NIC reports no speed and half duplex unless told otherwise, and
+    # RouterOS bonds in 802.3ad mode only with full-duplex ports.
+    _link="speed=$(data_nic_speed "$1"),duplex=full"
     case "$PCI_BRIDGES" in
         1)
             # The default PC has only 29 free PCI slots, including management.
@@ -218,11 +248,11 @@ data_nic_device() { # data_nic_device <index> <mac>: the NIC's -device value (al
             # Keep MSI-X, but share one vector between RX/TX queues (plus one
             # for config) to reduce IRQ pressure.
             # Disabling MSI-X entirely can leave NICs missing in RouterOS.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,bus=chrpci$(( ($1 - 1) / 25 + 1 )),addr=$(printf '0x%x' $(( ($1 - 1) % 25 + 1 ))),romfile=,vectors=2,$_link"
             ;;
         *)
             # ARM64 uses the virt machine and keeps its existing NIC layout.
-            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2"
+            printf '%s' "virtio-net,id=nic$1,netdev=d$1,mac=$2,$_link"
             ;;
     esac
 }
@@ -260,7 +290,7 @@ if [ ! -e "$SYSNET/$MGMT_BR" ]; then
     ip addr flush dev eth0
     # The launcher's side of the bootstrap channel: IPv6 link-local on the
     # bridge only. eth0 and tap0 are plain bridge ports.
-    sysctl -qw net.ipv6.conf.default.disable_ipv6=0 net.ipv6.conf.default.accept_ra=0 2>/dev/null
+    sysctl -qw net.ipv6.conf.default.accept_ra=0 2>/dev/null
     brctl addbr "$MGMT_BR"
     brctl setfd "$MGMT_BR" 0 2>/dev/null
     echo 16384 > "$SYSNET/$MGMT_BR/bridge/group_fwd_mask" 2>/dev/null
@@ -273,7 +303,8 @@ if [ ! -e "$SYSNET/$MGMT_BR" ]; then
     brctl addif "$MGMT_BR" tap0
     sysctl -qw net.ipv6.conf.eth0.disable_ipv6=1 net.ipv6.conf.tap0.disable_ipv6=1 \
         "net.ipv6.conf.$MGMT_BR.disable_ipv6=0" "net.ipv6.conf.$MGMT_BR.accept_ra=0" \
-        "net.ipv6.conf.$MGMT_BR.router_solicitations=0" 2>/dev/null
+        "net.ipv6.conf.$MGMT_BR.router_solicitations=0" ||
+        log "could not set IPv6 on $MGMT_BR, eth0 and tap0"
 fi
 ip link set tap0 up
 ip link set "$MGMT_BR" up
@@ -331,11 +362,57 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
         brctl addbr "br$1"
         ip link set "br$1" mtu "$_mtu"
         ip link set "tap$1" mtu "$_mtu"
-        # forward LLDP (01:80:c2:00:00:0e, bit 14); STP/LACP cannot cross a bridge
-        echo 16384 > "$SYSNET/br$1/bridge/group_fwd_mask" 2>/dev/null
+        # Forward the reserved 01:80:c2:00:00:0X groups, as tc mirred does:
+        # 802.1X (bit 3), LLDP (bit 14) and every other bit the bridge
+        # accepts (65528, the value netlab sets). STP BPDUs pass because STP
+        # is off. The bridge refuses LACP (bit 2), so each port forwards it
+        # (below); pause frames (bit 1) never cross a bridge.
+        echo 65528 > "$SYSNET/br$1/bridge/group_fwd_mask" ||
+            log "could not enable link-local forwarding on bridge br$1"
+        # A cable does not filter multicast: without snooping the bridge
+        # floods every group, also once a lab runs an IGMP or MLD querier.
+        echo 0 > "$SYSNET/br$1/bridge/multicast_snooping" ||
+            log "could not turn multicast snooping off on bridge br$1"
         brctl addif "br$1" "tap$1"
+        echo 4 > "$SYSNET/tap$1/brport/group_fwd_mask" ||
+            log "could not enable LACP forwarding on tap$1 (bridge br$1)"
+        # The bridge stands in for a cable, so neither port learns MACs. A
+        # learning bridge drops a frame whose destination it learned on the
+        # port the frame came in on: after a MAC moves between the two sides
+        # (an MLAG peer link, a bond failover), frames to it from that side
+        # are dropped until the MAC is seen on the other port or ages out
+        # (300 s). busybox brctl has no learning option.
+        echo 0 > "$SYSNET/tap$1/brport/learning" ||
+            log "could not turn MAC learning off on tap$1 (bridge br$1)"
+        # A cable sends nothing of its own: no IPv6 on the bridge or its
+        # ports, so they send no router solicitations, MLD reports or DAD
+        # probes to RouterOS or the peer (vrnetlab flushes IPv6 on its taps).
+        sysctl -qw "net.ipv6.conf.br$1.disable_ipv6=1" ||
+            log "could not disable IPv6 on bridge br$1"
+        sysctl -qw "net.ipv6.conf.tap$1.disable_ipv6=1" ||
+            log "could not disable IPv6 on tap$1 (bridge br$1)"
+    fi
+    sysctl -qw "net.ipv6.conf.eth$1.disable_ipv6=1" ||
+        log "could not disable IPv6 on eth$1 (bridge br$1)"
+    # Bridged frames skip netfilter, as with vrnetlab's tc mirred: Docker's
+    # DNS NAT rules in this namespace would otherwise track and defragment
+    # them. Per network namespace (Linux 5.3 and later), present only while
+    # br_netfilter is loaded (it can load later, so set on every join); the
+    # per-bridge nf_call_* cannot turn it off.
+    if [ -d /proc/sys/net/bridge ]; then
+        sysctl -qw net.bridge.bridge-nf-call-iptables=0 \
+            net.bridge.bridge-nf-call-ip6tables=0 \
+            net.bridge.bridge-nf-call-arptables=0 ||
+            log "could not keep bridged frames out of netfilter (bridge br$1)"
     fi
     brctl addif "br$1" "eth$1"
+    echo 4 > "$SYSNET/eth$1/brport/group_fwd_mask" ||
+        log "could not enable LACP forwarding on eth$1 (bridge br$1)"
+    # A veth that rejoins a bridge already up forwards before learning is off:
+    # drop what it learned in between.
+    echo 0 > "$SYSNET/eth$1/brport/learning" ||
+        log "could not turn MAC learning off on eth$1 (bridge br$1)"
+    echo 1 > "$SYSNET/eth$1/brport/flush" 2>/dev/null
     ip link set "eth$1" up
     ip link set "br$1" up
 }
@@ -343,12 +420,16 @@ bridge_eth() { # bridge_eth <i>: container ethI joins brI beside tapI (brI made 
 # right after a restart --node, a large lab attaches late, a peer node's
 # redeploy recreates the pair) joins its bridge as it appears, so the RouterOS
 # interface behind tapN gets its link back without a restart here.
+# Only an up veth is bridged: one that containerlab parks for a restart, or
+# that leaves with a deleted pair, is set down before the kernel takes it out
+# of its bridge, and bridging it then would only fail.
 watch_links() {
     _warned=""
     while kill -0 "$QEMU_PID" 2>/dev/null; do
         i=1
         while [ "$i" -le "$max" ]; do
-            if [ -e "$SYSNET/eth$i" ] && [ ! -e "$SYSNET/br$i/brif/eth$i" ]; then
+            if [ -e "$SYSNET/eth$i" ] && [ ! -e "$SYSNET/br$i/brif/eth$i" ] &&
+                [ $(( $(cat "$SYSNET/eth$i/flags" 2>/dev/null || echo 0) & 1 )) -eq 1 ]; then
                 bridge_eth "$i" && log "link eth$i attached: bridged to tap$i"
             fi
             i=$((i + 1))
@@ -366,14 +447,19 @@ watch_links() {
 }
 
 i=1
+speeds=""
 while [ "$i" -le "$max" ]; do
     tap="tap$i"
     tunctl -t "$tap" >/dev/null 2>&1 || ip tuntap add dev "$tap" mode tap
     [ -e "$SYSNET/eth$i" ] && bridge_eth "$i"
     ip link set "$tap" up
     NET="$NET $(qemu_data_nic "$i" "$(nic_mac "$i")")"
+    speeds="$speeds ether$((i + 1))=$(data_nic_speed "$i")"
     i=$((i + 1))
 done
+# One line with the speed of every data NIC, so a port-speeds entry for a
+# port this node does not create is visible here.
+[ "$max" -gt 0 ] && log "data NIC speeds (Mb/s):$speeds"
 
 # shellcheck disable=SC2086
 $QEMU $ACCEL -display none -monitor none \

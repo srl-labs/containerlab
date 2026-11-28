@@ -685,6 +685,41 @@
                     "description": "duration to wait for the kind cluster to become ready, e.g. 0s or 2m (k8s-kind kind).",
                     "markdownDescription": "duration to wait for the [kind cluster to become ready](https://containerlab.dev/manual/kinds/k8s-kind/#kind-specific-config), e.g. `0s` or `2m`. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `k8s-kind` kind"
                 },
+                "port-speeds": {
+                    "type": "array",
+                    "description": "Speed in Mb/s that data ports report, for single ports or inclusive port ranges; entries must not overlap (mikrotik_chr kind).",
+                    "markdownDescription": "[Port speed](https://containerlab.dev/manual/kinds/mikrotik_chr/#port-speed) in Mb/s that data ports report, for single ports or inclusive port ranges. A [kind-specific config](https://containerlab.dev/manual/nodes/#kind-specific-config) key of the `mikrotik_chr` kind",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "port",
+                            "speed"
+                        ],
+                        "properties": {
+                            "port": {
+                                "description": "RouterOS data port number or inclusive range, for example 26 or 2..25",
+                                "anyOf": [
+                                    {
+                                        "type": "integer",
+                                        "minimum": 2,
+                                        "maximum": 64
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^([2-9]|[1-5][0-9]|6[0-4])(\\.\\.([2-9]|[1-5][0-9]|6[0-4]))?$"
+                                    }
+                                ]
+                            },
+                            "speed": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 2147483647,
+                                "description": "Speed in Mb/s, for example 1000, 10000, 25000 or 100000"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                },
                 "aliases": {
                     "type": "array",
                     "description": "list of additional network aliases for the node",
@@ -1145,8 +1180,23 @@
                     "if": {
                         "properties": {
                             "kind": {
+                                "pattern": "^mikrotik_chr$"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/kind-specific-config-mikrotik_chr"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
                                 "not": {
-                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol|nvidia_cumulusvx|arista_ceos|frr|frrouting|k8s-kind)$"
+                                    "pattern": "^(nokia_srsim|nokia_sros|nokia_srlinux|cisco_iol|nvidia_cumulusvx|arista_ceos|frr|frrouting|k8s-kind|mikrotik_chr)$"
                                 }
                             }
                         },
@@ -2626,6 +2676,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -2725,6 +2780,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -2815,6 +2875,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -2894,6 +2959,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -2970,6 +3040,11 @@
                     {
                         "required": [
                             "wait"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
                         ]
                     }
                 ]
@@ -3053,6 +3128,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -3135,6 +3215,11 @@
                         "required": [
                             "wait"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
@@ -3212,10 +3297,102 @@
                         "required": [
                             "daemons"
                         ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
+                        ]
                     }
                 ]
             },
             "description": "kind-specific config keys of the k8s-kind kind"
+        },
+        "kind-specific-config-mikrotik_chr": {
+            "not": {
+                "anyOf": [
+                    {
+                        "required": [
+                            "components"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "config-mode"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "gen-component-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "sfm"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "inject-ssh-keys"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "custom-prompt"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "eda-default-grpc-server"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "pid-offset"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "mgmt-intf"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "bootstrap-config"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-count"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "breakouts"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "copy-to-flash"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "daemons"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "kubeconfig"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "wait"
+                        ]
+                    }
+                ]
+            },
+            "description": "kind-specific config keys of the mikrotik_chr kind"
         },
         "kind-specific-config-other": {
             "not": {
@@ -3298,6 +3475,11 @@
                     {
                         "required": [
                             "wait"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "port-speeds"
                         ]
                     }
                 ]
@@ -3967,7 +4149,7 @@
                                     "$ref": "#/definitions/node-config"
                                 },
                                 {
-                                    "$ref": "#/definitions/kind-specific-config-other"
+                                    "$ref": "#/definitions/kind-specific-config-mikrotik_chr"
                                 }
                             ]
                         },
