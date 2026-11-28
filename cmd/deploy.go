@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -19,6 +20,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"sigs.k8s.io/yaml"
 )
@@ -331,8 +333,14 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		m.DisplayNewVersionAvailable(versionCheckContext, false)
 	}
 
-	// print table summary
-	return PrintContainerInspect(result.Containers, o)
+	containers := slices.DeleteFunc(
+		slices.Clone(result.Containers),
+		func(ctr clabruntime.GenericContainer) bool {
+			return ctr.Labels[clabconstants.InternalNode] == "true"
+		},
+	)
+
+	return PrintContainerInspect(containers, o)
 }
 
 // validateDeployFlags runs before either deploy or redeploy can change lab resources.
