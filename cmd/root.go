@@ -173,7 +173,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if err != nil {
 		return err
 	}
-	if globalRuntimeRequiresRoot(o.Global.Runtime) {
+	if globalRuntimeRequiresRoot(o.Global.Runtime) && !commandIsRuntimeIndependent(cobraCmd, o) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -211,6 +211,49 @@ func globalRuntimeRequiresRoot(name string) bool {
 
 func commandSkipsRoot(name string) bool {
 	return clablabruntime.IsLabRuntimeName(name)
+}
+
+// runtimeIndependentCommands don't use the container runtime, so they don't need root
+// privileges with any runtime. Commands in this list that can still need root, such as
+// generate --deploy, check for it themselves.
+var runtimeIndependentCommands = map[string]struct{}{ //nolint:gochecknoglobals
+	"help":                          {},
+	cobra.ShellCompRequestCmd:       {},
+	cobra.ShellCompNoDescRequestCmd: {},
+	"version":                       {},
+	"version.check":                 {},
+	"completion":                    {},
+	"generate":                      {},
+	"tools.cert.ca.create":          {},
+	"tools.cert.sign":               {},
+}
+
+// commandIsRuntimeIndependent reports whether a command runs without the container runtime,
+// so that it doesn't need root privileges. Some commands only do so with certain flags.
+func commandIsRuntimeIndependent(cobraCmd *cobra.Command, o *Options) bool {
+	commandPath := getCommandPath(cobraCmd)
+	if _, ok := runtimeIndependentCommands[commandPath]; ok {
+		return true
+	}
+
+	switch commandPath {
+	case "graph":
+		// drawio runs the clab-io-draw container through Docker
+		return topologyFromFile(o) && !o.Graph.GenerateDrawIO &&
+			(o.Graph.GenerateDotFile || o.Graph.GenerateMermaid || o.Graph.Offline)
+	case "validate":
+		return topologyFromFile(o)
+	case "tui":
+		return o.TUI.Demo
+	}
+
+	return false
+}
+
+// topologyFromFile reports whether the topology is read from a file. A lab given by its name
+// alone is read from its containers.
+func topologyFromFile(o *Options) bool {
+	return o.Global.TopologyFile != "" || o.Global.TopologyName == ""
 }
 
 // labRuntimeUnsupportedCommands operate on local containers or host networking

@@ -488,15 +488,27 @@ By default (starting with version `0.63.0`), the `clab_admins` Unix group is cre
 
 Users who are _not_ part of this group can still execute non-privileged commands, such as:
 
+* completion
 * exec (requires `docker` group membership)
 * generate
 * graph
 * inspect (requires `docker` group membership)
 * save
+* tools cert
+* validate
 * version (no upgrade)
 
 Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.  
-Non-privileged command execution is only supported when the default container runtime, Docker.
+All of these run without root privileges only with the default container runtime, Docker. With other container runtimes, such as Podman, only the commands that don't use the container runtime do:
+
+* completion
+* generate (no `--deploy`)
+* graph with `--dot`, `--mermaid` or `--offline` (no `--drawio`, not with `--name` alone)
+* help
+* tools cert
+* tui with `--demo`
+* validate (not with `--name` alone)
+* version (no upgrade)
 
 To allow _any user on the host_ to use all Containerlab commands, simply delete the `clab_admins` Unix group.
 
