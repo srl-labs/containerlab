@@ -64,6 +64,12 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 		o.Inspect.Wide,
 		"also more details about a lab and its nodes",
 	)
+	c.Flags().BoolVarP(
+		&o.Inspect.Containers,
+		"containers",
+		"", o.Inspect.Containers,
+		"show every container of a lab, including node components and internal helper containers",
+	)
 
 	interfacesC := &cobra.Command{
 		Use:   "interfaces",
@@ -173,40 +179,107 @@ func listContainers(
 		return c.ListLabRuntimeContainers(ctx, o.Destroy.All)
 	}
 
-	var containers []clabruntime.GenericContainer
+	var listOptions []clabcore.ListOption
 
-	var err error
+	switch {
+	case o.Global.TopologyFile != "":
+		listOptions = append(listOptions, clabcore.WithListLabName(c.Config.Name))
+	case o.Global.TopologyName != "":
+		listOptions = append(listOptions, clabcore.WithListLabName(o.Global.TopologyName))
+	default:
+		listOptions = append(listOptions, clabcore.WithListclabLabelExists())
+	}
+
+	containers, err := c.ListContainers(ctx, listOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
+	}
 
 	if o.Global.TopologyFile != "" {
-		// List containers defined in the topology file
-		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+		containers = slices.DeleteFunc(containers, func(ctr clabruntime.GenericContainer) bool {
+			_, isNode := c.Nodes[ctr.Labels[clabconstants.NodeName]]
+			_, isComponent := c.Nodes[ctr.Labels[clabconstants.RootNodeName]]
+
+			return !isNode && !isComponent
+		})
+
+		// containers that containerlab did not create (ie. ext-container) have no lab labels.
+		nodeContainers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
 		}
-	} else {
-		var listOptions []clabcore.ListOption
 
-		// List containers based on labels (--name or --all)
-		if o.Global.TopologyName != "" {
-			listOptions = append(listOptions, clabcore.WithListLabName(o.Global.TopologyName))
-		} else {
-			listOptions = append(listOptions, clabcore.WithListclabLabelExists())
-		}
-
-		containers, err = c.ListContainers(ctx, listOptions...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
+		for idx := range nodeContainers {
+			if !slices.ContainsFunc(containers, func(ctr clabruntime.GenericContainer) bool {
+				return ctr.ID == nodeContainers[idx].ID
+			}) {
+				containers = append(containers, nodeContainers[idx])
+			}
 		}
 	}
 
-	// hide internal containers (ie. SR-SIM netns holder) only for non-all inspect.
-	if !o.Destroy.All {
-		containers = slices.DeleteFunc(containers, func(c clabruntime.GenericContainer) bool {
-			return c.Labels[clabconstants.InternalNode] == "true"
-		})
+	// --details always describes every container of a lab.
+	if o.Inspect.Containers || o.Inspect.Details {
+		return containers, nil
 	}
 
-	return containers, nil
+	return logicalNodeContainers(containers), nil
+}
+
+// logicalNodeContainers returns a single logical topology node.
+func logicalNodeContainers(
+	containers []clabruntime.GenericContainer,
+) []clabruntime.GenericContainer {
+	// Node names are unique only within a lab.
+	type nodeKey struct{ lab, node string }
+
+	holders := make(map[nodeKey]*clabruntime.GenericContainer)
+	hasCPMA := make(map[nodeKey]bool)
+
+	for idx := range containers {
+		l := containers[idx].Labels
+		key := nodeKey{l[clabconstants.Containerlab], l[clabconstants.RootNodeName]}
+
+		switch {
+		case key.node == "":
+		case l[clabconstants.InternalNode] == "true":
+			holders[key] = &containers[idx]
+		case l[clabconstants.NodeName] == key.node+"-a":
+			hasCPMA[key] = true
+		}
+	}
+
+	result := make([]clabruntime.GenericContainer, 0, len(containers))
+
+	for idx := range containers {
+		ctr := containers[idx]
+		name := ctr.Labels[clabconstants.NodeName]
+		key := nodeKey{
+			ctr.Labels[clabconstants.Containerlab],
+			ctr.Labels[clabconstants.RootNodeName],
+		}
+
+		// Components are named <root node>-<lowercase slot>.
+		isCPM := name == key.node+"-a" || (name == key.node+"-b" && !hasCPMA[key])
+		if ctr.Labels[clabconstants.ToolType] != "" ||
+			ctr.Labels[clabconstants.InternalNode] == "true" || (key.node != "" && !isCPM) {
+			continue
+		}
+
+		if key.node == "" {
+			key.node = name
+		}
+
+		if holder := holders[key]; holder != nil {
+			ctr.NetworkName = holder.NetworkName
+			ctr.NetworkSettings = holder.NetworkSettings
+			ctr.Ports = holder.Ports
+		}
+
+		result = append(result, ctr)
+	}
+
+	return result
 }
 
 func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWriter.Row {
@@ -446,9 +519,6 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 
 	// Gather summary details of each container
 	for idx := range containers {
-		if !o.Destroy.All && containers[idx].Labels[clabconstants.InternalNode] == "true" {
-			continue
-		}
 		absPath := containers[idx].Labels[clabconstants.TopoFile]
 
 		shortPath, err := getShortestTopologyPath(absPath)
