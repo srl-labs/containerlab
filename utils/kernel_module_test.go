@@ -9,6 +9,20 @@ import (
 )
 
 func TestIsKernelModuleLoaded(t *testing.T) {
+	modules := filepath.Join(t.TempDir(), "modules")
+	if err := os.WriteFile(
+		modules,
+		[]byte("ip_tables 32768 0 - Live 0x0000000000000000\n"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	orig := procModulesPath
+	procModulesPath = modules
+
+	t.Cleanup(func() { procModulesPath = orig })
+
 	type args struct {
 		name string
 	}
@@ -19,7 +33,7 @@ func TestIsKernelModuleLoaded(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "one",
+			name: "loaded",
 			args: args{
 				name: "ip_tables",
 			},
@@ -27,7 +41,7 @@ func TestIsKernelModuleLoaded(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "one",
+			name: "not loaded",
 			args: args{
 				name: "someXRaND0mStr1nG!",
 			},
