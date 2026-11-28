@@ -104,6 +104,24 @@ topology:
 
 Without a `startup-config` the node comes up with a minimal configuration that only sets `frr defaults traditional` and logging.
 
+/// admonition | Rejected lines do not fail the deploy
+    type: warning
+FRR skips a line it does not accept and applies the rest, and `containerlab deploy` still succeeds. The rejection shows up only in the node's log:
+
+```bash
+docker logs <node-name> 2>&1 | grep -E "Unknown command|processing failure"
+```
+
+To check a node's file, run `vtysh -C` in it: it exits non-zero when the configuration has a rejected line. It can also be used as a [healthcheck](../nodes.md#healthcheck):
+
+```yaml
+      healthcheck:
+        test: ["CMD-SHELL", "vtysh -C"]
+```
+
+Checked with containerlab 0.82.0 and `quay.io/frrouting/frr:containerlab-10.7.1`.
+///
+
 The hostname is not set in the generated config on purpose. FRR picks up the container's hostname, which containerlab already sets to the node name.
 
 ### Daemons
